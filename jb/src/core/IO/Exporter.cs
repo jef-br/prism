@@ -6,4 +6,4 @@ Can be exported as:
     B. json object literal containing one entry per image:
         - base64 string that holds the actual image
         - the new filename
-        */
+*/

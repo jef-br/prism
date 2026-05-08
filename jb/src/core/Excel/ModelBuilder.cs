@@ -1,1 +1,3 @@
+/*
 The file that builds the internal model of all excel files combined. It uses excelfilehandler.cs to load all excel files
+*/
