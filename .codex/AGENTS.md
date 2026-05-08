@@ -33,7 +33,12 @@ For each file created, ask in what (sub)folder it belongs unless it is 100% clea
   - return a structured result object rather than `void`.
 
 ## ONNX / ML style
-- Wrap `InferenceSession` creation and tensor preparation in dedicated helper methods (`LoadModel()`, `PrepareInputTensor()`, `RunInference()`, `ParseOutputTensor()`).
+- Wrap `InferenceSession` creation and tensor preparation in dedicated helper methods
+    -  `LoadModel()` --> 
+    -  `PrepareInputTensor()` --> name too vague, Use Convert/Prepare<X>to<Y>for<Z> (example: ConvertImagesToBase64ForClassification)
+    -  `RunInference()` --> name too vague, Be specific about what is being infered. Create helper method per inference process.
+    -  `ParseOutputTensor()` --> name too vague, describe what actually happens. (example: ParseTensorToBoundingBox, or ParseXyzToClassificationTags)
+    -  ...
 - Name every tensor input and output with a string constant or config value —
   never scatter raw `"input"` / `"output"` strings across the codebase.
 - State the expected input shape and data type in a comment above any tensor construction, including the normalization mean/std values if applicable.
