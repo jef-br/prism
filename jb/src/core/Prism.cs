@@ -1,6 +1,13 @@
 /*
 
-The in and out point of everything.
+The in and out point of everything. The main class in this library.
+
+It is the pipeline that chains all the steps from start to finish.
+
+It is imperative that this class contain as little complex-looking code as possible.
+Code written here should read like a story and should be understandable by a five year old as much as possible.
+
+"Real code" handling more complex tasks like Asynchronous behavior, threads, semaphores, and whatnot... All should be "hidden" in a class.
 
 - Accepts the input data using Importer.cs
 - Receives the excel model from ModelBuilder.cs
@@ -23,10 +30,12 @@ The in and out point of everything.
             - Orientation: enumeration: Front, back, left, right, top, bottom, ...
             - type: packshot, clothing, detail, ambiance, illustration, ...
             - ...
+    - once an image is classified, it is processed so the main object in the image is centered in frame with a whitespace margin surrounding it. If needed, the background is stretched and cleaned up.
 
 - once all images are processed, renames all image in one go by using the matching scores to determine the best filename candidate.
     - the filename consists out of a stem and a suffix.
         - the stem is a link to the familyID found in the internal excel model
         - the suffix is used to determine the image rank. Ie, the order in which the image will be shown on the website. The suffix consists out of "_det" followed by a zero-based count.
-
+- once renaming is done, the images are packaged using the Exporter.
+    - either they are packaged in a zipfile, or encoded as byte64 strings as part of a json object literal that represents the entire transformation.
 */
