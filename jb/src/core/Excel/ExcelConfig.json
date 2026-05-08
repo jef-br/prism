@@ -1,0 +1,25 @@
+{
+    "HeaderRowIndicators": [
+        "fam",
+        "family",
+        "familyID",
+        "famID",
+        "fam ID",
+        "family ID",
+        "famille ID",
+        "EAN",
+        "RefCo",
+        "Veepee",
+        "Reference"
+    ],
+    "HeaderRowSearchSpace": {
+        "FirstRow": 0,
+        "LastRow": 20,
+        "FirstColumn": 0,
+        "LastColumn": 20
+    },
+    "FamilyIDProperties":{
+        "IsNumeric": true,
+        "Length": 8
+    }
+}
