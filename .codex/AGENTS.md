@@ -15,6 +15,12 @@ For each file created, ask in what (sub)folder it belongs unless it is 100% clea
 - Every method should have XML doc comments (`/// <summary>`) explaining its purpose,
   parameters, and return value when relevant.
 
+## Parameters, properties, configuration
+- Regardless of technology/language, any and all parameters need to be configurable.
+- They cannot be directly inside a line of code but should be retrieved from a json file.
+- The json file containing the parameter should sit close to the file containing the code where the parameter is needed.
+- On server startup, Prism.cs should build a configuration object that loads all ..._config.jsons
+
 ## C# style
 - Target .NET 8+. Use modern C# syntax: `record` types for immutable config, primary
   constructors where appropriate, collection expressions, and pattern matching.
@@ -32,12 +38,13 @@ For each file created, ask in what (sub)folder it belongs unless it is 100% clea
   - release resources in `finally` or via `using`,
   - return a structured result object rather than `void`.
 
+
 ## ONNX / ML style
 - Wrap `InferenceSession` creation and tensor preparation in dedicated helper methods
     -  `LoadModel()` --> 
-    -  `PrepareInputTensor()` --> name too vague, Use Convert/Prepare<X>to<Y>for<Z> (example: ConvertImagesToBase64ForClassification)
+    -  `PrepareInputTensor()` --> name too vague, Use Convert/Prepare<X>to<Y>for<Z> (example: ConvertImagesToBase64ForImageLabeling)
     -  `RunInference()` --> name too vague, Be specific about what is being infered. Create helper method per inference process.
-    -  `ParseOutputTensor()` --> name too vague, describe what actually happens. (example: ParseTensorToBoundingBox, or ParseXyzToClassificationTags)
+    -  `ParseOutputTensor()` --> name too vague, describe what actually happens. (example: ParseTensorToBoundingBox, or ParseXyzToImageLabelingTags)
     -  ...
 - Name every tensor input and output with a string constant or config value —
   never scatter raw `"input"` / `"output"` strings across the codebase.
@@ -48,7 +55,7 @@ For each file created, ask in what (sub)folder it belongs unless it is 100% clea
 
 ## OpenCV / image processing style
 - Declare every `Mat` with a descriptive name that reflects its state:
-  `originalImage`, `resizedForModel`, `normalizedFloat`, `classificationOverlay`.
+  `originalImage`, `resizedForModel`, `normalizedFloat`, `ImageLabelingOverlay`.
 - Release intermediate `Mat` objects promptly with `using` or explicit `.Dispose()` calls — document why any Mat must outlive its immediate scope.
 - Wrap raw OpenCV calls (`Cv2.Resize`, `Cv2.CvtColor`, color normalization) in named helper methods even when the call is a one-liner, so the pipeline reads as a sequence of named steps.
 - State the expected color space (BGR, RGB, grayscale) in a comment at every point where images cross a boundary (loaded from disk, passed to model, saved to output). OpenCV loads as BGR by default — make this explicit.

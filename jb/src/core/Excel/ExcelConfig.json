@@ -1,16 +1,45 @@
 {
-    "HeaderRowIndicators": [
-        "fam",
-        "family",
-        "familyID",
-        "famID",
-        "fam ID",
-        "family ID",
-        "famille ID",
-        "EAN",
-        "RefCo",
-        "Veepee",
-        "Reference"
+    "RecordPrimaryKey": "FamilyID",
+    "HeaderRowIndicators": [[
+  "fam",
+  "family",
+  "famille",
+  "ean",
+  "sku",
+  "refco",
+  "reference",
+  "veepee ref",
+  "ngp",
+  "lot",
+  "pack",
+  "label",
+  "marque",
+  "produit",
+  "societe",
+  "color",
+  "material",
+  "composition",
+  "motif",
+  "description",
+  "designation",
+  "dimension",
+  "hauteur",
+  "largeur",
+  "longeur",
+  "weight",
+  "poids",
+  "fit",
+  "rise info",
+  "waist",
+  "sleeve",
+  "fastening",
+  "pocket",
+  "compartment",
+  "washing instructions",
+  "style",
+  "type of product"
+]
+
     ],
     "HeaderRowSearchSpace": {
         "FirstRow": 0,
@@ -23,3 +52,4 @@
         "Length": 8
     }
 }
+
