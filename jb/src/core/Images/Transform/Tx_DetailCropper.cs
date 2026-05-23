@@ -43,3 +43,12 @@ Most often this is a close-up picture or an image showing a product detail.
     - whitespace margin between the product and the image edges is applied
     - background is stretched or otherwise filled in so that the entire image canvas is "covered" (seam-carving, generative fill, ...)
 */
+
+
+public class Tx_DetailCropper : IImageTransformation
+{
+    public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage)
+    {
+        
+    }
+}

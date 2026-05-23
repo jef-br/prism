@@ -1,0 +1,45 @@
+{
+  "rules": [
+    {
+      "excelField": "familyID",
+      "type": "numeric",
+      "strategy": "NumericalMatcher",
+      "weight": 1,
+      "maxDistance": 1,
+      "candidates": "3"
+    },
+    {
+      "excelField": "EAN",
+      "type": "numeric",
+      "strategy": "NumericalMatcher",
+      "weight": 1,
+      "maxDistance": 1,
+      "candidates": "3"
+    },
+    {
+      "excelField": "ProductColor",
+      "type": "string",
+      "strategy": "ImageLabelingMatcher",
+      "weight": 1.0
+    },
+    {
+      "excelField": "ProductType",
+      "type": "string",
+      "strategy": "ImageLabelingMatcher",
+      "weight": 0.8
+    },
+    {
+      "excelField": "ProductMaterial",
+      "type": "string",
+      "strategy": "ImageLabelingMatcher",
+      "weight": 0.5
+    },
+    {
+      "excelField": "ALL",
+      "type": "image_labels",
+      "strategy": "ImageLabelingMatcher",
+      "Overlap": 2,
+      "weight": 0.6
+    }
+  ]
+}

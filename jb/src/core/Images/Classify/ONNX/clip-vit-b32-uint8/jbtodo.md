@@ -30,16 +30,6 @@
     Record the exact CLIP variant, upstream revision, ONNX opset, quantization method, and conversion date.
   - Answer:
 
-- [ ] Define model checksum: record a hash used to verify the local `.onnx` file before inference.
-  - Impact:
-    - Project progress: High - Checksum validation prevents silent model corruption or accidental replacement.
-    - Effect on other TODOs: Unblocks - It feeds ONNX model ownership, health checks, and model download verification.
-  - Industry standard:
-    Model artifacts are verified by cryptographic hash during startup/readiness, especially when downloaded outside the repository.
-  - Recommended solution:
-    Store a SHA-256 checksum for `model_uint8.onnx` and verify it before creating an inference session.
-  - Answer:
-
 - [ ] Define input tensor names: list the exact ONNX input names used by the inference code.
   - Impact:
     - Project progress: High - Tensor names are required before inference code can bind inputs reliably.
@@ -90,24 +80,14 @@
     Document CLIP-compatible resize/crop, RGB channel order, scaling, mean/std values, and quantization-specific requirements.
   - Answer:
 
-- [ ] Define tokenizer compatibility for `vocab.json`: say which model version this vocabulary must match.
+- [ ] Define tokenizer asset compatibility for `vocab.json` and `merges.txt`: say which model version both tokenizer files must match.
   - Impact:
-    - Project progress: High - Vocabulary mismatch can silently corrupt text embeddings and label scores.
-    - Effect on other TODOs: Blocks - It affects prompts, thresholds, expected outputs, and model versioning.
+    - Project progress: High - Vocabulary or BPE merge mismatches can silently corrupt text embeddings and label scores.
+    - Effect on other TODOs: Blocks - It affects prompts, thresholds, expected outputs, model versioning, and tokenizer asset verification.
   - Industry standard:
-    Text-image models pin tokenizer assets to the exact upstream model revision and validate asset hashes.
+    Text-image models pin tokenizer assets to the exact upstream model revision and validate asset hashes together with model weights.
   - Recommended solution:
-    Record the upstream tokenizer revision for `vocab.json` and verify it against the model version/checksum metadata.
-  - Answer:
-
-- [ ] Define tokenizer compatibility for `merges.txt`: say which model version these BPE merges must match.
-  - Impact:
-    - Project progress: High - BPE merge mismatch changes token IDs and invalidates prompt scores.
-    - Effect on other TODOs: Blocks - It supports prompt definitions, thresholds, and expected output verification.
-  - Industry standard:
-    Tokenizer merge files are treated as model artifacts with the same version and checksum discipline as weights.
-  - Recommended solution:
-    Record the exact upstream revision for `merges.txt` and verify it together with `vocab.json`.
+    Record the upstream tokenizer revision for both `vocab.json` and `merges.txt`, verify them against the model version/checksum metadata, and treat both files as model artifacts with the same version discipline as weights.
   - Answer:
 
 - [ ] Define image-label prompts: list the prompt strings used to classify product traits and visual concepts.

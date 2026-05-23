@@ -1,25 +1,5 @@
 # Zip Todo
 
-- [ ] Define zip output parity with JSON output: say which manifest fields must be identical between zip and JSON exports.
-  - Impact:
-    - Project progress: High - Export parity keeps downstream clients from seeing different truth depending on output format.
-    - Effect on other TODOs: Blocks - It gates JSON export fields, zip layout, manifest projection, and API response models.
-  - Industry standard:
-    Batch exporters keep one canonical manifest model and project it into each delivery format so audit, retry, and support behavior remain consistent.
-  - Recommended solution:
-    Use one `BatchManifest` projection for both zip and JSON, with identical summary counts, item rows, KO groups, reasons, and config snapshot.
-  - Answer:
-
-- [ ] Define duplicate filename handling in output zip folders: say how Prism avoids overwriting files with the same final name.
-  - Impact:
-    - Project progress: High - Filename collision policy prevents silent data loss in the output archive.
-    - Effect on other TODOs: Unblocks - It affects output filename collision handling, `_det` suffix assignment, and manifest row projection.
-  - Industry standard:
-    Archive writers treat output paths as unique keys and resolve collisions deterministically while recording the final path in the manifest.
-  - Recommended solution:
-    Generate unique final paths before writing zip entries, prefer deterministic `_det` ordering, and add a collision suffix only as a last resort with manifest evidence.
-  - Answer:
-
 - [ ] Define KO entries for corrupt zip members: list what manifest reason is used when a member cannot be extracted or decoded.
   - Impact:
     - Project progress: High - Corrupt members are common user-data failures and must not collapse healthy archive content.
@@ -38,16 +18,6 @@
     Pipelines reject encrypted payloads unless credential handling is explicitly supported, and report them as user-fixable KO entries.
   - Recommended solution:
     Treat encrypted archives or entries as KO with a `password-protected` reason and do not prompt for passwords in the core pipeline.
-  - Answer:
-
-- [ ] Define KO entries for ignored zip members: say whether ignored non-media files appear in `manifest.json` or are omitted completely.
-  - Impact:
-    - Project progress: Medium - Ignored-member policy affects manifest noise and support expectations.
-    - Effect on other TODOs: Influences - It ties into accepted media types, user-file KO policy, and zip output parity.
-  - Industry standard:
-    Ingestion systems distinguish unsupported-but-harmless members from failed media records, often summarizing ignored files instead of making them full failures.
-  - Recommended solution:
-    Omit harmless non-media members from per-image KO rows but include ignored counts and optionally file names in a manifest diagnostics section.
   - Answer:
 
 - [ ] Define zip layout folder configurability: say whether `OK`, `KO`, and `manifest.json` can change through `ZipLayout.json`.

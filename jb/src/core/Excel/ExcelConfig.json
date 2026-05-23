@@ -1,45 +1,46 @@
 {
     "RecordPrimaryKey": "FamilyID",
-    "HeaderRowIndicators": [[
-  "fam",
-  "family",
-  "famille",
-  "ean",
-  "sku",
-  "refco",
-  "reference",
-  "veepee ref",
-  "ngp",
-  "lot",
-  "pack",
-  "label",
-  "marque",
-  "produit",
-  "societe",
-  "color",
-  "material",
-  "composition",
-  "motif",
-  "description",
-  "designation",
-  "dimension",
-  "hauteur",
-  "largeur",
-  "longeur",
-  "weight",
-  "poids",
-  "fit",
-  "rise info",
-  "waist",
-  "sleeve",
-  "fastening",
-  "pocket",
-  "compartment",
-  "washing instructions",
-  "style",
-  "type of product"
-]
-
+    "HeaderRowIndicators": [
+        "fam",
+        "famID",
+        "family",
+        "famille",
+        "familleID",
+        "ean",
+        "sku",
+        "refco",
+        "reference",
+        "veepee",
+        "ref",
+        "ngp",
+        "lot",
+        "pack",
+        "label",
+        "marque",
+        "produit",
+        "societe",
+        "color",
+        "material",
+        "composition",
+        "motif",
+        "description",
+        "designation",
+        "dimension",
+        "hauteur",
+        "largeur",
+        "longeur",
+        "weight",
+        "poids",
+        "fit",
+        "rise info",
+        "waist",
+        "sleeve",
+        "fastening",
+        "pocket",
+        "compartment",
+        "washing instructions",
+        "style",
+        "type of product"
     ],
     "HeaderRowSearchSpace": {
         "FirstRow": 0,
@@ -47,9 +48,13 @@
         "FirstColumn": 0,
         "LastColumn": 20
     },
-    "FamilyIDProperties":{
+    "FamilyIDProperties": {
         "IsNumeric": true,
         "Length": 8
-    }
+    },
+    "NoiseFilterPatterns": [
+        {
+            "Date": "\/(\\d{4}|\\d{1,2})((?![A-z|0-9]).)(\\d{1,2})((?![A-z|0-9]).)((\\d{4})|(\\d{1,2}))\/gm"
+        }
+    ]
 }
-

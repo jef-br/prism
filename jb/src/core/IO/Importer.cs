@@ -38,7 +38,7 @@ External resources:
     * When PRISM files are missing, fail loud and hard.
         - invalid config
         - missing model files
-        - ... anything belonging to prism itself fails loud and hard and breaks the pipeline.
+        - ... anything belonging to prism itself fails loud and hard and pauses the pipeline until "order is restored".
 
     * Files sent to the prism pipeline (zips, excel, images) are checked prior to opening:
         - files are approached carefully. Any file causing any problems is flagged as KO in manifest.json and dropped with a verbose reason for why it was dropped.

@@ -20,26 +20,6 @@
     Collect images, Excel files, zip files, URL text, and all job parameters into the canonical request model, with job parameters configured in one UI location and binary parameters grouped together.
   - Answer:
 
-- [ ] Define progress visualization behavior: say which stages are visible and what data appears while a batch runs.
-  - Impact:
-    - Project progress: High - Progress visibility is essential for batches that may process thousands of images.
-    - Effect on other TODOs: Unblocks - It consumes API progress streaming and shared workbench behavior.
-  - Industry standard:
-    Large-batch UIs show stable stage names, item counts, warnings, current item, elapsed time, and completion state based on backend events rather than local guesses.
-  - Recommended solution:
-    Render canonical stages from progress events and show counts, current item, severity, message, and optional diagnostic snapshot references.
-  - Answer:
-
-- [ ] Define section data shapes: list the data each section expects for uploader, Excel model, image collection, match results, and output preview.
-  - Impact:
-    - Project progress: High - Section data shapes prevent UI components from inventing incompatible interpretations of core results.
-    - Effect on other TODOs: Influences - It maps to core models, manifest projection, progress events, and diagnostics.
-  - Industry standard:
-    Pipeline dashboards use typed view models derived from backend contracts, keeping raw pipeline data separate from presentation state.
-  - Recommended solution:
-    Define view models for upload state, job parameters, Excel summary, normalized images, matcher results, transform/output preview, and KO groups derived from API/core models.
-  - Answer:
-
 - [ ] Define drag-and-drop error states: say what users see for rejected files, invalid URLs, and oversized inputs.
   - Impact:
     - Project progress: Medium - Clear rejection states reduce support burden before users run batches.

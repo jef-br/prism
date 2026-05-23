@@ -20,26 +20,6 @@
     Keep ONNX sessions application-scoped and reusable, with per-batch input/output buffers isolated by worker.
   - Answer:
 
-- [ ] Define ONNX runtime provider policy: say whether CPU is always supported and when GPU providers may be used.
-  - Impact:
-    - Project progress: High - Provider policy determines portability across laptops, servers, and future GPU workers.
-    - Effect on other TODOs: Influences - It affects fallback behavior, health checks, and performance diagnostics.
-  - Industry standard:
-    Production inference supports CPU as a baseline and enables GPU providers through explicit configuration and readiness checks.
-  - Recommended solution:
-    Require CPU support, allow configured GPU providers when available, and fail readiness only if no configured required provider can run.
-  - Answer:
-
-- [ ] Define ONNX fallback behavior without GPU: say how Prism behaves on local servers and laptops with CPU only.
-  - Impact:
-    - Project progress: Medium - CPU fallback improves developer and desktop usability while preserving output semantics.
-    - Effect on other TODOs: Influences - It ties into provider policy, health reporting, and performance expectations.
-  - Industry standard:
-    ML pipelines degrade to CPU for correctness when latency is acceptable, and surface performance warnings rather than silently disabling inference.
-  - Recommended solution:
-    Run on CPU when GPU is unavailable, emit a diagnostic warning, and keep model-dependent stages enabled unless CPU performance exceeds configured limits.
-  - Answer:
-
 - [ ] Define ONNX diagnostic logging policy: say when tensor names, shapes, scores, and timing are logged.
   - Impact:
     - Project progress: Medium - Diagnostic logging makes inference failures debuggable without bloating normal batch output.

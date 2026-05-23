@@ -1,4 +1,4 @@
-Above all, maintain existing project folder structure.
+Above all, respect existing project folder structure and any structural/naming conventions that can be inferred from patterns you detect.
 For each file created, ask in what (sub)folder it belongs unless it is 100% clear from the prompt or filename. 
 
 ## General style
@@ -67,4 +67,46 @@ For each file created, ask in what (sub)folder it belongs unless it is 100% clea
 - Accept file paths and streams as inputs — avoid forcing callers to pre-parse Excel or pre-extract zips.
 - Return rich result objects (`ProcessingResult`, `ClassifiedImage`) rather than raw strings or `bool`. Include both success data and failure details.
 - Keep vendored or third-party wrapper files isolated; do not rewrite their style unless explicitly asked.
-- 
+
+## Knowledge
+- Before asking questions, read `PRISM-information.md`
+
+## Plan mode upgrade
+
+- When planning or reviewing, write everything out in full in `AGENTFEEDBACK.md`
+  - **Todos follow this pattern**:
+
+```
+  - [ ] <TodoTitle>: <Brief explanation of what needs to be done> (example: state which top-level folder owns API notes, core pipeline notes, workbench notes, shared docs, and test fixtures.)
+  - Impact:
+    - <Level of Impact on the project (Low|High)> - <One sentence explaining why this is so>
+    - Effect on other TODOs: <List all consequences>
+  - Industry standard:
+    <Describe the industry standard / best practice solution for this todo in one or two sentences. Avoid terminology and jargon as much as possible in favor of using plain english.>
+  - Recommended solution:
+    <Describe your recommended solution. Avoid scope creep. Do not add new functionality unless explicitly requested or indispensible for working code. Assume my input towards you is not exhaustive. For example, if I were to tell you "we need multi-language support for 5 languages (De, Es,En,Fr,It)"... Implement a solution without external dependencies that uses industry standard practices for multi-language support. Do not implement 4 or 6 languages, or try to "keep it simple for now".>
+  - Answer: <followed by nothing. I will manually write an answer here for you to read in my next prompt, or I will ask you to go over every todo with me.>
+  ```
+  - **Finished todos / closing a todo**:
+    - When a todo has an answer that is sufficient to complete the todo, the todo can be marked as done by checking the box with an X.
+    - A satisfactory answer is complete + valid + feasible + does not contradict previous knowledge.
+    - If the answer is not satisfactory:
+         1. Do not close the todo.
+         2. If inconsistency or contradiction is suspected, make a second in-depth check by looking closely at impacted files and related todos to verify.
+         3. If inconsistency or contradiction is confirmed, rephrase the todo:
+              - Incorporate the answers valid parts
+              - use information from the in-depth second check to refine the new todo
+              - The new todo should pertain to addressing the inconsistency/contradiction
+              - Update the impact, industry standard, and recommended solution sections accordingly
+              - Set the answer to empty.
+
+  - **Frozen todos**:
+    - A todo is frozen only when its answer section contains **FROZEN TODO** or **FROZEN**.
+    - A frozen todo stays open. Treat the marker as "not ready to answer", not as an answer.
+    - The marker means the user cannot resolve the topic right now because the subject is too difficult, the needed information is missing, or the project currently has too much noise around that decision.
+    - Do not make thawing a frozen todo the main goal.
+    - If a formerly frozen todo later receives an answer, probe it more deeply than a normal answer before accepting it:
+      - check impacted files and related todos;
+      - ask targeted follow-up questions when consequences are unclear;
+      - only accept the answer when you can explain its consequences back to the user for confirmation or refinement.
+    - Frozen todos all thaw at the same time only when every remaining open todo is frozen. When that happens, clearly notify the user and remove the frozen markers.

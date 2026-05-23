@@ -8,3 +8,11 @@ The transformation changes the original image so that the ...
     - whitespace margin between the product and the image edges is applied
     - background is stretched or otherwise filled in (seam-carving, generative fill, ...) if needed
 */
+
+public class Tx_CenterAndStretch : IImageTransformation
+{
+    public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage)
+    {
+        
+    }
+}
