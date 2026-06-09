@@ -17,4 +17,19 @@ The model is built runtime using Reflection and maps excel column headers as rec
 * Categorical matches have a very high value if they are confirmed using image classification/labelling
 * Descriptive properties are often less valuable to make matches, but strings with a cardinality between 4 and 8 that appear in the initial image filename are very high value.
 * 
+
+
 */
+
+public sealed class ExcelTokenStore
+{
+
+    /* This comment block contains a sketch indicating the direction for the model.
+    This direction is the least important source of information for this model but is here because it is guaranteed to work with the first version of MatchType.cs and MatchEvidence.cs
+    public List<ExcelToken> Tokens { get; init; } = new();
+
+    // optional indexes for fast lookup
+    public Dictionary<string, List<ExcelToken>> ByNormalizedValue { get; init; }
+        = new();
+    */
+}

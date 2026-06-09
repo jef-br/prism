@@ -68,12 +68,23 @@ For each file created, ask in what (sub)folder it belongs unless it is 100% clea
 - Return rich result objects (`ProcessingResult`, `ClassifiedImage`) rather than raw strings or `bool`. Include both success data and failure details.
 - Keep vendored or third-party wrapper files isolated; do not rewrite their style unless explicitly asked.
 
-## Knowledge
-- Before asking questions, read `PRISM-information.md`
+## PRISM - AGENT INSTRUCTIONS
+* Read `docs/prism/PRISM-index.md` first. It maps tasks to files.
+* Only load the files relevant to your current task — do not load all files upfront.
+* Documentation lives in `jb\docs`. Start with `jb\docs\PRISM-index.md`.
+* It contains a task-to-file map — use it to load only what the current task needs.
 
-## Plan mode upgrade
 
-- When planning or reviewing, write everything out in full in `AGENTFEEDBACK.md`
+  ### Key rules
+  - Pipeline stage order is fixed: Imported > Classified > Matched > Ordered > Renamed > Generated > Transformed > Exported
+  - Scoring logic must be readable by a 10-year-old
+  - `Prism.cs` contains management code only — no inline logic
+  - Missing config or model files fail fast and loud (never silently)
+
+
+## How to handle Todos  
+  - `jbtodo.md` files are temporary working notes for unresolved or not-yet-integrated decisions.
+  - Accepted project knowledge belongs in `jb\docs`, with `jb\docs\PRISM-index.md` used as the documentation map.
   - **Todos follow this pattern**:
 
 ```
@@ -88,7 +99,6 @@ For each file created, ask in what (sub)folder it belongs unless it is 100% clea
   - Answer: <followed by nothing. I will manually write an answer here for you to read in my next prompt, or I will ask you to go over every todo with me.>
   ```
   - **Finished todos / closing a todo**:
-    - When a todo has an answer that is sufficient to complete the todo, the todo can be marked as done by checking the box with an X.
     - A satisfactory answer is complete + valid + feasible + does not contradict previous knowledge.
     - If the answer is not satisfactory:
          1. Do not close the todo.
@@ -99,6 +109,13 @@ For each file created, ask in what (sub)folder it belongs unless it is 100% clea
               - The new todo should pertain to addressing the inconsistency/contradiction
               - Update the impact, industry standard, and recommended solution sections accordingly
               - Set the answer to empty.
+              - 
+    - If the answer is satisfactory:
+      - Move the accepted decision to the most appropriate `.md` file inside `jb\docs`.
+      - Update `jb\docs\PRISM-index.md` if the decision changes the task-to-file map or adds a new documentation surface.
+      - Remove the entire todo from the `jbtodo.md` once the answer is fully integrated in the documentation.
+      - Do not keep a header-only `jbtodo.md` after closing the last todo unless the user specifically asks for that in the current task.
+      - If the `jbtodo.md` file has no remaining open todos after close-out, delete that `jbtodo.md` file.
 
   - **Frozen todos**:
     - A todo is frozen only when its answer section contains **FROZEN TODO** or **FROZEN**.

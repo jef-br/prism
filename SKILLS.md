@@ -1,22 +1,23 @@
 # Prism Todo Workflow
 
-Use this workflow when creating, discussing, refining, or finalizing Prism `jbtodo.md` items.
+Use this workflow when creating, discussing, refining, or finalizing Prism folder-local todo decisions.
 
-## Source Of Truth
-
-- Read `PRISM-information.md` before working on Prism todos.
-- Treat folder-local `jbtodo.md` files as the source of truth for unresolved todos.
-- Treat `PRISM-information.md` as the source of truth for accepted completed todo decisions.
-- Use `AGENTFEEDBACK.md`, `AGENTS.md`, code, configs, comments, and nearby docs as supporting repo knowledge.
+## Knowledge Sources
+- Read `jb\docs` before working on Prism todos.
+- Read `docs/prism/PRISM-index.md` first. It maps tasks to files.
+- Only load the files relevant to your current task — do not load all files upfront.
+- Treat `jb\docs` as the durable home for accepted project knowledge and completed todo decisions.
+- Treat folder-local `jbtodo.md` files as temporary working documents for unresolved decisions, draft recommendations, frozen todos, and user-owned answers before integration.
+- Use `AGENTFEEDBACK.md`, `AGENTS.md`, code, configs, comments, `jb\docs` and nearby `.md` files as supporting repo knowledge.
 - Do not edit `AGENTS.md` unless the user explicitly grants permission for that specific edit.
 
 ## Creating Todos
 
-Before creating a todo, analyze the goal using all relevant repo knowledge. Search nearby code, configs, comments, existing todos, `PRISM-information.md`, `AGENTFEEDBACK.md`, and applicable project docs before asking the user questions.
+Before creating a todo, analyze the goal using all relevant repo knowledge. Search nearby code, configs, comments, existing todos, `jb\docs` (starting with `docs/prism/PRISM-index.md`), `AGENTFEEDBACK.md`, and applicable project docs before asking the user questions.
 
 Ask questions until the todo phrasing is clear enough to remove unintended ambiguity. Stay close to the user's original phrasing and scope. Do not expand the todo into adjacent feature work unless the repo context proves that extra scope is required for a valid decision.
 
-Create each todo in the nearest owning folder-local `jbtodo.md` file using this shape:
+Create each todo in the nearest owning folder-local `jbtodo.md` working document using this shape:
 
 ```markdown
 - [ ] <TodoTitle>: <Brief explanation of what needs to be decided or defined.>
@@ -50,7 +51,7 @@ When finalizing an accepted todo:
 
 - Remove `Impact`, `Industry standard`, and `Recommended solution`.
 - Preserve the accepted `Answer`.
-- Move the completed todo decision into `PRISM-information.md`.
+- Move the completed todo decision into `jb\docs`, adding it to the most appropriate .md existing file so the accepted decision no longer depends on the working document.
 - Remove the completed block from the folder-local `jbtodo.md`.
 - Delete the local `jbtodo.md` file if it has no open todos left.
 - Add optional process notes to `AGENTFEEDBACK.md` only when they help future reloads or avoid repeated work.

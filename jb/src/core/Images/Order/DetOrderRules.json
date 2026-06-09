@@ -1,14 +1,30 @@
 {
-    "default": {
-        "det0": ["front", "face", "voor", "avant", "frente", "vorne", "recto", "devant"],
-        "det1": ["back", "rear", "achter", "arriere", "derriere", "espalda", "hinten", "verso", "dos"],
-        "det2": ["side", "profile", "profil", "cote", "lado", "seite", "zijkant"],
-        "det3": ["detail", "close", "zoom", "dettaglio", "detalle", "grosplan", "closeup"],
-        "det4": ["pack", "package", "box", "boite", "caja", "verpackung"],
-        "det5": ["label", "tag", "etiquette", "etikett", "etichetta"],
-        "det6": ["material", "fabric", "matiere", "stoff", "tessuto"],
-        "det7": ["sole", "outsole", "semelle", "suela", "sohle"],
-        "det8": ["top", "above", "dessus", "arriba", "oben"],
-        "det9": ["bottom", "under", "dessous", "abajo", "unten"]
+    "DetOrderByNGP":{
+        "default": {
+            "det0":"front",
+            "det1":"back",
+            "det2":"side",
+            "det3":"detail",
+            "det4":"top",
+            "det5":"bottom",
+            "det6":"pack",
+            "det7":"label",
+            "det8":"material"
+        },
+        "PaP": {
+            "det0":"front",
+            "det1":"back",
+            "det2":"side",
+            "det3":"detail",
+            "det4":"lifestyle"
+       },
+        "Shoes": {
+            "det0":"diagonal",
+            "det1":"front",
+            "det2":"side",
+            "det3":"back",
+            "det4":"bottom",
+            "det5":"lifestyle"
+        }
     }
 }

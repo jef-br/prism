@@ -1,78 +1,83 @@
-# Purpose of AGENTFEEDBACK.md
+# AGENTFEEDBACK.md
 
-`AGENTFEEDBACK.md` is an agent-owned project memory file. Agents may read and edit it whenever doing so benefits the user's work.
+Agent-owned reload memory. Not authoritative project documentation. Agents may edit this file when useful unless the prompt explicitly says `AGENTFEEDBACK.md` is unavailable. Accepted PRISM knowledge lives in `jb\docs`; folder-local `jbtodo.md` files hold unresolved or not-yet-integrated decisions, including draft recommendations, frozen todos, and user-owned answers before sync.
 
-Prompt-level edit limits such as "do not edit files" or "edit only this file" apply to code, docs, config, and task files, but they do not restrict `AGENTFEEDBACK.md`. To restrict this file, a prompt must explicitly name `AGENTFEEDBACK.md` as unavailable.
+Project terminology, accepted media, pipeline order, completed decisions, and operating assumptions also exist in [PRISM-information.md](PRISM-information.md), but `jb\docs` is now the durable documentation home.
 
-# Prism Feedback Reload
+## Current State
 
-This file is an agent reload aid. Treat the current file tree, `PRISM-information.md`, and folder-local `jbtodo.md` files as the source of truth when they disagree with this overview.
+- Local todo answers have been progressively moved into `jb\docs`; closed blocks are removed from folder-local `jbtodo.md` files after sync.
+- Synced areas include API request/progress/result/health/error/URL/request-size/ignored-zip behavior; IO JSON export and EXIF orientation; match normalization, thresholds, weighting, waterfall, tie-breaking, descriptive/mixed matching, `_det`, numeric false positives, language, and stop words; web upload/layout/style decisions; V1 in-process queue; Images filename/collision/sanitization; Zip corrupt/password-protected KO behavior.
+- Removed empty todo files after sync for `jb/src/core/Excel/`, `jb/src/core/Models/`, `jb/src/api/`, and `jb/src/core/IO/`. The former `jb/src/core/` todo file is deleted; do not link new work to that location unless restored.
+- Current local todo set: 4 non-empty `jbtodo.md` files, 27 open todos.
+- Before the latest classification/ONNX/transform sync, the live local todo set was 5 non-empty `jbtodo.md` files and 32 open todos.
+- One frozen todo is known for `jb/src/`: fixture folder structure. Keep it frozen until the user explicitly thaws it.
+- Local CLIP ONNX model checksum in `jb\docs`: `4AC011172C8C022937BB83DAD2E8FC207F52F19972B36E14808CC3C8042C4E60`.
+- `jb/src/core/Images/ImageClassifier.cs` owns the ONNX model boundary: model loading, asset validation/readiness, session lifetime, diagnostics, and communication with the rest of PRISM. Any ONNX provider, worker, session, tokenizer, or buffer helper is hidden behind `ImageClassifier.cs`.
+- Current model placeholders live in `jb/src/core/Models`: `ImageNGP.cs`, `ImageRecord_INPUT.cs`, `ImageRecord_LAMBDA.cs`, `ImageRecord_OUTPUT.cs`, `ImageRecord_GENERATED.cs`.
+- Matching uses `jb/src/core/Images/Match/MatchEvidence.cs`; transformation uses `jb/src/core/Images/Transform/ImageTransformationResult.cs`; per-image route visualization uses `ImageRecord_LAMBDA` in route order imported, classified, matched, ordered, renamed, generated, transformed, exported.
+- IO failure placeholders exist as import/export/general exception files; `KoReason.cs` is not present.
+- V1 queue decision: single-server in-process bounded queue with fixed workers; RabbitMQ deferred until durable recovery, multiple processing servers, or broker-backed distribution is needed. Future areas: API/server job coordinator, in-memory job store, SSE adapter, result retention cleanup, queue pressure in health/config.
 
-Project terminology, accepted media, pipeline order, completed decisions, and established operating assumptions live in [PRISM-information.md](PRISM-information.md). Folder-local `jbtodo.md` files now contain open questions only.
+## ImageNGP Structure Analysis
 
-## Current Status
+This is a current decision lens for future agents, not a completed todo sync.
 
-- [x] Completed local todo answers were moved into `PRISM-information.md` on 2026-05-19.
-- [x] Folder-local `jbtodo.md` files now keep open todos only; closed todo blocks were removed from local task files.
-- [x] Empty local todo files were removed after the sync: `jb/src/core/Excel/jbtodo.md`, `jb/src/core/Models/jbtodo.md`.
-- [x] API request model and multipart field names todo was moved into `PRISM-information.md` on 2026-05-20.
-- [x] API progress streaming behavior todo was moved into `PRISM-information.md` on 2026-05-20.
-- [x] API zip and JSON response model todos were moved into `PRISM-information.md` on 2026-05-20.
-- [x] API health and config response model todos were moved into `PRISM-information.md` on 2026-05-20.
-- [x] API error payload model, external URL validation, and configured request size validation todos were moved into `PRISM-information.md` on 2026-05-21.
-- [x] API ignored zip member behavior todo was moved into `PRISM-information.md` on 2026-05-21.
-- [x] Empty local todo file removed after the sync: `jb/src/api/jbtodo.md`.
-- [x] IO JSON export property names todo was moved into `PRISM-information.md` on 2026-05-21.
-- [x] IO EXIF orientation metadata recording todo was moved into `PRISM-information.md` on 2026-05-22.
-- [x] Empty local todo file removed after the sync: `jb/src/core/IO/jbtodo.md`.
-- [x] Match string normalization todo was moved into `PRISM-information.md` on 2026-05-22.
-- [x] Match exact threshold and categorical/image-label weighting todos were moved into `PRISM-information.md` on 2026-05-22.
-- [x] The current local todo set has 12 non-empty `jbtodo.md` files with 63 open todo(s).
-- [x] Exactly one frozen todo is currently known: the classification image-type decision in `jb/src/core/Images/Classify/jbtodo.md`.
-- [x] The local CLIP ONNX model checksum recorded in `PRISM-information.md` is `4AC011172C8C022937BB83DAD2E8FC207F52F19972B36E14808CC3C8042C4E60`.
+### Core Meaning
 
-## Current Repo Snapshot
+- `ImageNGP` = canonical measured semantic image state only.
+- `ImageRole` = configured label for a required ImageFeature-state permutation.
+- `DetOrderRules` = product-type and det-slot mapping to ordered ImageRole preference lists.
+- Transformation consumes ImageNGP image features as modifiers; no broad `TransformRules` concept is introduced yet.
 
-- Current model placeholders live directly in `jb/src/core/Models`: `ImageNGP.cs`, `ImageRecord_INPUT.cs`, `ImageRecord_LAMBDA.cs`, `ImageRecord_OUTPUT.cs`, and `ImageRecord_GENERATED.cs`.
-- Matching uses `jb/src/core/Images/Match/MatchEvidence.cs` for the combined decision and retained evidence.
-- Transformation uses `jb/src/core/Images/Transform/ImageTransformationResult.cs`.
-- Per-image route visualization uses `ImageRecord_LAMBDA` in the definitive route order: imported, classified, matched, ordered, renamed, generated, transformed, exported.
-- IO failure placeholders currently exist as import/export/general exception files; `KoReason.cs` is not present in the current tree.
-- `jb/src/core/Excel/jbtodo.md` and `jb/src/core/Models/jbtodo.md` were removed because all local todos in those files were closed and synced.
-- `jb/src/core/IO/jbtodo.md` was removed because all local IO todos were closed and synced.
-- `jb/src/core/jbtodo.md` is deleted in the current tree. Do not link new open work to that file unless it is restored.
+### Planned Config Ownership
+
+- `jb/src/core/ImageNGP/ImageFeatures.json`: feature IDs and allowed states.
+- `jb/src/core/ImageNGP/ImageRoles.json`: role labels and required feature states.
+- `jb/src/core/Images/Order/DetOrderRules.json`: product-type det slots and ordered allowed ImageRoles.
+
+### Qualification Rules
+
+- Image analyzers emit measured feature observations into the per-image ImageNGP snapshot.
+- An image qualifies for an ImageRole only when all required ImageFeature states match.
+- Missing or unknown required feature states mean the image does not qualify for that ImageRole.
+- `ImageNGP.TypeOfShot` is one ImageFeature inside ImageNGP, not the whole taxonomy and not the whole ImageRole system.
+- CLIP prompts and thresholds should feed ImageFeature analyzers; they should not assign DetOrder directly.
+
+### DetOrder Rules
+
+- Current enum-weight ordering is superseded by ImageRole qualification plus ordered det preferences.
+- For each product type, each det slot lists allowed ImageRoles in preference order; the first ImageRole is the preferred role for that position.
+- Omitted ImageRoles are disallowed for that det slot.
+- The `default` DetOrder mapping is used when no product-type-specific mapping exists.
+- Ties resolve by role confidence, compatible filename order hints, then stable import/source index.
+- Trusted `_det#` filename schemes may shortcut ordering only when every image has a unique det token and each image's ImageRole is allowed for that det slot.
+- Images with no eligible configured role remain in the family set and are assigned after configured det slots by deterministic fallback, not dropped.
+
+### Todo Impact
+
+- Directly affected: `jb/src/core/Images/Classify/`, `jb/src/core/Images/Transform/`.
+- Indirectly affected: `jb/src/core/Images/Match/`, CLIP prompt/threshold todos, workbench diagnostics.
+- Mostly unaffected: fixture layout and model license/provenance todos.
+- `jb\docs` contains stale wording that says `ImageNGP.cs` owns "transform-facing image permutations"; clean this up during the next completed-decision sync, not silently inside unrelated work.
 
 ## Open Work Index
 
-- [ ] `jb/src/core/Images/Classify/jbtodo.md`: 1 open todo(s) covering canonical image type classification values.
-- [ ] `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/jbtodo.md`: 14 open todo(s) covering model license; model provenance; model version; and 11 more.
-- [ ] `jb/src/core/Images/Classify/ONNX/jbtodo.md`: 3 open todo(s) covering ONNX model ownership rules; ONNX session lifetime policy; ONNX diagnostic logging policy.
-- [ ] `jb/src/core/Images/jbtodo.md`: 3 open todo(s) covering filename token metadata; output filename and export path collision handling; forbidden filesystem character handling.
-- [ ] `jb/src/core/Images/Match/jbtodo.md`: 7 open todo(s) covering remaining matcher score aggregation rules; matcher tie-breaking; numeric false-positive handling; and 4 more.
-- [ ] `jb/src/core/Images/Order/jbtodo.md`: 9 open todo(s) covering `_det` suffix assignment and output filename suffix rules; ordering tie-breakers; remaining front image ordering rules; and 6 more.
-- [ ] `jb/src/core/Images/Transform/jbtodo.md`: 13 open todo(s) covering salient object bounds output; background identification output; transform-facing image type output; and 10 more.
-- [ ] `jb/src/core/Zip/jbtodo.md`: 3 open todo(s) covering KO entries for corrupt zip members; KO entries for password-protected zip members; and zip layout folder configurability.
-- [ ] `jb/src/jbtodo.md`: 1 open todo(s) covering test fixture folder structure.
-- [ ] `jb/src/workbench/jbtodo.md`: 1 open todo(s) covering progress event subscription.
-- [ ] `jb/src/workbench/web/jbtodo.md`: 7 open todo(s) covering API client behavior; upload component behavior; drag-and-drop error states; and 4 more.
-- [ ] `jb/src/workbench/wpf/jbtodo.md`: 1 open todo(s) covering WPF project layout.
+- [ ] `jb/src/core/Images/Classify/`: 1 open todo, final ImageNGP taxonomy and feature combinations.
+- [ ] `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/`: 14 open todos, model license/provenance/version plus tensor, tokenizer, prompt, threshold, expected-output, download, rebuild details.
+- [ ] `jb/src/core/Images/Transform/`: 11 open todos, transform-facing ImageFeature/ImageNGP, failures/fallback/fill, crop/resize/detail/cleanup behavior.
+- [ ] `jb/src/`: 1 open frozen todo, `jb/Testing` fixture folder structure. Keep frozen.
 
-## Immediate Priority
+## Web/API Notes
 
-- [ ] Define matcher aggregation, threshold enforcement, and tie-breaking before implementing final automatic FamilyID assignment.
-- [ ] Define `_det` suffix and export-path collision rules before finalizing output filenames.
+- Web and WPF workbench todos were recently closed. Do not re-mention `jb/src/workbench/web/` or `jb/src/workbench/wpf/` as open work unless new todo files are created there.
+- Web workbench todos already synced: upload component behavior, API client behavior, drag-and-drop error states, upload validation states, Next.js project layout, CSS variable file, and CSS class file.
+- API cleanup synced: error payload, external URL validation, request size validation, ignored zip member behavior; `HostRules.json` uses typed URL policy keys `allowedSchemes`, `blockedSchemes`, `blockedHostPatterns`, `redirects`, `networkRanges`, `timeouts`, `testing`.
+- Pre-core unsupported or policy-rejected URLs are dropped without manifest, KO, or `PrismJobRequest` trace when enough valid input remains.
 
-## API Todo Cleanup - 2026-05-21
+## Reload Rules
 
-- [x] API error payload model, external URL validation, and configured request size validation were synced to `PRISM-information.md`.
-- [x] `jb/src/api/jbtodo.md` briefly contained only the combined ignored zip member API/manifest todo before that final API todo was answered and synced.
-- [x] `HostRules.json` now uses typed URL policy keys: `allowedSchemes`, `blockedSchemes`, `blockedHostPatterns`, `redirects`, `networkRanges`, `timeouts`, and `testing`.
-- [x] Pre-core unsupported or policy-rejected URLs are intentionally dropped without manifest, KO, or `PrismJobRequest` trace when enough valid input remains.
-- [x] API ignored zip member behavior was synced to `PRISM-information.md`, and `jb/src/api/jbtodo.md` was removed because it had no open todos left.
-
-## Reload Notes
-
-- Reload `PRISM-information.md` first; it now owns completed todo decisions.
-- Use folder-local `jbtodo.md` files for unresolved decisions only.
-- If a local todo is answered later, move the completed answer into `PRISM-information.md`, then remove the closed block from the local `jbtodo.md` file.
-- Delete a local `jbtodo.md` file when it has no open todos left.
+- Reload `jb\docs` first; it owns accepted knowledge and completed todo decisions.
+- Use folder-local `jbtodo.md` files for unresolved or not-yet-integrated decisions.
+- When a todo is accepted, move the decision into `jb\docs`, remove the local todo block, and delete the local `jbtodo.md` file if no open todos remain.
+- Current priority: work through remaining non-empty folder-local `jbtodo.md` files, starting with high-blocking core classification/transform decisions.

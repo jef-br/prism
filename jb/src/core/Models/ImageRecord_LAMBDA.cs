@@ -4,15 +4,12 @@ imported, classified, matched, ordered, renamed, generated, transformed, exporte
 Implementation fields are currently provisional.
 */
 
-using System.Net.Sockets;
-
 public class ImageRecord_LAMBDA : ImageRecord_Base
 {
     //Matching parameters
     public
 
     //Analysis parameters
-
     private sealed record IntersectionData
     {
         public bool Top { get; set; }
@@ -20,17 +17,19 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
         public bool Bottom { get; set; }
         public bool Left { get; set; }
     }
+
+    //Image Labelling/classification tags
     public sealed record TagCollection
     {
         public ClassificationToken[] Influential { get; init; } = [];
         public ClassificationToken[] Trivial { get; init; } = [];
     }
+    public TagCollection[] VisionTags { get; set; } = new();
+
     
     
     public IntersectionData Intersection { get; set; } = new();
     public bool IsProductInFullView => Intersection.Top && Intersection.Right && Intersection.Bottom && Intersection.Left;
-    
-    public TagCollection[] Tags { get; set; } = new();
 
     public double DetectedSkinToneArea { get; set; }
 

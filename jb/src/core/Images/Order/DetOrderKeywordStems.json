@@ -1,0 +1,14 @@
+{
+"DetOrderKeywordStems": {
+    "front":    ["front", "face", "voor", "avant", "frente", "vorne", "recto", "devant"],
+    "back":     ["back", "rear", "achter", "arriere", "derriere", "espalda", "hinten", "verso", "dos"],
+    "side":     ["side", "profile", "profil", "cote", "lado", "seite", "zijkant"],
+    "detail":   ["detail", "close", "zoom", "dettaglio", "detalle", "grosplan", "closeup"],
+    "pack":     ["pack", "package", "box", "boite", "caja", "verpackung"],
+    "label":    ["label", "tag", "etiquette", "etikett", "etichetta"],
+    "material": ["material", "fabric", "matiere", "stoff", "tessuto"],
+    "top":      ["top", "above", "dessus", "arriba", "oben"],
+    "bottom":   ["bottom", "under", "dessous", "abajo", "unten","sole", "outsole", "semelle", "suela", "sohle"],
+    "lifestyle":["lifestyle", "ambiance", "marketing", "pub"]
+    }
+}

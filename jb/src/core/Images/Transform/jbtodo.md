@@ -1,33 +1,13 @@
 # Image Transform Todo
 
-- [ ] Define salient object bounds output: specify the bounding box fields produced by preprocessing for the main object.
+- [ ] Define transform-facing ImageFeature and ImageNGP output: say which ImageFeatures and selected ImageNGP phenotypes feed crop and center logic, including what happens when transform-critical features are unknown.
   - Impact:
-    - Project progress: High - Object bounds are the core geometry input for crop, resize, fill, and border decisions.
-    - Effect on other TODOs: Blocks - It gates crop decisions, border anchors, center-and-stretch behavior, and transform result fields.
+    - Project progress: High - Transform rules depend on selected ImageNGP phenotype plus features such as type-of-shot, orientation, background, human/head evidence, edge intersections, object bounds, and detail/whole-product evidence.
+    - Effect on other TODOs: Blocks - It links ImageFeature output, selected ImageNGP phenotype, the open classification todo, crop behavior, fill policy, and fallback rules.
   - Industry standard:
-    Image preprocessing stages emit normalized bounding boxes with pixel coordinates, confidence, source method, and edge-contact metadata.
+    Transform engines consume bounded classification/analyzer features and selected image phenotypes rather than re-inferring product semantics inside crop code.
   - Recommended solution:
-    Emit pixel `x`, `y`, `width`, `height`, normalized coordinates, confidence, detection method, and border intersection flags.
-  - Answer:
-
-- [ ] Define background identification output: say how preprocessing describes background color, flatness, and confidence.
-  - Impact:
-    - Project progress: High - Background identification controls fill, cleanup, and product centering quality.
-    - Effect on other TODOs: Blocks - It informs background fill policy, center-and-stretch extension, cleanup, and diagnostics.
-  - Industry standard:
-    Product image pipelines classify background color, variance, transparency/matte, and confidence before attempting synthetic extension.
-  - Recommended solution:
-    Emit dominant background color, flatness score, variance, sampled regions, confidence, and whether fill is safe.
-  - Answer:
-
-- [ ] Define transform-facing image type output: say how `ImageNGP.TypeOfShot` values feed crop and center logic, including what happens while the missing unknown state remains unresolved.
-  - Impact:
-    - Project progress: High - Transform rules depend on whether an image is `PACKSHOT`, `ONMODEL`, `DETAIL`, `LIFESTYLE`, `GHOST`, `FLAT`, `STILLIFE`, or unresolved/unknown.
-    - Effect on other TODOs: Blocks - It links `ImageNGP.TypeOfShot` values, the open image-type todo, crop behavior, fill policy, and fallback rules.
-  - Industry standard:
-    Transform engines consume bounded type labels from classification rather than re-inferring product semantics inside crop code.
-  - Recommended solution:
-    Pass the canonical `ImageNGP.TypeOfShot` value and confidence from classification into transform decisions, and define a safe fallback for unavailable or below-threshold type evidence.
+    Pass transform-relevant ImageFeatures and the selected ImageNGP phenotype with confidence from classification into transform decisions, and define a safe fallback for unavailable or below-threshold feature evidence.
   - Answer:
 
 - [ ] Define transform failure, fallback, and fill-KO policy: list which transform problems become KO, which eligible fill failures can still export, and what fallback path is used after border-intersection no-reposition cases are excluded.

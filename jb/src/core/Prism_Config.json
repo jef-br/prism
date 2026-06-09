@@ -63,7 +63,14 @@
     },
     "Classification": {
         "Confidence_Threshold": 0.9,
-        "Cutoff_Threshold": 0.25
+        "Cutoff_Threshold": 0.25,
+        "Weights": {
+            "NumericToken_Weight": 0.55,
+            "StringToken_Weight": 0.15,
+            "Classification_Weight": 0.15,
+            "SemanticalRelevanceWeight":0.15,
+            "CONVERGENCE_WEIGHT": 0.25
+        }
     },
     "Generation": {
         "InputImages": {
@@ -90,5 +97,11 @@
                 "BiDirectional": 0.25
             }
         }
+    },
+    "Pipeline":{
+        "JobRetries":3
+    },
+    "Jobs":{
+        "JobRetentionPeriodInHours":24
     }
 }
