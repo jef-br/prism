@@ -3,7 +3,7 @@ Represents an image generated to supplement an existing FamilyID image collectio
 
 */
 
-class ImageRecord_GENERATED : ImageRecord_Base
+public class ImageRecord_GENERATED : ImageRecord_Base
 {
 
 }

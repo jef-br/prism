@@ -7,10 +7,9 @@ Implementation fields are currently provisional.
 public class ImageRecord_LAMBDA : ImageRecord_Base
 {
     //Matching parameters
-    public
 
     //Analysis parameters
-    private sealed record IntersectionData
+    public sealed record IntersectionData
     {
         public bool Top { get; set; }
         public bool Right { get; set; }
@@ -24,14 +23,10 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
         public ClassificationToken[] Influential { get; init; } = [];
         public ClassificationToken[] Trivial { get; init; } = [];
     }
-    public TagCollection[] VisionTags { get; set; } = new();
+    public TagCollection[] VisionTags { get; set; } = [];
 
-    
-    
     public IntersectionData Intersection { get; set; } = new();
     public bool IsProductInFullView => Intersection.Top && Intersection.Right && Intersection.Bottom && Intersection.Left;
 
     public double DetectedSkinToneArea { get; set; }
-
-
 }

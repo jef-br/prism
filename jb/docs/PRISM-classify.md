@@ -22,10 +22,13 @@ The next separate task is to list all possible ImageNGPs using the currently ava
 
 ## ONNX Model
 
-- Model: `clip-vit-b32-uint8`
-- Path: `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/model_uint8.onnx`
-- SHA-256 checksum: `4AC011172C8C022937BB83DAD2E8FC207F52F19972B36E14808CC3C8042C4E60`
-- Verify checksum before creating an inference session. Mismatch → PRISM-owned failure (fail fast and loud).
+- Current temporary external model: `sentence-transformers/clip-ViT-B-32`.
+- Retrieval sources: Hugging Face model `sentence-transformers/clip-ViT-B-32` or Microsoft Foundry model `sentence-transformers-clip-vit-b-32`.
+- Local ONNX runtime artifact, when used: `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/model_uint8.onnx`.
+- The local ONNX file is a machine-local artifact and must not be stored in git.
+- The ONNX file does not need to be recreatable because this model is temporary and will be replaced by a PRISM-owned model later.
+- Exact tensor names, tensor shapes, dtypes, tokenizer compatibility, and normalization details are implementation contracts validated by `ImageClassifier.cs` at model load, not open project decisions for this temporary model.
+- Prompt sets, thresholds, and expected label outputs belong to classification configuration and evaluation when PRISM's own model/taxonomy is finalized, not to this temporary external model folder.
 
 ---
 
@@ -135,7 +138,7 @@ Intersections can occur at zero, one, several, or all edges. Intersection at an 
 - Attempt to detect facial features using the image as a matrix with kernels such as the Kernel Gabor-based Weighted Region Covariance Matrix (KGWRCM) optimized for facial feature detection.
 - Limit detection area to the **top half** of the image.
 - Scale the kernel using the previously discovered skeleton to match the size of a human head given anatomical proportions vs. image size vs. the single biggest blob of skin color in the top third of the full original image.
-- Correlate result with image classification/labeling from the ONNX model at `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8`.
+- Correlate result with image classification/labeling from the temporary CLIP model owned by `ImageClassifier.cs`.
 
 ---
 

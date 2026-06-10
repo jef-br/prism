@@ -9,10 +9,10 @@ Project terminology, accepted media, pipeline order, completed decisions, and op
 - Local todo answers have been progressively moved into `jb\docs`; closed blocks are removed from folder-local `jbtodo.md` files after sync.
 - Synced areas include API request/progress/result/health/error/URL/request-size/ignored-zip behavior; IO JSON export and EXIF orientation; match normalization, thresholds, weighting, waterfall, tie-breaking, descriptive/mixed matching, `_det`, numeric false positives, language, and stop words; web upload/layout/style decisions; V1 in-process queue; Images filename/collision/sanitization; Zip corrupt/password-protected KO behavior.
 - Removed empty todo files after sync for `jb/src/core/Excel/`, `jb/src/core/Models/`, `jb/src/api/`, and `jb/src/core/IO/`. The former `jb/src/core/` todo file is deleted; do not link new work to that location unless restored.
-- Current local todo set: 4 non-empty `jbtodo.md` files, 27 open todos.
+- Current local todo set: 3 non-empty `jbtodo.md` files, 13 open todos.
 - Before the latest classification/ONNX/transform sync, the live local todo set was 5 non-empty `jbtodo.md` files and 32 open todos.
 - One frozen todo is known for `jb/src/`: fixture folder structure. Keep it frozen until the user explicitly thaws it.
-- Local CLIP ONNX model checksum in `jb\docs`: `4AC011172C8C022937BB83DAD2E8FC207F52F19972B36E14808CC3C8042C4E60`.
+- Current temporary CLIP model source in `jb\docs`: `sentence-transformers/clip-ViT-B-32`, retrievable from Hugging Face or Microsoft Foundry. The local ONNX artifact is ignored and must not be stored in git.
 - `jb/src/core/Images/ImageClassifier.cs` owns the ONNX model boundary: model loading, asset validation/readiness, session lifetime, diagnostics, and communication with the rest of PRISM. Any ONNX provider, worker, session, tokenizer, or buffer helper is hidden behind `ImageClassifier.cs`.
 - Current model placeholders live in `jb/src/core/Models`: `ImageNGP.cs`, `ImageRecord_INPUT.cs`, `ImageRecord_LAMBDA.cs`, `ImageRecord_OUTPUT.cs`, `ImageRecord_GENERATED.cs`.
 - Matching uses `jb/src/core/Images/Match/MatchEvidence.cs`; transformation uses `jb/src/core/Images/Transform/ImageTransformationResult.cs`; per-image route visualization uses `ImageRecord_LAMBDA` in route order imported, classified, matched, ordered, renamed, generated, transformed, exported.
@@ -64,7 +64,6 @@ This is a current decision lens for future agents, not a completed todo sync.
 ## Open Work Index
 
 - [ ] `jb/src/core/Images/Classify/`: 1 open todo, final ImageNGP taxonomy and feature combinations.
-- [ ] `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/`: 14 open todos, model license/provenance/version plus tensor, tokenizer, prompt, threshold, expected-output, download, rebuild details.
 - [ ] `jb/src/core/Images/Transform/`: 11 open todos, transform-facing ImageFeature/ImageNGP, failures/fallback/fill, crop/resize/detail/cleanup behavior.
 - [ ] `jb/src/`: 1 open frozen todo, `jb/Testing` fixture folder structure. Keep frozen.
 

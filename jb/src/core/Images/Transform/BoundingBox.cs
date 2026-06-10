@@ -1,4 +1,4 @@
-public sealed struct BoundingBox
+public struct BoundingBox
 {
     public int X {get;set;}
     public int Y {get;set;}

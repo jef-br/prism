@@ -39,13 +39,13 @@ public class ImageNGP
     {
         FULL=5,
         PARTIAL=3,
-        UNKNOWN=2.5,
+        UNKNOWN=2,
         NONE=0
     }
     public enum HERO_IS_HUMAN
     {
         TRUE=5,
         FALSE=0,
-        UNKNOWN=2.5
+        UNKNOWN=2
     }
 }

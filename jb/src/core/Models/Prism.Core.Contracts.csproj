@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="ImageRecord_Base.cs" />
+    <Compile Include="ImageRecord_GENERATED.cs" />
+    <Compile Include="ImageRecord_INPUT.cs" />
+    <Compile Include="ImageRecord_LAMBDA.cs" />
+    <Compile Include="ImageRecord_OUTPUT.cs" />
+    <Compile Include="..\Excel\FamilyRecord.cs" Link="FamilyRecord.cs" />
+    <Compile Include="..\ImageNGP\ImageNGP.cs" Link="ImageNGP.cs" />
+    <Compile Include="..\IO\BatchManifest.cs" Link="BatchManifest.cs" />
+    <Compile Include="..\Pipeline\PipelineProgressEvent.cs" Link="PipelineProgressEvent.cs" />
+    <Compile Include="..\Images\Classify\ClassificationToken.cs" Link="ClassificationToken.cs" />
+    <Compile Include="..\Images\Match\MatchEvidence.cs" Link="MatchEvidence.cs" />
+    <Compile Include="..\Images\Match\MatchType.cs" Link="MatchType.cs" />
+    <Compile Include="..\Images\Transform\BackgroundType.cs" Link="BackgroundType.cs" />
+    <Compile Include="..\Images\Transform\BoundingBox.cs" Link="BoundingBox.cs" />
+    <Compile Include="..\Images\Transform\ImageTransformationResult.cs" Link="ImageTransformationResult.cs" />
+  </ItemGroup>
+</Project>
