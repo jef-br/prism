@@ -1,6 +1,13 @@
 Above all, respect existing project folder structure and any structural/naming conventions that can be inferred from patterns you detect.
 For each file created, ask in what (sub)folder it belongs unless it is 100% clear from the prompt or filename. 
 
+## First prompt of the day
+- Before starting on the first prompt you receive in a day, read:
+  1. AGENT-TICKETS.md (best record of project/solution work)
+  2. jb/docs/PRISM-index.md (source of truth)
+  3. AGENTFEEDBACK.md (useful reload memory)
+
+
 ## General style
 - Prefer verbose, readable code over brevity.
 - Make the main flow read like a recipe: `Initialize()` sets up the environment,
