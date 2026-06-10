@@ -245,7 +245,7 @@ export function WorkbenchShell() {
       <header className="workbench-header">
         <div>
           <p className="eyebrow">PRISM web workbench</p>
-          <h1>Pipeline inspection bootstrap</h1>
+          <h1>Pipeline inspection </h1>
         </div>
         <p>
           Uploads and URLs are submitted to the API. Route facts appear only when progress or result
