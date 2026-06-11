@@ -17,6 +17,7 @@ Load only the files relevant to your current task.
 | `PRISM-api.md` | HTTP API contracts, request/response models, progress SSE, health/config endpoints, error payloads, URL validation, request size validation |
 | `PRISM-workbench.md` | Shared web+WPF behavior, web-specific layout/upload, WPF-specific local invocation, allowed differences, no-hidden-behavior rule |
 | `PRISM-models.md` | All C# record/model field definitions: ImageRecord_INPUT/LAMBDA/OUTPUT/GENERATED, FamilyRecord, BatchManifest, MatchEvidence, ImageTransformationResult, PipelineProgressEvent, InternalExcelModel mapping |
+| `PRISM-knowledge-base.md`| single consolidated reference document agents can use. It includes: 1. Core Architecture: Pipeline facade principles, data flow, resource management; 2. Pipeline Stages: Immutable order + associated data models; 3. Configuration: All Prism_Config.json and ExcelConfig.json parameters with explanations; 4. Image Classification: 5 trait categories (Borders, Human, HeadVisible, Orientation, Type); 5. Matching Logic: Three matchers with weights (numeric 55%, string 15%, CV 15%, semantic 15%); 6. Data Models: ImageRecord hierarchy and FamilyRecord structure; 7. API Contracts: GET /health, GET /config, POST /process response shapes; 8. Import/Export Rules: Supported formats, multipage handling, external resources, privacy cleanup; 9. Design Principles: Configuration-driven, fail-fast, explicit resource management, story-readable code|
 
 ## Task → Files to Load
 

@@ -1,77 +1,150 @@
-var builder = WebApplication.CreateBuilder(args);
+using System.Text.Json;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = null;
 });
 
-var app = builder.Build();
+PrismApiConfiguration apiConfiguration = PrismApiConfiguration.Load();
+builder.Services.AddSingleton(apiConfiguration);
+builder.Services.AddSingleton<Prism>();
+builder.Services.AddSingleton<PrismJobCoordinator>();
 
-app.MapGet("/PRISM/health", () =>
-    Results.Ok(new PrismHealthResponse(
-        Message: "Prism API host is running.",
-        CanAcceptJobs: false,
-        ProcessingWired: false,
-        ActiveJobCount: 0,
-        QueuedJobCount: 0,
-        MaxQueuedJobs: 0,
-        MaxConcurrentJobs: 0,
-        SupportedRuntimeProviders: [],
-        ConfigReady: false,
-        RequiredModelAssetsReady: false,
-        TempStorageReady: false,
-        Notes: "Core processing and runtime configuration are not wired into this API project yet.")));
+WebApplication app = builder.Build();
+PrismJobCoordinator jobCoordinator = app.Services.GetRequiredService<PrismJobCoordinator>();
 
-app.MapGet("/PRISM/config", () =>
-    Results.Ok(new PrismConfigReadinessResponse(
-        ConfigReady: false,
-        SafeConfigurationAvailable: false,
-        Notes: "Runtime configuration is owned by Prism.cs and is not wired into this API project yet.")));
+app.MapGet("/PRISM/health", (PrismApiConfiguration configuration, PrismJobCoordinator coordinator) =>
+{
+    PrismHealthResponse response = new()
+    {
+        Message = "Prism Health OK",
+        CanAcceptJobs = configuration.ConfigReady && coordinator.CanAcceptJobs,
+        ProcessingWired = true,
+        ActiveJobCount = coordinator.ActiveJobCount,
+        QueuedJobCount = coordinator.QueuedJobCount,
+        MaxQueuedJobs = coordinator.MaxQueuedJobs,
+        MaxConcurrentJobs = coordinator.MaxConcurrentJobs,
+        SupportedRuntimeProviders = ["CPU"],
+        ConfigReady = configuration.ConfigReady,
+        RequiredModelAssetsReady = configuration.RequiredModelAssetsReady,
+        TempStorageReady = configuration.TempStorageReady,
+        Notes = configuration.ConfigReady
+            ? "T-200 API routes are wired to the minimal PRISM core adapter."
+            : configuration.ConfigReadinessMessage
+    };
 
-app.MapPost("/PRISM/process", () =>
-    Results.Problem(
-        title: "PRISM processing is not wired.",
-        detail: "This API host is runnable, but it does not accept processing jobs until core ingestion and Prism.Process are connected.",
-        statusCode: StatusCodes.Status501NotImplemented));
+    return Results.Ok(response);
+});
+
+app.MapGet("/PRISM/config", (PrismApiConfiguration configuration, PrismJobCoordinator coordinator) =>
+{
+    PrismSafeConfigResponse response = new()
+    {
+        ConfigReady = configuration.ConfigReady,
+        SafeConfigurationAvailable = configuration.ConfigReady,
+        AcceptedMediaTypes = configuration.AcceptedMediaTypes,
+        OutputFormats = ["zip", "json"],
+        VisibleFeatureFlags = new PrismVisibleFeatureFlags(
+            Rename: true,
+            Transform: true,
+            Generation: true,
+            ProgressSse: true,
+            MinimalCoreAdapter: true),
+        Limits = configuration.Limits,
+        Queue = new PrismQueueConfigResponse(coordinator.MaxQueuedJobs, coordinator.MaxConcurrentJobs),
+        Notes = configuration.ConfigReadinessMessage
+    };
+
+    return Results.Ok(response);
+});
+
+app.MapPost("/PRISM/process", async (HttpContext context, PrismApiConfiguration configuration, PrismJobCoordinator coordinator) =>
+{
+    PrismProcessIngressResult ingressResult = await PrismProcessIngressReader.Read(context.Request, configuration);
+    if (ingressResult.Error is not null)
+    {
+        return Results.Json(ingressResult.Error, statusCode: StatusCodes.Status400BadRequest);
+    }
+
+    PrismJobRequest coreRequest = ingressResult.Request!;
+    if (!coordinator.TryEnqueue(coreRequest, BuildJobUrls(context.Request, coreRequest), out PrismJobStartEnvelope? envelope))
+    {
+        PrismPreCoreErrorResponse errorResponse = PrismPreCoreErrorResponse.Create(
+            context.TraceIdentifier,
+            "QUEUE_FULL",
+            "PRISM cannot accept more queued jobs right now.",
+            [$"MaxQueuedJobs={coordinator.MaxQueuedJobs}"],
+            ["request:QUEUE_FULL"]);
+
+        return Results.Json(errorResponse, statusCode: StatusCodes.Status429TooManyRequests);
+    }
+
+    PrismJobStartEnvelope acceptedEnvelope = envelope ?? throw new InvalidOperationException("Accepted job envelope was not created.");
+    return Results.Accepted(acceptedEnvelope.ResultUrl, acceptedEnvelope);
+});
+
+app.MapGet("/PRISM/jobs/{jobID:guid}/progress", async (Guid jobID, HttpContext context, PrismJobCoordinator coordinator) =>
+{
+    PrismProgressSubscription? subscription = coordinator.Subscribe(jobID);
+    if (subscription is null)
+    {
+        return Results.NotFound();
+    }
+
+    if (subscription.IsTerminal)
+    {
+        return Results.StatusCode(StatusCodes.Status410Gone);
+    }
+
+    context.Response.Headers.CacheControl = "no-cache";
+    context.Response.Headers.Connection = "keep-alive";
+    context.Response.ContentType = "text/event-stream";
+
+    await foreach (PipelineProgressEvent progressEvent in subscription.Events.ReadAllAsync(context.RequestAborted))
+    {
+        string payload = JsonSerializer.Serialize(progressEvent);
+        await context.Response.WriteAsync($"event: progress\ndata: {payload}\n\n", context.RequestAborted);
+        await context.Response.Body.FlushAsync(context.RequestAborted);
+    }
+
+    return Results.Empty;
+});
+
+app.MapGet("/PRISM/jobs/{jobID:guid}/result", (Guid jobID, PrismJobCoordinator coordinator) =>
+{
+    PrismStoredJobResult? storedResult = coordinator.GetResult(jobID);
+    if (storedResult is null)
+    {
+        return Results.NotFound();
+    }
+
+    if (!storedResult.IsTerminal)
+    {
+        return Results.Json(new { JobID = jobID, Status = storedResult.Status }, statusCode: StatusCodes.Status202Accepted);
+    }
+
+    PrismJobResult result = storedResult.Result ?? throw new InvalidOperationException("Terminal job result was not stored.");
+
+    if (string.Equals(result.OutputFormat, "zip", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(result.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.File(
+            Array.Empty<byte>(),
+            "application/zip",
+            $"{jobID}.zip");
+    }
+
+    return Results.Json(new PrismJsonResultEnvelope(result));
+});
 
 app.Run();
 
-/// <summary>
-/// Describes the current readiness of the API host without claiming that PRISM processing is available.
-/// </summary>
-/// <param name="Message">A safe status message for callers.</param>
-/// <param name="CanAcceptJobs">Whether this API instance can currently accept PRISM jobs.</param>
-/// <param name="ProcessingWired">Whether the API is connected to the PRISM processing pipeline.</param>
-/// <param name="ActiveJobCount">The number of jobs currently being processed by this API instance.</param>
-/// <param name="QueuedJobCount">The number of jobs currently queued by this API instance.</param>
-/// <param name="MaxQueuedJobs">The configured maximum queued jobs value, or zero when configuration is unavailable.</param>
-/// <param name="MaxConcurrentJobs">The configured maximum concurrent jobs value, or zero when configuration is unavailable.</param>
-/// <param name="SupportedRuntimeProviders">The configured runtime providers that are safe to expose.</param>
-/// <param name="ConfigReady">Whether runtime configuration has been loaded and validated.</param>
-/// <param name="RequiredModelAssetsReady">Whether required model assets have been validated.</param>
-/// <param name="TempStorageReady">Whether temporary storage has been validated.</param>
-/// <param name="Notes">A safe explanation of missing readiness pieces.</param>
-internal sealed record PrismHealthResponse(
-    string Message,
-    bool CanAcceptJobs,
-    bool ProcessingWired,
-    int ActiveJobCount,
-    int QueuedJobCount,
-    int MaxQueuedJobs,
-    int MaxConcurrentJobs,
-    IReadOnlyList<string> SupportedRuntimeProviders,
-    bool ConfigReady,
-    bool RequiredModelAssetsReady,
-    bool TempStorageReady,
-    string Notes);
-
-/// <summary>
-/// Describes whether a safe public PRISM configuration payload is available from the API host.
-/// </summary>
-/// <param name="ConfigReady">Whether runtime configuration has been loaded and validated.</param>
-/// <param name="SafeConfigurationAvailable">Whether a sanitized configuration response is available to callers.</param>
-/// <param name="Notes">A safe explanation of why configuration is or is not available.</param>
-internal sealed record PrismConfigReadinessResponse(
-    bool ConfigReady,
-    bool SafeConfigurationAvailable,
-    string Notes);
+static PrismJobUrls BuildJobUrls(HttpRequest request, PrismJobRequest coreRequest)
+{
+    string baseUrl = $"{request.Scheme}://{request.Host}";
+    string progressUrl = $"{baseUrl}/PRISM/jobs/{coreRequest.JobID}/progress";
+    string resultUrl = $"{baseUrl}/PRISM/jobs/{coreRequest.JobID}/result";
+    return new PrismJobUrls(progressUrl, resultUrl);
+}

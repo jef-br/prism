@@ -141,7 +141,8 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-200 API Online End-to-End
 
-- `Status`: Ready
+- `Status`: Review
+- `Runtime agent`: Main thread
 - `Agent type`: worker
 - `Runtime profile`: `P1-feature-worker`
 - `Owner`: API agent
@@ -150,11 +151,13 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 - `Task`: Create the API host/routes for health, config, process, progress, and result. API is not considered online until routes call core and return documented shapes.
 - `Acceptance criteria`: API can call core for a minimal real smoke job, exposes progress/result URLs, and returns documented pre-core errors for invalid input.
 - `Prework note`: `T-050` created `jb/src/api/Prism.Api.csproj` and a runnable minimal API host. `/PRISM/health` returns 200, `/PRISM/config` reports configuration is not wired, and `/PRISM/process` returns 501. This does not satisfy T-200 because process/progress/result do not call core yet.
+- `Review note`: Main thread implemented real API endpoints for health, config, process, live progress SSE, and result retrieval. Added a minimal core adapter and shared job/result/progress contracts so API routes call `Prism.Process(...)` without implementing full pipeline behavior before T-300.
+- `Verification note`: Passed `dotnet build jb/src/PRISM.sln`. Started API on `http://127.0.0.1:5057`; `GET /PRISM/health` and `GET /PRISM/config` returned 200 with readiness/config fields; invalid non-multipart `POST /PRISM/process` returned documented pre-core error payload; minimal multipart request with one `.jpg` and one `.xlsx` returned a queued job envelope with progress/result URLs; `GET /PRISM/jobs/{JobID}/progress` streamed SSE route-stage events; `GET /PRISM/jobs/{JobID}/result` returned stored JSON result with `BatchManifest`.
 - `Runtime prompt`: You are the API Online agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then API and pipeline docs. Work in `jb/src/api` and only touch API-facing core contracts when required. Implement health/config/process/progress/result routes that call core end-to-end. Finish with changed files and API smoke command.
 
 ### T-210 API Smoke Test
 
-- `Status`: Blocked by T-200
+- `Status`: Ready
 - `Agent type`: worker
 - `Runtime profile`: `P2-verifier`
 - `Owner`: Verification agent

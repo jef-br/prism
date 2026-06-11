@@ -9,6 +9,9 @@
     <Compile Include="ImageRecord_INPUT.cs" />
     <Compile Include="ImageRecord_LAMBDA.cs" />
     <Compile Include="ImageRecord_OUTPUT.cs" />
+    <Compile Include="PrismJobRequest.cs" />
+    <Compile Include="PrismJobResult.cs" />
+    <Compile Include="PrismProcessingParameters.cs" />
     <Compile Include="..\Excel\FamilyRecord.cs" Link="FamilyRecord.cs" />
     <Compile Include="..\ImageNGP\ImageNGP.cs" Link="ImageNGP.cs" />
     <Compile Include="..\IO\BatchManifest.cs" Link="BatchManifest.cs" />
