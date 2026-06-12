@@ -11,6 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="Models\Prism.Core.Contracts.csproj" />
     <ProjectReference Include="Images\Classify\Prism.Core.Images.Classify.csproj" />
     <ProjectReference Include="Images\Transform\Prism.Core.Images.Transform.csproj" />

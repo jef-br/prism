@@ -266,6 +266,40 @@ internal sealed class PipelineContext : IDisposable
     /// <summary>Number of KO records accumulated across all stages.</summary>
     internal int KoRecordCount { get; set; }
 
+    // -------------------------------------------------------------------------
+    // Imported stage outputs — set by ImportStageShell after Run() completes.
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Normalized image records produced by the Imported stage.
+    /// Replaces <see cref="ImageRecords"/> as the working image collection for all
+    /// downstream stages (Classified through Exported).
+    /// Null until the Imported stage completes.
+    /// </summary>
+    internal ImportStageResult? ImportResult { get; set; }
+
+    // -------------------------------------------------------------------------
+    // Accessors used by downstream stages
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Normalized images available after the Imported stage.
+    /// Returns the raw pre-import list when the import stage has not run yet.
+    /// </summary>
+    internal IReadOnlyList<ImageRecord_INPUT> NormalizedImages =>
+        ImportResult?.NormalizedImages ?? ImageRecords;
+
+    /// <summary>
+    /// Family records built from the IEM during the Imported stage.
+    /// Empty until the Imported stage completes.
+    /// </summary>
+    internal IReadOnlyList<FamilyRecord> FamilyRecords =>
+        ImportResult?.FamilyRecords ?? [];
+
+    // -------------------------------------------------------------------------
+    // Stage tracking
+    // -------------------------------------------------------------------------
+
     /// <summary>Stages completed before the current point.</summary>
     internal IReadOnlyList<string> CompletedStages => completedStages;
 
