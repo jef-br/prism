@@ -1,26 +1,51 @@
 /// <summary>
-/// PRISM facade. It accepts core-facing job requests and delegates real pipeline work to named helpers.
+/// PRISM facade. Accepts core-facing job requests, validates them, and delegates
+/// real pipeline work to <see cref="Pipeline"/>. Reads like a recipe:
+/// Initialize sets up validated resources; Process expresses the job lifecycle;
+/// helpers below each method do their named step.
 /// </summary>
 public sealed class Prism
 {
-    private static readonly string[] StageNames =
-    [
-        "Imported",
-        "Classified",
-        "Matched",
-        "Ordered",
-        "Renamed",
-        "Generated",
-        "Transformed",
-        "Exported"
-    ];
+    private readonly PrismConfiguration configuration;
+    private readonly Pipeline pipeline;
+
+    // -------------------------------------------------------------------------
+    // Lifecycle — Initialize
+    // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Processes a PRISM job through the minimal T-200 adapter.
+    /// Creates the PRISM facade, loads and validates all configuration on startup.
+    /// Throws <see cref="PrismConfigurationException"/> if any required config file or model asset is missing or invalid.
+    /// </summary>
+    public Prism()
+    {
+        configuration = Initialize();
+        pipeline = new Pipeline(configuration);
+    }
+
+    /// <summary>
+    /// Creates the PRISM facade with an already-loaded configuration.
+    /// Intended for testing and injection scenarios where config is pre-validated.
+    /// </summary>
+    /// <param name="configuration">Pre-validated PRISM configuration.</param>
+    public Prism(PrismConfiguration configuration)
+    {
+        this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        pipeline = new Pipeline(this.configuration);
+    }
+
+    // -------------------------------------------------------------------------
+    // Entry point — Process
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Processes one PRISM job through the full pipeline.
+    /// Validates the request, delegates all stage work to <see cref="Pipeline"/>,
+    /// and returns a structured result to the caller.
     /// </summary>
     /// <param name="request">The normalized core-facing job request.</param>
-    /// <param name="progress">Progress callback used by API SSE and future workbench direct invocation.</param>
-    /// <param name="cancellationToken">Token used only for host shutdown, not user cancellation.</param>
+    /// <param name="progress">Progress callback used by API SSE transport and workbench direct invocation.</param>
+    /// <param name="cancellationToken">Host shutdown token — does not cancel accepted user jobs.</param>
     /// <returns>A structured PRISM job result.</returns>
     public async Task<PrismJobResult> Process(
         PrismJobRequest request,
@@ -28,12 +53,86 @@ public sealed class Prism
         CancellationToken cancellationToken = default)
     {
         ValidateRequest(request);
-        await EmitMinimalSmokeProgress(request, progress, cancellationToken);
-        return BuildMinimalSmokeResult(request);
+
+        PipelineResult pipelineResult = await pipeline.RunAsync(request, progress, cancellationToken);
+
+        return BuildJobResult(request, pipelineResult);
     }
 
+    // -------------------------------------------------------------------------
+    // Helpers — called by Initialize
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Loads Prism_Config.json and all required folder-local config files.
+    /// Throws <see cref="PrismConfigurationException"/> if any required asset is missing or invalid.
+    /// </summary>
+    private static PrismConfiguration Initialize()
+    {
+        string configPath = LocatePrismConfig();
+        PrismConfiguration config = PrismConfiguration.Load(configPath);
+        ValidateRequiredFolderLocalConfigs(configPath);
+        return config;
+    }
+
+    private static string LocatePrismConfig()
+    {
+        string? configPath = PrismConfigLocator.FindPrismConfigPath();
+
+        if (configPath is null)
+        {
+            throw new PrismConfigurationException(
+                "Prism_Config.json was not found in any expected location. " +
+                "Ensure the file is deployed next to the running assembly.");
+        }
+
+        return configPath;
+    }
+
+    private static void ValidateRequiredFolderLocalConfigs(string prismConfigPath)
+    {
+        string[] requiredFolderLocalConfigs =
+        [
+            "Excel/ExcelConfig.json",
+            "IO/cfg/HostRules.json",
+            "Images/Match/MatchingConfig.json",
+            "Images/Match/Translate/TranslationConfig.json",
+            "Images/Order/DetOrderRules.json",
+            "Images/Order/DetOrderKeywordStems.json",
+            "Images/Order/ImageNGP.json"
+        ];
+
+        string coreDirectory = Path.GetDirectoryName(prismConfigPath)
+            ?? throw new PrismConfigurationException("Could not determine core configuration directory.");
+
+        foreach (string relativePath in requiredFolderLocalConfigs)
+        {
+            string fullPath = Path.Combine(coreDirectory, relativePath);
+
+            if (!File.Exists(fullPath))
+            {
+                throw new PrismConfigurationException(
+                    $"Required PRISM configuration file was not found: {fullPath}. " +
+                    "Ensure all configuration assets are deployed with the assembly.");
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers — called by Process
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Validates that the request satisfies all pre-pipeline requirements.
+    /// Throws <see cref="ArgumentException"/> for caller-supplied structural failures.
+    /// </summary>
     private static void ValidateRequest(PrismJobRequest request)
     {
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
         if (request.JobID == Guid.Empty)
         {
             throw new ArgumentException("PrismJobRequest.JobID is required.", nameof(request));
@@ -55,72 +154,20 @@ public sealed class Prism
         }
     }
 
-    private static async Task EmitMinimalSmokeProgress(
-        PrismJobRequest request,
-        Func<PipelineProgressEvent, Task>? progress,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Projects a completed <see cref="PipelineResult"/> into the caller-facing <see cref="PrismJobResult"/>.
+    /// </summary>
+    private static PrismJobResult BuildJobResult(PrismJobRequest request, PipelineResult pipelineResult)
     {
-        if (progress is null)
-        {
-            return;
-        }
-
-        for (int stageIndex = 0; stageIndex < StageNames.Length; stageIndex++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            await progress(new PipelineProgressEvent
-            {
-                JobID = request.JobID,
-                Stage = StageNames[stageIndex],
-                CompletedCount = stageIndex + 1,
-                TotalCount = StageNames.Length,
-                Severity = "Information",
-                SafeMessage = $"T-200 adapter reached {StageNames[stageIndex]} stage.",
-                Timestamp = DateTimeOffset.UtcNow
-            });
-
-            await Task.Delay(TimeSpan.FromMilliseconds(25), cancellationToken);
-        }
-    }
-
-    private static PrismJobResult BuildMinimalSmokeResult(PrismJobRequest request)
-    {
-        string outputFormat = request.PrismProcessingParameters?.Format ?? "json";
-        bool zipRequested = string.Equals(outputFormat, "zip", StringComparison.OrdinalIgnoreCase);
-
-        string status = zipRequested ? "Failed" : "Completed";
-        string? failureReason = zipRequested
-            ? "ZIP export is not implemented by the T-200 minimal core adapter."
-            : null;
-
-        string[] warnings =
-        [
-            "T-200 minimal adapter verified API-to-core wiring only; full pipeline behavior is deferred to T-300 and later stage tickets."
-        ];
-
         return new PrismJobResult
         {
-            JobID = request.JobID,
-            ClientRequestToken = request.ClientRequestToken,
-            Status = status,
-            OutputFormat = outputFormat,
-            FailureReason = failureReason,
-            Warnings = warnings,
-            Manifest = new BatchManifest
-            {
-                JobID = request.JobID,
-                Summary = new BatchManifestSummary
-                {
-                    ImageCount = request.ImageRecords.Count,
-                    ExcelCount = request.ExcelRecords.Count,
-                    ZipCount = request.ZipFileRecords.Count,
-                    OkRenamed = 0,
-                    KoRecords = zipRequested ? request.ImageRecords.Count : 0
-                },
-                RouteSummaries = StageNames.Select(stage => $"{stage}: reached by T-200 adapter.").ToArray(),
-                Warnings = warnings
-            }
+            JobID                = request.JobID,
+            ClientRequestToken   = request.ClientRequestToken,
+            Status               = pipelineResult.Status,
+            OutputFormat         = pipelineResult.OutputFormat,
+            FailureReason        = pipelineResult.FailureReason,
+            Warnings             = pipelineResult.Warnings,
+            Manifest             = pipelineResult.Manifest
         };
     }
 }

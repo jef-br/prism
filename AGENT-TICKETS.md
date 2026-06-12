@@ -72,8 +72,8 @@ For already-started `T-100`, Cicero inherited the parent/default model and reaso
 |---|---|---|
 | M0 Build Boundaries | `jb/src` | Passed on 2026-06-10: .NET solution and separate API/core/classify/transform/WPF projects build; API and WPF run; web workbench builds through npm. |
 | M1 Workbench | `jb/src/workbench` | Passed on 2026-06-09: web workbench starts locally, returns HTTP 200, and renders empty/loading/error/progress/result states without backend data. |
-| M2 API | `jb/src/api` | API is online end-to-end: routes call core and return documented shapes. |
-| M3 Core | `jb/src/core` | Prism backend shell starts, validates config, and runs a minimal job through all stage names. |
+| M2 API | `jb/src/api` | Passed on 2026-06-12: API online end-to-end. T-210 smoke verified health/config/process/progress/result and the pre-core error payload; minimal multipart job returns a BatchManifest with all 8 stages in order. |
+| M3 Core | `jb/src/core` | Passed on 2026-06-12: T-300 built the core shell and T-310 verified the build, a minimal end-to-end job emitting all 8 stage names in order, and fail-fast `PrismConfigurationException` on invalid config. Unblocks T-400 (M4). |
 | M4 Pipeline | `jb/src/core` stage folders | Stages are implemented and proven one by one in definitive order. |
 
 M1 started with the web workbench. A minimal WPF project shell now exists, opens a real window, and references core directly; WPF parity work remains after API and core contracts stabilize.
@@ -141,7 +141,8 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-200 API Online End-to-End
 
-- `Status`: Review
+- `Status`: Done
+- `Orchestrator note`: Marked Done on 2026-06-12 after the T-210 smoke PASS confirmed the API is online end-to-end. This satisfies the M2 gate and unblocks T-300.
 - `Runtime agent`: Main thread
 - `Agent type`: worker
 - `Runtime profile`: `P1-feature-worker`
@@ -157,7 +158,8 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-210 API Smoke Test
 
-- `Status`: Ready
+- `Status`: Done
+- `Verification note`: Passed on 2026-06-12 (haiku verifier). `dotnet build jb/src/PRISM.sln` succeeded (0 errors, 14 warnings). API started on http://localhost:5000. `GET /PRISM/health` → 200 with readiness fields; `GET /PRISM/config` → 200 with config fields; non-multipart `POST /PRISM/process` → 400 with documented pre-core error payload (`INVALID_PAYLOAD`); minimal multipart (1 `.jpg` + 1 `.xlsx`) → 202 queued envelope with progress/result URLs; `GET /PRISM/jobs/{id}/progress` → 410 after terminal completion (documented replay behavior); `GET /PRISM/jobs/{id}/result` → 200 with BatchManifest listing all 8 stages in order (Imported→Classified→Matched→Ordered→Renamed→Generated→Transformed→Exported). Test image/xlsx were placeholders.
 - `Agent type`: worker
 - `Runtime profile`: `P2-verifier`
 - `Owner`: Verification agent
@@ -169,7 +171,9 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-300 Core Backend Shell
 
-- `Status`: Blocked by M2
+- `Status`: Done
+- `Runtime agent`: sonnet worker (2026-06-12)
+- `Orchestrator note`: Marked Done on 2026-06-12. Changes confined to `jb/src/core` (rewrote `Prism.cs` as a management-only facade and `Pipeline.cs` as the 8-stage boundary owner; added `PrismConfiguration.cs` with fail-fast validation, `PrismConfigurationException.cs`, `PrismConfigLocator.cs`, `Pipeline/StageShells.cs`). API `Process(...)` contract preserved. `dotnet build jb/src/PRISM.sln` succeeded (0 errors; 14 pre-existing warnings). Smoke run returned a Completed job whose RouteSummaries list all 8 stages in order. Pending formal T-310 verification before M3 is declared passed.
 - `Agent type`: worker
 - `Runtime profile`: `P4-critical-architecture`
 - `Owner`: Core backend agent
@@ -182,7 +186,9 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-310 Core Smoke Test
 
-- `Status`: Blocked by T-300
+- `Status`: Done
+- `Runtime agent`: haiku verifier (2026-06-12)
+- `Verification note`: Passed on 2026-06-12. `dotnet build jb/src/PRISM.sln` → 0 errors. Minimal multipart job (1 `.jpg` + 1 `.xlsx`) returned a Completed result whose RouteSummaries list all 8 stages in exact order (Imported→Classified→Matched→Ordered→Renamed→Generated→Transformed→Exported). Fail-fast verified by code inspection: `PrismConfiguration.Load()` throws `PrismConfigurationException` on invalid/missing config, invoked from the `Prism` constructor via `Initialize()`. (Note: fail-fast confirmed by inspection rather than a destructive runtime test, to avoid leaving the config broken.) Working tree left clean; config restored.
 - `Agent type`: worker
 - `Runtime profile`: `P2-verifier`
 - `Owner`: Verification agent
@@ -194,7 +200,8 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-320 Excel Module Foundation
 
-- `Status`: Review
+- `Status`: Done
+- `Orchestrator note`: Marked Done on 2026-06-12. Files stay inside `jb/src/core/Excel` (entry point `ModelBuilder.cs`), no `Pipeline.cs` integration as required, already committed in `c04dec0`, and compile clean as part of the T-210 solution build.
 - `Runtime agent`: Singer (`019eadeb-1e1d-7253-8fad-51f394afaec1`)
 - `Agent type`: worker
 - `Runtime profile`: `P1-feature-worker`
@@ -209,7 +216,8 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-330 Zip Module Foundation
 
-- `Status`: Review
+- `Status`: Done
+- `Orchestrator note`: Marked Done on 2026-06-12. Files stay inside `jb/src/core/Zip` (entry point `ZipHandler.cs`), no `Pipeline.cs` integration as required, already committed in `c04dec0`, and compile clean as part of the T-210 solution build.
 - `Runtime agent`: Averroes (`019eadeb-6892-72f0-ac90-2f07ca1c83b2`)
 - `Agent type`: worker
 - `Runtime profile`: `P1-feature-worker`
@@ -223,7 +231,8 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-400 Imported Stage
 
-- `Status`: Blocked by M3
+- `Status`: Ready
+- `Hold note`: M3 passed on 2026-06-12, so this ticket is now eligible. ON HOLD by user decision — the orchestrator paused the wave after M3; do not start T-400 (or any M4 stage) until the user gives the go-ahead.
 - `Agent type`: worker
 - `Runtime profile`: `P1-feature-worker`
 - `Owner`: Imported stage agent
