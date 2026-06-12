@@ -48,6 +48,13 @@ public sealed record InputExcelFileRecord
     /// Accepted byte length when known.
     /// </summary>
     public long? ByteLength { get; init; }
+
+    /// <summary>
+    /// Absolute path to a job-temp copy of the file when the API or caller has spilled the
+    /// uploaded bytes to disk. When populated, the Imported stage reads from this path.
+    /// When null, <see cref="SourceReference"/> is treated as the readable local file path.
+    /// </summary>
+    public string? TempFilePath { get; init; }
 }
 
 /// <summary>
@@ -64,4 +71,11 @@ public sealed record InputZipFileRecord
     /// Accepted byte length when known.
     /// </summary>
     public long? ByteLength { get; init; }
+
+    /// <summary>
+    /// Absolute path to a job-temp copy of the archive when the API or caller has spilled the
+    /// uploaded bytes to disk. When populated, the Imported stage reads from this path.
+    /// When null, <see cref="SourceReference"/> is treated as the readable local file path.
+    /// </summary>
+    public string? TempFilePath { get; init; }
 }

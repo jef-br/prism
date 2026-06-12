@@ -7,14 +7,67 @@ internal static class ImportStageShell
 {
     /// <summary>
     /// Runs the Imported stage for a job context.
-    /// T-400 will replace this body with real Importer delegation.
+    /// Delegates all normalization, zip extraction, and IEM construction to <see cref="Importer"/>.
+    /// KO records are stored in the context and do not stop the batch.
     /// </summary>
     /// <param name="context">Mutable per-job pipeline context.</param>
     /// <param name="configuration">Validated PRISM configuration.</param>
     internal static void Run(PipelineContext context, PrismConfiguration configuration)
     {
-        // TODO T-400: delegate to Importer.cs and ZipHandler.cs
+        string excelConfigPath = LocateExcelConfig();
+        ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(excelConfigPath);
+        Importer importer = new(configuration, modelBuilder);
+
+        string jobTempRoot = Path.Combine(Path.GetTempPath(), "PRISM");
+        ImportStageResult importResult = importer.Run(
+            context.JobID,
+            context.ImageRecords,
+            context.ExcelRecords,
+            context.ZipFileRecords,
+            jobTempRoot);
+
+        context.ImportResult = importResult;
+        context.KoRecordCount += importResult.ImageKoRecords.Count + importResult.ZipKoRecords.Count;
+
+        foreach (ExcelProcessingDiagnostic diagnostic in importResult.ExcelDiagnostics.Where(IsExcelKo))
+        {
+            context.AddWarning($"Excel KO: {diagnostic.ReasonCode} — {diagnostic.Message}");
+        }
+
         context.MarkStageCompleted(PipelineStageNames.Imported);
+    }
+
+    /// <summary>
+    /// Locates ExcelConfig.json next to the running assembly using PrismConfigLocator conventions.
+    /// </summary>
+    private static string LocateExcelConfig()
+    {
+        string? prismConfigPath = PrismConfigLocator.FindPrismConfigPath();
+        if (prismConfigPath is null)
+        {
+            throw new PrismConfigurationException(
+                "Prism_Config.json was not found; cannot locate ExcelConfig.json for the Imported stage.");
+        }
+
+        string coreDirectory = Path.GetDirectoryName(prismConfigPath)
+            ?? throw new PrismConfigurationException("Could not determine core configuration directory.");
+
+        string excelConfigPath = Path.Combine(coreDirectory, "Excel", "ExcelConfig.json");
+        if (!File.Exists(excelConfigPath))
+        {
+            throw new PrismConfigurationException(
+                $"ExcelConfig.json was not found at expected location: {excelConfigPath}");
+        }
+
+        return excelConfigPath;
+    }
+
+    /// <summary>
+    /// Determines whether an Excel diagnostic represents a KO item.
+    /// </summary>
+    private static bool IsExcelKo(ExcelProcessingDiagnostic diagnostic)
+    {
+        return diagnostic.Severity == ExcelDiagnosticSeverity.Error;
     }
 }
 
