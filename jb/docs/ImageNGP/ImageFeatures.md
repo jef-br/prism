@@ -133,9 +133,21 @@ Confidence scale: `very-high` ≥ 0.95 | `high` 0.85–0.94 | `medium` 0.70–0.
 
 ---
 
-## Open questions for architecture (deliverables 6–8)
+## Architecture decisions (deliverables 6–8)
 
-- Should `salient-bbox` be stored as a typed record or encoded as a flat float array for serialization efficiency?
-- `pose-type` and `body-visible` both require a skeleton/PAF model — should they share one detector pass?
-- `product-type-label` is high difficulty and medium confidence: how does it interact with the ProductType supplied via Excel? Is it overridden or used as a fallback?
-- `dominant-colors` extraction: is a perceptual color quantization (k-means in LAB space) sufficient, or is a palette-cluster approach needed for fashion accuracy?
+**`salient-bbox` storage**
+Use the existing `BoundingBox` struct (`jb/src/core/Images/Transform/BoundingBox.cs`). Add a method to return a flat `float[4]` `[x, y, w, h]` normalized [0.0–1.0] for serialization. The typed struct is the in-memory form; the flat array is the serialized form.
+
+**`pose-type` and `body-visible` detector sharing**
+Both features are computed in a single skeleton/PAF detector pass, gated on `skin-tone-area` exceeding a configured threshold. `body-visible` is evaluated before `pose-type` within that pass.
+
+**`product-type-label` vs Excel ProductType**
+Excel `ProductType` is authoritative. The detected `product-type-label` provides error-checking and supporting evidence; it becomes the authority only when Excel does not supply a ProductType value. Multiple ProductTypes may share one ImageFeature grouping — for example, sweater, hoodie, pullover, jacket, short coat, vest, and cardigan all map to the same `topwear-short` ImageFeature value. The label modulates confidence:
+- Match → high confidence corroboration.
+- No match → possible multiple-product indicator (medium confidence).
+- Extreme mismatch → **KO** for the image record.
+
+**`dominant-colors` extraction**
+Palette-cluster (LAB-space) approach. Search area determined before clustering:
+1. Spatial weighting: top-wear ProductTypes weight the top image half more; bottom-wear types weight the bottom half more.
+2. Background subtraction: a cluster touching all four edges is a background candidate. If it does not heavily intersect the salient mask (not the bbox), confirm it as background and subtract that region before the final palette-cluster run.

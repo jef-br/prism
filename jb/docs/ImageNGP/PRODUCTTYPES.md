@@ -18,7 +18,7 @@ Each slot lists primary phenotypes in preference order, separated by ` | `.
 
 **Orientation vocabulary:** `front`, `front-3-quarter`, `side`, `rear`, `top`, `bottom`, `interior`, `detail-view`
 **Occlusion vocabulary:** `full-product`, `mostly-visible`, `partially-occluded`
-**Presentation style vocabulary:** `clipping-path`, `on-ghost`, `on-model`, `flat-lay`, `packshot`, `detail`, `ambiance`, `lifestyle`, `scale-reference`, `exploded-view`
+**Presentation style vocabulary:** `clipping-path`, `on-ghost`, `on-model`, `flat-lay`, `packshot`, `detail`, `ambiance`, `lifestyle`, `scale-reference`, `illustration-technical-drawing`
 
 ---
 
@@ -54,11 +54,11 @@ T-shirts, shirts, blouses, polo shirts, sweaters, hoodies.
 det0 [front]     : front-on-model-full-product | ghost-front | front-packshot
 det1 [back]      : back-on-model-full-product | ghost-back | back-packshot
 det2 [side]      : side-on-model | ghost-side | side-packshot
-det3 [detail]    : detail-material | detail-stitching | detail-label | detail-hardware
+det3 [detail]    : closeup-image
 det4 [lifestyle] : lifestyle-hero | flatlay-styled
 det5 [front]     : front-on-model-partial | flatlay-front
-det6 [label]     : detail-label | packaging-shot
-det7 [material]  : detail-material | detail-stitching
+det6 [label]     : closeup-image | packaging-shot
+det7 [material]  : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -66,10 +66,10 @@ det7 [material]  : detail-material | detail-stitching
 | det0 | front | full-product | on-model > on-ghost > packshot | Primary hero; prefer human first |
 | det1 | rear | full-product | on-model > on-ghost > packshot | Back labels, print, construction |
 | det2 | side | full-product | on-model > on-ghost > packshot | Silhouette, sleeve length |
-| det3 | detail-view | partially-occluded | detail | Fabric, print, or hardware |
+| det3 | detail-view | partially-occluded | detail | Fabric, print, or hardware close-up |
 | det4 | front | full-product | lifestyle > flat-lay | Brand story / style context |
 | det5 | front | mostly-visible | on-model > flat-lay | Alternate angle or folded flat |
-| det6 | detail-view | mostly-visible | detail | Wash/care label |
+| det6 | detail-view | mostly-visible | detail | Wash/care label or branding tag |
 | det7 | detail-view | mostly-visible | detail | Material or stitching close-up |
 
 ---
@@ -81,11 +81,11 @@ Trousers, jeans, chinos, shorts, leggings, skirts.
 det0 [front]     : front-on-model-full-product | ghost-front | front-packshot
 det1 [back]      : back-on-model-full-product | ghost-back | back-packshot
 det2 [side]      : side-on-model | ghost-side | side-packshot
-det3 [detail]    : detail-material | detail-hardware | detail-stitching
+det3 [detail]    : closeup-image
 det4 [front]     : front-on-model-partial | flatlay-front
 det5 [lifestyle] : lifestyle-hero | flatlay-styled
-det6 [label]     : detail-label | packaging-shot
-det7 [material]  : detail-material
+det6 [label]     : closeup-image | packaging-shot
+det7 [material]  : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -108,11 +108,11 @@ Jackets, coats, parkas, blazers, gilets.
 det0 [front]     : front-on-model-full-product | ghost-front | front-packshot
 det1 [back]      : back-on-model-full-product | ghost-back | back-packshot
 det2 [side]      : side-on-model | ghost-side | side-packshot
-det3 [detail]    : detail-hardware | detail-material | detail-stitching
-det4 [interior]  : interior-shot | detail-label
+det3 [detail]    : closeup-image
+det4 [interior]  : interior-shot | closeup-image
 det5 [lifestyle] : lifestyle-hero
 det6 [front]     : front-on-model-partial | flatlay-front
-det7 [label]     : detail-label | packaging-shot
+det7 [label]     : closeup-image | packaging-shot | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -135,11 +135,11 @@ Dresses, midi dresses, maxi dresses, jumpsuits, playsuits.
 det0 [front]     : front-on-model-full-product | ghost-front | front-packshot
 det1 [back]      : back-on-model-full-product | ghost-back | back-packshot
 det2 [side]      : side-on-model | ghost-side
-det3 [detail]    : detail-material | detail-hardware | detail-stitching
+det3 [detail]    : closeup-image
 det4 [lifestyle] : lifestyle-hero | flatlay-styled
 det5 [front]     : front-on-model-partial | flatlay-front
-det6 [material]  : detail-material
-det7 [label]     : detail-label
+det6 [material]  : closeup-image
+det7 [label]     : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -158,9 +158,6 @@ det7 [label]     : detail-label
 ## 5. `footwear`
 Shoes, boots, sneakers, sandals, loafers, pumps.
 
-Reference: `DetOrderRules.json` `Shoes` rule:
-`det0=diagonal, det1=front, det2=side, det3=back, det4=bottom, det5=lifestyle`
-
 ```
 det0 [diagonal]  : diagonal-packshot | front-on-model-full-product
 det1 [front]     : front-packshot | front-on-model-partial
@@ -168,8 +165,8 @@ det2 [side]      : side-packshot | side-on-model
 det3 [back]      : back-packshot
 det4 [bottom]    : bottom-packshot
 det5 [top]       : top-packshot
-det6 [detail]    : detail-material | detail-hardware | detail-stitching
-det7 [lifestyle] : lifestyle-hero | on-model-with-accessories
+det6 [detail]    : closeup-image
+det7 [lifestyle] : lifestyle-hero | on-model-with-accessories | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -194,9 +191,9 @@ det1 [side]      : side-packshot
 det2 [back]      : back-packshot
 det3 [top]       : top-packshot
 det4 [interior]  : interior-shot
-det5 [detail]    : detail-hardware | detail-material | detail-stitching
+det5 [detail]    : closeup-image
 det6 [lifestyle] : lifestyle-hero | on-model-with-accessories
-det7 [label]     : detail-label | packaging-shot
+det7 [label]     : closeup-image | packaging-shot | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -220,10 +217,10 @@ det0 [front]     : packaging-shot | front-packshot
 det1 [back]      : back-packshot | packaging-shot
 det2 [side]      : side-packshot | packaging-shot
 det3 [top]       : top-packshot
-det4 [detail]    : detail-label | detail-material
-det5 [pack]      : packaging-shot | multi-angle-composite
+det4 [detail]    : closeup-image
+det5 [pack]      : packaging-shot
 det6 [lifestyle] : lifestyle-hero | scale-reference-shot
-det7 [label]     : detail-label
+det7 [label]     : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -247,10 +244,10 @@ det0 [front]     : packaging-shot | front-packshot
 det1 [back]      : back-packshot | packaging-shot
 det2 [side]      : side-packshot
 det3 [top]       : top-packshot
-det4 [detail]    : detail-label | detail-hardware
-det5 [pack]      : multi-angle-composite | packaging-shot
+det4 [detail]    : closeup-image
+det5 [pack]      : packaging-shot
 det6 [lifestyle] : lifestyle-hero
-det7 [label]     : detail-label
+det7 [label]     : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -273,11 +270,11 @@ Makeup (foundation, lipstick, mascara, eyeshadow palette), fragrance, nail polis
 det0 [front]     : packaging-shot | front-packshot | diagonal-packshot
 det1 [side]      : side-packshot | diagonal-packshot
 det2 [top]       : top-packshot
-det3 [detail]    : detail-label | detail-hardware | detail-material
+det3 [detail]    : closeup-image
 det4 [interior]  : interior-shot
 det5 [lifestyle] : lifestyle-hero | on-model-with-accessories
-det6 [pack]      : packaging-shot | multi-angle-composite
-det7 [label]     : detail-label
+det6 [pack]      : packaging-shot
+det7 [label]     : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -300,11 +297,11 @@ Headphones, earbuds, cables, USB hubs, phone cases, smart watches, portable char
 det0 [front]     : front-packshot | diagonal-packshot
 det1 [side]      : side-packshot | diagonal-packshot
 det2 [back]      : back-packshot
-det3 [detail]    : detail-hardware | detail-label
-det4 [pack]      : packaging-shot | exploded-view
+det3 [detail]    : closeup-image
+det4 [pack]      : packaging-shot
 det5 [lifestyle] : lifestyle-hero | scale-reference-shot
 det6 [top]       : top-packshot
-det7 [label]     : detail-label | multi-angle-composite
+det7 [label]     : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -313,7 +310,7 @@ det7 [label]     : detail-label | multi-angle-composite
 | det1 | side | full-product | packshot | Thickness, port positions |
 | det2 | rear | full-product | packshot | Back design, labels |
 | det3 | detail-view | mostly-visible | detail | Connector, button, LED indicator |
-| det4 | front | full-product | packshot | Box + contents exploded |
+| det4 | front | full-product | packshot | Box + contents |
 | det5 | front | full-product | lifestyle | In use / worn / connected |
 | det6 | top | full-product | packshot | Top-view layout |
 | det7 | detail-view | mostly-visible | detail | Model number / CE marks label |
@@ -328,10 +325,10 @@ det0 [front]     : front-packshot | diagonal-packshot
 det1 [side]      : side-packshot
 det2 [back]      : back-packshot
 det3 [top]       : top-packshot
-det4 [detail]    : detail-hardware | detail-label
+det4 [detail]    : closeup-image
 det5 [lifestyle] : lifestyle-hero | scale-reference-shot
-det6 [pack]      : packaging-shot | exploded-view
-det7 [interior]  : interior-shot | detail-hardware
+det6 [pack]      : packaging-shot
+det7 [interior]  : interior-shot | closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -352,13 +349,13 @@ Cushions, throws, blankets, towels, bath mats, bed linen sets, curtains.
 
 ```
 det0 [front]     : flatlay-front | front-packshot | front-on-model-full-product
-det1 [detail]    : detail-material | detail-stitching
+det1 [detail]    : closeup-image
 det2 [lifestyle] : lifestyle-hero | flatlay-styled
 det3 [side]      : side-packshot | front-packshot
 det4 [top]       : top-packshot | flatlay-front
 det5 [pack]      : packaging-shot | scale-reference-shot
-det6 [material]  : detail-material
-det7 [label]     : detail-label
+det6 [material]  : closeup-image
+det7 [label]     : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -382,10 +379,10 @@ det0 [front]     : front-packshot | diagonal-packshot
 det1 [top]       : top-packshot
 det2 [side]      : side-packshot
 det3 [interior]  : interior-shot | top-packshot
-det4 [detail]    : detail-material | detail-hardware
+det4 [detail]    : closeup-image
 det5 [lifestyle] : lifestyle-hero
 det6 [pack]      : packaging-shot | scale-reference-shot
-det7 [label]     : detail-label
+det7 [label]     : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -408,11 +405,11 @@ Action figures, dolls, plush toys, board games, puzzles, construction sets, lear
 det0 [front]     : front-packshot | diagonal-packshot | packaging-shot
 det1 [back]      : back-packshot | packaging-shot
 det2 [side]      : side-packshot
-det3 [detail]    : detail-hardware | detail-label
-det4 [pack]      : packaging-shot | exploded-view
+det3 [detail]    : closeup-image
+det4 [pack]      : packaging-shot
 det5 [lifestyle] : lifestyle-hero | scale-reference-shot
 det6 [top]       : top-packshot | flatlay-front
-det7 [label]     : detail-label | packaging-shot
+det7 [label]     : closeup-image | packaging-shot | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -421,7 +418,7 @@ det7 [label]     : detail-label | packaging-shot
 | det1 | rear | full-product | packshot > packaging | Box back with feature info |
 | det2 | side | full-product | packshot | Box side panel |
 | det3 | detail-view | mostly-visible | detail | Articulation joint, accessory, feature |
-| det4 | front | full-product | packshot/exploded | Contents laid out |
+| det4 | front | full-product | packshot | Contents laid out |
 | det5 | front | full-product | lifestyle/scale-ref | Child playing (scale reference) |
 | det6 | top | full-product | flat-lay | Components laid out flat |
 | det7 | detail-view | mostly-visible | detail | Age rating / safety label |
@@ -435,11 +432,11 @@ Power tools, hand tools, fixings (screws, bolts, brackets), adhesives, measuring
 det0 [front]     : front-packshot | diagonal-packshot
 det1 [side]      : side-packshot
 det2 [back]      : back-packshot
-det3 [detail]    : detail-hardware | detail-label
-det4 [pack]      : packaging-shot | exploded-view
+det3 [detail]    : closeup-image
+det4 [pack]      : packaging-shot
 det5 [lifestyle] : lifestyle-hero | scale-reference-shot
 det6 [top]       : top-packshot
-det7 [label]     : detail-label
+det7 [label]     : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -448,7 +445,7 @@ det7 [label]     : detail-label
 | det1 | side | full-product | packshot | Grip, length, switch position |
 | det2 | rear | full-product | packshot | Chuck, tail, battery compartment |
 | det3 | detail-view | mostly-visible | detail | Blade, bit, chuck, safety |
-| det4 | front | full-product | packshot/exploded | Kit contents or accessories |
+| det4 | front | full-product | packshot | Kit contents or accessories |
 | det5 | front | full-product | lifestyle/scale-ref | In-use context, scale |
 | det6 | top | full-product | packshot | Top view layout |
 | det7 | detail-view | mostly-visible | detail | CE/safety/spec label |
@@ -462,11 +459,11 @@ Plants, seed packets, garden tools, pots and planters, garden furniture, compost
 det0 [front]     : front-packshot | packaging-shot | lifestyle-hero
 det1 [side]      : side-packshot
 det2 [top]       : top-packshot | flatlay-front
-det3 [detail]    : detail-material | detail-label
+det3 [detail]    : closeup-image
 det4 [lifestyle] : lifestyle-hero
 det5 [pack]      : packaging-shot | scale-reference-shot
 det6 [back]      : back-packshot | packaging-shot
-det7 [label]     : detail-label
+det7 [label]     : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -489,11 +486,11 @@ Bikes, rackets, weights, dumbbells, yoga mats, helmets, protective gear, balls.
 det0 [front]     : front-packshot | diagonal-packshot
 det1 [side]      : side-packshot
 det2 [back]      : back-packshot
-det3 [detail]    : detail-hardware | detail-material
+det3 [detail]    : closeup-image
 det4 [lifestyle] : lifestyle-hero | front-on-model-full-product
 det5 [pack]      : packaging-shot | scale-reference-shot
 det6 [top]       : top-packshot
-det7 [label]     : detail-label
+det7 [label]     : closeup-image | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -517,10 +514,10 @@ det0 [front]     : front-packshot | diagonal-packshot | lifestyle-hero
 det1 [side]      : side-packshot
 det2 [back]      : back-packshot
 det3 [top]       : top-packshot
-det4 [detail]    : detail-material | detail-hardware
+det4 [detail]    : closeup-image
 det5 [lifestyle] : lifestyle-hero
-det6 [pack]      : packaging-shot | exploded-view | scale-reference-shot
-det7 [label]     : detail-label | interior-shot
+det6 [pack]      : packaging-shot | scale-reference-shot
+det7 [label]     : closeup-image | interior-shot | illustration-technical-drawing
 ```
 
 | Slot | Orientation | Occlusion | Presentation style | Notes |
@@ -531,7 +528,7 @@ det7 [label]     : detail-label | interior-shot
 | det3 | top | full-product | packshot | Surface, seat top |
 | det4 | detail-view | mostly-visible | detail | Joint, leg tip, fabric, wood grain |
 | det5 | front | full-product | lifestyle | Styled room context |
-| det6 | front | full-product | packshot/exploded/scale | Flat-pack contents or dimensions |
+| det6 | front | full-product | packshot/scale-reference | Flat-pack contents or dimensions |
 | det7 | detail-view | mostly-visible | detail | Care/maintenance label |
 
 ---
@@ -550,32 +547,29 @@ Features required to detect these phenotypes are defined in `ImageFeatures.md`.
 | `top-packshot` | footwear, bags-accessories, fmcg-packaged-food, fmcg-personal-care, electronics-small, electronics-large, homeware-hard, toys-children, diy-tools, sports-equipment, furniture |
 | `bottom-packshot` | footwear |
 | `front-on-model-full-product` | clothing-tops, clothing-bottoms, clothing-outerwear, clothing-dresses, footwear, sports-equipment |
-| `front-on-model-partial` | clothing-tops, clothing-bottoms, clothing-dresses |
+| `front-on-model-partial` | clothing-tops, clothing-bottoms, clothing-outerwear, clothing-dresses |
 | `back-on-model-full-product` | clothing-tops, clothing-bottoms, clothing-outerwear, clothing-dresses |
 | `side-on-model` | clothing-tops, clothing-bottoms, clothing-outerwear, clothing-dresses, footwear |
 | `ghost-front` | clothing-tops, clothing-bottoms, clothing-outerwear, clothing-dresses, bags-accessories |
 | `ghost-back` | clothing-tops, clothing-bottoms, clothing-outerwear, clothing-dresses |
 | `ghost-side` | clothing-tops, clothing-bottoms, clothing-outerwear, clothing-dresses |
-| `flatlay-front` | clothing-tops, clothing-bottoms, homeware-soft |
+| `flatlay-front` | clothing-tops, clothing-bottoms, homeware-soft, toys-children, gardening |
 | `flatlay-styled` | clothing-tops, clothing-bottoms, clothing-dresses, homeware-soft |
-| `detail-material` | clothing-tops, clothing-bottoms, clothing-outerwear, clothing-dresses, bags-accessories, homeware-soft, homeware-hard, sports-equipment, furniture |
-| `detail-stitching` | clothing-tops, clothing-bottoms, clothing-dresses, bags-accessories, homeware-soft |
-| `detail-label` | clothing-tops, clothing-bottoms, clothing-outerwear, clothing-dresses, bags-accessories, fmcg-packaged-food, fmcg-personal-care, beauty-cosmetics, electronics-small, electronics-large, homeware-soft, homeware-hard, toys-children, diy-tools, gardening, sports-equipment, furniture |
-| `detail-hardware` | clothing-outerwear, bags-accessories, beauty-cosmetics, electronics-small, electronics-large, toys-children, diy-tools, sports-equipment, furniture, homeware-hard |
-| `packaging-shot` | fmcg-packaged-food, fmcg-personal-care, beauty-cosmetics, electronics-small, electronics-large, toys-children, diy-tools, gardening |
+| `closeup-image` | all |
+| `packaging-shot` | clothing-tops, clothing-bottoms, clothing-outerwear, bags-accessories, fmcg-packaged-food, fmcg-personal-care, beauty-cosmetics, electronics-small, electronics-large, homeware-soft, homeware-hard, toys-children, diy-tools, gardening, sports-equipment, furniture |
 | `lifestyle-hero` | clothing-tops, clothing-bottoms, clothing-outerwear, clothing-dresses, footwear, bags-accessories, fmcg-packaged-food, fmcg-personal-care, beauty-cosmetics, homeware-soft, homeware-hard, toys-children, sports-equipment, furniture, gardening |
-| `interior-shot` | bags-accessories, beauty-cosmetics, electronics-large, homeware-hard, furniture |
-| `exploded-view` | electronics-small, electronics-large, toys-children, diy-tools, furniture |
-| `scale-reference-shot` | toys-children, diy-tools, gardening, sports-equipment, furniture |
-| `multi-angle-composite` | fmcg-packaged-food, fmcg-personal-care, electronics-small |
+| `interior-shot` | clothing-outerwear, bags-accessories, beauty-cosmetics, electronics-large, homeware-hard, furniture |
+| `scale-reference-shot` | fmcg-packaged-food, homeware-soft, toys-children, diy-tools, gardening, sports-equipment, furniture |
 | `on-model-with-accessories` | bags-accessories, beauty-cosmetics, footwear |
+| `illustration-technical-drawing` | all |
 
 ---
 
-## Open questions for architecture (deliverables 6–8)
+## Architecture decisions
 
-- Should `ProductType` be supplied solely from Excel metadata, or should a `product-type-label` ImageFeature provide a fallback / override when the Excel column is missing?
-- The `default` rule in `DetOrderRules.json` uses 9 slots (det0–det8) with keywords `pack`, `label`, `material` — these map closely to `packaging-shot`, `detail-label`, and `detail-material` phenotypes respectively. Should the rule file use phenotype ids directly, or is the keyword abstraction intentional?
-- Several product types (toys, electronics) benefit from `exploded-view` and `multi-angle-composite` — neither has a DetOrderRules.json keyword equivalent yet. New keywords `exploded` and `composite` would be needed.
-- For FMCG products, the front label is the packaging face and det0 and det6 both reference label content. Is there a risk of the same image mapping to two slots? A priority-ordering rule or de-duplication check would resolve this.
-- `furniture` det0 benefits from a lifestyle-hero in a room setting (not a studio packshot), which inverts the usual human→artificial preference. Should product-type-specific preference overrides be possible in DetOrderRules?
+- **ProductType authority**: Excel is authoritative for ProductType. `product-type-label` provides error-checking and supporting evidence; it becomes the authority only when Excel does not supply a ProductType value. Multiple ProductTypes may share one ImageFeature grouping (example: sweater, hoodie, pullover, jacket, short coat, vest, cardigan all map to `topwear-short`).
+- **DetOrderRules.json structure**: The current content of `DetOrderRules.json` is indicative only — it demonstrates the preferred JSON structure. Per-product-type det slot preferences are defined in this catalog and should be used as the authoritative source when implementing `DetOrderRules.json`.
+- **`illustration-technical-drawing`**: Covers exploded views, technical drawings, EU energy labels, multi-angle composites, vector drawings, icons, and badges. Always assigned the last configured DetOrder slot for any product type.
+- **det0 orientation**: Frontal orientation is required for det0 in all product types. Fallback order when frontal is unavailable: FRONT → SIDE → DIAGONAL. Back, top, and bottom orientations do not qualify for det0.
+- **Product-type-specific overrides**: No meta-override mechanism is needed. Per-product-type DetOrderRules entries already capture all variation (e.g., furniture det0 preferring `lifestyle-hero` over a pure packshot).
+- **Dual-slot risk**: Little to no risk of one image mapping to two slots or two images mapping to one slot. The phenotype qualification and preference-ordering system handles assignment deterministically.

@@ -515,6 +515,100 @@ button:disabled {
   gap: 4px;
 }
 
+.route-stage-name {
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.route-stage-badge {
+  border: 1px solid var(--prism-color-ok);
+  border-radius: var(--prism-radius);
+  color: var(--prism-color-ok);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  text-transform: uppercase;
+}
+
+.job-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--prism-radius);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 4px 12px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.job-status-done {
+  background: #e6f5ee;
+  color: var(--prism-color-ok);
+}
+
+.job-status-failed {
+  background: var(--prism-color-error-soft);
+  color: var(--prism-color-error);
+}
+
+.job-status-running {
+  background: #e9f2f6;
+  color: var(--prism-color-cool);
+}
+
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: var(--prism-radius);
+  background: var(--prism-color-accent);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0 18px;
+}
+
+.action-button:hover {
+  background: var(--prism-color-accent-strong);
+}
+
+.manifest-section {
+  margin-top: 16px;
+}
+
+.manifest-section-heading {
+  margin: 0 0 8px;
+  color: var(--prism-color-accent-strong);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.manifest-stage-list,
+.manifest-warning-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+.manifest-stage-list li,
+.manifest-warning-list li {
+  color: var(--prism-color-ink);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.manifest-warning-list li {
+  color: var(--prism-color-warm);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

@@ -64,14 +64,22 @@ internal static class PrismProcessIngressReader
         List<ImageRecord_INPUT> images = [];
         List<InputExcelFileRecord> excelFiles = [];
         List<InputZipFileRecord> zipFiles = [];
-        long totalSubmittedBytes = 0;
+        long totalSubmittedBytes;
         List<string> fieldErrors = [];
 
+        Guid jobID = Guid.NewGuid();
+        string jobTempDir = Path.Combine(Path.GetTempPath(), "prism", jobID.ToString());
+
+        totalSubmittedBytes = form.Files
+            .Where(f => string.Equals(f.Name, "input", StringComparison.OrdinalIgnoreCase))
+            .Sum(f => f.Length);
+
         AddRemoteInputRecords(processRequest.Input, images, excelFiles, zipFiles);
-        AddUploadedInputRecords(form.Files, configuration, images, excelFiles, zipFiles, ref totalSubmittedBytes, fieldErrors);
+        await AddUploadedInputRecords(form.Files, configuration, jobTempDir, images, excelFiles, zipFiles, fieldErrors);
 
         if (configuration.MaximumRequestBytes > 0 && totalSubmittedBytes > configuration.MaximumRequestBytes)
         {
+            CleanUpJobTempDir(jobTempDir);
             return PrismProcessIngressResult.FromError(CreateError(
                 httpRequest,
                 "REQUEST_TOO_LARGE",
@@ -82,6 +90,7 @@ internal static class PrismProcessIngressReader
 
         if (fieldErrors.Count > 0)
         {
+            CleanUpJobTempDir(jobTempDir);
             return PrismProcessIngressResult.FromError(CreateError(
                 httpRequest,
                 "INVALID_PAYLOAD",
@@ -92,6 +101,7 @@ internal static class PrismProcessIngressReader
 
         if (images.Count < configuration.MinimumImageCount || excelFiles.Count < configuration.MinimumExcelCount)
         {
+            CleanUpJobTempDir(jobTempDir);
             return PrismProcessIngressResult.FromError(CreateError(
                 httpRequest,
                 "INCOMPLETE_PAYLOAD",
@@ -100,7 +110,6 @@ internal static class PrismProcessIngressReader
                 ["request.Input:INCOMPLETE_PAYLOAD"]));
         }
 
-        Guid jobID = Guid.NewGuid();
         PrismJobRequest coreRequest = new()
         {
             JobID = jobID,
@@ -197,51 +206,81 @@ internal static class PrismProcessIngressReader
         }
     }
 
-    private static void AddUploadedInputRecords(
+    private static async Task AddUploadedInputRecords(
         IFormFileCollection files,
         PrismApiConfiguration configuration,
+        string jobTempDir,
         List<ImageRecord_INPUT> images,
         List<InputExcelFileRecord> excelFiles,
         List<InputZipFileRecord> zipFiles,
-        ref long totalSubmittedBytes,
         List<string> fieldErrors)
     {
         int inputIndex = 0;
         foreach (IFormFile file in files.Where(file => string.Equals(file.Name, "input", StringComparison.OrdinalIgnoreCase)))
         {
-            totalSubmittedBytes += file.Length;
             string extension = Path.GetExtension(file.FileName);
             string fieldPath = $"multipart.input[{inputIndex}]";
 
             if (ImageExtensions.Contains(extension))
             {
                 ValidateFileLength(file, configuration.MinimumImageBytes, configuration.MaximumImageBytes, fieldPath, fieldErrors);
+                string tempPath = await SpillToTempAsync(file, jobTempDir, inputIndex);
                 images.Add(new ImageRecord_INPUT
                 {
-                    InitialFullName = file.FileName
+                    InitialFullName = file.FileName,
+                    TempFilePath = tempPath
                 });
             }
             else if (string.Equals(extension, ".xlsx", StringComparison.OrdinalIgnoreCase))
             {
                 ValidateFileLength(file, configuration.MinimumExcelBytes, configuration.MaximumExcelBytes, fieldPath, fieldErrors);
+                string tempPath = await SpillToTempAsync(file, jobTempDir, inputIndex);
                 excelFiles.Add(new InputExcelFileRecord
                 {
                     SourceReference = file.FileName,
-                    ByteLength = file.Length
+                    ByteLength = file.Length,
+                    TempFilePath = tempPath
                 });
             }
             else if (string.Equals(extension, ".zip", StringComparison.OrdinalIgnoreCase))
             {
                 ValidateFileLength(file, 0, configuration.MaximumZipBytes, fieldPath, fieldErrors);
+                string tempPath = await SpillToTempAsync(file, jobTempDir, inputIndex);
                 zipFiles.Add(new InputZipFileRecord
                 {
                     SourceReference = file.FileName,
-                    ByteLength = file.Length
+                    ByteLength = file.Length,
+                    TempFilePath = tempPath
                 });
             }
 
             inputIndex++;
         }
+    }
+
+    private static async Task<string> SpillToTempAsync(IFormFile file, string jobTempDir, int index)
+    {
+        Directory.CreateDirectory(jobTempDir);
+        string safeFileName = $"{index:D4}_{Path.GetFileName(file.FileName)}";
+        string tempPath = Path.Combine(jobTempDir, safeFileName);
+
+        await using FileStream dest = new(tempPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        await file.CopyToAsync(dest);
+
+        return tempPath;
+    }
+
+    private static void CleanUpJobTempDir(string jobTempDir)
+    {
+        try
+        {
+            if (Directory.Exists(jobTempDir))
+            {
+                Directory.Delete(jobTempDir, recursive: true);
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private static void ValidateFileLength(

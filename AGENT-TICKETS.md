@@ -80,180 +80,18 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ## Tickets
 
-### T-000 Ticket Board Setup
-
-- `Status`: Done
-- `Agent type`: orchestrator
-- `Runtime profile`: `P0-orchestrator`
-- `Owner`: Main Codex thread
-- `Write scope`: `AGENT-TICKETS.md`
-- `Context`: `jb/docs/PRISM-index.md`, `AGENTFEEDBACK.md`
-- `Task`: Create this root ticket board with milestone gates, team rules, ticket format, initial tickets, and verification rules.
-- `Acceptance criteria`: `AGENT-TICKETS.md` exists, includes all initial tickets, and no production code is changed for setup.
-- `Runtime prompt`: No sub-agent needed. The orchestrator owns this setup.
-
-### T-050 Build Boundaries And Solution Setup
-
-- `Status`: Done
-- `Runtime agent`: Main thread plus API/WPF workers (`019eb08d-ad05-7761-a517-a779a52cd640`, `019eb08e-00a8-73a1-83f4-f13406b4d63d`)
-- `Agent type`: worker
-- `Runtime profile`: `P1-feature-worker`
-- `Owner`: Main Codex thread
-- `Write scope`: `jb/src`, project files, API/WPF startup shells, compile-only contract cleanup
-- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-pipeline-core.md`, `jb/docs/PRISM-workbench.md`, existing `jb/src` source files
-- `Task`: Create a buildable project/solution structure with separate build targets for API, full core, image transformations, image classification, web workbench, and WPF workbench.
-- `Acceptance criteria`: All requested projects exist; class-library projects build; API and WPF `dotnet run` succeed; web workbench remains npm-native and builds; no fake PRISM pipeline behavior is introduced.
-- `Review note`: Completed `jb/src/PRISM.sln`, `Directory.Build.props`, `Prism.Core.Contracts`, `Prism.Core.Images.Transform`, `Prism.Core.Images.Classify`, `Prism.Core`, `Prism.Api`, and `Prism.Workbench.Wpf`. API and WPF target .NET 10 because this machine has ASP.NET Core/Desktop 10 runtimes installed; class libraries target net8.0.
-- `Verification note`: Passed `dotnet build jb/src/PRISM.sln`, separate `dotnet build` for core/classify/transform/API/WPF, API `dotnet run --no-build` with `/PRISM/health` returning 200, WPF `dotnet run --no-build` with a real window staying open, `npm run typecheck`, `npm run build`, and `git diff --check`.
-- `Runtime prompt`: No sub-agent should repeat this setup. Future agents should use the project files created here and keep web workbench build/run commands npm-native.
-
-### T-100 Workbench Bootstrap
-
-- `Status`: Done
-- `Runtime agent`: Cicero (`019eacec-c4db-72d1-9776-5f4bd0160c75`)
-- `Agent type`: worker
-- `Runtime profile`: `P1-feature-worker` (started with inherited parent/default model)
-- `Owner`: Workbench agent
-- `Write scope`: `jb/src/workbench`, `jb/docs/PRISM-workbench.md` only if documentation must be clarified.
-- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-workbench.md`, `jb/docs/PRISM-api.md`, `jb/src/workbench/workbench.md`, `jb/src/workbench/web/index.tsx`
-- `Task`: Make the web workbench runnable as the first frontend milestone. Include upload surface, one job-parameter location, route display placeholders, and an API client boundary. Do not invent hidden pipeline behavior or fake PRISM-owned facts.
-- `Acceptance criteria`: The web workbench can start locally, renders without backend data, and has visible states for empty input, loading, API error, progress placeholder, and result placeholder.
-- `Review note`: Cicero completed the scaffold under `jb/src/workbench/web`. Dependencies were installed after user approval. `npm run typecheck` and `npm run build` pass locally.
-- `Dependency note`: The user approved installing `next`, `react`, `react-dom`, `typescript`, `@types/node`, `@types/react`, and `@types/react-dom`. `npm install` completed under `jb/src/workbench/web`.
-- `Audit note`: `npm audit --audit-level=moderate` reports vulnerabilities through `next@16.2.2`/`postcss` and suggests `npm audit fix --force` to install `next@16.2.7`. Do not run force fixes or change dependency versions without explicit approval.
-- `Verification note`: `npm run typecheck` passed, `npm run build` passed, and `npm run start` responded with HTTP 200 at `http://127.0.0.1:3000` on 2026-06-09. Source inspection confirms the scaffold keeps the `app`, `components`, `sections`, `services`, and `styles` folders and exposes the required empty, loading, API error, progress placeholder, and result placeholder states without backend data.
-- `Build-boundary note`: `T-050` added a separate runnable WPF workbench shell under `jb/src/workbench/wpf`; it opens a real window but does not yet implement full WPF parity.
-- `Runtime prompt`: You are the Workbench Bootstrap agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then the workbench/API docs and `jb/src/workbench` files. Work only in `jb/src/workbench` unless a workbench doc clarification is unavoidable. Make the web workbench runnable first, with upload surface, grouped job parameters, route placeholders, and API client boundary. Do not fake hidden pipeline behavior. Finish by listing changed files and the local start/smoke command.
-
-### T-110 Workbench Smoke Test
-
-- `Status`: Done
-- `Runtime agent`: Plato (`019eade7-e0e6-7c40-8c46-53a8be872a8e`)
-- `Agent type`: worker
-- `Runtime profile`: `P2-verifier`
-- `Owner`: Verification agent
-- `Write scope`: `AGENT-TICKETS.md` for result notes only, plus generated build/cache output if commands create it.
-- `Context`: `AGENT-TICKETS.md`, `jb/docs/PRISM-workbench.md`, workbench package/project files once they exist.
-- `Task`: Prove the web workbench starts locally and renders required states without backend data.
-- `Acceptance criteria`: Start command succeeds, smoke scenario is documented, and any failure is recorded with exact command/output summary.
-- `Verification note`: Plato ran `npm run typecheck`, `npm run build`, and `npm run start`; HTTP probe returned `STATUS:200` from `http://127.0.0.1:3000`. Source inspection confirmed empty input, loading, API error, progress placeholder, result placeholder, fixed route order, upload support, one grouped parameter location, and typed API client boundary.
-- `Runtime prompt`: You are the Workbench Verification agent for PRISM. Do not edit production code. Run the documented workbench start/build/smoke commands after T-100. Verify empty, loading, and error states can render without backend data. Update only ticket result notes if asked by the orchestrator. Finish with commands run, pass/fail result, and blockers.
-
-### T-200 API Online End-to-End
-
-- `Status`: Done
-- `Orchestrator note`: Marked Done on 2026-06-12 after the T-210 smoke PASS confirmed the API is online end-to-end. This satisfies the M2 gate and unblocks T-300.
-- `Runtime agent`: Main thread
-- `Agent type`: worker
-- `Runtime profile`: `P1-feature-worker`
-- `Owner`: API agent
-- `Write scope`: `jb/src/api`, API-facing contracts under `jb/src/core` only when needed, `jb/docs/PRISM-api.md` only if docs need clarification.
-- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-api.md`, `jb/docs/PRISM-pipeline-core.md`, `jb/src/api`, `jb/src/core/Prism.cs`
-- `Task`: Create the API host/routes for health, config, process, progress, and result. API is not considered online until routes call core and return documented shapes.
-- `Acceptance criteria`: API can call core for a minimal real smoke job, exposes progress/result URLs, and returns documented pre-core errors for invalid input.
-- `Prework note`: `T-050` created `jb/src/api/Prism.Api.csproj` and a runnable minimal API host. `/PRISM/health` returns 200, `/PRISM/config` reports configuration is not wired, and `/PRISM/process` returns 501. This does not satisfy T-200 because process/progress/result do not call core yet.
-- `Review note`: Main thread implemented real API endpoints for health, config, process, live progress SSE, and result retrieval. Added a minimal core adapter and shared job/result/progress contracts so API routes call `Prism.Process(...)` without implementing full pipeline behavior before T-300.
-- `Verification note`: Passed `dotnet build jb/src/PRISM.sln`. Started API on `http://127.0.0.1:5057`; `GET /PRISM/health` and `GET /PRISM/config` returned 200 with readiness/config fields; invalid non-multipart `POST /PRISM/process` returned documented pre-core error payload; minimal multipart request with one `.jpg` and one `.xlsx` returned a queued job envelope with progress/result URLs; `GET /PRISM/jobs/{JobID}/progress` streamed SSE route-stage events; `GET /PRISM/jobs/{JobID}/result` returned stored JSON result with `BatchManifest`.
-- `Runtime prompt`: You are the API Online agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then API and pipeline docs. Work in `jb/src/api` and only touch API-facing core contracts when required. Implement health/config/process/progress/result routes that call core end-to-end. Finish with changed files and API smoke command.
-
-### T-210 API Smoke Test
-
-- `Status`: Done
-- `Verification note`: Passed on 2026-06-12 (haiku verifier). `dotnet build jb/src/PRISM.sln` succeeded (0 errors, 14 warnings). API started on http://localhost:5000. `GET /PRISM/health` → 200 with readiness fields; `GET /PRISM/config` → 200 with config fields; non-multipart `POST /PRISM/process` → 400 with documented pre-core error payload (`INVALID_PAYLOAD`); minimal multipart (1 `.jpg` + 1 `.xlsx`) → 202 queued envelope with progress/result URLs; `GET /PRISM/jobs/{id}/progress` → 410 after terminal completion (documented replay behavior); `GET /PRISM/jobs/{id}/result` → 200 with BatchManifest listing all 8 stages in order (Imported→Classified→Matched→Ordered→Renamed→Generated→Transformed→Exported). Test image/xlsx were placeholders.
-- `Agent type`: worker
-- `Runtime profile`: `P2-verifier`
-- `Owner`: Verification agent
-- `Write scope`: `AGENT-TICKETS.md` for result notes only, plus generated build/cache output if commands create it.
-- `Context`: `AGENT-TICKETS.md`, `jb/docs/PRISM-api.md`, API project files once they exist.
-- `Task`: Prove API online behavior against documented routes and error payloads.
-- `Acceptance criteria`: Health/config respond, minimal process path calls core, progress/result shapes are exposed, invalid payload returns documented pre-core error shape.
-- `Runtime prompt`: You are the API Verification agent for PRISM. Do not edit production code. Run focused API smoke commands after T-200. Verify health/config/process/progress/result behavior and invalid payload errors. Finish with commands run, pass/fail result, and blockers.
-
-### T-300 Core Backend Shell
-
-- `Status`: Done
-- `Runtime agent`: sonnet worker (2026-06-12)
-- `Orchestrator note`: Marked Done on 2026-06-12. Changes confined to `jb/src/core` (rewrote `Prism.cs` as a management-only facade and `Pipeline.cs` as the 8-stage boundary owner; added `PrismConfiguration.cs` with fail-fast validation, `PrismConfigurationException.cs`, `PrismConfigLocator.cs`, `Pipeline/StageShells.cs`). API `Process(...)` contract preserved. `dotnet build jb/src/PRISM.sln` succeeded (0 errors; 14 pre-existing warnings). Smoke run returned a Completed job whose RouteSummaries list all 8 stages in order. Pending formal T-310 verification before M3 is declared passed.
-- `Agent type`: worker
-- `Runtime profile`: `P4-critical-architecture`
-- `Owner`: Core backend agent
-- `Write scope`: `jb/src/core`, core docs only if documentation must be clarified.
-- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-pipeline-core.md`, `jb/docs/PRISM-models.md`, `jb/src/core/Prism.cs`, `jb/src/core/Pipeline.cs`, `jb/src/core/Prism_Config.json`
-- `Task`: Build the global Prism backend shell: `Prism.cs`, config loading, request/result contracts, job lifecycle, and `Pipeline.cs` stage boundaries. Keep `Prism.cs` management-only.
-- `Acceptance criteria`: Core starts with validated config and can run one minimal end-to-end job path that emits every definitive stage name in order.
-- `Prework note`: `T-050` created buildable core project boundaries: `Prism.Core`, `Prism.Core.Contracts`, `Prism.Core.Images.Classify`, and `Prism.Core.Images.Transform`. These projects compile, but `Prism.cs`, config startup, request/result contracts, and a minimal stage-order job path are not implemented yet.
-- `Runtime prompt`: You are the Core Backend Shell agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then pipeline/model docs and core files. Work only in `jb/src/core` unless a core doc clarification is required. Build the Prism facade, config startup, request/result contracts, job lifecycle, and Pipeline stage shell. Preserve `Prism.cs` as readable management-only code. Finish with changed files and core smoke command.
-
-### T-310 Core Smoke Test
-
-- `Status`: Done
-- `Runtime agent`: haiku verifier (2026-06-12)
-- `Verification note`: Passed on 2026-06-12. `dotnet build jb/src/PRISM.sln` → 0 errors. Minimal multipart job (1 `.jpg` + 1 `.xlsx`) returned a Completed result whose RouteSummaries list all 8 stages in exact order (Imported→Classified→Matched→Ordered→Renamed→Generated→Transformed→Exported). Fail-fast verified by code inspection: `PrismConfiguration.Load()` throws `PrismConfigurationException` on invalid/missing config, invoked from the `Prism` constructor via `Initialize()`. (Note: fail-fast confirmed by inspection rather than a destructive runtime test, to avoid leaving the config broken.) Working tree left clean; config restored.
-- `Agent type`: worker
-- `Runtime profile`: `P2-verifier`
-- `Owner`: Verification agent
-- `Write scope`: `AGENT-TICKETS.md` for result notes only, plus generated build/cache output if commands create it.
-- `Context`: `AGENT-TICKETS.md`, `jb/docs/PRISM-pipeline-core.md`, core project files once they exist.
-- `Task`: Prove core startup/config validation and a minimal end-to-end job through all stage names.
-- `Acceptance criteria`: Core smoke command passes and verifies stage order exactly: Imported > Classified > Matched > Ordered > Renamed > Generated > Transformed > Exported.
-- `Runtime prompt`: You are the Core Verification agent for PRISM. Do not edit production code. Run the core build/smoke commands after T-300. Verify config startup and a minimal job emitting all definitive stage names in order. Finish with commands run, pass/fail result, and blockers.
-
-### T-320 Excel Module Foundation
-
-- `Status`: Done
-- `Orchestrator note`: Marked Done on 2026-06-12. Files stay inside `jb/src/core/Excel` (entry point `ModelBuilder.cs`), no `Pipeline.cs` integration as required, already committed in `c04dec0`, and compile clean as part of the T-210 solution build.
-- `Runtime agent`: Singer (`019eadeb-1e1d-7253-8fad-51f394afaec1`)
-- `Agent type`: worker
-- `Runtime profile`: `P1-feature-worker`
-- `Owner`: Excel module agent
-- `Write scope`: `jb/src/core/Excel`, `jb/docs/PRISM-excel.md` only if documentation must be clarified.
-- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-excel.md`, `jb/docs/PRISM-models.md`, `jb/src/core/Excel`
-- `Task`: Build the Excel module foundation in the existing `jb/src/core/Excel` folder. Implement the Internal Excel Model flow, header detection, primary-key validation, duplicate row/column handling, and `FamilyRecord` mapping according to docs. Do not integrate into `Pipeline.cs` yet.
-- `Acceptance criteria`: Excel module code is internally coherent, respects existing folder structure, exposes a clear entry point for later Imported-stage integration, and includes a local smoke/test path where possible.
-- `Review note`: Singer completed the Excel foundation inside `jb/src/core/Excel` only. Entry point is `ModelBuilder.BuildFromExcelFiles(...)`. Reported smoke compile/test passed in a temporary `net10.0` project with result `records=2; diagnostics=2; invalidKey=True; mergedFamily=True; conflict=True`. No pipeline/API/workbench/docs integration was touched.
-- `Build-boundary note`: `T-050` links `FamilyRecord` into `Prism.Core.Contracts` because image/input contract types expose family candidates. Excel itself remains owned by `Prism.Core` until Imported-stage integration.
-- `Runtime prompt`: You are the Excel Module Foundation agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then Excel/model docs and the existing `jb/src/core/Excel` files. Work only in `jb/src/core/Excel` unless a focused Excel doc clarification is required. Build the Excel module foundation in the existing folder structure: header detection, primary key validation, duplicate handling, IEM construction, and FamilyRecord mapping. Do not edit `Pipeline.cs` or integrate with other stages. Finish with changed files, smoke/test command if available, and blockers.
-
-### T-330 Zip Module Foundation
-
-- `Status`: Done
-- `Orchestrator note`: Marked Done on 2026-06-12. Files stay inside `jb/src/core/Zip` (entry point `ZipHandler.cs`), no `Pipeline.cs` integration as required, already committed in `c04dec0`, and compile clean as part of the T-210 solution build.
-- `Runtime agent`: Averroes (`019eadeb-6892-72f0-ac90-2f07ca1c83b2`)
-- `Agent type`: worker
-- `Runtime profile`: `P1-feature-worker`
-- `Owner`: Zip module agent
-- `Write scope`: `jb/src/core/Zip`, zip-related IO docs only if documentation must be clarified.
-- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-io-import.md`, `jb/docs/PRISM-api.md`, `jb/docs/PRISM-models.md`, `jb/src/core/Zip`
-- `Task`: Build the Zip module foundation in the existing `jb/src/core/Zip` folder. Implement zip extraction policy, member triage, encrypted/corrupt member KO classification, and fixed output layout constants according to docs. Do not integrate into `Pipeline.cs` yet.
-- `Acceptance criteria`: Zip module code is internally coherent, respects existing folder structure, exposes a clear entry point for later Imported/Exported-stage integration, and includes a local smoke/test path where possible.
-- `Review note`: Averroes completed the Zip foundation inside `jb/src/core/Zip` only. Entry point is `ZipHandler.ExtractProcessableMembers(...)`. Reported isolated classlib smoke build passed with `dotnet build .tmp\\zip-smoke-t330\\ZipSmoke.csproj --no-restore`; `git diff --check -- jb/src/core/Zip` passed. `ZipLayout.json` was deleted because docs say `OK`, `KO`, and `manifest.json` are fixed constants, not configurable.
-- `Runtime prompt`: You are the Zip Module Foundation agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then IO/import, API, and model docs plus the existing `jb/src/core/Zip` files. Work only in `jb/src/core/Zip` unless a focused zip doc clarification is required. Build the Zip module foundation in the existing folder structure: extraction policy, member triage, encrypted/corrupt member KO classification, and fixed OK/KO/manifest layout constants. Do not edit `Pipeline.cs` or integrate with other stages. Finish with changed files, smoke/test command if available, and blockers.
-
-### T-400 Imported Stage
-
-- `Status`: Ready
-- `Hold note`: M3 passed on 2026-06-12, so this ticket is now eligible. ON HOLD by user decision — the orchestrator paused the wave after M3; do not start T-400 (or any M4 stage) until the user gives the go-ahead.
-- `Agent type`: worker
-- `Runtime profile`: `P1-feature-worker`
-- `Owner`: Imported stage agent
-- `Write scope`: import-related files under `jb/src/core`, import docs only if clarification is required.
-- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-io-import.md`, `jb/docs/PRISM-excel.md`, `jb/docs/PRISM-models.md`
-- `Task`: Implement import normalization, Excel intake, zip/local/remote input handling, and import KO behavior according to docs.
-- `Acceptance criteria`: Imported stage is tested and proven before Classified begins.
-- `Runtime prompt`: You are the Imported Stage agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then IO/import, Excel, and model docs. Work only on import-related core files. Implement and test Imported stage behavior. Do not start classification work. Finish with changed files and stage test command.
-
 ### T-500 Classified Stage
 
-- `Status`: Blocked by T-400
+- `Status`: Ready
 - `Agent type`: worker
 - `Runtime profile`: `P4-critical-architecture`
 - `Owner`: Classified stage agent
 - `Write scope`: classification-related files under `jb/src/core`, classification docs/todos only if clarification is required.
-- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-classify.md`, `jb/docs/PRISM-models.md`, `jb/src/core/Images/Classify/jbtodo.md`
-- `Task`: Implement visual dedupe, temporary CLIP boundary through `ImageClassifier.cs`, ImageFeature storage, and selected/candidate ImageNGP storage.
+- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-classify.md`, `jb/docs/PRISM-models.md`, `jb/docs/ImageNGP/imagePhenotypes.md`, `jb/docs/ImageNGP/ImageFeatures.md`, `jb/docs/ImageNGP/PRODUCTTYPES.MD`, `jb/src/core/Images/Classify/jbtodo.md`
+- `Task`: Implement visual dedupe, temporary CLIP boundary through `ImageClassifier.cs`, ImageFeature storage, and selected/candidate ImageNGP storage. Phenotype taxonomy is finalized: 26 phenotypes in `imagePhenotypes.md`. Phenotype assignment is always a hard assignment — no soft probability vectors.
 - `Acceptance criteria`: Classified stage is tested and proven before Matched begins.
 - `Prework note`: `T-050` added `Prism.Core.Images.Classify.csproj` and moved the classifier boundary to `jb/src/core/Images/Classify/ImageClassifier.cs` so the classification slice builds separately. Actual classification behavior remains unimplemented.
-- `Runtime prompt`: You are the Classified Stage agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then classification/model docs and classification todo. Work only on classification-related core files. Implement and test Classified stage behavior through `ImageClassifier.cs`. Do not start matching work. Finish with changed files and stage test command.
+- `Runtime prompt`: You are the Classified Stage agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then classification/model docs, ImageNGP taxonomy docs, and classification todo. Work only on classification-related core files. Implement and test Classified stage behavior through `ImageClassifier.cs`. Phenotype assignment is always a hard assignment. Do not start matching work. Finish with changed files and stage test command.
 
 ### T-600 Matched Stage
 
@@ -274,10 +112,10 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 - `Runtime profile`: `P1-feature-worker`
 - `Owner`: Ordered stage agent
 - `Write scope`: ordering-related files under `jb/src/core`, order docs/config only if clarification is required.
-- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-order-rename.md`, `jb/docs/PRISM-match.md`, `jb/docs/PRISM-models.md`
-- `Task`: Implement ImageNGP/DetOrder ordering and ordering evidence.
+- `Context`: `jb/docs/PRISM-index.md`, `jb/docs/PRISM-order-rename.md`, `jb/docs/PRISM-match.md`, `jb/docs/PRISM-models.md`, `jb/docs/ImageNGP/PRODUCTTYPES.MD`, `jb/docs/ImageNGP/imagePhenotypes.md`
+- `Task`: Implement ImageNGP/DetOrder ordering and ordering evidence. Key architecture decisions: (1) phenotype assignment is always a hard assignment — no soft probability vectors; (2) `closeup-image` is the single close-up phenotype (merged detail-*); (3) `illustration-technical-drawing` always gets the last configured det slot; (4) det0 fallback orientation order: FRONT → SIDE → DIAGONAL; (5) per-product-type DetOrderRules are the authoritative slot specification — see `jb/docs/ImageNGP/PRODUCTTYPES.MD`.
 - `Acceptance criteria`: Ordered stage is tested and proven before Renamed begins.
-- `Runtime prompt`: You are the Ordered Stage agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then order/rename, match, and model docs. Work only on ordering-related core files. Implement and test Ordered stage behavior. Do not start renaming work. Finish with changed files and stage test command.
+- `Runtime prompt`: You are the Ordered Stage agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then order/rename, match, model docs, and the ImageNGP taxonomy docs (PRODUCTTYPES.MD, imagePhenotypes.md). Work only on ordering-related core files. Implement and test Ordered stage behavior. Do not start renaming work. Finish with changed files and stage test command.
 
 ### T-800 Renamed Stage
 
@@ -328,7 +166,7 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 - `Acceptance criteria`: Exported stage is tested and proven, and full pipeline smoke passes through all definitive stages.
 - `Runtime prompt`: You are the Exported Stage agent for PRISM. You are not alone in the codebase; do not revert others' edits. Read `jb/docs/PRISM-index.md`, then API, pipeline, and model docs. Work only on export-related core files. Implement and test Exported stage zip/json output and `manifest.json`. Finish with changed files and full pipeline smoke command.
 
-### T-999 Frozen Fixture Watch
+### T-9999 Frozen Fixture Watch
 
 - `Status`: Blocked
 - `Agent type`: orchestrator
@@ -339,6 +177,28 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 - `Task`: Keep the `jb/Testing` fixture folder structure todo frozen.
 - `Acceptance criteria`: No agent implements or rewrites fixture folder structure until the user explicitly thaws the todo.
 - `Runtime prompt`: No sub-agent should receive this ticket until the user explicitly thaws `jb/src/jbtodo.md`.
+
+## Archive — Completed Tickets
+
+All tickets below reached `Done`. Retained here for context; do not re-open or re-implement.
+
+| Ticket | Title | Done date | Key outcome |
+|---|---|---|---|
+| T-000 | Ticket Board Setup | 2026-06-09 | `AGENT-TICKETS.md` created with milestone gates, team rules, and ticket format. |
+| T-050 | Build Boundaries & Solution Setup | 2026-06-10 | `PRISM.sln` with 7 projects (Core.Contracts, Core, Classify, Transform, Api, Wpf, web). M0 gate passed. |
+| T-100 | Workbench Bootstrap | 2026-06-09 | Web workbench scaffold: upload, route placeholders, API client. M1 gate passed. |
+| T-110 | Workbench Smoke Test | 2026-06-09 | HTTP 200 at `localhost:3000`; all required states confirmed by inspection. |
+| T-150 | Integration Test Fixtures | 2026-06-12 | xUnit project + 4 integration tests using SPACINI29/TINY; 8-stage route order asserted. |
+| T-200 | API Online End-to-End | 2026-06-12 | Health, config, process, SSE progress, result routes wired to core. M2 gate passed. |
+| T-210 | API Smoke Test | 2026-06-12 | All routes verified; BatchManifest with 8 stages in order returned for minimal job. |
+| T-300 | Core Backend Shell | 2026-06-12 | `Prism.cs` facade + `Pipeline.cs` 8-stage boundary; config fail-fast; minimal job smoke passed. M3 gate passed. |
+| T-310 | Core Smoke Test | 2026-06-12 | 8-stage order verified; fail-fast confirmed by inspection. |
+| T-320 | Excel Module Foundation | 2026-06-12 | `ModelBuilder.cs` entry point; IEM, header detection, dedup, FamilyRecord mapping. |
+| T-330 | Zip Module Foundation | 2026-06-12 | `ZipHandler.ExtractProcessableMembers`; extraction policy, encrypted/corrupt KO, fixed OK/KO layout. |
+| T-400 | Imported Stage | 2026-06-12 | `Importer.cs` fully implemented; `ImageRecord_INPUT` with provenance fields; API ingress spills uploads to `%TEMP%/prism/{jobID}/` so `TempFilePath` is set before enqueue. `SixLabors.ImageSharp` upgraded from 3.1.5 → 3.1.12 (Apache 2.0, CVEs resolved) on 2026-06-15. |
+| T-workbench-polish | Web Workbench Result & Route Display | 2026-06-15 | JSON manifest display; ZIP download button; job status badge; stage name heading; conditional field rendering. |
+
+---
 
 ## Verification Rules
 

@@ -16,7 +16,7 @@ Classification and purpose-built analyzers produce **ImageFeatures**. An ImageFe
 
 `TypeOfShot` is not the canonical ImageNGP list. It may remain one ImageFeature or be replaced by more precise ImageFeatures when the ImageNGP taxonomy is defined.
 
-The next separate task is to list all possible ImageNGPs using the currently available ImageFeature information.
+The ImageNGP phenotype taxonomy is being finalized in `jb/docs/ImageNGP/PRODUCTTYPES.md` and `jb/docs/ImageNGP/imagePhenotypes.md`. T-500 (Classified Stage) is blocked until those documents are complete.
 
 ---
 

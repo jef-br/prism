@@ -23,7 +23,7 @@ export function StageRouteList({ events }: StageRouteListProps) {
   }
 
   return (
-    <ol className="route-list" aria-label="PRISM route stage placeholders">
+    <ol className="route-list" aria-label="PRISM pipeline stages">
       {PRISM_ROUTE_STAGES.map((stage) => {
         const event = latestEventByStage.get(stage);
         const completedCount = event
@@ -40,40 +40,47 @@ export function StageRouteList({ events }: StageRouteListProps) {
         return (
           <li className={event ? "route-stage route-stage-live" : "route-stage"} key={stage}>
             <div className="route-stage-header">
-              <span>Source stage: {stage}</span>
-              <small>{event ? "SSE data received" : "Placeholder"}</small>
+              <span className="route-stage-name">{stage}</span>
+              {event && <small className="route-stage-badge">received</small>}
             </div>
 
             {event ? (
               <dl className="fact-list">
-                <div>
-                  <dt>Current item</dt>
-                  <dd>{currentItem ?? "Not supplied"}</dd>
-                </div>
-                <div>
-                  <dt>Completed</dt>
-                  <dd>
-                    {completedCount ?? "?"} / {totalCount ?? "?"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Severity</dt>
-                  <dd>{severity ?? "Not supplied"}</dd>
-                </div>
-                <div>
-                  <dt>Safe message</dt>
-                  <dd>{safeMessage ?? "Not supplied"}</dd>
-                </div>
-                <div>
-                  <dt>Timestamp</dt>
-                  <dd>{timestamp ?? "Not supplied"}</dd>
-                </div>
+                {(completedCount !== undefined || totalCount !== undefined) && (
+                  <div>
+                    <dt>Progress</dt>
+                    <dd>
+                      {completedCount ?? "?"} / {totalCount ?? "?"}
+                    </dd>
+                  </div>
+                )}
+                {currentItem && (
+                  <div>
+                    <dt>Current item</dt>
+                    <dd>{currentItem}</dd>
+                  </div>
+                )}
+                {severity && (
+                  <div>
+                    <dt>Severity</dt>
+                    <dd>{severity}</dd>
+                  </div>
+                )}
+                {safeMessage && (
+                  <div>
+                    <dt>Message</dt>
+                    <dd>{safeMessage}</dd>
+                  </div>
+                )}
+                {timestamp && (
+                  <div>
+                    <dt>Timestamp</dt>
+                    <dd>{timestamp}</dd>
+                  </div>
+                )}
               </dl>
             ) : (
-              <p className="placeholder-text">
-                No source-stage data has been received for {stage}. Friendly display waits for API
-                progress or result data.
-              </p>
+              <p className="placeholder-text">Waiting for progress data.</p>
             )}
           </li>
         );

@@ -240,6 +240,12 @@ Used in `BatchManifest`, API errors, and workbench diagnostics.
 - Skin-tone evidence
 - Object bounds and background state
 
+**Feature storage design decisions**
+- `salient-bbox` uses `BoundingBox` (`jb/src/core/Images/Transform/BoundingBox.cs`) in memory; serialized as a flat `float[4]` via a method on that struct.
+- `pose-type` and `body-visible` share one skeleton/PAF detector pass, gated by `skin-tone-area` exceeding a configured threshold; `body-visible` is evaluated first within that pass.
+- `product-type-label` interacts with Excel `ProductType` via confidence modulation: match corroborates, no match flags possible multiple products, extreme mismatch causes a KO.
+- `dominant-colors` uses spatially-weighted palette-cluster (LAB space), with a background subtraction step driven by the salient mask before the final palette run.
+
 **`ImageNGP`** is the selected image phenotype derived from a combination of ImageFeatures. It is not the list of individual features. Examples of the intended phenotype shape are `PAP_FRONT`, `JEANS_GHOST_FRONT`, `JEANS_BUTT`, and `JEANS_GHOST_DETAIL`.
 
 **`ImageRecord_LAMBDA.cs`** owns measured per-image state and derived classification/order summaries:

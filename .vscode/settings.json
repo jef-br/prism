@@ -1,3 +1,83 @@
 {
-    "folder-color.pathColors": []
+    "folder-color.pathColors": [
+        {
+            "extension": "md",
+            "color": "foldercolorizer.color_d75f00"
+        },
+        {
+            "filePath": "prism\\.gitignore",
+            "color": "foldercolorizer.color_5f87af"
+        },
+        {
+            "extension": "csproj",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "extension": "sln",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "extension": "props",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Excel\\",
+            "color": "foldercolorizer.color_5fafaf"
+        },
+        {
+            "folderPath": "bin",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "tmp",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "github",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "claude",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "prism\\.vscode\\",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\",
+            "isFolderOnly": true,
+            "color": "foldercolorizer.color_ff0000"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\api",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\workbench",
+            "color": "foldercolorizer.color_00af00"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core",
+            "color": "foldercolorizer.color_00afff"
+        }
+    ],
+    "folder-color.favoriteColors": [
+        "foldercolorizer.color_005fff",
+        "foldercolorizer.color_ffd700",
+        "foldercolorizer.color_00ffff",
+        "foldercolorizer.color_008080",
+        "foldercolorizer.color_0087ff",
+        "foldercolorizer.color_0000ff",
+        "foldercolorizer.color_626262",
+        "foldercolorizer.color_5f5f5f",
+        "foldercolorizer.color_9e9e9e",
+        "foldercolorizer.color_121212",
+        "foldercolorizer.color_00af00",
+        "foldercolorizer.color_5fd700",
+        "foldercolorizer.color_ffaf00",
+        "foldercolorizer.color_ff0087",
+        "foldercolorizer.color_ffafff",
+        "foldercolorizer.color_d75f00"
+    ]
 }

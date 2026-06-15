@@ -217,55 +217,16 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 
 ---
 
-### `detail-material`
+### `closeup-image`
 
 | Field | Value |
 |---|---|
-| **Phenotype id** | `detail-material` |
-| **Description** | Extreme close-up of the product's material, fabric, or texture. The product fills most or all of the frame; overall product shape is not visible. |
-| **Required features** | `occlusion-level = closeup`, `material-texture-visible = true`, `product-coverage-ratio ≥ 0.85`, `hero-is-human = FALSE` |
-| **Optional features** | `intersection-count = 3 OR 4`, `crop-tightness ≥ 0.9` |
+| **Phenotype id** | `closeup-image` |
+| **Description** | Close-up of any product detail — fabric, texture, stitching, hardware, label, tag, or component — where the detail fills most or all of the frame and the image content intersects with at least one image border. No human present. Product-detail purpose only. Consolidates all close-up detail phenotypes (material, stitching, label, hardware). |
+| **Required features** | `hero-is-human = FALSE`, `intersection-count ≥ 1`, `occlusion-level = closeup` |
+| **Optional features** | `material-texture-visible`, `text-present`, `logo-present`, `crop-tightness ≥ 0.85`, `product-coverage-ratio ≥ 0.80` |
 | **easy_to_detect** | true |
-| **Rationale** | High crop-tightness + high product-coverage-ratio + intersection of multiple borders is geometrically distinctive and detectable with pure OpenCV metrics. |
-
----
-
-### `detail-stitching`
-
-| Field | Value |
-|---|---|
-| **Phenotype id** | `detail-stitching` |
-| **Description** | Close-up showing stitching, seams, or construction details of a garment or leather goods item. |
-| **Required features** | `occlusion-level = closeup`, `material-texture-visible = true`, `product-coverage-ratio ≥ 0.85` |
-| **Optional features** | `intersection-count ≥ 2` |
-| **easy_to_detect** | false |
-| **Rationale** | Indistinguishable from `detail-material` by geometry alone; requires texture-type classification (linear stitch patterns vs. woven fabric). |
-
----
-
-### `detail-label`
-
-| Field | Value |
-|---|---|
-| **Phenotype id** | `detail-label` |
-| **Description** | Close-up of a product label, care instructions tag, or branding tag. |
-| **Required features** | `occlusion-level = closeup`, `text-present = true`, `logo-present = true OR packaging-visible = false`, `hero-is-human = FALSE` |
-| **Optional features** | `crop-tightness ≥ 0.85` |
-| **easy_to_detect** | true |
-| **Rationale** | Text presence + close crop is reliably detected with OCR (Tesseract on CPU) + crop-tightness heuristic. |
-
----
-
-### `detail-hardware`
-
-| Field | Value |
-|---|---|
-| **Phenotype id** | `detail-hardware` |
-| **Description** | Close-up of a hardware or accessory component — zipper, buckle, clasp, button, sole unit. |
-| **Required features** | `occlusion-level = closeup`, `material-texture-visible = false`, `hero-is-human = FALSE`, `product-coverage-ratio ≥ 0.85` |
-| **Optional features** | `background-type = SOLIDCOLOR`, `reflection-present` |
-| **easy_to_detect** | false |
-| **Rationale** | Hardware close-ups share geometry with material close-ups; distinguishing them requires object-level classification (metallic surfaces, geometric shapes vs. textile). |
+| **Rationale** | Border intersection (at least one edge touched) is a geometric invariant of all product detail close-ups and is detectable with very high confidence using salient-object bounds. Combined with `occlusion-level = closeup` and no human, this is a reliable and discriminating signal on CPU regardless of the specific detail type. |
 
 ---
 
@@ -300,11 +261,11 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 | Field | Value |
 |---|---|
 | **Phenotype id** | `lifestyle-context` |
-| **Description** | Atmospheric or mood image where the product is partially visible, in use, or in context — not the primary focus. |
-| **Required features** | `lifestyle-background = true`, `occlusion-level = partially-occluded OR mostly-visible`, `product-coverage-ratio ≤ 0.40` |
-| **Optional features** | `hero-is-human = TRUE`, `intersection-count ≥ 1` |
+| **Description** | Catch-all for non-packshot images: any image showing the product in a real-world, marketing, or ambient context that does not qualify as a packshot phenotype. Generic marketing photographs qualify. The primary PRISM distinction is packshot-family (on-model, ghost, floating, packshot) vs. non-packshot — `lifestyle-context` is the residual class for all images with a lifestyle background that do not fit a more specific packshot phenotype. Product coverage may range from prominent to incidental. |
+| **Required features** | `lifestyle-background = true` |
+| **Optional features** | `hero-is-human = TRUE OR FALSE`, `occlusion-level` (any), `indoor = true OR outdoor = true`, `intersection-count ≥ 1` |
 | **easy_to_detect** | false |
-| **Rationale** | Low product coverage in a busy lifestyle scene makes it hard to distinguish from a generic scene photograph. Product detection in context requires object detection model. |
+| **Rationale** | As a catch-all residual class, `lifestyle-context` is assigned when no other phenotype can be confidently asserted for an image with a lifestyle background. Lifestyle background detection is reliable; the assignment decision is driven by elimination rather than direct detection. |
 
 ---
 
@@ -321,16 +282,16 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 
 ---
 
-### `exploded-view`
+### `illustration-technical-drawing`
 
 | Field | Value |
 |---|---|
-| **Phenotype id** | `exploded-view` |
-| **Description** | Product components shown separated and arranged to indicate assembly or contents. Common for electronics kits, furniture flat-packs, DIY sets. |
-| **Required features** | `multiple-products = true`, `hero-is-human = FALSE`, `background-type = SOLIDCOLOR OR STUDIO`, `overlap-count = 0` |
-| **Optional features** | `white-background = true`, `text-present = true` |
+| **Phenotype id** | `illustration-technical-drawing` |
+| **Description** | An image that is primarily a graphic, schematic, or synthetic composition rather than a photograph. Covers: technical drawings (assembly instructions, furniture flat-pack diagrams), EU energy labels, exploded-view compositions, multi-angle composites, vector drawings, icons, and badges. Always assigned the last configured DetOrder slot. |
+| **Required features** | `hero-is-human = FALSE` |
+| **Optional features** | `text-present = true`, `multiple-products = true`, `overlap-count = 0`, `white-background = true`, `logo-present = true` |
 | **easy_to_detect** | false |
-| **Rationale** | Multiple separated objects with no overlap is geometrically distinctive, but distinguishing an exploded view from a multi-product packshot requires understanding spatial arrangement intent. |
+| **Rationale** | The boundary between a photograph and a graphic or schematic requires semantic understanding (vector lines, synthetic rendering, scale-drawing cues). On CPU without a specialized model, reliable detection requires classification labels from the CLIP model. |
 
 ---
 
@@ -386,19 +347,6 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 
 ---
 
-### `multi-angle-composite`
-
-| Field | Value |
-|---|---|
-| **Phenotype id** | `multi-angle-composite` |
-| **Description** | A single image file containing multiple product views arranged as a composite (e.g., front + back + side in one image). |
-| **Required features** | `multiple-products = true OR overlap-count ≥ 2`, `hero-is-human = FALSE`, `image-occupancy ≥ 0.70` |
-| **Optional features** | `white-background = true`, `text-present = true` |
-| **easy_to_detect** | true |
-| **Rationale** | Multiple distinct product silhouettes with no spatial overlap, arranged in a grid pattern, is detectable by contour analysis. High image-occupancy + multiple separated bounding boxes is a strong signal. |
-
----
-
 ### `size-chart`
 
 | Field | Value |
@@ -409,6 +357,8 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 | **Optional features** | `logo-present = true`, `packaging-visible = false` |
 | **easy_to_detect** | true |
 | **Rationale** | High text density + tabular layout is reliably detected by OCR + grid-line detection on CPU. |
+
+> **DetOrder note:** `size-chart` has no configured DetOrder slot. Images of this type are assigned after all configured det slots via deterministic fallback.
 
 ---
 
@@ -431,31 +381,28 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 | `ghost-side` | false |
 | `flatlay-front` | true |
 | `flatlay-styled` | false |
-| `detail-material` | true |
-| `detail-stitching` | false |
-| `detail-label` | true |
-| `detail-hardware` | false |
+| `closeup-image` | true |
 | `packaging-shot` | true |
 | `lifestyle-hero` | true |
 | `lifestyle-context` | false |
 | `scale-reference-shot` | false |
-| `exploded-view` | false |
+| `illustration-technical-drawing` | false |
 | `model-detail-closeup` | false |
 | `sitting-on-model` | false |
 | `on-model-with-accessories` | false |
 | `interior-shot` | false |
-| `multi-angle-composite` | true |
 | `size-chart` | true |
 
-**Total phenotypes: 30**
-Easily detectable on CPU: 10 / 30 (33%)
+**Total phenotypes: 26**
+Easily detectable on CPU: 9 / 26 (35%)
 
 ---
 
-## Open questions for architecture (deliverables 6–8)
+## Architecture decisions
 
-- `ghost-front` vs. `front-packshot`: these share almost all required features. The discriminating signal is 3D garment structure. Should a separate "3D-structure score" feature be added to `ImageFeatures.md` to make this split deterministic?
-- `detail-stitching` vs. `detail-material`: both are close-ups of textile. Should these be merged into one phenotype (`detail-textile`) for practical ordering purposes, given the low practical distinction for DetOrder assignment?
-- Should phenotypes be weighted (confidence-scored) at assignment time, or is it always a hard assignment? The phenotype-to-DetOrder mapping might benefit from soft phenotype probability vectors rather than single-label classification, especially for the 20 non-trivially-detectable phenotypes.
-- `lifestyle-context` is difficult to distinguish from a generic marketing photograph without product-specific object detection. Should it have a lower-priority "catch-all" role in DetOrder rather than a specific slot?
-- `size-chart` and `multi-angle-composite` are not product-specific but appear in many catalog image sets — should these be product-type-independent slots in all DetOrder rule sets?
+- **`ghost-front` vs. `front-packshot`**: Phenotype disambiguation is determined by product type, not by a dedicated 3D-structure ImageFeature. No additional feature needed.
+- **`detail-*` consolidation**: All close-up product-detail phenotypes (material, stitching, label, hardware) are consolidated into `closeup-image`. `model-detail-closeup` is retained separately because it requires `has-human` or skin-tone evidence. The distinguishing invariant for `closeup-image` is border intersection (`intersection-count ≥ 1`).
+- **Phenotype assignment**: Always a hard assignment. No soft probability vectors or confidence-weighted phenotype scoring.
+- **`lifestyle-context`**: Catch-all for non-packshot images. Generic marketing photographs qualify. Assigned by elimination when `lifestyle-background = true` and no packshot phenotype fits.
+- **`size-chart`**: No configured DetOrder slot. Assigned to deterministic fallback after all configured det slots.
+- **`illustration-technical-drawing`**: Always assigned the last configured DetOrder slot, regardless of product type.
