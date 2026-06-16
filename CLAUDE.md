@@ -108,6 +108,15 @@ On API startup, `PrismApiConfiguration.Load()` validates all config and model as
 - ONNX: name every tensor input/output with a string constant. State expected input shape and normalization in a comment above tensor construction. One method per preprocessing step.
 - OpenCV: every `Mat` has a name reflecting its state. State color space (BGR/RGB) at every image boundary. Release intermediate `Mat` objects with `using` or explicit `.Dispose()`.
 
+## Library documentation (context7)
+
+Before writing or editing code that calls any of these libraries, query context7 for current API docs:
+- **ImageSharp** — `SixLabors.ImageSharp` (resolve: `sixlabors/imagesharp`)
+- **ONNX Runtime** — `Microsoft.ML.OnnxRuntime` (resolve: `microsoft/onnxruntime`)
+- **ASP.NET Core** — when using minimal API patterns (resolve: `dotnet/aspnetcore`)
+
+Use `resolve-library-id` first, then `get-library-docs` with the relevant topic (e.g., `image resizing`, `InferenceSession`, `minimal api routing`).
+
 ## Documentation
 
 All accepted project knowledge is in `jb/docs/`. The index at `jb/docs/PRISM-index.md` maps tasks to the relevant doc file — always use it to load only what the current task needs rather than loading everything.

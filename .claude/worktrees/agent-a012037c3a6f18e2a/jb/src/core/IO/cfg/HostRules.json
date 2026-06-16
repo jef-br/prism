@@ -1,0 +1,24 @@
+{
+  "allowedSchemes": ["http", "https"],
+  "blockedSchemes": ["ftp"],
+  "blockedHostPatterns": ["reddit.com", "*.reddit.com"],
+  "redirects": {
+    "allowGenericDirectFileRedirects": false,
+    "allowFetcherOwnedRedirects": true
+  },
+  "networkRanges": {
+    "allowPrivate": true,
+    "allowLinkLocal": true,
+    "allowLoopback": false,
+    "rejectAnyLoopbackDnsResult": true
+  },
+  "timeouts": {
+    "connectSeconds": 10,
+    "responseHeaderSeconds": 15,
+    "idleReadSeconds": 15,
+    "totalFetchSeconds": 120
+  },
+  "testing": {
+    "allowLocalhost": false
+  }
+}

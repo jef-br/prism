@@ -11,3 +11,13 @@ schema_version = 1
 # strip_lines_matching = ["^\\s*$", "^Downloading", "^Installing"]
 # max_lines = 30
 # on_empty = "my-tool: ok"
+
+# Suppress verbose ONNX session initialization logs in dotnet output
+[filter.dotnet-onnx]
+pattern = "Microsoft.ML.OnnxRuntime"
+action = "suppress"
+
+# Suppress ImageSharp license banner
+[filter.imagesharp-banner]
+pattern = "SixLabors.ImageSharp"
+action = "suppress"

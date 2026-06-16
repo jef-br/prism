@@ -98,8 +98,7 @@ public sealed class Prism
             "Images/Match/MatchingConfig.json",
             "Images/Match/Translate/TranslationConfig.json",
             "Images/Order/DetOrderRules.json",
-            "Images/Order/DetOrderKeywordStems.json",
-            "Images/Order/ImageNGP.json"
+            "Images/Order/DetOrderKeywordStems.json"
         ];
 
         string coreDirectory = Path.GetDirectoryName(prismConfigPath)

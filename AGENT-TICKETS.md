@@ -11,7 +11,7 @@ This is the standing ticket board for PRISM sub-agents. The main Codex thread is
 - Agents must respect and use the existing folder structure in their assigned area. For the web workbench, use the existing `jb/src/workbench/web` structure and its `app`, `components`, `sections`, `services`, and `styles` folders.
 - Agents must not move to a later milestone until the current milestone has a documented smoke test and passes.
 - Unresolved product decisions stay in folder-local `jbtodo.md` files. Agents must not guess product policy to force a todo closed.
-- `jb/src/jbtodo.md` is frozen. Do not implement or thaw the fixture-folder decision until the user explicitly asks for it.
+- `jb/src/jbtodo.md` fixture-folder decision was thawed and closed on 2026-06-16. See T-9999 Done note.
 
 ## Agent Reporting Protocol
 
@@ -119,7 +119,7 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-800 Renamed Stage
 
-- `Status`: Ready
+- `Status`: Done
 - `Agent type`: worker
 - `Runtime profile`: `P1-feature-worker`
 - `Owner`: Renamed stage agent
@@ -131,7 +131,7 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-900 Generated Stage
 
-- `Status`: Blocked by T-800
+- `Status`: Done
 - `Agent type`: worker
 - `Runtime profile`: `P1-feature-worker`
 - `Owner`: Generated stage agent
@@ -143,7 +143,7 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-1000 Transformed Stage
 
-- `Status`: Blocked by T-900
+- `Status`: Done
 - `Agent type`: worker
 - `Runtime profile`: `P4-critical-architecture`
 - `Owner`: Transformed stage agent
@@ -156,7 +156,7 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-1100 Exported Stage
 
-- `Status`: Blocked by T-1000
+- `Status`: Ready
 - `Agent type`: worker
 - `Runtime profile`: `P1-feature-worker`
 - `Owner`: Exported stage agent
@@ -168,7 +168,7 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-9999 Frozen Fixture Watch
 
-- `Status`: Blocked
+- `Status`: Done
 - `Agent type`: orchestrator
 - `Runtime profile`: `P0-orchestrator`
 - `Owner`: Main Codex thread
@@ -177,6 +177,7 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 - `Task`: Keep the `jb/Testing` fixture folder structure todo frozen.
 - `Acceptance criteria`: No agent implements or rewrites fixture folder structure until the user explicitly thaws the todo.
 - `Runtime prompt`: No sub-agent should receive this ticket until the user explicitly thaws `jb/src/jbtodo.md`.
+- `Done note`: User thawed the todo on 2026-06-16. Answer recorded in `jb/src/jbtodo.md`: one subfolder per Job under `jb/Testing`; each job folder gets a `foldername + " - expected result"` sibling with real expected files. Test project: `jb/src/tests/Prism.Core.Tests/`.
 
 ## Archive — Completed Tickets
 
@@ -199,6 +200,9 @@ All tickets below reached `Done`. Retained here for context; do not re-open or r
 | T-500 | Classified Stage | 2026-06-15 | Visual dedup, ImageFeatureAnalyzer, CLIP classifier, phenotype assignment; 61/61 tests green. |
 | T-600 | Matched Stage | 2026-06-16 | ImageMatcher waterfall (brackets 1–3 + label evidence); NumericMatcher (TCD), StringMatcher, ImageLabelingMatcher; MatchEvidence on ImageRecord_LAMBDA; 61/61 tests green. |
 | T-700 | Ordered Stage | 2026-06-16 | DetOrderConfig + ImageOrderer; 18-product-type DetOrderRules.json from PRODUCTTYPES.MD; phenotype qualification, deterministic tie-breaking (NGP confidence → filename hint → source index); overflow assignment; OrderEvidence on ImageRecord_LAMBDA; 72/72 tests green. |
+| T-800 | Renamed Stage | 2026-06-16 | ImageRenamer.cs; det-slot collision detection (RENAME_COLLISION KOs entire family); OkRenamedCount tracking; NewName computed property used as-is (FamilyID sanitized upstream); 82/82 tests green. |
+| T-900 | Generated Stage | 2026-06-16 | ImageGenerator.cs decision shell; GenerationRouteState enum (6 states); GeneratedChildren + GenerationRouteState on ImageRecord_LAMBDA; GeneratedRecords + GeneratedCount on PipelineContext; MinImagesPerFamily config; generation gated (GenerationBackendAvailable = false); 93/93 tests green. |
+| T-1000 | Transformed Stage | 2026-06-16 | ImageTransformer.cs routing (phenotype → Tx class); TransformationStatus enum (5 states); ImageTransformationResult expanded (13 fields); Tx_CenterAndStretch, Tx_DetailCropper, Tx_CropSquare, Tx_ProblemImageProcessor all gated; TransformationResult on ImageRecord_LAMBDA; OkTransformedCount on PipelineContext; TransformStageShell wired; 107/107 tests green. |
 | T-workbench-polish | Web Workbench Result & Route Display | 2026-06-15 | JSON manifest display; ZIP download button; job status badge; stage name heading; conditional field rendering. |
 
 ---

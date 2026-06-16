@@ -29,3 +29,19 @@
   - Recommended solution:
     Either (a) add CLIP-based conditions to tighten the rule (e.g. require a classification token above threshold for "technical drawing", "vector illustration", or "schematic"), or (b) replace the current rule with a null assignment so unrecognized non-human images get no phenotype and are handled by deterministic fallback in the Ordered stage. Option (b) is safer until the CLIP-based signal is proven reliable.
   - Answer:
+
+- [ ] CLIP prompt format is key=value schema annotations, not natural language.
+  - File: `jb/src/core/Pipeline/StageShells.cs` `BuildDefaultPrompts()`.
+  - Issue: CLIP is a vision-language model expecting prompts like "a photo of a person wearing a shirt", not "hero-is-human=TRUE". The schema-annotation format produces semantically meaningless embeddings.
+  - Block: No spec-prescribed prompt list exists. Requires user decision on what the CLIP prompts should be before this can be fixed.
+  - Fix: Replace BuildDefaultPrompts() with natural-language prompts that map to the same feature values via TryParseFeatureToken or a new lookup table.
+
+- [ ] interior-shot phenotype is silently unreachable in CPU-only mode.
+  - File: `jb/src/core/ImageNGP/ImageRoles.json` — interior-shot entry requires `packaging-visible = false`.
+  - Issue: `packaging-visible` is always UNKNOWN in CPU-only mode. UNKNOWN never satisfies a condition in PhenotypeRuleSet. No CLIP prompt or analyzer currently writes `packaging-visible`. interior-shot can never be assigned.
+  - Fix: Either add a CLIP prompt or analyzer that writes `packaging-visible`, or change the interior-shot phenotype rule to not require it. Requires user decision.
+
+- [ ] Code stub: `RecordUnknownFeatures()` in `ImageFeatureAnalyzer.cs` marks 35+ features as UNKNOWN.
+  - File: `jb/src/core/Images/Classify/ImageFeatureAnalyzer.cs` lines 195–235.
+  - Block: These features require a CLIP-backed classifier or specialized detectors that are not yet wired in. The open todos above (ImageNGP taxonomy definition and `illustration-technical-drawing` scope) must be resolved first — they determine which features need CLIP prompts and which need separate detectors.
+  - Fix: After taxonomy and role todos are answered, replace each `SetUnknownIfNotSet` call with a real measurement call to the appropriate analyzer (CLIP classifier for semantic features like `hero-is-human`, `hero-orientation`, `product-type-label`; specialized detectors for `salient-bbox`, `dominant-colors`, `pose-type`, etc.). Features with no planned analyzer keep `SetUnknownIfNotSet` until a detector is available.

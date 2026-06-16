@@ -109,3 +109,4 @@
   - Recommended solution:
     Use feathering and local smoothing by default, with optional inpainting for artifacts above a configured threshold.
   - Answer:
+

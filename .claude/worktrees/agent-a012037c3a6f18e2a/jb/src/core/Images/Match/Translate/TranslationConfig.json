@@ -1,0 +1,57 @@
+{
+  "synonymGroups": [
+    {
+      "id": "color-blue",
+      "domain": "color",
+      "terms": [ "blue", "bleu", "blauw", "azul" ]
+    },
+    {
+      "id": "color-red",
+      "domain": "color",
+      "terms": [ "red", "rouge", "rood", "rojo" ]
+    },
+    {
+      "id": "material-cotton",
+      "domain": "material",
+      "terms": [ "cotton", "coton", "katoen", "algodon" ]
+    },
+    {
+      "id": "product-shirt",
+      "domain": "productType",
+      "terms": [ "shirt", "tshirt", "t-shirt", "tee", "chemise" ]
+    }
+  ],
+  "stopWords": {
+    "general": [
+      "a",
+      "an",
+      "and",
+      "de",
+      "des",
+      "du",
+      "for",
+      "la",
+      "le",
+      "les",
+      "of",
+      "the",
+      "to",
+      "with"
+    ],
+    "domain": [
+      "article",
+      "collection",
+      "color",
+      "colour",
+      "image",
+      "model",
+      "new",
+      "product",
+      "size",
+      "style"
+    ]
+  },
+  "diagnostics": {
+    "includeIgnoredStopWordsInEvidence": true
+  }
+}

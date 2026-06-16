@@ -33,5 +33,20 @@
         ]
       }
     ]
-  }
+  },
+  "PostToolUse": [
+    {
+      "matcher": "Edit|Write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "if ($env:CLAUDE_TOOL_INPUT_FILE_PATH -match '\\.cs$') { rtk dotnet build jb/src/PRISM.sln --no-restore -v q 2>&1 | tail -5 }"
+        },
+        {
+          "type": "command",
+          "command": "if ($env:CLAUDE_TOOL_INPUT_FILE_PATH -match '\\.(tsx?|ts)$') { cd jb/src/workbench/web && rtk npm run typecheck 2>&1 | tail -10 }"
+        }
+      ]
+    }
+  ]
 }

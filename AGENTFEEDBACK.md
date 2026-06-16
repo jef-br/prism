@@ -9,9 +9,9 @@ Project terminology, accepted media, pipeline order, completed decisions, and op
 - Local todo answers have been progressively moved into `jb\docs`; closed blocks are removed from folder-local `jbtodo.md` files after sync.
 - Synced areas include API request/progress/result/health/error/URL/request-size/ignored-zip behavior; IO JSON export and EXIF orientation; match normalization, thresholds, weighting, waterfall, tie-breaking, descriptive/mixed matching, `_det`, numeric false positives, language, and stop words; web upload/layout/style decisions; V1 in-process queue; Images filename/collision/sanitization; Zip corrupt/password-protected KO behavior.
 - Removed empty todo files after sync for `jb/src/core/Excel/`, `jb/src/core/Models/`, `jb/src/api/`, and `jb/src/core/IO/`. The former `jb/src/core/` todo file is deleted; do not link new work to that location unless restored.
-- Current local todo set: 3 non-empty `jbtodo.md` files, 13 open todos.
+- Current local todo set: 4 non-empty `jbtodo.md` files (Classify, Transform, IO, Pipeline), 23 open todos. `jb/src/jbtodo.md` fixture todo closed 2026-06-16.
 - Before the latest classification/ONNX/transform sync, the live local todo set was 5 non-empty `jbtodo.md` files and 32 open todos.
-- One frozen todo is known for `jb/src/`: fixture folder structure. Keep it frozen until the user explicitly thaws it.
+- The fixture folder structure todo in `jb/src/` was thawed and closed on 2026-06-16. No frozen todos remain.
 - Four ImageFeature architecture decisions now resolved and recorded in `jb/docs/ImageNGP/ImageFeatures.md` and `jb/docs/PRISM-models.md`: `salient-bbox` uses `BoundingBox` with flat-float serialization; `pose-type`/`body-visible` share one gated detector pass; `product-type-label` extreme mismatch causes KO; `dominant-colors` uses spatially-weighted palette-cluster with salient-mask background subtraction.
 - Current temporary CLIP model source in `jb\docs`: `sentence-transformers/clip-ViT-B-32`, retrievable from Hugging Face or Microsoft Foundry. The local ONNX artifact is ignored and must not be stored in git.
 - `jb/src/core/Images/ImageClassifier.cs` owns the ONNX model boundary: model loading, asset validation/readiness, session lifetime, diagnostics, and communication with the rest of PRISM. Any ONNX provider, worker, session, tokenizer, or buffer helper is hidden behind `ImageClassifier.cs`.
@@ -27,6 +27,9 @@ Project terminology, accepted media, pipeline order, completed decisions, and op
 - **det0 orientation (2026-06-15)**: Frontal orientation required for det0. Fallback: FRONT → SIDE → DIAGONAL. Back, top, bottom do not qualify for det0.
 - **DetOrderRules.json (2026-06-15)**: Current file content is indicative only (not authoritative). Per-product-type det slot specs in `jb/docs/ImageNGP/PRODUCTTYPES.MD` are the authoritative source.
 - **T-500 unblocked**: Both blockers cleared — T-400 done, taxonomy finalized. T-500 status: Ready.
+- **T-800 done (2026-06-16)**: Renamed stage implemented as `ImageRenamer.cs` under `jb/src/core/Images/`. Stage is validation-only: FamilyID sanitization happens upstream; `NewName` computed property (`{Family}_det{DetOrder}.jpg`) is the definitive output filename consumed by the Exported stage. Work done: det-slot collision detection (`RENAME_COLLISION` KOs whole family), `OkRenamedCount` tracking, stage-complete signal. `RenameStageShell` now delegates to `ImageRenamer.Run(context)`. 82/82 tests green. T-900 unblocked.
+- **T-900 done (2026-06-16)**: Generated stage decision shell implemented as `ImageGenerator.cs` under `jb/src/core/Images/Generate/`. Stage evaluates each FamilyID group: families above `MinImagesPerFamily` (config = 1) → `Skipped`; hero below 1600×1600 → `SkippedLowQuality`; qualified hero → `Gated` (no backend deployed). `GenerationRouteState` enum and `GeneratedChildren` list added to `ImageRecord_LAMBDA`. `GeneratedRecords` list and `GeneratedCount` counter added to `PipelineContext`. `GenerateStageShell` now delegates to `ImageGenerator.Run(context)`. 93/93 tests green.
+- **T-1000 done (2026-06-16)**: Transformed stage decision shell implemented. `ImageTransformer.TransformImage(lambda)` routes by phenotype: `closeup-image`/`model-detail-closeup` → `Tx_DetailCropper`; null phenotype → `Tx_ProblemImageProcessor`; all others → `Tx_CenterAndStretch`. All Tx classes gate pixel processing behind `ImageProcessorAvailable() = false` → all images receive `TransformationStatus.Gated`. `TransformationStatus` enum (5 states), `ImageTransformationResult` (13 fields), `TransformationResult?` on `ImageRecord_LAMBDA`, `OkTransformedCount` on `PipelineContext`, `TransformStageShell` wired. 107/107 tests green. T-1100 is next.
 
 ## ImageNGP Structure Analysis
 
@@ -72,9 +75,13 @@ This is a current decision lens for future agents, not a completed todo sync.
 
 ## Open Work Index
 
-- [x] `jb/src/core/Images/Classify/jbtodo.md`: taxonomy finalization complete (2026-06-15). Review and close remaining classify todos before T-500 execution begins.
-- [ ] `jb/src/core/Images/Transform/`: 11 open todos, transform-facing ImageFeature/ImageNGP, failures/fallback/fill, crop/resize/detail/cleanup behavior.
-- [ ] `jb/src/`: 1 open frozen todo, `jb/Testing` fixture folder structure. Keep frozen.
+- [ ] `jb/src/core/Images/Classify/jbtodo.md`: 6 open todos — `ghost-front` ordering bug in `ImageRoles.json` (fix described, ready to apply); `illustration-technical-drawing` catch-all scope (needs user decision); taxonomy + feature combinations list; `RecordUnknownFeatures()` code stub (blocked by first two); CLIP prompt format (key=value schema is wrong for CLIP, no spec alternative yet); `interior-shot` silently unreachable in CPU-only mode.
+- [ ] `jb/src/core/Images/Match/jbtodo.md`: 6 open todos — `MatchEvidence` missing 3 fields; `StringMatcher` Bracket 3 missing duplicate-type guard; numeric scoring formula incomplete; original token text not preserved; zero unit tests for Match stage; cross-bracket tie resolution (needs user decision).
+- [ ] `jb/src/core/Images/Order/jbtodo.md`: 3 open todos — default det0 SIDE fallback requires algorithm change (needs user decision); no code guard for illustration-technical-drawing last-slot invariant; `OrderEvidence` missing full qualifying candidate set.
+- [ ] `jb/src/core/Images/Transform/jbtodo.md`: 10 open todos — all design questions for post-T-1000 pixel processing (transform-facing ImageFeatures, failure/KO policy, crop decision output, fill policy, resize output, border-intersection result, saliency, headcut, greedy crop, detail fill, cleanup method). Code stubs todo closed (T-1000 done). All Answer sections still empty; these are product decisions.
+- [ ] `jb/src/core/IO/jbtodo.md`: 7 open todos — `Exporter.cs` stub (blocked by T-1100); `Fetch_HTTPS_DirectFile.cs` stub (no ticket yet); `Fetch_DropBox.cs` stub (deferred); `Fetch_WeTransfer.cs` stub (deferred); ExcelConfig.json loaded at run time instead of startup; media kind triage uses extension-only detection; directory input has no production implementation.
+- [ ] `jb/src/core/Pipeline/jbtodo.md`: 1 open todo — stage shell stub for Exported (T-1100). Transformed stub closed (T-1000 done).
+- [x] `jb/src/jbtodo.md`: fixture folder structure closed 2026-06-16. Answer: `jb/Testing` one subfolder per Job; each job folder gets `foldername + " - expected result"` sibling with real expected files.
 
 ## Web/API Notes
 
@@ -84,6 +91,7 @@ This is a current decision lens for future agents, not a completed todo sync.
 - Pre-core unsupported or policy-rejected URLs are dropped without manifest, KO, or `PrismJobRequest` trace when enough valid input remains.
 - WPF workbench parity is deferred. Shell exists and opens a window. Full parity deferred until API and core contracts stabilize further (no blocking ticket yet).
 - **T-500 (Classified Stage) is Ready** (2026-06-15). Both blockers cleared: T-400 is done and ImageNGP taxonomy is finalized. T-500 is the next pipeline work to start.
+- **T-1100 (Exported Stage) is next** (2026-06-16). T-1000 is done. T-1100 is the final pipeline stage: zip/JSON output and `manifest.json` export. `Exporter.cs` is still a comment-only stub. Context: `jb/docs/PRISM-api.md`, `jb/docs/PRISM-pipeline-core.md`, `jb/docs/PRISM-models.md`. **Full implementation plan saved at `C:\Users\JefB\.claude\plans\t1100-exported-stage.md`** — 3 new files, 10 modified files, 12-step implementation order, 10 test cases, target 107→117+ green.
 
 ## Reload Rules
 

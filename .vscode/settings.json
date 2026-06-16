@@ -64,6 +64,38 @@
         {
             "filePath": "prism\\Launch_API_CORE_WEBBENCH.ps1",
             "color": "foldercolorizer.color_ff0000"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Images\\",
+            "color": "foldercolorizer.color_0000d7"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Models\\",
+            "color": "foldercolorizer.color_0000d7"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Images\\Classify\\",
+            "color": "foldercolorizer.color_5f87d7"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Images\\Order\\",
+            "color": "foldercolorizer.color_5f87d7"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Images\\ImageMatcher.cs",
+            "color": "foldercolorizer.color_0087ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Images\\ImageOrderer.cs",
+            "color": "foldercolorizer.color_0087ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Images\\ImagePreProcessor.cs",
+            "color": "foldercolorizer.color_0087ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Images\\ImageTransformer.cs",
+            "color": "foldercolorizer.color_0087ff"
         }
     ],
     "folder-color.favoriteColors": [

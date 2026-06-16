@@ -1,0 +1,19 @@
+<UserControl x:Class="Prism.Workbench.Wpf.Controls.RouteStageControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Border Margin="0,0,0,10"
+          Padding="12"
+          CornerRadius="6"
+          Background="{StaticResource WorkbenchSurfaceBrush}"
+          BorderBrush="{StaticResource WorkbenchBorderBrush}"
+          BorderThickness="1">
+    <DockPanel LastChildFill="True">
+      <TextBlock DockPanel.Dock="Right"
+                 Text="{Binding Status}"
+                 Foreground="{StaticResource WorkbenchMutedTextBrush}" />
+      <TextBlock Text="{Binding Name}"
+                 Foreground="{StaticResource WorkbenchHeadingBrush}"
+                 FontWeight="SemiBold" />
+    </DockPanel>
+  </Border>
+</UserControl>

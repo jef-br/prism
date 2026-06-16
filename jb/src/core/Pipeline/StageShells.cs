@@ -79,8 +79,6 @@ internal static class ImportStageShell
 /// </summary>
 internal static class ClassifyStageShell
 {
-    private const float ClipInfluentialThreshold = 0.28f;
-
     /// <summary>
     /// Runs the Classified stage for a job context.
     /// </summary>
@@ -103,7 +101,9 @@ internal static class ClassifyStageShell
 
         foreach (DedupGroup group in groups)
         {
-            ProcessCanonical(group.Canonical, ruleSet, classifier, context);
+            ProcessCanonical(group.Canonical, ruleSet, classifier, context,
+                configuration.ClassificationConfidenceThreshold,
+                configuration.ClassificationCutoffThreshold);
 
             foreach (ImageRecord_INPUT duplicate in group.Duplicates)
                 KoDuplicate(duplicate, group.Canonical, context);
@@ -118,7 +118,9 @@ internal static class ClassifyStageShell
         ImageRecord_INPUT source,
         PhenotypeRuleSet ruleSet,
         ImageClassifier classifier,
-        PipelineContext context)
+        PipelineContext context,
+        double influentialThreshold,
+        double cutoffThreshold)
     {
         ImageRecord_LAMBDA lambda = CreateLambdaRecord(source);
 
@@ -129,7 +131,7 @@ internal static class ClassifyStageShell
                 ImageFeatureAnalyzer.Analyze(source.NormalizedJpgPath, lambda.Features);
 
                 if (classifier.IsReady)
-                    ApplyClipTags(source.NormalizedJpgPath, classifier, lambda);
+                    ApplyClipTags(source.NormalizedJpgPath, classifier, lambda, influentialThreshold, cutoffThreshold);
             }
             catch (Exception ex)
             {
@@ -170,15 +172,17 @@ internal static class ClassifyStageShell
     private static void ApplyClipTags(
         string imagePath,
         ImageClassifier classifier,
-        ImageRecord_LAMBDA lambda)
+        ImageRecord_LAMBDA lambda,
+        double influentialThreshold,
+        double cutoffThreshold)
     {
         ClassificationToken[] allTokens = classifier.ClassifyImage(imagePath, BuildDefaultPrompts());
         if (allTokens.Length == 0) return;
 
         lambda.Tags = new TagCollection
         {
-            Influential = allTokens.Where(t => t.Confidence >= ClipInfluentialThreshold).ToArray(),
-            Trivial     = allTokens.Where(t => t.Confidence <  ClipInfluentialThreshold).ToArray()
+            Influential = allTokens.Where(t => t.Confidence >= influentialThreshold).ToArray(),
+            Trivial     = allTokens.Where(t => t.Confidence >= cutoffThreshold && t.Confidence < influentialThreshold).ToArray()
         };
 
         // Write top-scoring tokens into the feature snapshot for phenotype matching.
@@ -282,7 +286,6 @@ internal static class MatchStageShell
 {
     /// <summary>
     /// Runs the Matched stage for a job context.
-    /// T-420 will replace this body with real ImageMatcher delegation.
     /// </summary>
     /// <param name="context">Mutable per-job pipeline context.</param>
     /// <param name="configuration">Validated PRISM configuration.</param>
@@ -302,7 +305,7 @@ internal static class OrderStageShell
 {
     /// <summary>
     /// Runs the Ordered stage for a job context.
-    /// T-430 will replace this body with real ImageOrderer delegation.
+    /// Delegates to <see cref="ImageOrderer"/> to assign det-slot indices and ordering evidence per FamilyID.
     /// </summary>
     /// <param name="context">Mutable per-job pipeline context.</param>
     /// <param name="configuration">Validated PRISM configuration.</param>
@@ -315,19 +318,20 @@ internal static class OrderStageShell
 
 /// <summary>
 /// Shell delegate for the Renamed stage.
-/// Collapses FamilyID and det-order into the final output filename.
+/// Validates det-slot uniqueness within each matched family and counts renamed images.
+/// Real implementation lives in <c>ImageRenamer.cs</c>.
 /// </summary>
 internal static class RenameStageShell
 {
     /// <summary>
     /// Runs the Renamed stage for a job context.
-    /// T-440 will replace this body with real rename logic.
+    /// Delegates collision detection and rename counting to <see cref="ImageRenamer"/>.
     /// </summary>
     /// <param name="context">Mutable per-job pipeline context.</param>
     /// <param name="configuration">Validated PRISM configuration.</param>
     internal static void Run(PipelineContext context, PrismConfiguration configuration)
     {
-        // TODO T-440: apply FamilyID_det# rename to each accepted ImageRecord_LAMBDA
+        ImageRenamer.Run(context);
         context.MarkStageCompleted(PipelineStageNames.Renamed);
     }
 }
@@ -341,33 +345,56 @@ internal static class GenerateStageShell
 {
     /// <summary>
     /// Runs the Generated stage for a job context.
-    /// T-450 will replace this body with real generation delegation.
     /// </summary>
     /// <param name="context">Mutable per-job pipeline context.</param>
     /// <param name="configuration">Validated PRISM configuration.</param>
     internal static void Run(PipelineContext context, PrismConfiguration configuration)
     {
-        // TODO T-450: delegate to generation module when Parameters.Generation is true
+        ImageGenerator.Run(context);
         context.MarkStageCompleted(PipelineStageNames.Generated);
     }
 }
 
 /// <summary>
 /// Shell delegate for the Transformed stage.
-/// Applies visual transformations per ImageNGP state.
-/// Real implementation lives in <c>ImageTransformer.cs</c>.
+/// Routes each non-KO image to its appropriate <see cref="IImageTransformation"/> strategy
+/// via <see cref="ImageTransformer"/>, then updates per-job counters.
 /// </summary>
 internal static class TransformStageShell
 {
     /// <summary>
     /// Runs the Transformed stage for a job context.
-    /// T-460 will replace this body with real ImageTransformer delegation.
+    /// When <c>Parameters.Transform</c> is false, all non-KO images are marked Skipped and the stage completes immediately.
+    /// Otherwise each non-KO image is routed through <see cref="ImageTransformer.TransformImage"/>.
     /// </summary>
     /// <param name="context">Mutable per-job pipeline context.</param>
     /// <param name="configuration">Validated PRISM configuration.</param>
     internal static void Run(PipelineContext context, PrismConfiguration configuration)
     {
-        // TODO T-460: delegate to ImageTransformer.cs when Parameters.Transform is true
+        if (!context.Parameters.Transform)
+        {
+            foreach (ImageRecord_LAMBDA lambda in context.LambdaRecords)
+            {
+                if (lambda.IsKo) continue;
+                lambda.TransformationResult = new ImageTransformationResult
+                {
+                    Status          = TransformationStatus.Skipped,
+                    InputWidth      = lambda.Width,
+                    InputHeight     = lambda.Height,
+                    SafeSummaryText = "Transform disabled by job parameters."
+                };
+            }
+            context.MarkStageCompleted(PipelineStageNames.Transformed);
+            return;
+        }
+
+        foreach (ImageRecord_LAMBDA lambda in context.LambdaRecords)
+        {
+            if (lambda.IsKo) continue;
+            ImageTransformer.TransformImage(lambda);
+            context.OkTransformedCount++;
+        }
+
         context.MarkStageCompleted(PipelineStageNames.Transformed);
     }
 }
@@ -387,7 +414,7 @@ internal static class ExportStageShell
     /// <param name="configuration">Validated PRISM configuration.</param>
     internal static void Run(PipelineContext context, PrismConfiguration configuration)
     {
-        // TODO T-470: delegate to Exporter.cs
+        // TODO T-1100: delegate to Exporter.cs
         context.MarkStageCompleted(PipelineStageNames.Exported);
     }
 }

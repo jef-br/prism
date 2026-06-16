@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Compile Remove="Models\**\*.cs" />
+    <Compile Remove="Pipeline\PipelineProgressEvent.cs" />
+    <Compile Remove="IO\BatchManifest.cs" />
+    <Compile Remove="Excel\FamilyRecord.cs" />
+    <Compile Remove="Images\Classify\**\*.cs" />
+    <Compile Remove="Images\Transform\**\*.cs" />
+    <Compile Remove="Images\Match\MatchEvidence.cs" />
+    <Compile Remove="Images\Match\MatchType.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="Models\Prism.Core.Contracts.csproj" />
+    <ProjectReference Include="Images\Classify\Prism.Core.Images.Classify.csproj" />
+    <ProjectReference Include="Images\Transform\Prism.Core.Images.Transform.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Prism_Config.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Excel\ExcelConfig.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="IO\cfg\HostRules.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Images\Match\MatchingConfig.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Images\Match\Translate\TranslationConfig.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Images\Order\DetOrderKeywordStems.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Images\Order\DetOrderRules.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Images\Order\ImageNGP.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Images\Classify\ONNX\clip-vit-b32-uint8\merges.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Images\Classify\ONNX\clip-vit-b32-uint8\merges.txt')" />
+    <Content Include="Images\Classify\ONNX\clip-vit-b32-uint8\vocab.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Images\Classify\ONNX\clip-vit-b32-uint8\vocab.json')" />
+  </ItemGroup>
+</Project>

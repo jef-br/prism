@@ -9,6 +9,8 @@
     "material": ["material", "fabric", "matiere", "stoff", "tessuto"],
     "top":      ["top", "above", "dessus", "arriba", "oben"],
     "bottom":   ["bottom", "under", "dessous", "abajo", "unten","sole", "outsole", "semelle", "suela", "sohle"],
-    "lifestyle":["lifestyle", "ambiance", "marketing", "pub"]
+    "lifestyle":["lifestyle", "ambiance", "marketing", "pub"],
+    "diagonal": ["diagonal", "diag", "diagonale", "schraeg"],
+    "interior": ["interior", "inside", "interieur", "innenseite", "innen", "interno", "binnenkant"]
     }
 }

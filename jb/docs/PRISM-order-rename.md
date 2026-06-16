@@ -84,7 +84,7 @@ DetOrder assignment evidence must record which tie-breaker won: ImageNGP confide
 - Every processed PRISM output image uses the `.jpg` extension.
 - Valid ordering guarantees unique final filenames in the form `FamilyID_det#.jpg` inside each FamilyID group.
 - Output names are reserved before export. The reservation covers final filenames, zip entry paths, and JSON artifact paths.
-- A duplicate final filename, zip path, or JSON artifact path is an ordering/rename invariant failure. PRISM must KO the whole affected FamilyID/family with `rename-collision` or `export-path-collision`, keep every original filename as provenance, emit safe manifest evidence, and continue the rest of the batch.
+- A duplicate final filename, zip path, or JSON artifact path is an ordering/rename invariant failure. PRISM must KO the whole affected FamilyID/family with `RENAME_COLLISION` or `export-path-collision`, keep every original filename as provenance, emit safe manifest evidence, and continue the rest of the batch.
 
 ## Output Filename Sanitization
 

@@ -73,6 +73,7 @@
         }
     },
     "Generation": {
+        "MinImagesPerFamily": 1,
         "InputImages": {
             "MINIMUM_SIZE_IN_PIXELS": {
                 "width": 1600,

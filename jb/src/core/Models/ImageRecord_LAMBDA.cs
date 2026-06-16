@@ -69,6 +69,26 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
 
     /// <summary>Human-readable safe rejection message for the manifest.</summary>
     public string? KoSafeMessage { get; set; }
+
+    // -------------------------------------------------------------------------
+    // Generation outputs — populated by the Generated stage
+    // -------------------------------------------------------------------------
+
+    /// <summary>Outcome of the generation route decision for this image's family.</summary>
+    public GenerationRouteState GenerationRouteState { get; set; } = GenerationRouteState.NotEvaluated;
+
+    /// <summary>Generated child records created from this image as the hero source.</summary>
+    public IReadOnlyList<ImageRecord_GENERATED> GeneratedChildren { get; set; } = [];
+
+    // -------------------------------------------------------------------------
+    // Transformation outputs — populated by the Transformed stage
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Outcome of the transform routing and pixel processing for this image.
+    /// Null until the Transformed stage evaluates this record.
+    /// </summary>
+    public ImageTransformationResult? TransformationResult { get; set; }
 }
 
 /// <summary>

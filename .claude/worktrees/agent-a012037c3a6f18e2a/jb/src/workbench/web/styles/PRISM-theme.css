@@ -1,0 +1,20 @@
+:root {
+  --prism-font-display: "Bahnschrift", "Aptos Display", "Trebuchet MS", sans-serif;
+  --prism-font-body: "Aptos", "Trebuchet MS", "Segoe UI", sans-serif;
+  --prism-color-page: #f3f1eb;
+  --prism-color-surface: #fffdf8;
+  --prism-color-surface-strong: #f7eadc;
+  --prism-color-ink: #1e2322;
+  --prism-color-muted: #66706d;
+  --prism-color-line: #d8d0c4;
+  --prism-color-accent: #126e72;
+  --prism-color-accent-strong: #0b4e52;
+  --prism-color-warm: #b85b35;
+  --prism-color-cool: #315f86;
+  --prism-color-ok: #276b43;
+  --prism-color-warning: #9b651b;
+  --prism-color-error: #a93632;
+  --prism-color-error-soft: #f8dfd9;
+  --prism-shadow-soft: 0 18px 50px rgba(45, 38, 30, 0.12);
+  --prism-radius: 8px;
+}

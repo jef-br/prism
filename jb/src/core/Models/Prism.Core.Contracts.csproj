@@ -4,6 +4,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="GenerationRouteState.cs" />
     <Compile Include="ImageRecord_Base.cs" />
     <Compile Include="ImageRecord_GENERATED.cs" />
     <Compile Include="ImageRecord_INPUT.cs" />
@@ -21,9 +22,9 @@
     <Compile Include="..\Images\Classify\ImageFeatureSnapshot.cs" Link="ImageFeatureSnapshot.cs" />
     <Compile Include="..\Images\Match\MatchEvidence.cs" Link="MatchEvidence.cs" />
     <Compile Include="..\Images\Order\OrderEvidence.cs" Link="OrderEvidence.cs" />
-    <Compile Include="..\Images\Match\MatchType.cs" Link="MatchType.cs" />
-    <Compile Include="..\Images\Transform\BackgroundType.cs" Link="BackgroundType.cs" />
+<Compile Include="..\Images\Transform\BackgroundType.cs" Link="BackgroundType.cs" />
     <Compile Include="..\Images\Transform\BoundingBox.cs" Link="BoundingBox.cs" />
     <Compile Include="..\Images\Transform\ImageTransformationResult.cs" Link="ImageTransformationResult.cs" />
+    <Compile Include="..\Images\Transform\TransformationStatus.cs" Link="TransformationStatus.cs" />
   </ItemGroup>
 </Project>

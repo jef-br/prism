@@ -1,0 +1,30 @@
+{
+    "DetOrderByNGP":{
+        "default": {
+            "det0":"front",
+            "det1":"back",
+            "det2":"side",
+            "det3":"detail",
+            "det4":"top",
+            "det5":"bottom",
+            "det6":"pack",
+            "det7":"label",
+            "det8":"material"
+        },
+        "PaP": {
+            "det0":"front",
+            "det1":"back",
+            "det2":"side",
+            "det3":"detail",
+            "det4":"lifestyle"
+       },
+        "Shoes": {
+            "det0":"diagonal",
+            "det1":"front",
+            "det2":"side",
+            "det3":"back",
+            "det4":"bottom",
+            "det5":"lifestyle"
+        }
+    }
+}
