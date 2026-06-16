@@ -1,0 +1,322 @@
+{
+  "phenotypes": [
+
+    {
+      "id": "front-on-model-full-product",
+      "required": [
+        { "feature": "hero-is-human", "equals": "TRUE" },
+        { "feature": "hero-orientation", "equals": "FRONT" },
+        { "anyOf": [
+            { "feature": "head-visible", "equals": "FULL" },
+            { "feature": "head-visible", "equals": "PARTIAL" }
+        ]},
+        { "feature": "body-visible", "equals": "full" },
+        { "feature": "intersection-count", "equals": "0" }
+      ]
+    },
+
+    {
+      "id": "front-on-model-partial",
+      "required": [
+        { "feature": "hero-is-human", "equals": "TRUE" },
+        { "feature": "hero-orientation", "equals": "FRONT" },
+        { "anyOf": [
+            { "feature": "body-visible", "equals": "three-quarter" },
+            { "feature": "body-visible", "equals": "half" },
+            { "feature": "body-visible", "equals": "bust" }
+        ]},
+        { "anyOf": [
+            { "feature": "intersects-bottom", "equals": "true" },
+            { "feature": "intersects-top", "equals": "true" }
+        ]}
+      ]
+    },
+
+    {
+      "id": "back-on-model-full-product",
+      "required": [
+        { "feature": "hero-is-human", "equals": "TRUE" },
+        { "feature": "hero-orientation", "equals": "BACK" },
+        { "feature": "body-visible", "equals": "full" },
+        { "anyOf": [
+            { "feature": "head-visible", "equals": "NONE" },
+            { "feature": "head-visible", "equals": "PARTIAL" }
+        ]},
+        { "feature": "intersection-count", "equals": "0" }
+      ]
+    },
+
+    {
+      "id": "side-on-model",
+      "required": [
+        { "feature": "hero-is-human", "equals": "TRUE" },
+        { "feature": "hero-orientation", "equals": "SIDEON" },
+        { "anyOf": [
+            { "feature": "body-visible", "equals": "full" },
+            { "feature": "body-visible", "equals": "three-quarter" }
+        ]}
+      ]
+    },
+
+    {
+      "id": "sitting-on-model",
+      "required": [
+        { "feature": "hero-is-human", "equals": "TRUE" },
+        { "feature": "pose-type", "equals": "sitting" },
+        { "anyOf": [
+            { "feature": "occlusion-level", "equals": "full-product" },
+            { "feature": "occlusion-level", "equals": "mostly-visible" }
+        ]}
+      ]
+    },
+
+    {
+      "id": "on-model-with-accessories",
+      "required": [
+        { "feature": "hero-is-human", "equals": "TRUE" },
+        { "feature": "multiple-products", "equals": "true" },
+        { "anyOf": [
+            { "feature": "occlusion-level", "equals": "full-product" },
+            { "feature": "occlusion-level", "equals": "mostly-visible" }
+        ]}
+      ]
+    },
+
+    {
+      "id": "model-detail-closeup",
+      "required": [
+        { "feature": "hero-is-human", "equals": "TRUE" },
+        { "anyOf": [
+            { "feature": "occlusion-level", "equals": "closeup" },
+            { "feature": "occlusion-level", "equals": "partially-occluded" }
+        ]},
+        { "anyOf": [
+            { "feature": "body-visible", "equals": "bust" },
+            { "feature": "body-visible", "equals": "none" }
+        ]}
+      ]
+    },
+
+    {
+      "id": "front-packshot",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "hero-orientation", "equals": "FRONT" },
+        { "anyOf": [
+            { "feature": "background-type", "equals": "SOLIDCOLOR" },
+            { "feature": "clipping-path", "equals": "true" }
+        ]},
+        { "feature": "occlusion-level", "equals": "full-product" },
+        { "feature": "intersection-count", "equals": "0" }
+      ]
+    },
+
+    {
+      "id": "back-packshot",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "hero-orientation", "equals": "BACK" },
+        { "anyOf": [
+            { "feature": "background-type", "equals": "SOLIDCOLOR" },
+            { "feature": "clipping-path", "equals": "true" }
+        ]},
+        { "feature": "occlusion-level", "equals": "full-product" },
+        { "feature": "intersection-count", "equals": "0" }
+      ]
+    },
+
+    {
+      "id": "side-packshot",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "hero-orientation", "equals": "SIDEON" },
+        { "anyOf": [
+            { "feature": "background-type", "equals": "SOLIDCOLOR" },
+            { "feature": "clipping-path", "equals": "true" }
+        ]},
+        { "feature": "occlusion-level", "equals": "full-product" }
+      ]
+    },
+
+    {
+      "id": "diagonal-packshot",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "hero-orientation", "equals": "DIAGONAL" },
+        { "anyOf": [
+            { "feature": "background-type", "equals": "SOLIDCOLOR" },
+            { "feature": "clipping-path", "equals": "true" }
+        ]},
+        { "feature": "occlusion-level", "equals": "full-product" }
+      ]
+    },
+
+    {
+      "id": "top-packshot",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "hero-orientation", "equals": "TOP" },
+        { "anyOf": [
+            { "feature": "background-type", "equals": "SOLIDCOLOR" },
+            { "feature": "clipping-path", "equals": "true" }
+        ]},
+        { "feature": "occlusion-level", "equals": "full-product" }
+      ]
+    },
+
+    {
+      "id": "bottom-packshot",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "hero-orientation", "equals": "BOTTOM" },
+        { "anyOf": [
+            { "feature": "background-type", "equals": "SOLIDCOLOR" },
+            { "feature": "clipping-path", "equals": "true" }
+        ]},
+        { "feature": "occlusion-level", "equals": "full-product" }
+      ]
+    },
+
+    {
+      "id": "ghost-front",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "hero-orientation", "equals": "FRONT" },
+        { "feature": "contains-mannequin", "equals": "false" },
+        { "anyOf": [
+            { "feature": "background-type", "equals": "SOLIDCOLOR" },
+            { "feature": "clipping-path", "equals": "true" }
+        ]},
+        { "feature": "occlusion-level", "equals": "full-product" },
+        { "feature": "intersection-count", "equals": "0" }
+      ]
+    },
+
+    {
+      "id": "ghost-back",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "hero-orientation", "equals": "BACK" },
+        { "anyOf": [
+            { "feature": "background-type", "equals": "SOLIDCOLOR" },
+            { "feature": "clipping-path", "equals": "true" }
+        ]},
+        { "feature": "occlusion-level", "equals": "full-product" }
+      ]
+    },
+
+    {
+      "id": "ghost-side",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "hero-orientation", "equals": "SIDEON" },
+        { "anyOf": [
+            { "feature": "background-type", "equals": "SOLIDCOLOR" },
+            { "feature": "clipping-path", "equals": "true" }
+        ]},
+        { "feature": "occlusion-level", "equals": "full-product" }
+      ]
+    },
+
+    {
+      "id": "flatlay-front",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "hero-orientation", "equals": "TOP" },
+        { "feature": "top-view", "equals": "true" },
+        { "feature": "intersection-count", "equals": "0" }
+      ]
+    },
+
+    {
+      "id": "flatlay-styled",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "top-view", "equals": "true" },
+        { "anyOf": [
+            { "feature": "multiple-products", "equals": "true" },
+            { "feature": "lifestyle-background", "equals": "true" }
+        ]}
+      ]
+    },
+
+    {
+      "id": "closeup-image",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "intersection-count", "min": 1 },
+        { "feature": "occlusion-level", "equals": "closeup" }
+      ]
+    },
+
+    {
+      "id": "packaging-shot",
+      "required": [
+        { "feature": "packaging-visible", "equals": "true" },
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "anyOf": [
+            { "feature": "occlusion-level", "equals": "full-product" },
+            { "feature": "occlusion-level", "equals": "mostly-visible" }
+        ]}
+      ]
+    },
+
+    {
+      "id": "size-chart",
+      "required": [
+        { "feature": "text-present", "equals": "true" },
+        { "feature": "product-coverage-ratio", "max": 0.30 },
+        { "feature": "image-occupancy", "min": 0.60 }
+      ]
+    },
+
+    {
+      "id": "lifestyle-hero",
+      "required": [
+        { "feature": "lifestyle-background", "equals": "true" },
+        { "anyOf": [
+            { "feature": "occlusion-level", "equals": "full-product" },
+            { "feature": "occlusion-level", "equals": "mostly-visible" }
+        ]}
+      ]
+    },
+
+    {
+      "id": "scale-reference-shot",
+      "required": [
+        { "feature": "scale-reference-present", "equals": "true" },
+        { "anyOf": [
+            { "feature": "occlusion-level", "equals": "full-product" },
+            { "feature": "occlusion-level", "equals": "mostly-visible" }
+        ]}
+      ]
+    },
+
+    {
+      "id": "interior-shot",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "anyOf": [
+            { "feature": "hero-orientation", "equals": "FRONT" },
+            { "feature": "hero-orientation", "equals": "TOP" }
+        ]},
+        { "feature": "packaging-visible", "equals": "false" }
+      ]
+    },
+
+    {
+      "id": "illustration-technical-drawing",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" }
+      ]
+    },
+
+    {
+      "id": "lifestyle-context",
+      "required": [
+        { "feature": "lifestyle-background", "equals": "true" }
+      ]
+    }
+
+  ]
+}

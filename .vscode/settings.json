@@ -60,6 +60,10 @@
         {
             "folderPath": "prism\\jb\\src\\core",
             "color": "foldercolorizer.color_00afff"
+        },
+        {
+            "filePath": "prism\\Launch_API_CORE_WEBBENCH.ps1",
+            "color": "foldercolorizer.color_ff0000"
         }
     ],
     "folder-color.favoriteColors": [

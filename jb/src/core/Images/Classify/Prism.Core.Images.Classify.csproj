@@ -5,6 +5,15 @@
 
   <ItemGroup>
     <Compile Include="ImageClassifier.cs" />
+    <Compile Include="ImageFeatureAnalyzer.cs" />
+    <Compile Include="PhenotypeRule.cs" />
+    <Compile Include="PhenotypeRuleSet.cs" />
+    <Compile Include="VisualHasher.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
 
   <ItemGroup>

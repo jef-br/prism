@@ -17,6 +17,8 @@
     <Compile Include="..\IO\BatchManifest.cs" Link="BatchManifest.cs" />
     <Compile Include="..\Pipeline\PipelineProgressEvent.cs" Link="PipelineProgressEvent.cs" />
     <Compile Include="..\Images\Classify\ClassificationToken.cs" Link="ClassificationToken.cs" />
+    <Compile Include="..\Images\Classify\ImageFeatureValue.cs" Link="ImageFeatureValue.cs" />
+    <Compile Include="..\Images\Classify\ImageFeatureSnapshot.cs" Link="ImageFeatureSnapshot.cs" />
     <Compile Include="..\Images\Match\MatchEvidence.cs" Link="MatchEvidence.cs" />
     <Compile Include="..\Images\Match\MatchType.cs" Link="MatchType.cs" />
     <Compile Include="..\Images\Transform\BackgroundType.cs" Link="BackgroundType.cs" />

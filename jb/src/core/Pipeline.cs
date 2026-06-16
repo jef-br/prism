@@ -266,6 +266,15 @@ internal sealed class PipelineContext : IDisposable
     /// <summary>Number of KO records accumulated across all stages.</summary>
     internal int KoRecordCount { get; set; }
 
+    /// <summary>Classified image records produced by the Classified stage.</summary>
+    internal List<ImageRecord_LAMBDA> LambdaRecords { get; } = [];
+
+    /// <summary>Number of visual duplicate images suppressed by the Classified stage.</summary>
+    internal int DuplicatesRemoved { get; set; }
+
+    /// <summary>Number of images successfully assigned a phenotype by the Classified stage.</summary>
+    internal int PhenotypeAssignedCount { get; set; }
+
     // -------------------------------------------------------------------------
     // Imported stage outputs — set by ImportStageShell after Run() completes.
     // -------------------------------------------------------------------------

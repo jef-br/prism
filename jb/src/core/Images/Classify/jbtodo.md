@@ -9,3 +9,23 @@
   - Recommended solution:
     Use the accepted `jb/docs/PRISM-classify.md` decision as the baseline: ImageFeatures are measured attributes with source/confidence/unknown state, and `ImageNGP` is a phenotype derived from combinations of ImageFeatures rather than a single `TypeOfShot` list. Complete this todo by listing the concrete ImageNGP values and their required feature combinations.
   - Answer:
+
+- [ ] Fix `ImageRoles.json` ordering bug: `ghost-front` is permanently unreachable because `front-packshot` appears before it and matches the same five conditions first.
+  - Impact:
+    - Project progress: Medium — invisible in CPU-only mode (hero-is-human is UNKNOWN so neither rule fires), but becomes a silent misclassification once CLIP provides `hero-is-human = FALSE`. Every ghost garment will be assigned `front-packshot` instead.
+    - Effect on other TODOs: Directly affects DetOrder slot assignment (ghost vs. packshot may map to different slots in `DetOrderRules.json`) and transform behavior.
+  - Industry standard:
+    First-match-wins rule engines always place more-specific rules (more required conditions) before less-specific ones. `ghost-front` is a strict superset of `front-packshot` requirements; it must come first.
+  - Recommended solution:
+    In `jb/src/core/ImageNGP/ImageRoles.json`, move `ghost-front`, `ghost-back`, and `ghost-side` to appear immediately before their corresponding packshot variants (`front-packshot`, `back-packshot`, `side-packshot`). Update the corresponding assertion in `PhenotypeRuleSetTests.Assign_GhostFront_OrderingBug_CurrentlyReturnsFrontPackshot` from `"front-packshot"` to `"ghost-front"` after the fix.
+  - Answer:
+
+- [ ] Resolve whether `illustration-technical-drawing` should remain a broad catch-all or require additional conditions.
+  - Impact:
+    - Project progress: Medium — once CLIP provides `hero-is-human = FALSE` for real images, every non-human image that does not match any earlier rule (including plain products with unusual or ambiguous features) will be silently assigned `illustration-technical-drawing`. This is almost certainly wrong for most of those images.
+    - Effect on other TODOs: Affects DetOrder slot assignment (the phenotype is documented to always receive the last configured det slot) and transform routing. Misclassification here directly degrades ordering quality.
+  - Industry standard:
+    Catch-all rules in phenotype taxonomies are either placed at the very bottom and clearly scoped (e.g. "all remaining lifestyle images → lifestyle-context") or gated by a positive signal (e.g. a CLIP prompt confidence for "graphic/schematic rendering"). A rule that means "graphic/schematic" but fires for any non-human image is an unscoped catch-all masquerading as a specific phenotype.
+  - Recommended solution:
+    Either (a) add CLIP-based conditions to tighten the rule (e.g. require a classification token above threshold for "technical drawing", "vector illustration", or "schematic"), or (b) replace the current rule with a null assignment so unrecognized non-human images get no phenotype and are handled by deterministic fallback in the Ordered stage. Option (b) is safer until the CLIP-based signal is proven reliable.
+  - Answer:

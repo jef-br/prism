@@ -82,7 +82,7 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-500 Classified Stage
 
-- `Status`: Ready
+- `Status`: Done
 - `Agent type`: worker
 - `Runtime profile`: `P4-critical-architecture`
 - `Owner`: Classified stage agent
@@ -95,7 +95,7 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-600 Matched Stage
 
-- `Status`: Blocked by T-500
+- `Status`: Done
 - `Agent type`: worker
 - `Runtime profile`: `P1-feature-worker`
 - `Owner`: Matched stage agent
@@ -107,7 +107,7 @@ M1 started with the web workbench. A minimal WPF project shell now exists, opens
 
 ### T-700 Ordered Stage
 
-- `Status`: Blocked by T-600
+- `Status`: Ready
 - `Agent type`: worker
 - `Runtime profile`: `P1-feature-worker`
 - `Owner`: Ordered stage agent
@@ -196,6 +196,8 @@ All tickets below reached `Done`. Retained here for context; do not re-open or r
 | T-320 | Excel Module Foundation | 2026-06-12 | `ModelBuilder.cs` entry point; IEM, header detection, dedup, FamilyRecord mapping. |
 | T-330 | Zip Module Foundation | 2026-06-12 | `ZipHandler.ExtractProcessableMembers`; extraction policy, encrypted/corrupt KO, fixed OK/KO layout. |
 | T-400 | Imported Stage | 2026-06-12 | `Importer.cs` fully implemented; `ImageRecord_INPUT` with provenance fields; API ingress spills uploads to `%TEMP%/prism/{jobID}/` so `TempFilePath` is set before enqueue. `SixLabors.ImageSharp` upgraded from 3.1.5 → 3.1.12 (Apache 2.0, CVEs resolved) on 2026-06-15. |
+| T-500 | Classified Stage | 2026-06-15 | Visual dedup, ImageFeatureAnalyzer, CLIP classifier, phenotype assignment; 61/61 tests green. |
+| T-600 | Matched Stage | 2026-06-16 | ImageMatcher waterfall (brackets 1–3 + label evidence); NumericMatcher (TCD), StringMatcher, ImageLabelingMatcher; MatchEvidence on ImageRecord_LAMBDA; 61/61 tests green. |
 | T-workbench-polish | Web Workbench Result & Route Display | 2026-06-15 | JSON manifest display; ZIP download button; job status badge; stage name heading; conditional field rendering. |
 
 ---
