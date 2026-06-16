@@ -18,3 +18,7 @@ Start-Process pwsh -ArgumentList "-NoExit", "-Command", "Set-Location '$root/jb/
 Start-Process pwsh -ArgumentList "-NoExit", "-Command", "Set-Location '$root'; dotnet run --project jb/src/workbench/wpf/Prism.Workbench.Wpf.csproj"
 
 Write-Host "All services launched. Web workbench: http://localhost:3000"
+
+
+
+Restore succeeded with 4 warning(s) in 1,6s

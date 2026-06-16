@@ -1,30 +1,194 @@
 {
-    "DetOrderByNGP":{
-        "default": {
-            "det0":"front",
-            "det1":"back",
-            "det2":"side",
-            "det3":"detail",
-            "det4":"top",
-            "det5":"bottom",
-            "det6":"pack",
-            "det7":"label",
-            "det8":"material"
-        },
-        "PaP": {
-            "det0":"front",
-            "det1":"back",
-            "det2":"side",
-            "det3":"detail",
-            "det4":"lifestyle"
-       },
-        "Shoes": {
-            "det0":"diagonal",
-            "det1":"front",
-            "det2":"side",
-            "det3":"back",
-            "det4":"bottom",
-            "det5":"lifestyle"
-        }
+  "productTypes": {
+    "default": {
+      "det0": { "keyword": "front",   "phenotypes": ["front-packshot", "front-on-model-full-product", "diagonal-packshot"] },
+      "det1": { "keyword": "back",    "phenotypes": ["back-packshot", "back-on-model-full-product"] },
+      "det2": { "keyword": "side",    "phenotypes": ["side-packshot", "side-on-model"] },
+      "det3": { "keyword": "detail",  "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "top",     "phenotypes": ["top-packshot"] },
+      "det5": { "keyword": "bottom",  "phenotypes": ["bottom-packshot"] },
+      "det6": { "keyword": "pack",    "phenotypes": ["packaging-shot", "scale-reference-shot"] },
+      "det7": { "keyword": "label",   "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "clothing-tops": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-on-model-full-product", "ghost-front", "front-packshot"] },
+      "det1": { "keyword": "back",      "phenotypes": ["back-on-model-full-product", "ghost-back", "back-packshot"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-on-model", "ghost-side", "side-packshot"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "flatlay-styled"] },
+      "det5": { "keyword": "front",     "phenotypes": ["front-on-model-partial", "flatlay-front"] },
+      "det6": { "keyword": "label",     "phenotypes": ["closeup-image", "packaging-shot"] },
+      "det7": { "keyword": "material",  "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "clothing-bottoms": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-on-model-full-product", "ghost-front", "front-packshot"] },
+      "det1": { "keyword": "back",      "phenotypes": ["back-on-model-full-product", "ghost-back", "back-packshot"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-on-model", "ghost-side", "side-packshot"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "front",     "phenotypes": ["front-on-model-partial", "flatlay-front"] },
+      "det5": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "flatlay-styled"] },
+      "det6": { "keyword": "label",     "phenotypes": ["closeup-image", "packaging-shot"] },
+      "det7": { "keyword": "material",  "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "clothing-outerwear": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-on-model-full-product", "ghost-front", "front-packshot"] },
+      "det1": { "keyword": "back",      "phenotypes": ["back-on-model-full-product", "ghost-back", "back-packshot"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-on-model", "ghost-side", "side-packshot"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "interior",  "phenotypes": ["interior-shot", "closeup-image"] },
+      "det5": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero"] },
+      "det6": { "keyword": "front",     "phenotypes": ["front-on-model-partial", "flatlay-front"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "packaging-shot", "illustration-technical-drawing"] }
+    },
+    "clothing-dresses": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-on-model-full-product", "ghost-front", "front-packshot"] },
+      "det1": { "keyword": "back",      "phenotypes": ["back-on-model-full-product", "ghost-back"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-on-model", "ghost-side"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "flatlay-styled"] },
+      "det5": { "keyword": "front",     "phenotypes": ["front-on-model-partial", "flatlay-front"] },
+      "det6": { "keyword": "material",  "phenotypes": ["closeup-image"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "footwear": {
+      "det0": { "keyword": "diagonal",  "phenotypes": ["diagonal-packshot", "front-on-model-full-product"] },
+      "det1": { "keyword": "front",     "phenotypes": ["front-packshot", "front-on-model-partial"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-packshot", "side-on-model"] },
+      "det3": { "keyword": "back",      "phenotypes": ["back-packshot"] },
+      "det4": { "keyword": "bottom",    "phenotypes": ["bottom-packshot"] },
+      "det5": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det6": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det7": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "on-model-with-accessories", "illustration-technical-drawing"] }
+    },
+    "bags-accessories": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-packshot", "ghost-front"] },
+      "det1": { "keyword": "side",      "phenotypes": ["side-packshot"] },
+      "det2": { "keyword": "back",      "phenotypes": ["back-packshot"] },
+      "det3": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det4": { "keyword": "interior",  "phenotypes": ["interior-shot"] },
+      "det5": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det6": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "on-model-with-accessories"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "packaging-shot", "illustration-technical-drawing"] }
+    },
+    "fmcg-packaged-food": {
+      "det0": { "keyword": "front",     "phenotypes": ["packaging-shot", "front-packshot"] },
+      "det1": { "keyword": "back",      "phenotypes": ["back-packshot", "packaging-shot"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-packshot", "packaging-shot"] },
+      "det3": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det4": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det5": { "keyword": "pack",      "phenotypes": ["packaging-shot"] },
+      "det6": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "scale-reference-shot"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "fmcg-personal-care": {
+      "det0": { "keyword": "front",     "phenotypes": ["packaging-shot", "front-packshot"] },
+      "det1": { "keyword": "back",      "phenotypes": ["back-packshot", "packaging-shot"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-packshot"] },
+      "det3": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det4": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det5": { "keyword": "pack",      "phenotypes": ["packaging-shot"] },
+      "det6": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "beauty-cosmetics": {
+      "det0": { "keyword": "front",     "phenotypes": ["packaging-shot", "front-packshot", "diagonal-packshot"] },
+      "det1": { "keyword": "side",      "phenotypes": ["side-packshot", "diagonal-packshot"] },
+      "det2": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "interior",  "phenotypes": ["interior-shot"] },
+      "det5": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "on-model-with-accessories"] },
+      "det6": { "keyword": "pack",      "phenotypes": ["packaging-shot"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "electronics-small": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-packshot", "diagonal-packshot"] },
+      "det1": { "keyword": "side",      "phenotypes": ["side-packshot", "diagonal-packshot"] },
+      "det2": { "keyword": "back",      "phenotypes": ["back-packshot"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "pack",      "phenotypes": ["packaging-shot"] },
+      "det5": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "scale-reference-shot"] },
+      "det6": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "electronics-large": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-packshot", "diagonal-packshot"] },
+      "det1": { "keyword": "side",      "phenotypes": ["side-packshot"] },
+      "det2": { "keyword": "back",      "phenotypes": ["back-packshot"] },
+      "det3": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det4": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det5": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "scale-reference-shot"] },
+      "det6": { "keyword": "pack",      "phenotypes": ["packaging-shot"] },
+      "det7": { "keyword": "interior",  "phenotypes": ["interior-shot", "closeup-image", "illustration-technical-drawing"] }
+    },
+    "homeware-soft": {
+      "det0": { "keyword": "front",     "phenotypes": ["flatlay-front", "front-packshot", "front-on-model-full-product"] },
+      "det1": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det2": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "flatlay-styled"] },
+      "det3": { "keyword": "side",      "phenotypes": ["side-packshot", "front-packshot"] },
+      "det4": { "keyword": "top",       "phenotypes": ["top-packshot", "flatlay-front"] },
+      "det5": { "keyword": "pack",      "phenotypes": ["packaging-shot", "scale-reference-shot"] },
+      "det6": { "keyword": "material",  "phenotypes": ["closeup-image"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "homeware-hard": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-packshot", "diagonal-packshot"] },
+      "det1": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-packshot"] },
+      "det3": { "keyword": "interior",  "phenotypes": ["interior-shot", "top-packshot"] },
+      "det4": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det5": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero"] },
+      "det6": { "keyword": "pack",      "phenotypes": ["packaging-shot", "scale-reference-shot"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "toys-children": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-packshot", "diagonal-packshot", "packaging-shot"] },
+      "det1": { "keyword": "back",      "phenotypes": ["back-packshot", "packaging-shot"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-packshot"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "pack",      "phenotypes": ["packaging-shot"] },
+      "det5": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "scale-reference-shot"] },
+      "det6": { "keyword": "top",       "phenotypes": ["top-packshot", "flatlay-front"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "packaging-shot", "illustration-technical-drawing"] }
+    },
+    "diy-tools": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-packshot", "diagonal-packshot"] },
+      "det1": { "keyword": "side",      "phenotypes": ["side-packshot"] },
+      "det2": { "keyword": "back",      "phenotypes": ["back-packshot"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "pack",      "phenotypes": ["packaging-shot"] },
+      "det5": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "scale-reference-shot"] },
+      "det6": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "gardening": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-packshot", "packaging-shot", "lifestyle-hero"] },
+      "det1": { "keyword": "side",      "phenotypes": ["side-packshot"] },
+      "det2": { "keyword": "top",       "phenotypes": ["top-packshot", "flatlay-front"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero"] },
+      "det5": { "keyword": "pack",      "phenotypes": ["packaging-shot", "scale-reference-shot"] },
+      "det6": { "keyword": "back",      "phenotypes": ["back-packshot", "packaging-shot"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "sports-equipment": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-packshot", "diagonal-packshot"] },
+      "det1": { "keyword": "side",      "phenotypes": ["side-packshot"] },
+      "det2": { "keyword": "back",      "phenotypes": ["back-packshot"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det4": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "front-on-model-full-product"] },
+      "det5": { "keyword": "pack",      "phenotypes": ["packaging-shot", "scale-reference-shot"] },
+      "det6": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
+    },
+    "furniture": {
+      "det0": { "keyword": "front",     "phenotypes": ["front-packshot", "diagonal-packshot", "lifestyle-hero"] },
+      "det1": { "keyword": "side",      "phenotypes": ["side-packshot"] },
+      "det2": { "keyword": "back",      "phenotypes": ["back-packshot"] },
+      "det3": { "keyword": "top",       "phenotypes": ["top-packshot"] },
+      "det4": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det5": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero"] },
+      "det6": { "keyword": "pack",      "phenotypes": ["packaging-shot", "scale-reference-shot"] },
+      "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "interior-shot", "illustration-technical-drawing"] }
     }
+  }
 }

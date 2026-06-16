@@ -308,7 +308,7 @@ internal static class OrderStageShell
     /// <param name="configuration">Validated PRISM configuration.</param>
     internal static void Run(PipelineContext context, PrismConfiguration configuration)
     {
-        // TODO T-430: delegate to ImageOrderer.cs
+        ImageOrderer.Run(context);
         context.MarkStageCompleted(PipelineStageNames.Ordered);
     }
 }

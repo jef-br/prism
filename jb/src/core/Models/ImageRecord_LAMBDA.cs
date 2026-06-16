@@ -48,6 +48,16 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
     public MatchEvidence? MatchEvidence { get; set; }
 
     // -------------------------------------------------------------------------
+    // Ordering outputs — populated by the Ordered stage
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Det-slot assignment and tie-breaking evidence produced by the Ordered stage.
+    /// Null until the Ordered stage completes for this record.
+    /// </summary>
+    public OrderEvidence? OrderEvidence { get; set; }
+
+    // -------------------------------------------------------------------------
     // KO tracking — set by any stage when the image is rejected
     // -------------------------------------------------------------------------
 
