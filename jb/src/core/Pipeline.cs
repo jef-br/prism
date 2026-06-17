@@ -126,7 +126,8 @@ internal sealed class Pipeline
     {
         string outputFormat = request.PrismProcessingParameters?.Format ?? "json";
 
-        BatchManifest manifest = new()
+        // Exporter builds the canonical manifest during the Exported stage — reuse it to avoid rebuilding.
+        BatchManifest manifest = context.ExportResult?.FinalManifest ?? new BatchManifest
         {
             JobID = context.JobID,
             Summary = new BatchManifestSummary
@@ -141,7 +142,7 @@ internal sealed class Pipeline
             Warnings       = context.Warnings
         };
 
-        return new PipelineResult("Completed", outputFormat, manifest, null, context.Warnings);
+        return new PipelineResult("Completed", outputFormat, manifest, null, context.Warnings, context.ExportResult?.ZipBytes);
     }
 
     private static PipelineResult BuildFailedResult(PipelineContext context, PrismJobRequest request, Exception exception)

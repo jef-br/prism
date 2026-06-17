@@ -216,3 +216,6 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 .vscode/settings.json
+
+#graphify
+graphify-out/cache/

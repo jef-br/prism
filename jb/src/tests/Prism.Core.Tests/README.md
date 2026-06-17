@@ -26,7 +26,6 @@ Confirms RouteSummaries list is always populated and non-empty.
 Documents the definitive stage order: Imported → Classified → Matched → Ordered → Renamed → Generated → Transformed → Exported.
 
 ## Running Tests
-
 From the repository root:
 
 ```bash
@@ -40,7 +39,6 @@ dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj
 ```
 
 ## Fixture Data
-
 Tests use real fixture data from `jb/Testing/SPACINI29/`:
 - `TINY/` — Subset of 11 images for fast tests
 - `SPACINI29-INPUTS.xlsx` — Excel mapping file
@@ -48,5 +46,4 @@ Tests use real fixture data from `jb/Testing/SPACINI29/`:
 The fixture path is resolved dynamically at runtime by walking up the directory tree from the assembly location, with a fallback to a known absolute path.
 
 ## Assertions
-
 Tests assert on `BatchManifest.RouteSummaries` only (not implementation details). The stage order assertion is definitive and immutable.

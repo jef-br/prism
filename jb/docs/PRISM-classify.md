@@ -1,163 +1,150 @@
 # PRISM — Image Classification
+*Abbreviations: `GLOSSARY.md`*
 
 ## When Classification Runs
 
-Classification runs during the **`Classified`** stage for **every canonical image** after import normalization and visual-hash deduplication.
+Runs in the **`Classified`** stage for every canonical image after import normalization and visual-hash deduplication. Classification is unconditional — not a fallback.
 
-Labels are part of the definitive pipeline route and are available before matching, ordering, generation, transformation, and export. Classification is not a fallback — it runs unconditionally.
+Labels available before matching, ordering, generation, transformation, and export.
 
 ---
 
-## ImageFeature and ImageNGP
+## IF and INGP
 
-Classification and purpose-built analyzers produce **ImageFeatures**. An ImageFeature is one measured image attribute with source and confidence, such as product type, orientation, background state, edge intersections, human presence, head visibility, skin-color evidence, object bounds, or visual labels.
+Classification and purpose-built analyzers produce **IFs**. Each IF is one measured image attribute (PT, orientation, background state, edge intersections, human presence, head visibility, skin-color evidence, object bounds, visual labels) with source and confidence.
 
-`ImageNGP` is the image phenotype derived from a combination of ImageFeatures. It is not a single trait list such as `TypeOfShot`; examples of the intended phenotype shape are `PAP_FRONT`, `JEANS_GHOST_FRONT`, `JEANS_BUTT`, and `JEANS_GHOST_DETAIL`.
+INGP = phenotype derived from a combination of IFs. Not a single trait list like `TypeOfShot`. Examples: `PAP_FRONT`, `JEANS_GHOST_FRONT`, `JEANS_GHOST_DETAIL`.
 
-`TypeOfShot` is not the canonical ImageNGP list. It may remain one ImageFeature or be replaced by more precise ImageFeatures when the ImageNGP taxonomy is defined.
+`TypeOfShot` is one IF — not the INGP taxonomy.
 
-The ImageNGP phenotype taxonomy is being finalized in `jb/docs/ImageNGP/PRODUCTTYPES.md` and `jb/docs/ImageNGP/imagePhenotypes.md`. T-500 (Classified Stage) is blocked until those documents are complete.
+INGP taxonomy: 26 phenotypes in `jb/docs/ImageNGP/imagePhenotypes.md` and `jb/docs/ImageNGP/PRODUCTTYPES.MD`.
+
+**Current impl**: Most IFs set to `UNKNOWN` via `RecordUnknownFeatures()` in `ImageFeatureAnalyzer.cs`. CLIP runs for: `hero-is-human`, `hero-orientation`, `head-visible`, `body-visible` using natural-language prompts in `StageShells.cs`. Open work in `jb/src/core/Images/Classify/jbtodo.md`.
 
 ---
 
 ## ONNX Model
 
-- Current temporary external model: `sentence-transformers/clip-ViT-B-32`.
-- Retrieval sources: Hugging Face model `sentence-transformers/clip-ViT-B-32` or Microsoft Foundry model `sentence-transformers-clip-vit-b-32`.
-- Local ONNX runtime artifact, when used: `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/model_uint8.onnx`.
-- The local ONNX file is a machine-local artifact and must not be stored in git.
-- The ONNX file does not need to be recreatable because this model is temporary and will be replaced by a PRISM-owned model later.
-- Exact tensor names, tensor shapes, dtypes, tokenizer compatibility, and normalization details are implementation contracts validated by `ImageClassifier.cs` at model load, not open project decisions for this temporary model.
-- Prompt sets, thresholds, and expected label outputs belong to classification configuration and evaluation when PRISM's own model/taxonomy is finalized, not to this temporary external model folder.
+- Temporary model: `sentence-transformers/clip-ViT-B-32`
+- Sources: Hugging Face `sentence-transformers/clip-ViT-B-32` or Microsoft Foundry `sentence-transformers-clip-vit-b-32`
+- Local path: `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/model_uint8.onnx`
+- SHA-256: `4AC011172C8C022937BB83DAD2E8FC207F52F19972B36E14808CC3C8042C4E60` — verify before creating `InferenceSession`; mismatch → FFAIL
+- Must not be stored in git. Not recreatable (temporary; will be replaced by PRISM-owned model).
+- Tensor names, shapes, dtypes, tokenizer compatibility, normalization details: validated by `ImageClassifier.cs` at model load.
 
 ---
 
-## ONNX Ownership and Lifetime
+## ONNX Ownership
 
-`jb/src/core/Images/ImageClassifier.cs` owns the ONNX model boundary for PRISM.
-
-Responsibilities:
-- Load and validate required model files and tokenizer/model assets.
-- Verify required assets exist before inference is attempted.
-- Validate model readiness, including checksum and tensor contract checks when those contracts are known.
-- Own communication between the model layer and the rest of PRISM.
-- Hide any lower-level ONNX provider, worker, session, tokenizer, or buffer helper from PRISM callers.
-
-ONNX sessions are application-scoped and reusable. Per-batch input/output buffers and any per-worker state remain isolated behind `ImageClassifier.cs`.
+`ImageClassifier.cs` owns the ONNX boundary:
+- Load and validate model files and tokenizer/model assets.
+- Verify assets exist before inference.
+- Validate model readiness (checksum + tensor contracts when known).
+- Own communication between model layer and PRISM callers.
+- Hide all lower-level ONNX provider/worker/session/tokenizer/buffer helpers.
+- Sessions application-scoped. Per-batch buffers and per-worker state isolated behind `ImageClassifier.cs`.
 
 ---
 
 ## ONNX Diagnostics
 
-ONNX diagnostics run only in debug mode.
-
-Debug diagnostics write model parameters, tensor metadata, and bounded per-sample output to the console. Normal batch output must not be bloated with unbounded tensor data or raw per-item scores.
+Debug mode only. Writes model parameters, tensor metadata, bounded per-sample output to console. Normal batch output must not include unbounded tensor data or raw per-item scores.
 
 ---
 
 ## ONNX Runtime Provider Policy
 
-- **CPU is the required baseline.** PRISM must run on local servers and laptops without a GPU.
-- Only models that can run on CPU-only are permitted.
-- Absence of a GPU must not disable model-dependent stages or fail a job.
-- A GPU is a bonus resource only — it may enhance productivity of what could also be done on CPU.
-- Missing, invalid, or incompatible required model files still fail fast and loud as PRISM-owned failures; GPU absence alone is not such a failure.
-- No GPU → CPU fallback path is required. CPU-only is a supported configuration, not a fallback.
+- **CPU is the required baseline.** Must run on local servers and laptops without GPU.
+- Only CPU-capable models permitted.
+- GPU absence must not disable model-dependent stages or fail a job.
+- GPU = bonus resource only.
+- Missing/invalid/incompatible required model files → FFAIL. GPU absence alone is not.
+- No GPU→CPU fallback path required — CPU-only is the supported configuration.
 
 ---
 
 ## Classification Confidence Thresholds
 
-Configured in `jb/src/core/Prism_Config.json` at `Classification.Confidence_Threshold` and `Classification.Cutoff_Threshold`.
+From CFG: `Classification.Confidence_Threshold` and `Classification.Cutoff_Threshold`.
+Current effective: **`0.9`** (`Confidence_Threshold`).
 
-Current effective threshold: **`0.9`** (`Classification.Confidence_Threshold`).
-
-| Score range | Storage |
+| Score range | Stored in |
 |---|---|
-| ≥ `Confidence_Threshold` | `ImageRecord_LAMBDA.Tags.Influential` — accepted evidence, may drive decisions |
-| ≥ `Cutoff_Threshold` and < `Confidence_Threshold` | `ImageRecord_LAMBDA.Tags.Trivial` — weak evidence and diagnostics only, do not drive decisions |
-| < `Cutoff_Threshold` | Discarded from matching, ordering, and transform evidence |
+| ≥ `Confidence_Threshold` | `IRL.Tags.Influential` — accepted evidence; may drive decisions |
+| ≥ `Cutoff_Threshold` AND < `Confidence_Threshold` | `IRL.Tags.Trivial` — weak evidence/diagnostics only; does not drive decisions |
+| < `Cutoff_Threshold` | Discarded |
 
-Traits use **both** a numeric confidence `double` and a boolean derived from it (boolean = score ≥ configured threshold).
-
----
-
-## Unknown Classification States
-
-- Every bounded ImageFeature enum has an `UNKNOWN` value.
-- When classification or an analyzer is not confident enough to choose a concrete feature value → set that feature to `UNKNOWN`, never default to a false or arbitrary value.
-- Unknown ImageFeatures can prevent confident ImageNGP derivation and must remain visible in the classification summary.
-- Unknown transform-critical ImageFeatures route image handling to conservative processing in `Tx_ProblemImageProcessor.cs`.
-- Valid imported/canonical images stay in the image collection regardless of classification confidence issues.
+Each trait stores both numeric `double` confidence and a derived boolean (score ≥ threshold).
 
 ---
 
-## Orientation ImageFeature
+## UNKNOWN States
 
-Hero orientation is one ImageFeature. Current allowed values are:
-- `FRONT`
-- `DIAGONAL`
-- `BACK`
-- `SIDEON`
-- `TOP`
-- `BOTTOM`
-- `UNKNOWN`
+- Every bounded IF enum has an `UNKNOWN` value.
+- Confidence below threshold → set to `UNKNOWN`, never default to false or arbitrary value.
+- UNKNOWN IFs can prevent INGP derivation — must remain visible in classification summary.
+- UNKNOWN transform-critical IFs → route to `Tx_ProblemImageProcessor.cs`.
+- Valid canonical images stay in the image collection regardless of classification confidence issues.
+
+---
+
+## Orientation IF
+
+`hero-orientation` allowed values: `FRONT`, `DIAGONAL`, `BACK`, `SIDEON`, `TOP`, `BOTTOM`, `UNKNOWN`
 
 ---
 
 ## Border Intersection Detection
 
-**Stage 1:** Use salient object bounds as a first stage.
+**Stage 1:** Salient object bounds as first stage.
+**Stage 2:** Edge detection on subsampled strips:
+- Covers full width for horizontal edges; full height for vertical.
+- `SubSampleWidth` = 10% of smallest image dimension.
+- Canny edge detection → Hough Line detection.
+- Hough lines detected AND leaving image frame → salient object is intersecting.
 
-**Stage 2:** Edge detection on a subsample of the image:
-- Subsample covers entire width for horizontal edges (top/bottom); full height for vertical edges (left/right).
-- Other dimension: `SubSampleWidth` = 10% of the smallest initial image dimension.
-- Perform Canny edge detection to detect Hough Line presence.
-- If Hough lines detected **and** those lines leave the image frame → salient object is considered intersecting.
-
-Intersections can occur at zero, one, several, or all edges. Intersection at an edge means the salient object **cannot be repositioned** in that direction.
+Intersection at an edge means the object **cannot be repositioned** in that direction. Each edge is independent: 0–4 intersections possible.
 
 ---
 
 ## Human Detection
 
-**Step 1:** Scan histogram for "human skin color" percentage.
-- Must account for all skin colors under all common lighting circumstances.
-- Configurable parameter: `MinimumSkinToneArea`
-- Result stored as a property of `ImageRecord_LAMBDA`.
+**Step 1 — Skin histogram scan:**
+- Detects skin-color percentage (all skin colors, all common lighting).
+- Configurable: `MinimumSkinToneArea`
+- Result stored in IRL.
 
-**Step 2:** Part Affinity Field-based pose estimation (without detecting keypoints) to find a human skeleton (partial or full).
-- Uses border intersection information (from prior stage) to predict partial/full skeleton.
-  - Bottom intersection → legs likely cut off
-  - Left/right intersection → one arm might be cut off
+**Step 2 — PAF-based pose estimation (partial or full skeleton):**
+- Uses border intersection information from prior stage to predict partial/full skeleton.
+- Bottom intersection → legs likely cut off; left/right intersection → arm might be cut off.
 
 ---
 
 ## Head Visibility Detection
 
-- Attempt to detect facial features using the image as a matrix with kernels such as the Kernel Gabor-based Weighted Region Covariance Matrix (KGWRCM) optimized for facial feature detection.
-- Limit detection area to the **top half** of the image.
-- Scale the kernel using the previously discovered skeleton to match the size of a human head given anatomical proportions vs. image size vs. the single biggest blob of skin color in the top third of the full original image.
-- Correlate result with image classification/labeling from the temporary CLIP model owned by `ImageClassifier.cs`.
+- Facial feature detection using image matrix + kernels (KGWRCM) optimized for facial features.
+- Detection area limited to **top half** of image.
+- Kernel scaled using previously discovered skeleton (anatomical proportions vs. image size vs. largest skin-color blob in top third).
+- Correlated with CLIP classification labels from `ImageClassifier.cs`.
 
 ---
 
 ## Expected Classification Label Categories (`ImageLabelingMatcher`)
 
-- Human/silhouette presence (whether human appears fully within frame when confidence supports it)
-- Clothing or product categories (e.g., `jeans`, `shirt`)
-- Product colors (e.g., `blue`, `red`)
-- Background labels: flat/single-color evidence and color when available
-- Pose/orientation labels (e.g., `front`) — used as ImageFeature evidence
+- Human/silhouette presence
+- Clothing/product categories (`jeans`, `shirt`, …)
+- Product colors (`blue`, `red`, …)
+- Background labels (flat/solid evidence + color)
+- Pose/orientation labels (`front`, …)
 
-Labels are retained as classification evidence with confidence and summarized in `MatchEvidence` and `ImageRecord_LAMBDA`.
+Labels retained as evidence with confidence; summarized in ME and IRL.
 
 ---
 
 ## Visual Deduplication
 
-Runs in the `Classified` stage after import normalization.
+Runs in `Classified` stage after import normalization.
 - Key comparer: visual hash.
-- Highest-resolution image → canonical image that continues through pipeline.
-- Non-canonical duplicates: do not produce separate OK output images.
+- Highest-resolution → canonical; continues through pipeline.
+- Non-canonical duplicates: no separate OK output.
 - Reported with safe source provenance in manifest/workbench diagnostics.

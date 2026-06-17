@@ -1,12 +1,13 @@
 # PRISM — API Contracts
+*Abbreviations: `GLOSSARY.md`*
 
 ## `POST /PRISM/process`
 
 Accepts `multipart/form-data`.
 
-**Multipart parts:**
+**Parts:**
 - `request` — JSON request model (see shape below)
-- `input` — repeated for every uploaded file (image, `.xlsx`, or zip — client does not classify type)
+- `input` — repeated per uploaded file (image, `.xlsx`, or zip — client does not classify type)
 
 **Request JSON shape:**
 ```json
@@ -28,51 +29,37 @@ Accepts `multipart/form-data`.
 }
 ```
 
-- Processing options are in the JSON request model, not query parameters.
-- Accepted `format` values: `"zip"` and `"json"`.
-- `request.Input` contains remote input strings (HTTP links, Dropbox, WeTransfer, cloud platform links).
-- Clients do not classify inputs as image, Excel, or zip — PRISM/API ingress triages by accepted media type.
+- Processing options in JSON, not query parameters.
+- `format` values: `"zip"` and `"json"`.
+- `request.Input` contains remote input strings (HTTP links, Dropbox, WeTransfer, cloud links).
+- Clients do not classify inputs as image/Excel/zip — PRISM triages by accepted media type.
 
-**Minimum requirements:** At least one accepted image representation and one accepted `.xlsx` Excel file must be present after import (from uploads, remote resources, or zip contents).
+**Minimum:** ≥1 accepted image representation + ≥1 accepted `.xlsx` after import.
 
-**Before calling `Prism.Process`:** API ingress and `Importer.cs` resolve/download/open all inputs, validate them, convert to importer descriptors, then build `PrismJobRequest`. `PrismJobRequest` must not expose raw multipart objects, API-specific types, WPF-specific objects, or platform-specific link objects.
+**Before `Prism.Process`:** API ingress + `Importer.cs` resolve/download/open all inputs, validate, convert to descriptors, then build PJR. PJR must not expose raw multipart objects, API types, WPF objects, or platform link objects.
 
 ---
 
 ## Submission Response (Job Start Envelope)
 
 `POST /PRISM/process` returns quickly with:
-- `JobID`
-- `ClientRequestToken` (when supplied)
-- `progressUrl`
-- `resultUrl`
-- Initial job status: `Queued`
-- The client persists returned `JobID` values locally and expires them on the same retention window as the server.
+- `JobID`, `ClientRequestToken` (when supplied), `progressUrl`, `resultUrl`
+- Initial status: `Queued`
+
+Client persists returned `JobID` values locally and expires on same retention window as server.
 
 ---
 
-## Progress — Server-Sent Events
+## Progress — SSE
 
-`GET /PRISM/jobs/{JobID}/progress` — SSE stream for web clients.
-
-SSE is the **primary** web progress transport. Polling is not primary. WebSockets not used.
+`GET /PRISM/jobs/{JobID}/progress` — SSE stream for web clients. Primary transport; no polling; no WebSockets.
 Only the client that started the job may access this endpoint.
 
-**Each SSE progress event includes:**
-- `JobID`
-- Route stage name from the definitive route: `Imported`, `Classified`, `Matched`, `Ordered`, `Renamed`, `Generated`, `Transformed`, `Exported`
-- Current item when available
-- Completed count and total count when known
-- Severity
-- Safe message
-- Timestamp
+**Each PPE includes:** `JobID`, route stage name, current item (when available), completed/total counts (when known), severity, safe message, timestamp.
 
-Queue, running, completion, and failure job-status events may appear around route-stage progress events.
-Events are **monotonic** for one job and never invent API-only progress stages.
-SSE is live-only: late subscribers and reconnecting clients do not receive replayed historical events.
-After terminal completion or failure, this endpoint no longer acts as a replay source.
+Queue/running/completion/failure job-status events may appear around route-stage events. Events are **monotonic** for one job. SSE is live-only — no replay for late subscribers or reconnects. After terminal state: endpoint no longer acts as replay source.
 
-**WPF:** Does not use API progress transport. Subscribes directly to the shared core progress event stream.
+WPF: subscribes directly to shared core PPE stream — does not use SSE.
 
 ---
 
@@ -80,70 +67,47 @@ After terminal completion or failure, this endpoint no longer acts as a replay s
 
 `GET /PRISM/jobs/{JobID}/result`
 
-Called after the job reaches a completed or failed final state. The progress stream sends completion/failure status but does not carry the full output.
-Only the client that started the job may access this endpoint.
-The result remains available until `Prism_Config.json -> Jobs.JobRetentionPeriodInHours` expires. After that, the `JobID` is stale and should be treated as unknown.
+Call after terminal state from progress stream. Only the job's originating client may access.
+Result available until CFG `Jobs.JobRetentionPeriodInHours` expires. After: `JobID` stale.
 
 ### Zip Output (`format="zip"`)
 
-Returns raw `application/zip` stream with normal download headers only.
-- No `X-Prism-JobID` or `X-Prism-ClientRequestToken` headers.
+Returns `application/zip`. No extra headers (`X-Prism-JobID` etc.).
 
-**Zip contents:**
+**Contents:**
 - `manifest.json` at archive root
-- `OK/` — all OK renamed, ordered, transformed output images
-- `KO/` — normalized JPG artifacts for images that imported successfully but became KO later (images that cannot be decoded/imported appear in `manifest.json` KO entries only)
-- The full first `.xlsx` file whose workbook contained the first accepted `familyID` column (keeps original filename)
+- `OK/` — all OK renamed/ordered/transformed output images
+- `KO/` — normalized JPGs for images that imported OK but became KO later (decode failures appear in manifest only)
+- First `.xlsx` with first accepted FID column (original filename kept)
 
 ### JSON Output (`format="json"`)
 
 Returns `application/json`.
 
 **Top-level fields:**
-- `manifest` — canonical `BatchManifest` (summary, OK/KO images, KO groups, route summaries, safe diagnostics, export metadata)
-- `images` — grouped per-image journey entries
-- `originalImages` — optional, present only when `ReturnOriginalImages=true`
+- `manifest` — canonical BM (summary, OK/KO images, KO groups, route summaries, safe diagnostics, export metadata)
+- `images` — `{ ok[], ko[] }` per-image journey entries
+- `originalImages` — present only when `PPP.ReturnOriginalImages = true`
 
-`images` contains:
-- `ok[]` — images with exportable OK output
-- `ko[]` — images that became KO, preserving bounded pipeline journey
-
-Each journey item:
+**Per journey item:**
 ```json
-{
-  "sourceReference": "full/original/path/or/url/to/image.jpg",
-  "lambda": { ... },
-  "output": { ... }
-}
+{ "sourceReference": "full/original/path.jpg", "lambda": { ... }, "output": { ... } }
 ```
-- `output` is `null` for KO items.
-- Default JSON export does not embed image bytes.
+`output` is `null` for KO items. Default JSON export does not embed image bytes.
 
 No separate top-level `summary`, `ko`, or `diagnostics` fields — those belong inside `manifest`.
-`manifest.json` is the only retained diagnostic snapshot artifact.
 
 ---
 
 ## `GET /PRISM/health`
 
-Returns generic "Prism Health OK" plus:
-- Whether processing can currently accept jobs
-- Number of jobs currently being processed
-- Number of queued jobs
-- Configured `MaxQueuedJobs`
-- Configured `MaxConcurrentJobs`
-- Supported runtime providers
-- Config validity readiness fields
-- Required model assets readiness
-- Temp disk availability
+Returns: processing acceptance status, jobs currently processing, jobs queued, configured `MaxQueuedJobs` + `MaxConcurrentJobs`, supported runtime providers, config/model/disk readiness fields.
 
 ---
 
 ## `GET /PRISM/config`
 
-Exposes: accepted media types, max file size, max request size, max image count, output formats, visible feature flags, and any parameter safe to share from any `..._config.json` file in the repo.
-
-Hides: local paths and private provider settings.
+Returns: accepted media types, max file size, max request size, max image count, output formats, visible feature flags, safe params from any `..._config.json`. Hides: local paths and private provider settings.
 
 ---
 
@@ -154,18 +118,13 @@ Hides: local paths and private provider settings.
   "correlationId": "1234567890",
   "code": "INVALID_PAYLOAD",
   "message": "Message that describes what is invalid.",
-  "details": [
-    "request.Input[0]=https://example.com/file.zip",
-    "maxRequestBytes=2684354560"
-  ],
-  "fieldErrors": [
-    "request.Input[0]:CONTENT_LENGTH_REQUIRED"
-  ],
+  "details": ["request.Input[0]=https://example.com/file.zip", "maxRequestBytes=2684354560"],
+  "fieldErrors": ["request.Input[0]:CONTENT_LENGTH_REQUIRED"],
   "retryable": false
 }
 ```
 
-`correlationId` is always a string (even if numeric-looking). `fieldErrors` entries shaped as `<fieldPath>:<VALIDATION_CODE>`.
+`correlationId` is always a string. `fieldErrors` shaped as `<fieldPath>:<VALIDATION_CODE>`.
 
 **Field paths:** `request`, `request.Input`, `request.Input[0]`, `multipart.input[0]`, `format`, `rename`, `transform`, `generation`, `ReturnOriginalImages`
 
@@ -173,42 +132,42 @@ Hides: local paths and private provider settings.
 
 | Code | Description |
 |---|---|
-| `INCOMPLETE_PAYLOAD` | Minimum image, zip, and xlsx requirements not met (per `Prism_Config.Input`) |
-| `CONTENT_LENGTH_REQUIRED` | List only the first remote file for which `Content-Length` was required but not provided |
-| `REQUEST_TOO_LARGE` | List total request size and max from `Prism_Config.json` |
+| `INCOMPLETE_PAYLOAD` | Minimum image/zip/xlsx requirements not met (per CFG `Input`) |
+| `CONTENT_LENGTH_REQUIRED` | First remote file requiring but lacking `Content-Length` |
+| `REQUEST_TOO_LARGE` | Total request size + max from CFG |
 | `REDIRECT_NOT_ALLOWED` | Safe message: "File a Fetcher support request by contacting Jef Bracke" |
 | `UNSUPPORTED_URL` | Safe message: "File a URL support request by contacting Jef Bracke" |
 | `FILE_TOO_LARGE` | One item exceeds its configured per-item limit |
-| `FETCH_TIMEOUT` | Fetch exceeds configured connect, response-header, idle-read, or total-fetch timeout |
-| `LOOPBACK_NOT_ALLOWED` | URL targets localhost, `127.0.0.0/8`, `::1`, or any DNS result containing a loopback address |
+| `FETCH_TIMEOUT` | Fetch exceeds connect, response-header, idle-read, or total-fetch timeout |
+| `LOOPBACK_NOT_ALLOWED` | URL targets localhost, `127.0.0.0/8`, `::1`, or any DNS result containing loopback |
 
 ---
 
 ## Request Size Validation
 
-**Per-item checks and aggregate checks are separate:**
-- `*.filesize.min` / `*.filesize.max` → each uploaded, downloaded, image, zip, or Excel item
-- `Input.MAXIMUM_REQUEST_SIZE` → summed submitted and downloaded binary bytes
-- `*.amount.min` / `*.amount.max` → accepted media counts, not individual files
+**Per-item vs aggregate (separate checks):**
+- `*.filesize.min` / `*.filesize.max` → each uploaded/downloaded item
+- `Input.MAXIMUM_REQUEST_SIZE` → summed submitted + downloaded binary bytes
+- `*.amount.min` / `*.amount.max` → accepted media counts
 
 **Remote `Content-Length` policy:**
-- Generic remote fetches require `Content-Length`.
+- Generic fetches require `Content-Length`.
 - Dedicated `Fetch_` classes may have platform-specific behavior.
-- Every fetcher still enforces observed-byte caps while reading.
+- All fetchers still enforce observed-byte caps while reading.
 
 **Zip rule:**
-- Compressed zip bytes: may not exceed `Input.MAXIMUM_REQUEST_SIZE` or `Prism_Config.Input.ZIP.filesize.max`.
+- Compressed zip bytes: count against `Input.MAXIMUM_REQUEST_SIZE` and `CFG.Input.ZIP.filesize.max`.
 - Expanded zip bytes: do **not** count against `Input.MAXIMUM_REQUEST_SIZE`.
-- Normalized image bytes: do **not** count against `Input.MAXIMUM_REQUEST_SIZE`.
+- Normalized image bytes: do **not** count.
 
 **Failure behavior:**
-- Request-level failure (cannot satisfy configured minimums) → stop job creation, return pre-core error payload.
-- Item-level failures are ignored or handled when enough valid input remains.
-- A second validation stage in `Importer.cs` happens after zip decompression and import normalization.
-- When remaining valid input no longer satisfies configured minimums → stop the job.
+- Request-level failure (cannot satisfy configured minimums) → stop job creation, return pre-core error. No `manifest.json`.
+- Item-level failures handled when enough valid input remains.
+- Second validation in `Importer.cs` after zip decompression + import normalization.
+- If remaining valid input no longer satisfies minimums → stop the job.
 
 ---
 
 ## URL Validation (Pre-Pipeline)
 
-See full URL validation rules and `HostRules.json` shape in `PRISM-io-import.md`.
+See full rules and HCFG shape in `PRISM-io-import.md`.

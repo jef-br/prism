@@ -158,15 +158,20 @@ public sealed class Prism
     /// </summary>
     private static PrismJobResult BuildJobResult(PrismJobRequest request, PipelineResult pipelineResult)
     {
+        IReadOnlyList<ManifestImageRow> rows = pipelineResult.Manifest.ImageRows;
+
         return new PrismJobResult
         {
-            JobID                = request.JobID,
-            ClientRequestToken   = request.ClientRequestToken,
-            Status               = pipelineResult.Status,
-            OutputFormat         = pipelineResult.OutputFormat,
-            FailureReason        = pipelineResult.FailureReason,
-            Warnings             = pipelineResult.Warnings,
-            Manifest             = pipelineResult.Manifest
+            JobID              = request.JobID,
+            ClientRequestToken = request.ClientRequestToken,
+            Status             = pipelineResult.Status,
+            OutputFormat       = pipelineResult.OutputFormat,
+            FailureReason      = pipelineResult.FailureReason,
+            Warnings           = pipelineResult.Warnings,
+            Manifest           = pipelineResult.Manifest,
+            ZipBytes           = pipelineResult.ZipBytes,
+            OkImages           = rows.Where(r => r.Status == "Ok").ToList(),
+            KoImages           = rows.Where(r => r.Status == "Ko").ToList()
         };
     }
 }

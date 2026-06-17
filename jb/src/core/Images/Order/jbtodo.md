@@ -1,5 +1,4 @@
 # Order Stage Open Decisions
-
 - [ ] Default det0 SIDE fallback: spec says FRONT → SIDE → DIAGONAL but current default det0 only lists FRONT and DIAGONAL phenotypes, skipping SIDE.
   - File: `jb/src/core/Images/Order/DetOrderRules.json`.
   - Issue: AGENTFEEDBACK.md (det0 orientation 2026-06-15) specifies the fallback chain for det0 as FRONT → SIDE → DIAGONAL. The default product type det0 has ["front-packshot", "front-on-model-full-product", "diagonal-packshot"] — SIDE is absent. Adding SIDE phenotypes to the det0 list alone does not fix the fallback behavior because the ordering algorithm assigns each image to its best-ranked slot: a SIDE image qualifies for det2 (rank 0) over det0 (rank 2) and will always prefer det2. The fallback cannot work purely through phenotype list ordering.

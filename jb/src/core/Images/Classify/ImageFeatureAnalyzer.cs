@@ -18,14 +18,6 @@ public static class ImageFeatureAnalyzer
     private const float BackgroundVarianceLifestyleMin  = 0.040f;
     private const float NearWhiteChannelMin             = 0.90f;
 
-    // Border intersection: fraction of strip pixels that differ from background color
-    // before declaring the salient object intersects that edge.
-    private const float BorderIntersectionFraction = 0.28f;
-    private const float BorderColorDiffThreshold   = 0.15f;
-
-    // Strip size as fraction of the smallest image dimension.
-    private const float BorderStripFraction = 0.08f;
-
     /// <summary>
     /// Analyzes the image at <paramref name="imagePath"/> and writes all detectable
     /// feature values into <paramref name="snapshot"/>.
@@ -36,8 +28,8 @@ public static class ImageFeatureAnalyzer
         using Image<Rgba32> image = Image.Load<Rgba32>(imagePath);
 
         AnalyzeGeometry(image, snapshot);
-        AnalyzeBackground(image, snapshot, out float bgR, out float bgG, out float bgB);
-        AnalyzeBorderIntersections(image, snapshot, bgR, bgG, bgB);
+        AnalyzeBackground(image, snapshot, out _, out _, out _);
+        WriteEdgeIntersections(SubjectEdgeDetector.Detect(image), snapshot);
         DeriveOcclusionLevel(snapshot);
         AnalyzeSkinTone(image, snapshot);
         RecordUnknownFeatures(snapshot);
@@ -94,55 +86,14 @@ public static class ImageFeatureAnalyzer
 
     // ─── Border intersections ─────────────────────────────────────────────────
 
-    private static void AnalyzeBorderIntersections(
-        Image<Rgba32> image, ImageFeatureSnapshot snapshot,
-        float bgR, float bgG, float bgB)
+    private static void WriteEdgeIntersections(EdgeIntersectionResult r, ImageFeatureSnapshot snapshot)
     {
-        int stripPx = Math.Max(2, (int)(Math.Min(image.Width, image.Height) * BorderStripFraction));
-
-        bool top    = StripIntersects(image, 0,                    0,                     image.Width,  stripPx,    bgR, bgG, bgB);
-        bool bottom = StripIntersects(image, 0,                    image.Height - stripPx, image.Width, stripPx,    bgR, bgG, bgB);
-        bool left   = StripIntersects(image, 0,                    0,                     stripPx,      image.Height, bgR, bgG, bgB);
-        bool right  = StripIntersects(image, image.Width - stripPx, 0,                    stripPx,      image.Height, bgR, bgG, bgB);
-
-        snapshot.Set("intersects-top",    top    ? "true" : "false", 0.85, "heuristic");
-        snapshot.Set("intersects-bottom", bottom ? "true" : "false", 0.85, "heuristic");
-        snapshot.Set("intersects-left",   left   ? "true" : "false", 0.85, "heuristic");
-        snapshot.Set("intersects-right",  right  ? "true" : "false", 0.85, "heuristic");
-
-        int count = (top ? 1 : 0) + (bottom ? 1 : 0) + (left ? 1 : 0) + (right ? 1 : 0);
-        snapshot.Set("intersection-count", count.ToString(CultureInfo.InvariantCulture), 0.85, "heuristic");
-        snapshot.Set("fully-in-frame",     count == 0 ? "true" : "false", 0.85, "heuristic");
-    }
-
-    private static bool StripIntersects(
-        Image<Rgba32> image,
-        int startX, int startY, int width, int height,
-        float bgR, float bgG, float bgB)
-    {
-        int endX = Math.Min(startX + width,  image.Width);
-        int endY = Math.Min(startY + height, image.Height);
-        int total = 0;
-        int nonBg = 0;
-
-        for (int y = startY; y < endY; y++)
-        {
-            for (int x = startX; x < endX; x++)
-            {
-                Rgba32 px = image[x, y];
-                if (px.A < 128) continue;
-                total++;
-
-                float dr = (px.R / 255f) - bgR;
-                float dg = (px.G / 255f) - bgG;
-                float db = (px.B / 255f) - bgB;
-                float diff = MathF.Sqrt(dr * dr + dg * dg + db * db);
-
-                if (diff > BorderColorDiffThreshold) nonBg++;
-            }
-        }
-
-        return total > 0 && (float)nonBg / total > BorderIntersectionFraction;
+        snapshot.Set("intersects-top",     r.IntersectsTop    ? "true" : "false", 0.85, "heuristic");
+        snapshot.Set("intersects-bottom",  r.IntersectsBottom ? "true" : "false", 0.85, "heuristic");
+        snapshot.Set("intersects-left",    r.IntersectsLeft   ? "true" : "false", 0.85, "heuristic");
+        snapshot.Set("intersects-right",   r.IntersectsRight  ? "true" : "false", 0.85, "heuristic");
+        snapshot.Set("intersection-count", r.IntersectionCount.ToString(CultureInfo.InvariantCulture), 0.85, "heuristic");
+        snapshot.Set("fully-in-frame",     r.FullyInFrame     ? "true" : "false", 0.85, "heuristic");
     }
 
     // ─── Occlusion level (derived) ────────────────────────────────────────────

@@ -96,6 +96,10 @@
         {
             "filePath": "prism\\jb\\src\\core\\Images\\ImageTransformer.cs",
             "color": "foldercolorizer.color_0087ff"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\tests\\Prism.Core.Tests\\",
+            "color": "foldercolorizer.color_008787"
         }
     ],
     "folder-color.favoriteColors": [

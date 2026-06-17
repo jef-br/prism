@@ -100,7 +100,11 @@ internal sealed record PrismPreCoreErrorResponse
 internal sealed record PrismJsonResultEnvelope(PrismJobResult? Result)
 {
     public BatchManifest? Manifest => Result?.Manifest;
-    public PrismJsonImagesEnvelope Images { get; init; } = new();
+    public PrismJsonImagesEnvelope Images => new()
+    {
+        Ok = Result?.OkImages ?? [],
+        Ko = Result?.KoImages ?? []
+    };
     public object? OriginalImages => null;
 }
 
@@ -109,8 +113,8 @@ internal sealed record PrismJsonResultEnvelope(PrismJobResult? Result)
 /// </summary>
 internal sealed record PrismJsonImagesEnvelope
 {
-    public IReadOnlyList<object> Ok { get; init; } = [];
-    public IReadOnlyList<object> Ko { get; init; } = [];
+    public IReadOnlyList<ManifestImageRow> Ok { get; init; } = [];
+    public IReadOnlyList<ManifestImageRow> Ko { get; init; } = [];
 }
 
 /// <summary>

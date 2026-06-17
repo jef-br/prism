@@ -1,6 +1,18 @@
-# Pipeline Stage Shells Todo
+# Pipeline Module Todo
 
-- [ ] Replace ExportStageShell.Run() stub with real Exporter delegation.
-  - File: `jb/src/core/Pipeline/StageShells.cs` line 390.
-  - Block: Ticket T-1100 (Exported Stage) is blocked by T-1000. `Exporter.cs` itself is also a comment-only stub. The shell currently only calls `MarkStageCompleted`.
-  - Fix: When T-1100 is activated, delegate to `Exporter.cs` (implement zip/JSON export there first). Remove the TODO comment.
+## Architecture
+
+- [ ] Split `StageShells.cs` into one file per stage shell class.
+  - Rule: every C# class must be in its own `.cs` file named after the type.
+  - Types to split out (each to its own file in `jb/src/core/Pipeline/`):
+    - `ImportStageShell.cs`
+    - `ClassifyStageShell.cs`
+    - `MatchStageShell.cs`
+    - `OrderStageShell.cs`
+    - `RenameStageShell.cs`
+    - `GenerateStageShell.cs`
+    - `TransformStageShell.cs`
+    - `ExportStageShell.cs`
+  - Current file: `jb/src/core/Pipeline/StageShells.cs` — 8 classes, ~430 lines.
+  - Note: `ClassifyStageShell` is the largest at ~205 lines; it will become the biggest standalone file.
+  - Answer:

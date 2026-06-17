@@ -1,62 +1,58 @@
 # PRISM — Excel Processing (IEM)
+*Abbreviations: `GLOSSARY.md`*
 
-## Config Source
+## Config
 
-Primary key rules come from `RecordPrimaryKey` and `FamilyIDProperties` in `ExcelConfig.json`.
-Canonical header source: use `HeaderRowIndicators` to find the header row before selecting canonical column names.
+PK rules from `RecordPrimaryKey` and `FamilyIDProperties` in XCFG. Canonical header source: `HeaderRowIndicators`.
 
 ---
 
-## Primary Key Rules
+## PK Rules
 
-- A primary key cannot be accepted unless it matches the configured numeric requirement.
-- A primary key cannot be accepted unless it is **exactly 8 digits** under the current config.
-- Every single data row belongs to **one and only one** FamilyID.
-- Duplicate FamilyID records **cannot** exist in the Internal Excel Model.
-- When a detected header row contains a cell with edit distance 0 to `RecordPrimaryKey`, use that cell as the primary key column.
+- PK must match configured numeric requirement.
+- PK must be **exactly 8 digits** (current config).
+- Each data row belongs to exactly one FID. Duplicate FIDs cannot exist in IEM.
+- Header cell with edit distance 0 to `RecordPrimaryKey` → that cell is the PK column.
 
 ---
 
 ## Header Row Detection
 
-- At least **50%** of columns in a candidate header row must match configured indicators.
-- An edit distance greater than **12%** means the cell does not qualify as an indicator match.
-- Edit distance 1 → **75% confidence**
-- Edit distance 2 → **50% confidence**
-- Exact match (edit distance 0): use Tokenized Concatenation Distance (TCD).
-  - The method is in `jb/src/core/Excel/TCD FOR EXCEL COLUMN HEADER.cs`.
-  - TCD is a version of Levenshtein that uses the Kendall Tau correlation coefficient to account for token count and reordering to achieve 100% confidence.
+- Candidate header row: ≥ **50%** of columns must match configured indicators.
+- Edit distance > **12%** of cell length → not a match.
+- Edit distance 1 → **75% confidence**; distance 2 → **50% confidence**.
+- Exact match (distance 0): use TCD (`jb/src/core/Excel/TCD FOR EXCEL COLUMN HEADER.cs`). TCD uses Levenshtein + Kendall Tau for token count and reordering → 100% confidence.
 
 ---
 
-## Column Validity Rules
+## Column Validity
 
-- A column must contain non-null and non-empty values in at least **20%** of its rows to be valid.
-- Drop columns that do not contain enough useful values.
-- Fill empty cells with an empty string **after** deciding the column itself is valid.
+- Valid column: non-null/non-empty values in ≥ **20%** of rows.
+- Drop columns below 20% fill.
+- Fill empty cells with `""` **after** column is accepted.
 
 ---
 
 ## Duplicate Column Handling
 
-- Identical headers → two columns are duplicate candidates.
-- Content must be identical before two columns are considered direct duplicates.
-- If headers differ but more than **20% of cells** appear in both columns → merge and deduplicate the cells.
-- When duplicate columns disagree for the same FamilyID: tokenize both non-empty cell values, merge unique normalized tokens into the canonical property, and keep the original cell values as conflict evidence for manifest/workbench review.
+- Identical headers → duplicate candidates.
+- Content must be identical for direct duplicate.
+- Headers differ but > **20% of cells** appear in both → merge and deduplicate.
+- When duplicate columns disagree for same FID: tokenize both non-empty values, merge unique normalized tokens into canonical property, retain original cell values as conflict evidence.
 
 ---
 
-## Duplicate Row / FamilyID Handling
+## Duplicate Row / FID Handling
 
-- Deduplicate the entire row when all other cells in the involved records contain duplicate information.
-- When the same FamilyID appears in multiple rows: merge all non-empty data into one FamilyID record, preserve unique values, and keep conflicting values as tokenized evidence instead of overwriting them.
+- All cells identical → deduplicate row.
+- Same FID in multiple rows → merge all non-empty data into one FR; unique values preserved; conflicting values kept as tokenized evidence.
 
 ---
 
-## Invalid / Missing Key Handling
+## Invalid / Missing Key
 
-- Rows with missing, malformed, or non-config-compliant primary key values: skip the row, report as KO in `manifest.json`. Does **not** stop Excel parsing.
-- When a worksheet has no primary key column: skip that worksheet, report as KO in `manifest.json`.
+- Missing, malformed, or non-compliant PK rows → KO in `manifest.json`. Does **not** stop Excel parsing.
+- Worksheet with no PK column → KO in `manifest.json`.
 
 ---
 
@@ -68,21 +64,10 @@ Only merge cells in the same column when their value is identical.
 
 ## Provenance
 
-Do not keep provenance beyond processing — cleanup removes all temporary batch files.
+No provenance retained beyond processing — cleanup removes all temporary batch files.
 
 ---
 
-## IEM → FamilyRecord Mapping
+## IEM → FR Mapping
 
-The IEM maps each valid FamilyID to exactly one `FamilyRecord`.
-
-Mapping rules:
-1. Use `RecordPrimaryKey` and `FamilyIDProperties` from `ExcelConfig.json`.
-2. Primary key must satisfy numeric requirement and be exactly 8 digits.
-3. Every valid data row belongs to one and only one FamilyID.
-4. Duplicate rows merge into one `FamilyRecord`.
-5. Empty cells become empty strings after the column is accepted as valid.
-6. Columns without enough useful values are dropped.
-7. Duplicate columns deduplicated or merged per duplicate column rules.
-8. Conflicting duplicates preserve unique values and retain conflicting values as tokenized evidence.
-9. Invalid-primary-key rows and worksheets without usable primary key column are skipped and reported KO.
+Each valid FID maps to exactly one FR (from XCFG): numeric PK, exactly 8 digits; duplicate rows merged; empty cells → `""` after column accepted; columns <20% fill dropped; duplicate columns deduplicated/merged; conflicts kept as tokenized evidence; invalid-key rows and key-less worksheets → KO.

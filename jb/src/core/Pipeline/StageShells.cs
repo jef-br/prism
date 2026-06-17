@@ -236,38 +236,45 @@ internal static class ClassifyStageShell
     // ─── CLIP prompt catalogue ────────────────────────────────────────────────
 
     /// <summary>
-    /// Default CLIP zero-shot prompts.
-    /// Each prompt encodes a feature value pair in the form "featureId=value"
-    /// so <see cref="TryParseFeatureToken"/> can map it back to a feature snapshot entry.
+    /// Maps each natural-language CLIP prompt to the feature ID and value it represents.
+    /// Single source of truth: adding a prompt here automatically includes it in
+    /// <see cref="BuildDefaultPrompts"/> and makes it parseable by <see cref="TryParseFeatureToken"/>.
     /// </summary>
-    private static string[] BuildDefaultPrompts() =>
-    [
-        "hero-is-human=TRUE",
-        "hero-is-human=FALSE",
-        "hero-orientation=FRONT",
-        "hero-orientation=BACK",
-        "hero-orientation=SIDEON",
-        "hero-orientation=TOP",
-        "hero-orientation=DIAGONAL",
-        "head-visible=FULL",
-        "head-visible=PARTIAL",
-        "head-visible=NONE",
-        "body-visible=full",
-        "body-visible=three-quarter",
-        "body-visible=half",
-        "body-visible=bust"
-    ];
+    private static readonly Dictionary<string, (string FeatureId, string FeatureValue)> PromptFeatureMap = new()
+    {
+        ["a photo of a person wearing clothing"]                         = ("hero-is-human",    "TRUE"),
+        ["a product photo with no person, ghost mannequin or flat lay"]  = ("hero-is-human",    "FALSE"),
+        ["a front view of the product"]                                  = ("hero-orientation",  "FRONT"),
+        ["a back view of the product"]                                   = ("hero-orientation",  "BACK"),
+        ["a side view of the product"]                                   = ("hero-orientation",  "SIDEON"),
+        ["a top down view of the product"]                               = ("hero-orientation",  "TOP"),
+        ["a three-quarter or diagonal view of the product"]              = ("hero-orientation",  "DIAGONAL"),
+        ["a photo showing the full face of the model"]                   = ("head-visible",      "FULL"),
+        ["a photo showing a partially visible face"]                     = ("head-visible",      "PARTIAL"),
+        ["a photo with no visible face or head"]                         = ("head-visible",      "NONE"),
+        ["a photo showing the full body of the model"]                   = ("body-visible",      "full"),
+        ["a photo showing three quarters of the body"]                   = ("body-visible",      "three-quarter"),
+        ["a photo showing only the upper half of the body"]              = ("body-visible",      "half"),
+        ["a photo showing only the bust or chest of the model"]          = ("body-visible",      "bust"),
+    };
 
+    /// <summary>
+    /// Returns all natural-language CLIP zero-shot prompts derived from <see cref="PromptFeatureMap"/>.
+    /// </summary>
+    private static string[] BuildDefaultPrompts() => [.. PromptFeatureMap.Keys];
+
+    /// <summary>
+    /// Maps a CLIP result label back to its feature ID and value using <see cref="PromptFeatureMap"/>.
+    /// </summary>
     private static bool TryParseFeatureToken(
         string label,
         out string featureId,
         out string featureValue)
     {
-        int eq = label.IndexOf('=');
-        if (eq > 0 && eq < label.Length - 1)
+        if (PromptFeatureMap.TryGetValue(label, out (string FeatureId, string FeatureValue) mapping))
         {
-            featureId    = label[..eq];
-            featureValue = label[(eq + 1)..];
+            featureId    = mapping.FeatureId;
+            featureValue = mapping.FeatureValue;
             return true;
         }
 
@@ -408,13 +415,13 @@ internal static class ExportStageShell
 {
     /// <summary>
     /// Runs the Exported stage for a job context.
-    /// T-470 will replace this body with real Exporter delegation.
+    /// Delegates zip/JSON packaging and manifest construction to <see cref="Exporter"/>.
     /// </summary>
     /// <param name="context">Mutable per-job pipeline context.</param>
     /// <param name="configuration">Validated PRISM configuration.</param>
     internal static void Run(PipelineContext context, PrismConfiguration configuration)
     {
-        // TODO T-1100: delegate to Exporter.cs
+        Exporter.Run(context, configuration);
         context.MarkStageCompleted(PipelineStageNames.Exported);
     }
 }

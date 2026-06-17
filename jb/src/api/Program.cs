@@ -131,7 +131,7 @@ app.MapGet("/PRISM/jobs/{jobID:guid}/result", (Guid jobID, PrismJobCoordinator c
         && string.Equals(result.Status, "Completed", StringComparison.OrdinalIgnoreCase))
     {
         return Results.File(
-            Array.Empty<byte>(),
+            result.ZipBytes ?? Array.Empty<byte>(),
             "application/zip",
             $"{jobID}.zip");
     }

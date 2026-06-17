@@ -110,3 +110,32 @@
     Use feathering and local smoothing by default, with optional inpainting for artifacts above a configured threshold.
   - Answer:
 
+- [ ] Implement Tx_CropSquare: square crop without background extension.
+  - File: `jb/src/core/Images/Transform/Tx_CropSquare.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
+  - What is needed: Compute a centered square crop rectangle from input dimensions, apply the crop, and populate `ImageTransformationResult` with output dimensions. No fill or saliency required.
+  - Prerequisites: Resize decision output todo must be answered (determines how to handle images that are already smaller than the target).
+  - Image processor: SixLabors.ImageSharp (already a project dependency) can perform the crop without additional libraries. This is the simplest Tx class and can be implemented first.
+  - Fix: Implement the crop using `ImageSharp.Image.Mutate(x => x.Crop(...))`. Replace `ImageProcessorAvailable() => false` with a real readiness check. Populate all `ImageTransformationResult` fields.
+
+- [ ] Implement Tx_CenterAndStretch: center salient object on a square canvas and fill or stretch the background.
+  - File: `jb/src/core/Images/Transform/Tx_CenterAndStretch.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
+  - What is needed: (1) Read salient-object bounding box from `InputImage.Features` (`salient-bbox` feature, populated by the classifier). (2) Compute canvas offsets to center the object at target resolution. (3) Fill or stretch the background using the decided fill policy. (4) Apply cleanup per the cleanup-method decision. (5) Populate full `ImageTransformationResult` with crop rectangle, fill method, output dimensions, and any warnings.
+  - Prerequisites: Transform-facing ImageFeature definition, background fill policy, and cleanup method todos must be answered. `salient-bbox` must be written by the classifier (currently UNKNOWN).
+  - Image processor: OpenCV (via EmguCV) or ImageSharp advanced operations for background extension. Inpainting requires a dedicated model if chosen as fill method.
+  - Fix: Implement after prerequisites are answered and `salient-bbox` is populated by the classifier.
+
+- [ ] Implement Tx_DetailCropper: square crop anchored at bounding box edges, with optional headcut and greedy crop.
+  - File: `jb/src/core/Images/Transform/Tx_DetailCropper.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
+  - What is needed: (1) Read `salient-bbox` from `InputImage.Features`. (2) Detect whether the bounding box intersects an image edge. (3) For non-intersecting images: apply greedy crop centered on saliency region; apply headcut placement when `head-visible` and `hero-is-human` features are above configured thresholds. (4) For border-intersecting images: anchor crop to touched edges; record the no-reposition decision. (5) Apply fill when the crop extends beyond original bounds. (6) Populate full `ImageTransformationResult` including crop rectangle, headcut flag, border-intersection flag, fill method used, and warnings.
+  - Prerequisites: Saliency map behavior, headcut thresholds, greedy crop behavior, fill policy, and border-intersection result todos must all be answered. `salient-bbox`, `head-visible`, and `hero-is-human` features must be populated by the classifier.
+  - Image processor: Same as Tx_CenterAndStretch.
+  - Fix: Implement after all prerequisites are answered and classifier features are available.
+
+- [ ] Implement Tx_ProblemImageProcessor: conservative resize and passthrough for images with unknown or low-confidence features.
+  - File: `jb/src/core/Images/Transform/Tx_ProblemImageProcessor.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
+  - What is needed: (1) Determine which transform-critical features are UNKNOWN or below threshold and record them. (2) Apply a safe resize to target dimensions if input is out of spec (no crop, no fill, no stretch). (3) Populate `ImageTransformationResult` with status, the list of missing features, and output dimensions. (4) Apply the failure/KO policy: if the resize output is still unacceptable, KO the image instead of exporting.
+  - Prerequisites: Transform failure, fallback, and fill-KO policy todo must be answered. Does not require `salient-bbox`.
+  - Image processor: ImageSharp resize is sufficient — no saliency or fill required for the conservative path.
+  - Note: This class can be implemented before the other Tx classes because it requires no saliency features. It can serve as the integration scaffold for the image processor dependency.
+  - Fix: Implement after the failure/KO policy todo is answered and ImageSharp is wired to the processor gate.
+

@@ -16,8 +16,11 @@
     <Compile Include="..\Excel\FamilyRecord.cs" Link="FamilyRecord.cs" />
     <Compile Include="..\ImageNGP\ImageNGP.cs" Link="ImageNGP.cs" />
     <Compile Include="..\IO\BatchManifest.cs" Link="BatchManifest.cs" />
+    <Compile Include="..\IO\BatchManifestSummary.cs" Link="BatchManifestSummary.cs" />
+    <Compile Include="..\IO\ManifestImageRow.cs" Link="ManifestImageRow.cs" />
     <Compile Include="..\Pipeline\PipelineProgressEvent.cs" Link="PipelineProgressEvent.cs" />
     <Compile Include="..\Images\Classify\ClassificationToken.cs" Link="ClassificationToken.cs" />
+    <Compile Include="..\Images\Classify\EdgeIntersectionResult.cs" Link="EdgeIntersectionResult.cs" />
     <Compile Include="..\Images\Classify\ImageFeatureValue.cs" Link="ImageFeatureValue.cs" />
     <Compile Include="..\Images\Classify\ImageFeatureSnapshot.cs" Link="ImageFeatureSnapshot.cs" />
     <Compile Include="..\Images\Match\MatchEvidence.cs" Link="MatchEvidence.cs" />

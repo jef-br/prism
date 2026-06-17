@@ -2,7 +2,7 @@ Human facing description of PRISM.
 
 = A data aggregator and image processing pipeline
     - Ingress requires At least one Excel file and one image
-      - can include dropbox, wetransfer, local, remote, and zipped files
+      - can include dropbox, local, remote, and zipped files
     - Turn all image data into jpg representations
     - deduplicates images prior to processing using both perceptive duplicate detection via hashing as well as flagging suspected duplicates based on metadata (filename+resolution+filesize extension-agnostic)
     - renames all images using the excel files

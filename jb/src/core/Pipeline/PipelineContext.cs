@@ -67,6 +67,17 @@ internal sealed class PipelineContext : IDisposable
     internal int OkTransformedCount { get; set; }
 
     // -------------------------------------------------------------------------
+    // Exported stage outputs — set by ExportStageShell after Run() completes.
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Result produced by the Exported stage.
+    /// Carries the ZIP bytes (when format is "zip") and the fully-populated manifest.
+    /// Null until the Exported stage completes.
+    /// </summary>
+    internal ExportStageResult? ExportResult { get; set; }
+
+    // -------------------------------------------------------------------------
     // Imported stage outputs — set by ImportStageShell after Run() completes.
     // -------------------------------------------------------------------------
 

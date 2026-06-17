@@ -1,69 +1,52 @@
 # PRISM — Overview, Specs & Terminology
+*Abbreviations: `GLOSSARY.md`*
 
-## What is PRISM
+## System Specs
 
-PRISM is an image processing pipeline that renames and transforms product images by combining incoming media with data found in Excel files.
+- **What**: Renames/transforms product images using Excel FID data.
+- **Users**: Junior non-technical admin staff; ~250 concurrent.
+- **Runtime**: Local servers; GPU not guaranteed; CPU-only fully supported.
 
-- **Target user:** Junior non-technical administrative support staff
-- **Concurrency target:** Technically able to serve 250 concurrent users
-- **Runtime:** Local servers. Hardware specs subject to change and will not always include a GPU.
+## Accepted Input
 
-## Accepted Input Media
-
-Images and documents: `jpg`, `jpeg`, `png`, `tif`, `tiff`, `pdf`, `webp`, `bmp`, `gif`
-
-PSD is not accepted unless added later as an explicit supported media type.
-
-Excel: `.xlsx` files in any human language, from any of +2000 suppliers.
+Images: `jpg jpeg png tif tiff pdf webp bmp gif`. PSD excluded unless added explicitly.
+Excel: `.xlsx`, any human language, 2000+ suppliers.
 
 ## Batch & File Limits
 
-- Heavy daily average per user: ~10k images and 2 Excel files → ~4 batches of 2500 images each
-- Normal configured cap: **2500 images per batch**
-- Hard ceiling PRISM must handle with ease: **5000 images per batch**
-- No single file larger than **25 MB** by default
-- File and request limits configured in `jb/src/core/Prism_Config.json`
+- Normal cap: **2500 images**; hard ceiling: **5000**. Max **25 MB**/file.
+- Heavy daily avg: ~10k images + 2 Excel → ~4 batches of 2500.
+- Limits in CFG.
 
 ## External Resources
 
-External resources are allowed **before** entering the pipeline (as input media only):
-- Dropbox, WeTransfer, cloud platform links, direct HTTP links
-- External image-like resources must be converted to flat JPG (raw byte array or memory-backed stream) before the pipeline receives them
-- Zip resources must be unzipped; each valid image inside → flat JPG; each Excel inside → Excel collection
+Pre-pipeline input only (Dropbox, WeTransfer, HTTP links). Each external image/zip converted before pipeline entry. Inside pipeline: `www.letsenhance.ai` only. Missing PRISM config/model → FFAIL.
 
-Once data is inside the pipeline, **no external resources are permitted**, except the upscaling API at `www.letsenhance.ai`.
-
-Missing PRISM-owned configuration or model files must **fail fast and loud**.
-
-## High-Level Pipeline Order
+## Pipeline Order (definitive, immutable)
 
 ```
-Imported > Classified > Matched > Ordered > Renamed > Generated > Transformed > Exported
+Imported → Classified → Matched → Ordered → Renamed → Generated → Transformed → Exported
 ```
-
-This is the **definitive, final, and only valid pipeline order.**
 
 ## Desired Output
 
-A collection of renamed/transformed images + `manifest.json`.
+Renamed/transformed images + `manifest.json`.
+- All images renamed by matching filename vs Excel → FID
+- Packshots: centered, consistent margin applied
+- Non-repositionable (detail/lifestyle): cropped best possible; background stretched respecting intersection values
+- `manifest.json`: counts (OK/KO), per-image original/new name, artifact ref — never original bytes
 
-- Every image renamed by comparing filename with data from Excel file(s) to find `familyID`
-- Images transformed according to the image typology defined in `core/images/classify`
-- Product packshots: centered with consistent margin applied
-- Non-repositionable images (detail/lifestyle): cropped as well as possible with background stretched respecting Intersection values
-- `manifest.json` contains batch summary (counts OK/KO, per-image original/new filename, processed artifact reference — NOT the original image)
-
-## Terminology / Vocabulary
+## Vocabulary
 
 | Term | Meaning |
 |---|---|
-| **Request** | Suffix for something a client asks PRISM |
-| **Result** | Suffix for something a class sends back, or something PRISM sends back to a client |
-| **Job** | The entire process including every single step start to finish |
-| **Batch** | (1) The part of a job where images are processed (classified → exported); (2) The actual image collection — the complete set of all image files in a job, in any form (byte stream, memory-backed stream, artifact reference, or file on disk), including those found inside zips or remote locations |
-| **IEM** | Internal Excel Model — all collated worksheets with deduplicated rows/columns |
-| **FamilyID** | The primary product/family identifier; becomes the output filename stem |
-| **_det** | Suffix indicating image order within a FamilyID family (zero-based: `_det0`, `_det1`, …) |
-| **KO** | A failed/rejected item that is recorded in the manifest but does not stop the job when valid work remains |
-| **Failed** | A PRISM-owned failure that stops the entire job |
-| **Canonical image** | The highest-resolution representative of a visually duplicate group; proceeds through pipeline |
+| FID | Primary product identifier; output filename stem |
+| `_det` | Zero-based order suffix within FID (`_det0`, `_det1`, …) |
+| IEM | Collated, deduplicated Excel worksheets |
+| KO | Failed/rejected; recorded in manifest; does not stop job when valid work remains |
+| Failed | PRISM-owned failure; stops the entire job |
+| Canonical image | Highest-res representative of a visual-duplicate group |
+| Batch | (1) Part of job where images are processed; (2) Complete image collection for one job |
+| Request | Suffix for what a client asks PRISM |
+| Result | Suffix for what a class or PRISM sends back |
+| Job | Entire process, start to finish |

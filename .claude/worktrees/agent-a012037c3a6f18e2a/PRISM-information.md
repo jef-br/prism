@@ -22,7 +22,7 @@ PSD is not accepted unless it is added later as an explicit supported media type
 
 External resources are allowed before entering the pipeline.
 
-External resources such as Dropbox, WeTransfer, cloud platform links, and direct HTTP links are allowed as input media only.
+External resources such as Dropbox, cloud platform links, and direct HTTP links are allowed as input media only.
 
 External image-like resources must be converted before the pipeline receives them.
 
@@ -482,7 +482,7 @@ Prism.cs regulates the pipeline
 
 - Define path input handling: say whether core accepts local file paths directly and who checks.
   - Answer:
-    Prism accepts local path descriptors before the pipeline starts. `Importer.cs` performs the first checks for existence, size, and extension before opening the file. Only inputs that pass those checks enter normalization. Importer turns the accepted input paths, whether folder or file, local or resolved remote, into two normalized collections: one image collection and one Excel collection. Paths that fail validation are skipped and logged to `manifest.json`. Import strategy classes handle content type and origin-specific parsing, including separate strategies for remote paths and platform links such as WeTransfer or Dropbox.
+    Prism accepts local path descriptors before the pipeline starts. `Importer.cs` performs the first checks for existence, size, and extension before opening the file. Only inputs that pass those checks enter normalization. Importer turns the accepted input paths, whether folder or file, local or resolved remote, into two normalized collections: one image collection and one Excel collection. Paths that fail validation are skipped and logged to `manifest.json`. Import strategy classes handle content type and origin-specific parsing, including separate strategies for remote paths and platform links such as Dropbox.
 
 - Define stream input handling: say how memory-backed streams enter Importer and who owns stream disposal.
   - Answer:
@@ -1757,7 +1757,7 @@ Prism.cs regulates the pipeline
     Identical behavior is required for:
     - Input validation semantics.
     - Job-parameter availability and `PrismProcessingParameters` meaning.
-    - Definitive route order.
+    - Definitive route order.a
     - Progress field meanings.
     - Evidence display semantics.
     - Diagnostic snapshot semantics.

@@ -8,6 +8,7 @@
     <Compile Include="ImageFeatureAnalyzer.cs" />
     <Compile Include="PhenotypeRule.cs" />
     <Compile Include="PhenotypeRuleSet.cs" />
+    <Compile Include="SubjectEdgeDetector.cs" />
     <Compile Include="VisualHasher.cs" />
   </ItemGroup>
 

@@ -89,6 +89,16 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
     /// Null until the Transformed stage evaluates this record.
     /// </summary>
     public ImageTransformationResult? TransformationResult { get; set; }
+
+    // -------------------------------------------------------------------------
+    // Export outputs — populated by the Exported stage
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Export metadata attached by the Exported stage for non-KO images.
+    /// Null for KO images or until the Exported stage completes.
+    /// </summary>
+    public ImageRecord_OUTPUT? OutputRecord { get; set; }
 }
 
 /// <summary>

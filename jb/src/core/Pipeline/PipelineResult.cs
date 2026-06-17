@@ -6,4 +6,5 @@ internal sealed record PipelineResult(
     string OutputFormat,
     BatchManifest Manifest,
     string? FailureReason,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    byte[]? ZipBytes = null);

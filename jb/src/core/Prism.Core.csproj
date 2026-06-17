@@ -3,6 +3,8 @@
     <Compile Remove="Models\**\*.cs" />
     <Compile Remove="Pipeline\PipelineProgressEvent.cs" />
     <Compile Remove="IO\BatchManifest.cs" />
+    <Compile Remove="IO\BatchManifestSummary.cs" />
+    <Compile Remove="IO\ManifestImageRow.cs" />
     <Compile Remove="Excel\FamilyRecord.cs" />
     <Compile Remove="Images\Classify\**\*.cs" />
     <Compile Remove="Images\Transform\**\*.cs" />

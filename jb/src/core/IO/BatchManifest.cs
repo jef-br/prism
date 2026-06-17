@@ -14,6 +14,11 @@ public sealed record BatchManifest
     public BatchManifestSummary Summary { get; init; } = new();
 
     /// <summary>
+    /// Per-image rows — one entry per lambda record processed by the pipeline.
+    /// </summary>
+    public IReadOnlyList<ManifestImageRow> ImageRows { get; init; } = [];
+
+    /// <summary>
     /// Safe route-stage summaries emitted for this job.
     /// </summary>
     public IReadOnlyList<string> RouteSummaries { get; init; } = [];
@@ -22,35 +27,4 @@ public sealed record BatchManifest
     /// Safe warnings emitted while building the result.
     /// </summary>
     public IReadOnlyList<string> Warnings { get; init; } = [];
-}
-
-/// <summary>
-/// Batch-level counts projected into the manifest.
-/// </summary>
-public sealed record BatchManifestSummary
-{
-    /// <summary>
-    /// Number of accepted image records.
-    /// </summary>
-    public int ImageCount { get; init; }
-
-    /// <summary>
-    /// Number of accepted Excel records.
-    /// </summary>
-    public int ExcelCount { get; init; }
-
-    /// <summary>
-    /// Number of accepted zip records.
-    /// </summary>
-    public int ZipCount { get; init; }
-
-    /// <summary>
-    /// Number of OK renamed outputs.
-    /// </summary>
-    public int OkRenamed { get; init; }
-
-    /// <summary>
-    /// Number of KO records.
-    /// </summary>
-    public int KoRecords { get; init; }
 }
