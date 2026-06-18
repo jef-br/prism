@@ -211,22 +211,4 @@ internal static class ImageOrderer
         return DetOrderConfig.Load(rulesPath, stemsPath);
     }
 
-    // ─── Private types ────────────────────────────────────────────────────────
-
-    private sealed record Candidate(
-        int ImageIndex,
-        int DetSlot,
-        int PhenotypeRank,
-        int NgpConfidence,
-        int HintScore,
-        int SourceIndex,
-        string Phenotype);
-
-    private sealed record AssignmentRecord(
-        int DetSlot,
-        string? WinningPhenotype,
-        int PhenotypeRank,
-        int NgpConfidence,
-        string TieBreakerWon,
-        bool IsOverflow);
 }

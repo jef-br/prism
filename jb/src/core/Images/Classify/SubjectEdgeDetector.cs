@@ -3,6 +3,8 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Prism.Core.Tests")]
+
 /// <summary>
 /// Detects whether the image subject intersects one or more image boundaries.
 /// <para>
@@ -224,7 +226,7 @@ public static class SubjectEdgeDetector
     /// decoding the main image. Returns <c>null</c> when no thumbnail is present or
     /// any parsing step fails — the caller falls back to a full image load.
     /// </summary>
-    private static byte[]? TryExtractJpegExifThumbnail(string path)
+    internal static byte[]? TryExtractJpegExifThumbnail(string path)
     {
         try
         {

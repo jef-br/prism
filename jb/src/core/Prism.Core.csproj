@@ -7,6 +7,8 @@
     <Compile Remove="IO\ManifestImageRow.cs" />
     <Compile Remove="Excel\FamilyRecord.cs" />
     <Compile Remove="Images\Classify\**\*.cs" />
+    <Compile Remove="Images\ImageClassifier.cs" />
+    <Compile Remove="Images\ClipTokenizer.cs" />
     <Compile Remove="Images\Transform\**\*.cs" />
   </ItemGroup>
 

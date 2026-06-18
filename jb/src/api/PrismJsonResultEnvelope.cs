@@ -1,0 +1,15 @@
+
+
+/// <summary>
+/// JSON result envelope matching the documented top-level shape.
+/// </summary>
+internal sealed record PrismJsonResultEnvelope(PrismJobResult? Result)
+{
+    public BatchManifest? Manifest => Result?.Manifest;
+    public PrismJsonImagesEnvelope Images => new()
+    {
+        Ok = Result?.OkImages ?? [],
+        Ko = Result?.KoImages ?? []
+    };
+    public object? OriginalImages => null;
+}

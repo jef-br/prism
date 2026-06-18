@@ -4,8 +4,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="ImageClassifier.cs" />
+    <Compile Include="..\ImageClassifier.cs" />
+    <Compile Include="..\ClipTokenizer.cs" />
+    <Compile Include="DedupGroup.cs" />
+    <Compile Include="FeatureCondition.cs" />
     <Compile Include="ImageFeatureAnalyzer.cs" />
+    <Compile Include="ImageRolesConfig.cs" />
     <Compile Include="PhenotypeRule.cs" />
     <Compile Include="PhenotypeRuleSet.cs" />
     <Compile Include="SubjectEdgeDetector.cs" />

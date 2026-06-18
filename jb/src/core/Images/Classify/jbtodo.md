@@ -1,6 +1,5 @@
 # Image Classification Todo
 
-
 ## ONNX session scope
 
 - [ ] ONNX `InferenceSession` is created per pipeline run, not application-scoped — may contradict `AGENTFEEDBACK.md`.
