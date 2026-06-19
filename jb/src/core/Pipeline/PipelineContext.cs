@@ -67,7 +67,7 @@ internal sealed class PipelineContext : IDisposable
     internal int OkTransformedCount { get; set; }
 
     // -------------------------------------------------------------------------
-    // Exported stage outputs — set by ExportStageShell after Run() completes.
+    // Exported stage outputs — set by ShellStage_Export after Run() completes.
     // -------------------------------------------------------------------------
 
     /// <summary>
@@ -78,7 +78,7 @@ internal sealed class PipelineContext : IDisposable
     internal ExportStageResult? ExportResult { get; set; }
 
     // -------------------------------------------------------------------------
-    // Imported stage outputs — set by ImportStageShell after Run() completes.
+    // Imported stage outputs — set by ShellStage_Import after Run() completes.
     // -------------------------------------------------------------------------
 
     /// <summary>

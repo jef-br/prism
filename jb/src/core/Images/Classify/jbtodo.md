@@ -3,7 +3,7 @@
 ## ONNX session scope
 
 - [ ] ONNX `InferenceSession` is created per pipeline run, not application-scoped — may contradict `AGENTFEEDBACK.md`.
-  - File: `jb/src/core/Pipeline/StageShells.cs` `ClassifyStageShell.Run()` — `ImageClassifier` is instantiated inside `Run` with `using ImageClassifier classifier = new()` followed by `InitializeClassifier(classifier)`.
+  - File: `jb/src/core/Pipeline/ShellStage_Classify.cs` `ShellStage_Classify.Run()` — `ImageClassifier` is instantiated inside `Run` with `using ImageClassifier classifier = new()` followed by `InitializeClassifier(classifier)`.
   - `AGENTFEEDBACK.md` note (if present) states sessions are "application-scoped." Current code creates a fresh session per job and disposes it when the job ends.
   - Trade-off: Per-job sessions are safe (no cross-job state) but add ONNX model load time per job (~100–500 ms). Application-scoped sessions would amortize load cost but require thread-safe session management across concurrent jobs.
   - Decision needed: Accept per-job session lifecycle (current), or move to application-scoped singleton session with thread-safe access?

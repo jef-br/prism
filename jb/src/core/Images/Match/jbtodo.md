@@ -30,23 +30,6 @@
   - Why it deviates: `ExtractImageTokens` normalizes tokens before returning them, and the normalized form is what gets stored in evidence. The original text is discarded after normalization.
   - Fix: Pass both the original and normalized token through `ExtractImageTokens` (return tuples or a wrapper type), and store the original text in `TokenEvidenceItem.FilenameToken` while using the normalized form for comparison only.
 
-## Architecture
-
-- [ ] Split `MatchEvidence.cs` into one file per type.
-  - Rule: every C# record must be in its own `.cs` file named after the type.
-  - Types to split out (each to its own file in `jb/src/core/Images/Match/`):
-    - `MatchEvidence.cs` (keep, is the primary type)
-    - `CandidateSummary.cs`
-    - `TokenEvidenceItem.cs`
-    - `LabelEvidenceItem.cs`
-  - Current file: `jb/src/core/Images/Match/MatchEvidence.cs` — 4 types.
-  - Answer:
-
-- [ ] Split `MatchingConfig.cs` — `MatchingRule` is a second type in the same file.
-  - Rule: every C# record must be in its own `.cs` file named after the type.
-  - Type to extract: `MatchingRule` (line 49) → `jb/src/core/Images/Match/MatchingRule.cs`.
-  - Current file: `jb/src/core/Images/Match/MatchingConfig.cs`.
-  - Answer:
 
 ## User decisions required
 

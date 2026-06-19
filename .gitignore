@@ -1,6 +1,6 @@
 # Project specific
 jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/model_uint8.onnx
-jb/Testing/
+jb/testing/
 
 
 
@@ -219,3 +219,6 @@ vite.config.ts.timestamp-*
 
 #graphify
 graphify-out/cache/
+
+#Claude
+.claude

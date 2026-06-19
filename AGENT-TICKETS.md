@@ -53,7 +53,65 @@ Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, 
 
 ## Tickets
 
-_No active tickets. New tickets will be created once Classify `jbtodo.md` decisions are answered._
+### T-1300 · Implement Fetch_HTTPS_DirectFile.cs
+**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+
+Implement `IFetchStrategy` in `jb/src/core/IO/Fetchers/Fetch_HTTPS_DirectFile.cs` to download a file from a direct HTTPS URL.
+
+**Acceptance:**
+- Validates URL against `HostRules.json`: allowed schemes, blocked hosts, redirect count limit, timeout.
+- Streams download to `%TEMP%/prism/{jobID}/`.
+- Returns `ImageRecord_INPUT`.
+- `dotnet build jb/src/PRISM.sln` passes.
+
+**Files:** `jb/src/core/IO/Fetchers/Fetch_HTTPS_DirectFile.cs`
+
+---
+
+### T-1400 · Implement Fetch_DropBox.cs
+**Status:** Blocked | **Profile:** P1-feature-worker | **Agent:** worker  
+**Blocked-by:** Product decision — public-only vs. OAuth-authenticated scope. Not required for V1.
+
+Public shared links (`dropbox.com/s/...?dl=0`) can be normalized (`?dl=1`) and delegated to `Fetch_HTTPS_DirectFile`. Private links require OAuth2 + Dropbox API v2.
+
+**Acceptance (when unblocked):**
+- Scope decision documented.
+- Public link normalization implemented; delegates to `Fetch_HTTPS_DirectFile`.
+- `dotnet build jb/src/PRISM.sln` passes.
+
+**Files:** `jb/src/core/IO/Fetchers/Fetch_DropBox.cs`
+
+---
+
+### T-1500 · Split StageShells.cs into per-stage files
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
+
+`jb/src/core/Pipeline/StageShells.cs` contains 8 `internal static class` declarations (~430 lines). Rule: one type per file, filename matches type name. Naming convention: `ShellStage_Xyz.cs` (not `XyzStageShell.cs`).
+
+**Acceptance:**
+- `StageShells.cs` deleted.
+- Eight new files in `jb/src/core/Pipeline/`, each with one renamed class:
+  - `ShellStage_Import.cs` (was `ImportStageShell`)
+  - `ShellStage_Classify.cs` (was `ClassifyStageShell`)
+  - `ShellStage_Match.cs` (was `MatchStageShell`)
+  - `ShellStage_Order.cs` (was `OrderStageShell`)
+  - `ShellStage_Rename.cs` (was `RenameStageShell`)
+  - `ShellStage_Generate.cs` (was `GenerateStageShell`)
+  - `ShellStage_Transform.cs` (was `TransformStageShell`)
+  - `ShellStage_Export.cs` (was `ExportStageShell`)
+- `Prism.cs` call sites updated to use new class names.
+- `dotnet build jb/src/PRISM.sln` passes.
+
+**Files:** `jb/src/core/Pipeline/StageShells.cs` (delete); `ShellStage_Import.cs` through `ShellStage_Export.cs` (new); `Prism.cs` (call site renames)
+
+---
+
+### T-1600 · SD-8: ImageRecord_OUTPUT Width/Height/Checksum
+**Status:** Done | **Profile:** P0-orchestrator
+
+**Resolution — not a bug.** `ImageRecord_OUTPUT` inherits from `ImageRecord_Base` which already declares `Width`, `Height`, and `Checksum`. All `ImageRecord*` types carry these fields via inheritance. No fix required.
+
+**Files:** `jb/src/core/Models/ImageRecord_Base.cs` (no changes)
 
 ---
 

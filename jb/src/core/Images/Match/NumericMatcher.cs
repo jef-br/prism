@@ -187,24 +187,11 @@ internal sealed class NumericMatcher
     /// </summary>
     private static string? GetNumericTarget(FamilyRecord family, string excelField)
     {
-        string rawValue;
-
-        if (excelField.Equals("familyID", StringComparison.OrdinalIgnoreCase) ||
-            excelField.Equals("famID", StringComparison.OrdinalIgnoreCase))
-        {
-            rawValue = family.FamilyID;
-        }
-        else if (family.CanonicalProperties.TryGetValue(excelField, out string? value) &&
-                 !string.IsNullOrWhiteSpace(value))
-        {
-            rawValue = value;
-        }
-        else
-        {
+        if (!family.CanonicalProperties.TryGetValue(excelField, out string? value) ||
+            string.IsNullOrWhiteSpace(value))
             return null;
-        }
 
-        string digitsOnly = string.Concat(DigitsOnlyPattern.Matches(rawValue).Select(m => m.Value));
+        string digitsOnly = string.Concat(DigitsOnlyPattern.Matches(value).Select(m => m.Value));
         return digitsOnly.Length > 0 ? digitsOnly : null;
     }
 

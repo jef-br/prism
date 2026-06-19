@@ -19,7 +19,7 @@ internal sealed class ImageMatcher
     }
 
     /// <summary>
-    /// Entry point called by <see cref="MatchStageShell"/>.
+    /// Entry point called by <see cref="ShellStage_Match"/>.
     /// Loads configs, runs the waterfall, and writes MatchEvidence to every lambda record.
     /// </summary>
     /// <param name="context">Mutable per-job pipeline context.</param>

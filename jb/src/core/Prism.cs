@@ -19,19 +19,20 @@ public sealed class Prism
     /// </summary>
     public Prism()
     {
-        configuration = Initialize();
-        pipeline = new Pipeline(configuration);
+        (configuration, ModelBuilder modelBuilder) = Initialize();
+        pipeline = new Pipeline(configuration, modelBuilder);
     }
 
     /// <summary>
-    /// Creates the PRISM facade with an already-loaded configuration.
+    /// Creates the PRISM facade with already-loaded configuration and model builder.
     /// Intended for testing and injection scenarios where config is pre-validated.
     /// </summary>
     /// <param name="configuration">Pre-validated PRISM configuration.</param>
-    public Prism(PrismConfiguration configuration)
+    /// <param name="modelBuilder">Pre-loaded Excel model builder.</param>
+    public Prism(PrismConfiguration configuration, ModelBuilder modelBuilder)
     {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        pipeline = new Pipeline(this.configuration);
+        pipeline = new Pipeline(this.configuration, modelBuilder ?? throw new ArgumentNullException(nameof(modelBuilder)));
     }
 
     // -------------------------------------------------------------------------
@@ -64,15 +65,18 @@ public sealed class Prism
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Loads Prism_Config.json and all required folder-local config files.
+    /// Loads Prism_Config.json, validates all required folder-local config files,
+    /// and pre-loads the Excel model builder so ExcelConfig.json failures surface at startup.
     /// Throws <see cref="PrismConfigurationException"/> if any required asset is missing or invalid.
     /// </summary>
-    private static PrismConfiguration Initialize()
+    private static (PrismConfiguration Config, ModelBuilder ExcelModelBuilder) Initialize()
     {
         string configPath = LocatePrismConfig();
         PrismConfiguration config = PrismConfiguration.Load(configPath);
         ValidateRequiredFolderLocalConfigs(configPath);
-        return config;
+        string coreDir = Path.GetDirectoryName(configPath)!;
+        ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(Path.Combine(coreDir, "Excel", "ExcelConfig.json"));
+        return (config, modelBuilder);
     }
 
     private static string LocatePrismConfig()

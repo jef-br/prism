@@ -537,7 +537,15 @@ public sealed class ModelBuilder
             propertyValues.Add(propertyValue);
         }
 
-        model.AddOrMergeFamilyRow(familyID, propertyValues, columnClassifications);
+        propertyValues.Add(new ExcelPropertyValue(config.RecordPrimaryKey, [familyID], []));
+
+        var extendedClassifications = new Dictionary<string, ExcelColumnClassification>(
+            columnClassifications, StringComparer.OrdinalIgnoreCase)
+        {
+            [config.RecordPrimaryKey] = ExcelColumnClassification.PrimaryKey
+        };
+
+        model.AddOrMergeFamilyRow(familyID, propertyValues, extendedClassifications);
     }
 
     private ExcelPropertyValue BuildPropertyValue(ExcelWorksheet worksheet, WorksheetDataRow dataRow, ColumnPlan column)

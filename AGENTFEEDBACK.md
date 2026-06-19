@@ -5,7 +5,7 @@ Agent-owned reload memory. Not authoritative project docs. Accepted knowledge in
 ## Current State
 
 - Todo files: 6 non-empty `jbtodo.md` (Classify ×2, Match, Order, Transform, Generate, IO).
-- Fixture folder closed 2026-06-16: `jb/Testing` one subfolder/job; each gets `foldername + " - expected result"` sibling with real expected files.
+- Fixture folder closed 2026-06-16: `jb/testing` one subfolder/job; each gets `foldername + " - expected result"` sibling with real expected files.
 - **V1 queue**: single-server in-process bounded queue, fixed workers. RabbitMQ deferred until durable recovery/distributed workers needed.
 - **SixLabors.ImageSharp 3.1.12** (Apache 2.0; CVEs GHSA-2cmq-823j-5qj8 high + GHSA-rxmq-m78w-7wmc moderate cleared). 4.0.0 rejected (commercial license).
 - **ImageClassifier.cs** owns ONNX boundary: loading, asset validation, session lifetime, diagnostics. Sessions application-scoped.
@@ -66,8 +66,9 @@ Decision lens for future agents.
 - [ ] `jb/src/core/Images/Order/jbtodo.md`: 3 — det0 SIDE fallback (user decision), `illustration-technical-drawing` last-slot guard, OrderEvidence missing full qualifying candidate set.
 - [ ] `jb/src/core/Images/Transform/jbtodo.md`: 15 — 11 design decisions (product answers required); 4 impl todos (Tx_CropSquare, Tx_CenterAndStretch, Tx_DetailCropper, Tx_ProblemImageProcessor) with prerequisites.
 - [ ] `jb/src/core/Images/Generate/jbtodo.md`: 1 — wire real `GenerationBackendAvailable()`. Recommend ComfyUI + Flux.1-schnell on-prem.
-- [ ] `jb/src/core/IO/jbtodo.md`: 6 — 3 fetch stubs (HTTPS high/1–2d, DropBox medium/1–3d, WeTransfer low/fragile); 2 spec deviations (XCFG at run-time, media-triage extension-only); 1 missing (directory input).
-- [x] `jb/src/core/Pipeline/jbtodo.md`: deleted.
+- [ ] `jb/src/core/IO/jbtodo.md`: 4 — fetch stubs: T-1300 (HTTPS, Ready), T-1400 (DropBox, Blocked/deferred), WeTransfer (no ticket); media-triage extension-only; directory input missing.
+- [ ] `jb/src/core/Pipeline/jbtodo.md`: StageShells split → T-1500 (Ready).
+- [x] `jb/src/core/Models/jbtodo.md`: SD-8 closed — not a bug (fields inherited from `ImageRecord_Base`). T-1600 Done.
 - [x] `jb/src/jbtodo.md`: fixture folder closed 2026-06-16.
 
 ## Web/API Notes

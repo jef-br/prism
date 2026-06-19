@@ -107,6 +107,15 @@ On API startup, `PrismApiConfiguration.Load()` validates all config and model as
 - Processing lifecycle: validate → initialize → `try/catch/finally` pipeline → release → return structured result object.
 - ONNX: name every tensor input/output with a string constant. State expected input shape and normalization in a comment above tensor construction. One method per preprocessing step.
 - OpenCV: every `Mat` has a name reflecting its state. State color space (BGR/RGB) at every image boundary. Release intermediate `Mat` objects with `using` or explicit `.Dispose()`.
+- K&R braces: opening brace on same line as declaration/statement
+- Method parameters on a single line, never split across lines
+- Object construction: flat `obj.Prop = x;` assignments, NOT object initializer syntax `new Foo { Prop = x }`
+- No XML doc comments on methods; class-level summary only
+- No defensive null-coalescing on internal/known-non-null values
+- Collapse boolean conditions: prefer `!= 1` over separate `== 0` / `> 1` checks
+- Short, practical variable names (fnTokens, famID, me, tei)
+- Closing braces on one line: `}   }   }`
+- No `Try` prefix on methods unless returning bool with out param
 
 ## Library documentation (context7)
 

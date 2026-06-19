@@ -7,12 +7,34 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.PropertyNamingPolicy = null;
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins("http://localhost:3000")
+              .AllowAnyMethod()
+              .AllowAnyHeader());
+});
+
 PrismApiConfiguration apiConfiguration = PrismApiConfiguration.Load();
+
+// Apply the configured maximum request size (Prism_Config.json → Input.MAXIMUM_REQUEST_SIZE) to the
+// transport and multipart form limits. Without this, Kestrel enforces its 30 MB default and rejects
+// legitimate batches with 413 even though the configured ceiling is far higher.
+if (apiConfiguration.MaximumRequestBytes > 0)
+{
+    builder.WebHost.ConfigureKestrel(options =>
+        options.Limits.MaxRequestBodySize = apiConfiguration.MaximumRequestBytes);
+
+    builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+        options.MultipartBodyLengthLimit = apiConfiguration.MaximumRequestBytes);
+}
+
 builder.Services.AddSingleton(apiConfiguration);
 builder.Services.AddSingleton<Prism>();
 builder.Services.AddSingleton<PrismJobCoordinator>();
 
 WebApplication app = builder.Build();
+app.UseCors();
 PrismJobCoordinator jobCoordinator = app.Services.GetRequiredService<PrismJobCoordinator>();
 
 app.MapGet("/PRISM/health", (PrismApiConfiguration configuration, PrismJobCoordinator coordinator) =>

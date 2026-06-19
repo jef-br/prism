@@ -47,7 +47,7 @@ internal static class ImageOrderer
         IReadOnlyList<DetSlotRule> slots = config.GetSlots(productTypeId);
         int lastConfiguredSlot = slots.Count > 0 ? slots[^1].SlotIndex : -1;
 
-        List<Candidate> candidates = BuildCandidates(images, slots, config);
+        List<CandidateDetOrder> candidates = BuildCandidates(images, slots, config);
         candidates.Sort(CompareCandidates);
 
         bool[] imageAssigned = new bool[images.Count];
@@ -55,7 +55,7 @@ internal static class ImageOrderer
         Dictionary<int, AssignmentRecord> assignments = [];
 
         // Assign each candidate in sorted order (best slot/phenotype first).
-        foreach (Candidate c in candidates)
+        foreach (CandidateDetOrder c in candidates)
         {
             if (imageAssigned[c.ImageIndex]) continue;
             if (slotClaimed.Contains(c.DetSlot)) continue;
@@ -106,12 +106,12 @@ internal static class ImageOrderer
     /// Builds all (image, slot) candidates where the image's selected phenotype qualifies for the slot.
     /// Each qualifying combination becomes one candidate entry for the assignment sort.
     /// </summary>
-    private static List<Candidate> BuildCandidates(
+    private static List<CandidateDetOrder> BuildCandidates(
         List<ImageRecord_LAMBDA> images,
         IReadOnlyList<DetSlotRule> slots,
         DetOrderConfig config)
     {
-        List<Candidate> result = [];
+        List<CandidateDetOrder> result = [];
 
         for (int i = 0; i < images.Count; i++)
         {
@@ -126,7 +126,7 @@ internal static class ImageOrderer
                 if (phenotypeRank < 0) continue;
 
                 int hintScore = config.FilenameMatchesSlotKeyword(img.InitialFullName, slot.Keyword) ? 1 : 0;
-                result.Add(new Candidate(i, slot.SlotIndex, phenotypeRank, ngpConfidence, hintScore, i, img.SelectedPhenotype));
+                result.Add(new CandidateDetOrder(i, slot.SlotIndex, phenotypeRank, ngpConfidence, hintScore, i, img.SelectedPhenotype));
             }
         }
 
@@ -139,7 +139,7 @@ internal static class ImageOrderer
     /// Sorts candidates so the best assignment comes first.
     /// Priority: earlier det slot → lower phenotype rank → higher NGP confidence → filename hint → lower source index.
     /// </summary>
-    private static int CompareCandidates(Candidate a, Candidate b)
+    private static int CompareCandidates(CandidateDetOrder a, CandidateDetOrder b)
     {
         int cmp = a.DetSlot.CompareTo(b.DetSlot);             if (cmp != 0) return cmp;
         cmp = a.PhenotypeRank.CompareTo(b.PhenotypeRank);     if (cmp != 0) return cmp;
@@ -154,9 +154,9 @@ internal static class ImageOrderer
     /// Returns which tie-breaker determined the winner over competitors at the same slot and phenotype rank.
     /// Returns "none" when there were no competitors.
     /// </summary>
-    private static string DetermineTieBreaker(Candidate winner, List<Candidate> all)
+    private static string DetermineTieBreaker(CandidateDetOrder winner, List<CandidateDetOrder> all)
     {
-        List<Candidate> competitors = all.Where(c =>
+        List<CandidateDetOrder> competitors = all.Where(c =>
             !ReferenceEquals(c, winner) &&
             c.DetSlot == winner.DetSlot &&
             c.PhenotypeRank == winner.PhenotypeRank).ToList();

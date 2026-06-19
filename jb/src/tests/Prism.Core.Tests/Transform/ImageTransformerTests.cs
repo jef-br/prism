@@ -4,7 +4,7 @@ namespace PrismCoreTests.Transform;
 
 /// <summary>
 /// Unit tests for <see cref="ImageTransformer"/> transform routing and
-/// <see cref="TransformStageShell"/> skip-flag behaviour.
+/// <see cref="ShellStage_Transform"/> skip-flag behaviour.
 /// Transform routing tests call <see cref="ImageTransformer.TransformImage"/> directly
 /// (no configuration dependency — processor gating is unconditional in this build).
 /// Shell behaviour tests verify the skip path and context counter via the full shell signature.
@@ -125,7 +125,7 @@ public class ImageTransformerTests
         ],
         transformEnabled: false);
 
-        TransformStageShell.Run(context, LoadConfig());
+        ShellStage_Transform.Run(context, LoadConfig());
 
         Assert.All(context.LambdaRecords, r =>
             Assert.Equal(TransformationStatus.Skipped, r.TransformationResult?.Status));
@@ -140,7 +140,7 @@ public class ImageTransformerTests
         ],
         transformEnabled: false);
 
-        TransformStageShell.Run(context, LoadConfig());
+        ShellStage_Transform.Run(context, LoadConfig());
 
         Assert.Null(context.LambdaRecords[0].TransformationResult);
     }
@@ -154,7 +154,7 @@ public class ImageTransformerTests
         ],
         transformEnabled: false);
 
-        TransformStageShell.Run(context, LoadConfig());
+        ShellStage_Transform.Run(context, LoadConfig());
 
         Assert.Equal(0, context.OkTransformedCount);
     }
@@ -171,7 +171,7 @@ public class ImageTransformerTests
             MakeLambda("ko.jpg", "FAM002", phenotype: null, isKo: true)
         ]);
 
-        TransformStageShell.Run(context, LoadConfig());
+        ShellStage_Transform.Run(context, LoadConfig());
 
         Assert.Equal(2, context.OkTransformedCount);
     }
@@ -184,7 +184,7 @@ public class ImageTransformerTests
             MakeLambda("ko.jpg", "FAM001", phenotype: null, isKo: true)
         ]);
 
-        TransformStageShell.Run(context, LoadConfig());
+        ShellStage_Transform.Run(context, LoadConfig());
 
         Assert.Null(context.LambdaRecords[0].TransformationResult);
         Assert.Equal(0, context.OkTransformedCount);

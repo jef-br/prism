@@ -29,6 +29,52 @@ import { ResultSection } from "./ResultSection";
 import { RouteSection } from "./RouteSection";
 import { UploadSection } from "./UploadSection";
 
+async function resolveDroppedItems(items: DataTransferItemList): Promise<File[]> {
+  const entries: FileSystemEntry[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const entry = items[i].webkitGetAsEntry();
+    if (entry) entries.push(entry);
+  }
+
+  const files: File[] = [];
+  await Promise.all(entries.map((entry) => collectFilesFromEntry(entry, files)));
+  return files;
+}
+
+async function collectFilesFromEntry(entry: FileSystemEntry, files: File[]): Promise<void> {
+  if (entry.isFile) {
+    const file = await readFileEntry(entry as FileSystemFileEntry);
+    files.push(file);
+  } else if (entry.isDirectory) {
+    const children = await readDirectoryEntry(entry as FileSystemDirectoryEntry);
+    await Promise.all(children.map((child) => collectFilesFromEntry(child, files)));
+  }
+}
+
+function readFileEntry(entry: FileSystemFileEntry): Promise<File> {
+  return new Promise((resolve, reject) => entry.file(resolve, reject));
+}
+
+function readDirectoryEntry(entry: FileSystemDirectoryEntry): Promise<FileSystemEntry[]> {
+  return new Promise((resolve, reject) => {
+    const reader = entry.createReader();
+    const all: FileSystemEntry[] = [];
+
+    function readBatch() {
+      reader.readEntries((batch) => {
+        if (batch.length === 0) {
+          resolve(all);
+        } else {
+          all.push(...batch);
+          readBatch();
+        }
+      }, reject);
+    }
+
+    readBatch();
+  });
+}
+
 const defaultParameters: PrismProcessingParameters = {
   rename: true,
   transform: true,
@@ -123,7 +169,10 @@ export function WorkbenchShell() {
       event.preventDefault();
       setIsDragging(false);
 
-      if (event.dataTransfer?.files) {
+      const items = event.dataTransfer?.items;
+      if (items && items.length > 0) {
+        void resolveDroppedItems(items).then(addFiles);
+      } else if (event.dataTransfer?.files) {
         addFiles(Array.from(event.dataTransfer.files));
       }
     }

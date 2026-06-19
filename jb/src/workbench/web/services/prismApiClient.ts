@@ -168,6 +168,7 @@ export class PrismApiClient {
     handlers: ProgressSubscriptionHandlers
   ): () => void {
     const eventSource = new EventSource(this.resolveUrl(progressUrl));
+    let terminalSeen = false;
     const handleMessage = (event: Event) => {
       if (!(event instanceof MessageEvent)) {
         handlers.onError(new Error("The PRISM progress stream returned an invalid event type."));
@@ -180,7 +181,11 @@ export class PrismApiClient {
       }
 
       try {
-        handlers.onProgress(parseProgressEvent(event.data));
+        const progressEvent = parseProgressEvent(event.data);
+        if (isTerminalProgressEvent(progressEvent)) {
+          terminalSeen = true;
+        }
+        handlers.onProgress(progressEvent);
       } catch (error) {
         handlers.onError(
           error instanceof Error
@@ -194,6 +199,13 @@ export class PrismApiClient {
     eventSource.addEventListener("progress", handleMessage);
     eventSource.addEventListener("status", handleMessage);
     eventSource.onerror = () => {
+      // The API closes the SSE stream once the job reaches a terminal state; the browser reports that
+      // normal close as an error. Only surface it when the stream dropped before any terminal event.
+      if (terminalSeen) {
+        eventSource.close();
+        return;
+      }
+
       handlers.onError(new Error("The PRISM progress stream is unavailable."));
     };
 
@@ -282,7 +294,9 @@ export function getProgressStage(event: PrismProgressEvent): PrismRouteStage | u
 }
 
 export function isTerminalProgressEvent(event: PrismProgressEvent): boolean {
-  const status = readStringField(event, ["status", "Status", "jobStatus", "JobStatus"]);
+  // The API carries the terminal job status ("Completed"/"Failed") in the Stage field of the final
+  // progress event (PipelineProgressEvent has no Status field), so Stage must be inspected too.
+  const status = readStringField(event, ["status", "Status", "jobStatus", "JobStatus", "stage", "Stage"]);
 
   if (!status) {
     return false;

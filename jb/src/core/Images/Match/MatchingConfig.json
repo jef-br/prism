@@ -1,11 +1,27 @@
 {
   "rules": [
     {
-      "excelField": "familyID",
+      "excelField": "FamilyID",
       "type": "numeric",
       "strategy": "NumericalMatcher",
       "weight": 1,
-      "maxDistance": 1,
+      "maxDistance": 1.478,
+      "candidates": "3"
+    },
+    {
+      "excelField": "RefCo",
+      "type": "numeric",
+      "strategy": "NumericalMatcher",
+      "weight": 1,
+      "maxDistance": 1.478,
+      "candidates": "3"
+    },
+    {
+      "excelField": "veepee",
+      "type": "numeric",
+      "strategy": "NumericalMatcher",
+      "weight": 1,
+      "maxDistance": 1.478,
       "candidates": "3"
     },
     {
@@ -13,7 +29,7 @@
       "type": "numeric",
       "strategy": "NumericalMatcher",
       "weight": 1,
-      "maxDistance": 1,
+      "maxDistance": 1.478,
       "candidates": "3"
     },
     {

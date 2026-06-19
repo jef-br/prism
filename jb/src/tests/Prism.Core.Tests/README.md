@@ -39,7 +39,7 @@ dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj
 ```
 
 ## Fixture Data
-Tests use real fixture data from `jb/Testing/SPACINI29/`:
+Tests use real fixture data from `jb/testing/SPACINI29/`:
 - `TINY/` — Subset of 11 images for fast tests
 - `SPACINI29-INPUTS.xlsx` — Excel mapping file
 

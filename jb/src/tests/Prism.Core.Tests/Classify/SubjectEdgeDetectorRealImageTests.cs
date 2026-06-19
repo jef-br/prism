@@ -6,7 +6,7 @@ namespace PrismCoreTests.Classify;
 
 /// <summary>
 /// Integration tests for <see cref="SubjectEdgeDetector"/> against real camera JPEG files
-/// from the jb/Testing/ fixture directory. Tests are skipped gracefully when the fixture
+/// from the jb/testing/ fixture directory. Tests are skipped gracefully when the fixture
 /// directory is not present (e.g., CI without test assets).
 /// </summary>
 public sealed class SubjectEdgeDetectorRealImageTests

@@ -6,14 +6,17 @@
 internal sealed class Pipeline
 {
     private readonly PrismConfiguration configuration;
+    private readonly ModelBuilder modelBuilder;
 
     /// <summary>
-    /// Creates a Pipeline with its required validated configuration.
+    /// Creates a Pipeline with its required validated configuration and pre-loaded Excel model builder.
     /// </summary>
     /// <param name="configuration">Validated PRISM configuration loaded at startup.</param>
-    internal Pipeline(PrismConfiguration configuration)
+    /// <param name="modelBuilder">Pre-loaded Excel model builder from ExcelConfig.json.</param>
+    internal Pipeline(PrismConfiguration configuration, ModelBuilder modelBuilder)
     {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        this.modelBuilder  = modelBuilder  ?? throw new ArgumentNullException(nameof(modelBuilder));
     }
 
     // -------------------------------------------------------------------------
@@ -54,14 +57,14 @@ internal sealed class Pipeline
 
         try
         {
-            await RunStage(context, PipelineStageNames.Imported,    ImportStageShell.Run,    progress, cancellationToken);
-            await RunStage(context, PipelineStageNames.Classified,  ClassifyStageShell.Run,  progress, cancellationToken);
-            await RunStage(context, PipelineStageNames.Matched,     MatchStageShell.Run,     progress, cancellationToken);
-            await RunStage(context, PipelineStageNames.Ordered,     OrderStageShell.Run,     progress, cancellationToken);
-            await RunStage(context, PipelineStageNames.Renamed,     RenameStageShell.Run,    progress, cancellationToken);
-            await RunStage(context, PipelineStageNames.Generated,   GenerateStageShell.Run,  progress, cancellationToken);
-            await RunStage(context, PipelineStageNames.Transformed, TransformStageShell.Run, progress, cancellationToken);
-            await RunStage(context, PipelineStageNames.Exported,    ExportStageShell.Run,    progress, cancellationToken);
+            await RunStage(context, PipelineStageNames.Imported,    (ctx, cfg) => ShellStage_Import.Run(ctx, cfg, modelBuilder), progress, cancellationToken);
+            await RunStage(context, PipelineStageNames.Classified,  ShellStage_Classify.Run,  progress, cancellationToken);
+            await RunStage(context, PipelineStageNames.Matched,     ShellStage_Match.Run,     progress, cancellationToken);
+            await RunStage(context, PipelineStageNames.Ordered,     ShellStage_Order.Run,     progress, cancellationToken);
+            await RunStage(context, PipelineStageNames.Renamed,     ShellStage_Rename.Run,    progress, cancellationToken);
+            await RunStage(context, PipelineStageNames.Generated,   ShellStage_Generate.Run,  progress, cancellationToken);
+            await RunStage(context, PipelineStageNames.Transformed, ShellStage_Transform.Run, progress, cancellationToken);
+            await RunStage(context, PipelineStageNames.Exported,    ShellStage_Export.Run,    progress, cancellationToken);
 
             return BuildSuccessResult(context, request);
         }
