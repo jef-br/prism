@@ -1,5 +1,6 @@
 {
     "Input": {
+        "AcceptedMediaTypes": [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf", ".webp", ".bmp", ".gif", ".xlsx", ".zip"],
         "MAXIMUM_REQUEST_SIZE": 2684354560,
         "Images": {
             "amount": {
@@ -33,6 +34,14 @@
             }
         }
     },
+    "Jobs":{
+        "JobRetentionPeriodInHours":24,
+        "MaxQueuedJobs":100,
+        "MaxConcurrentJobs":1
+    },
+    "Pipeline":{
+        "JobRetries":3
+    },
     "Output": {
         "Images": {
             "Processed": {
@@ -43,7 +52,8 @@
                 "MAXIMUM_SIZE_IN_PIXELS": {
                     "width": 2000,
                     "height": 2000
-                }
+                },
+                "ASPECT_RATIO": 1
             },
             "Resize": {
                 "MAXIMUM_UpScale": 1.42,
@@ -98,11 +108,5 @@
                 "BiDirectional": 0.25
             }
         }
-    },
-    "Pipeline":{
-        "JobRetries":3
-    },
-    "Jobs":{
-        "JobRetentionPeriodInHours":24
     }
 }

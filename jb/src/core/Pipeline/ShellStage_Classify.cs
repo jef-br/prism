@@ -18,6 +18,7 @@ internal static class ShellStage_Classify
             .ToList();
 
         PhenotypeRuleSet ruleSet = LoadRuleSet();
+        ClipPromptCatalog promptCatalog = LoadPromptCatalog();
 
         using ImageClassifier classifier = new();
         InitializeClassifier(classifier);
@@ -28,7 +29,7 @@ internal static class ShellStage_Classify
 
         foreach (DedupGroup group in groups)
         {
-            ProcessCanonical(group.Canonical, ruleSet, classifier, context,
+            ProcessCanonical(group.Canonical, ruleSet, classifier, promptCatalog, context,
                 configuration.ClassificationConfidenceThreshold,
                 configuration.ClassificationCutoffThreshold);
 
@@ -45,6 +46,7 @@ internal static class ShellStage_Classify
         ImageRecord_INPUT source,
         PhenotypeRuleSet ruleSet,
         ImageClassifier classifier,
+        ClipPromptCatalog promptCatalog,
         PipelineContext context,
         double influentialThreshold,
         double cutoffThreshold)
@@ -58,7 +60,7 @@ internal static class ShellStage_Classify
                 ImageFeatureAnalyzer.Analyze(source.NormalizedJpgPath, lambda.Features);
 
                 if (classifier.IsReady)
-                    ApplyClipTags(source.NormalizedJpgPath, classifier, lambda, influentialThreshold, cutoffThreshold);
+                    ApplyClipTags(source.NormalizedJpgPath, classifier, promptCatalog, lambda, influentialThreshold, cutoffThreshold);
             }
             catch (Exception ex)
             {
@@ -99,11 +101,12 @@ internal static class ShellStage_Classify
     private static void ApplyClipTags(
         string imagePath,
         ImageClassifier classifier,
+        ClipPromptCatalog promptCatalog,
         ImageRecord_LAMBDA lambda,
         double influentialThreshold,
         double cutoffThreshold)
     {
-        ClassificationToken[] allTokens = classifier.ClassifyImage(imagePath, BuildDefaultPrompts());
+        ClassificationToken[] allTokens = classifier.ClassifyImage(imagePath, promptCatalog.BuildPrompts());
         if (allTokens.Length == 0) return;
 
         lambda.Tags = new TagCollection
@@ -115,7 +118,7 @@ internal static class ShellStage_Classify
         // Write top-scoring tokens into the feature snapshot for phenotype matching.
         foreach (ClassificationToken token in lambda.Tags.Influential)
         {
-            if (TryParseFeatureToken(token.Label, out string featureId, out string featureValue))
+            if (promptCatalog.TryResolve(token.Label, out string featureId, out string featureValue))
             {
                 lambda.Features.Set(featureId, featureValue, token.Confidence, "clip");
             }
@@ -132,6 +135,16 @@ internal static class ShellStage_Classify
                 "ImageRoles.json not found. Ensure ImageNGP/ImageRoles.json is present next to Prism_Config.json.");
 
         return PhenotypeRuleSet.Load(imageRolesPath);
+    }
+
+    private static ClipPromptCatalog LoadPromptCatalog()
+    {
+        string? clipPromptsPath = PrismConfigLocator.FindFolderLocalConfig("Images/Classify/ClipPrompts.json");
+        if (clipPromptsPath is null)
+            throw new PrismConfigurationException(
+                "ClipPrompts.json not found. Ensure Images/Classify/ClipPrompts.json is present next to Prism_Config.json.");
+
+        return ClipPromptCatalog.Load(clipPromptsPath);
     }
 
     private static void InitializeClassifier(ImageClassifier classifier)
@@ -158,55 +171,5 @@ internal static class ShellStage_Classify
             Width           = source.NormalizedWidth  > 0 ? source.NormalizedWidth  : source.Width,
             Height          = source.NormalizedHeight > 0 ? source.NormalizedHeight : source.Height
         };
-    }
-
-    // ─── CLIP prompt catalogue ────────────────────────────────────────────────
-
-    /// <summary>
-    /// Maps each natural-language CLIP prompt to the feature ID and value it represents.
-    /// Single source of truth: adding a prompt here automatically includes it in
-    /// <see cref="BuildDefaultPrompts"/> and makes it parseable by <see cref="TryParseFeatureToken"/>.
-    /// </summary>
-    private static readonly Dictionary<string, (string FeatureId, string FeatureValue)> PromptFeatureMap = new()
-    {
-        ["a photo of a person wearing clothing"]                         = ("hero-is-human",    "TRUE"),
-        ["a product photo with no person, ghost mannequin or flat lay"]  = ("hero-is-human",    "FALSE"),
-        ["a front view of the product"]                                  = ("hero-orientation",  "FRONT"),
-        ["a back view of the product"]                                   = ("hero-orientation",  "BACK"),
-        ["a side view of the product"]                                   = ("hero-orientation",  "SIDEON"),
-        ["a top down view of the product"]                               = ("hero-orientation",  "TOP"),
-        ["a three-quarter or diagonal view of the product"]              = ("hero-orientation",  "DIAGONAL"),
-        ["a photo showing the full face of the model"]                   = ("head-visible",      "FULL"),
-        ["a photo showing a partially visible face"]                     = ("head-visible",      "PARTIAL"),
-        ["a photo with no visible face or head"]                         = ("head-visible",      "NONE"),
-        ["a photo showing the full body of the model"]                   = ("body-visible",      "full"),
-        ["a photo showing three quarters of the body"]                   = ("body-visible",      "three-quarter"),
-        ["a photo showing only the upper half of the body"]              = ("body-visible",      "half"),
-        ["a photo showing only the bust or chest of the model"]          = ("body-visible",      "bust"),
-    };
-
-    /// <summary>
-    /// Returns all natural-language CLIP zero-shot prompts derived from <see cref="PromptFeatureMap"/>.
-    /// </summary>
-    private static string[] BuildDefaultPrompts() => [.. PromptFeatureMap.Keys];
-
-    /// <summary>
-    /// Maps a CLIP result label back to its feature ID and value using <see cref="PromptFeatureMap"/>.
-    /// </summary>
-    private static bool TryParseFeatureToken(
-        string label,
-        out string featureId,
-        out string featureValue)
-    {
-        if (PromptFeatureMap.TryGetValue(label, out (string FeatureId, string FeatureValue) mapping))
-        {
-            featureId    = mapping.FeatureId;
-            featureValue = mapping.FeatureValue;
-            return true;
-        }
-
-        featureId    = string.Empty;
-        featureValue = string.Empty;
-        return false;
     }
 }

@@ -133,6 +133,19 @@ public sealed class PrismConfiguration
     /// <summary>How long completed jobs are retained in-process before expiry (hours).</summary>
     public int JobRetentionPeriodInHours { get; private set; }
 
+    /// <summary>Maximum number of jobs that may sit in the queue at once.</summary>
+    public int MaxQueuedJobs { get; private set; }
+
+    /// <summary>Maximum number of jobs processed concurrently.</summary>
+    public int MaxConcurrentJobs { get; private set; }
+
+    // -------------------------------------------------------------------------
+    // Accepted media types
+    // -------------------------------------------------------------------------
+
+    /// <summary>File extensions accepted as input (images, Excel, zip).</summary>
+    public IReadOnlyList<string> AcceptedMediaTypes { get; private set; } = [];
+
     // -------------------------------------------------------------------------
     // Factory
     // -------------------------------------------------------------------------
@@ -181,7 +194,10 @@ public sealed class PrismConfiguration
 
         using (document)
         {
-            return ParseAndValidate(document.RootElement, configPath);
+            PrismConfiguration config = ParseAndValidate(document.RootElement, configPath);
+            string coreConfigDirectory = Path.GetDirectoryName(configPath) ?? string.Empty;
+            ImageNgpValidator.Validate(coreConfigDirectory);
+            return config;
         }
     }
 
@@ -232,6 +248,10 @@ public sealed class PrismConfiguration
 
         config.JobRetries                = RequireInt32(root, configPath, "Pipeline", "JobRetries");
         config.JobRetentionPeriodInHours = RequireInt32(root, configPath, "Jobs", "JobRetentionPeriodInHours");
+        config.MaxQueuedJobs             = RequireInt32(root, configPath, "Jobs", "MaxQueuedJobs");
+        config.MaxConcurrentJobs         = RequireInt32(root, configPath, "Jobs", "MaxConcurrentJobs");
+
+        config.AcceptedMediaTypes = RequireStringArray(root, configPath, "Input", "AcceptedMediaTypes");
 
         config.Validate(configPath);
         return config;
@@ -283,6 +303,15 @@ public sealed class PrismConfiguration
         {
             throw new PrismConfigurationException(
                 $"Prism_Config.json at '{configPath}': Jobs.JobRetentionPeriodInHours must be > 0 but was {JobRetentionPeriodInHours}.");
+        }
+
+        AssertPositive(MaxQueuedJobs,     configPath, "Jobs.MaxQueuedJobs");
+        AssertPositive(MaxConcurrentJobs, configPath, "Jobs.MaxConcurrentJobs");
+
+        if (AcceptedMediaTypes.Count == 0)
+        {
+            throw new PrismConfigurationException(
+                $"Prism_Config.json at '{configPath}': Input.AcceptedMediaTypes must contain at least one entry.");
         }
     }
 
@@ -341,6 +370,31 @@ public sealed class PrismConfiguration
         }
 
         return element.Value.GetBoolean();
+    }
+
+    private static IReadOnlyList<string> RequireStringArray(JsonElement root, string configPath, params string[] path)
+    {
+        JsonElement? element = Navigate(root, path);
+
+        if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Array)
+        {
+            throw new PrismConfigurationException(
+                $"Prism_Config.json at '{configPath}': required array field '{string.Join(".", path)}' is missing or not an array.");
+        }
+
+        List<string> values = [];
+        foreach (JsonElement item in element.Value.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+            {
+                throw new PrismConfigurationException(
+                    $"Prism_Config.json at '{configPath}': array field '{string.Join(".", path)}' must contain only strings.");
+            }
+
+            values.Add(item.GetString()!);
+        }
+
+        return values;
     }
 
     private static JsonElement? Navigate(JsonElement root, string[] path)

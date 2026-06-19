@@ -39,5 +39,7 @@
 <Content Include="Images\Classify\ONNX\clip-vit-b32-uint8\merges.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Images\Classify\ONNX\clip-vit-b32-uint8\merges.txt')" />
     <Content Include="Images\Classify\ONNX\clip-vit-b32-uint8\vocab.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Images\Classify\ONNX\clip-vit-b32-uint8\vocab.json')" />
     <Content Include="ImageNGP\ImageRoles.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="ImageNGP\ImageNGP.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Images\Classify\ClipPrompts.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

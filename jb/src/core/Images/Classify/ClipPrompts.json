@@ -1,0 +1,20 @@
+{
+  "_comment": "CLIP zero-shot prompt catalogue. Each prompt is a natural-language label scored by the CLIP model; a top-scoring prompt writes (feature, value) into the image feature snapshot for phenotype matching. feature/value pairs are validated against ImageNGP.json at startup. Edit to add or retune prompts without recompiling.",
+
+  "prompts": [
+    { "prompt": "a photo of a person wearing clothing",                        "feature": "hero-is-human",   "value": "TRUE" },
+    { "prompt": "a product photo with no person, ghost mannequin or flat lay",  "feature": "hero-is-human",   "value": "FALSE" },
+    { "prompt": "a front view of the product",                                  "feature": "hero-orientation", "value": "FRONT" },
+    { "prompt": "a back view of the product",                                   "feature": "hero-orientation", "value": "BACK" },
+    { "prompt": "a side view of the product",                                   "feature": "hero-orientation", "value": "SIDEON" },
+    { "prompt": "a top down view of the product",                               "feature": "hero-orientation", "value": "TOP" },
+    { "prompt": "a three-quarter or diagonal view of the product",              "feature": "hero-orientation", "value": "DIAGONAL" },
+    { "prompt": "a photo showing the full face of the model",                   "feature": "head-visible",    "value": "FULL" },
+    { "prompt": "a photo showing a partially visible face",                     "feature": "head-visible",    "value": "PARTIAL" },
+    { "prompt": "a photo with no visible face or head",                         "feature": "head-visible",    "value": "NONE" },
+    { "prompt": "a photo showing the full body of the model",                   "feature": "body-visible",    "value": "full" },
+    { "prompt": "a photo showing three quarters of the body",                   "feature": "body-visible",    "value": "three-quarter" },
+    { "prompt": "a photo showing only the upper half of the body",              "feature": "body-visible",    "value": "half" },
+    { "prompt": "a photo showing only the bust or chest of the model",          "feature": "body-visible",    "value": "bust" }
+  ]
+}

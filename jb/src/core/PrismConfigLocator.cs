@@ -1,14 +1,14 @@
 /// <summary>
 /// Locates PRISM configuration files on disk using standard search paths.
 /// </summary>
-internal static class PrismConfigLocator
+public static class PrismConfigLocator
 {
     /// <summary>
     /// Finds the absolute path to Prism_Config.json by searching standard locations.
     /// Returns <c>null</c> if the file is not found in any candidate location.
     /// </summary>
     /// <returns>Absolute path to Prism_Config.json, or <c>null</c>.</returns>
-    internal static string? FindPrismConfigPath()
+    public static string? FindPrismConfigPath()
     {
         string[] candidates =
         [
