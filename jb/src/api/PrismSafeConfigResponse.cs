@@ -1,3 +1,5 @@
+namespace Prism.Api;
+
 /// <summary>
 /// Safe public configuration response.
 /// </summary>

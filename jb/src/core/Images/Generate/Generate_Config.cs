@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Typed generation parameters extracted from the <c>Generation</c> section of <c>Prism_Config.json</c>.
 /// </summary>

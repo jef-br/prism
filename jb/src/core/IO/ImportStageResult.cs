@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Structured result returned by <see cref="Importer"/> after the Imported stage completes.
 /// Carries the normalized image records, the Internal Excel Model family records, and any

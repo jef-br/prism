@@ -1,3 +1,5 @@
+namespace Prism.Api;
+
 /// <summary>
 /// Describes the current readiness of the API host and minimal PRISM processing adapter.
 /// </summary>

@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// A visual deduplication group with one canonical image and zero or more duplicates.
 /// </summary>

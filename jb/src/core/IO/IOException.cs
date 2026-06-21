@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 public abstract class PrismIOException : Exception
 {
     protected PrismIOException(

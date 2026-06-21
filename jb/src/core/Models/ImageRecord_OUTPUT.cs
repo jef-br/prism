@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /*
 Represents the final output image bytes and output filename metadata.
 Populated by the Exported stage via Exporter.BuildOutputRecords.

@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Crops the image to a square anchored at the edges touched by the salient-object bounding box.
 /// Applied to close-up and detail images where the bounding box intersects one or more image edges.

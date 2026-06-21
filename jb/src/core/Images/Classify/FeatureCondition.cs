@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 
+namespace Prism.Core;
+
 /// <summary>
 /// A single condition within a phenotype rule, as loaded from <c>ImageRoles.json</c>.
 /// Either a direct feature comparison (when <see cref="Feature"/> is set)

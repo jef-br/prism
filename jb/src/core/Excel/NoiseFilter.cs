@@ -1,6 +1,8 @@
 using System;
 using System.Text.RegularExpressions;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Removes numeric values that look like measurements, dates, or other non-identity
 /// numbers before text is used as matching evidence.

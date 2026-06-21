@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Processing options selected by the caller for one PRISM job.
 /// </summary>

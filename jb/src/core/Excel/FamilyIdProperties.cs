@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Validation rules for the configured FamilyID primary key.
 /// </summary>

@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Dynamic column classification thresholds from ExcelConfig.json.
 /// </summary>

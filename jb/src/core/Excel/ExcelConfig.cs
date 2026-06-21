@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Runtime configuration for building the Internal Excel Model.
 /// </summary>

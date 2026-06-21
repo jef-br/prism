@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Loads <c>ClipPrompts.json</c> and maps each natural-language CLIP prompt to the feature id and
 /// value it represents. Replaces the former hard-coded prompt dictionary in the Classified stage —

@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Represents one source image after import normalization, before classification and matching.
 /// Handoff record between the Imported stage and all downstream stages.
@@ -37,17 +39,6 @@ public class ImageRecord_INPUT : ImageRecord_Base {
 
     /// <summary>Height of the normalized image in pixels. Set after normalization.</summary>
     public int NormalizedHeight { get; set; }
-
-    //─── Import status
-
-    /// <summary>Import outcome for this image.</summary>
-    public ImportStatus ImportStatus { get; set; } = ImportStatus.Pending;
-
-    /// <summary>Safe KO reason code when the image could not be imported.</summary>
-    public string? KoReasonCode { get; set; }
-
-    /// <summary>Safe diagnostic message when the image could not be imported.</summary>
-    public string? KoSafeMessage { get; set; }
 
     //─── Downstream matching tokens (populated downstream)
 

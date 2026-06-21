@@ -1,3 +1,5 @@
+namespace Prism.Api;
+
 /// <summary>
 /// Feature flags safe to expose to callers.
 /// </summary>

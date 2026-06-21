@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Column validity thresholds from ExcelConfig.json.
 /// </summary>

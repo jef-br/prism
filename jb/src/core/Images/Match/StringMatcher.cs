@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Matches images to FamilyIDs using normalized string token comparison.
 /// Bracket 3: accepts an assignment only when exactly one FamilyID has string token evidence.

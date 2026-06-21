@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Collected ImageFeature measurements for one canonical image after the Classified stage.
 /// Feature ids match <c>jb/docs/ImageNGP/ImageFeatures.md</c>.

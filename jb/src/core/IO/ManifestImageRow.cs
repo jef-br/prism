@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// One row in the batch manifest — one entry per image processed by the pipeline.
 /// </summary>

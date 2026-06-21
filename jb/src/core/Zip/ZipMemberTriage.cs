@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Classifies zip members by content signature and accepted PRISM filename extensions.
 /// </summary>

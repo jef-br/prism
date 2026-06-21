@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /*
 Represents an image generated to supplement an existing FamilyID image collection.
 
@@ -14,7 +16,5 @@ public class ImageRecord_GENERATED : ImageRecord_Base {
     public string? ParamsSummary { get; set; }   // safe config snapshot
     public bool QualityAccepted { get; set; }
     public string? OutputImagePath { get; set; }   // set when Created
-    public string? KoReasonCode { get; set; }   // set when Failed
-    public string? KoSafeMessage { get; set; }
     public string? SafeDiagnostics { get; set; }
 }

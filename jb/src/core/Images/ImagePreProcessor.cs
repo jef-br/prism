@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /*
     PreProcessor.cs is the first class that touches the image with regards to image transformation.
     It is used to identify the image content and type

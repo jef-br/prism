@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// One feature entry from <c>ImageNGP.json</c>: the canonical id, its datatype, and —
 /// for <c>enum</c>/<c>boolean</c> features — the closed set of allowed values.

@@ -29,7 +29,7 @@ public class PipelineIntegrationTests
         Assert.True(File.Exists(excelPath), $"Test fixture Excel file not found: {excelPath}");
         Assert.NotEmpty(Directory.GetFiles(tinyImagesPath, "*.jpg", SearchOption.TopDirectoryOnly));
 
-        var result = await new Prism().Process(BuildTinyJobRequest());
+        var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.NotNull(result);
         Assert.Equal("Completed", result.Status);
@@ -80,7 +80,7 @@ public class PipelineIntegrationTests
             PrismProcessingParameters = new PrismProcessingParameters { Format = "json" }
         };
 
-        var result = await new Prism().Process(jobRequest);
+        var result = await new PrismService().Process(jobRequest);
 
         Assert.NotNull(result);
         Assert.NotNull(result.Manifest);
@@ -92,7 +92,7 @@ public class PipelineIntegrationTests
     [Fact]
     public async Task BatchManifest_AlwaysContainsRouteSummaries()
     {
-        var result = await new Prism().Process(BuildTinyJobRequest());
+        var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.NotNull(result.Manifest);
         Assert.NotNull(result.Manifest.RouteSummaries);
@@ -130,7 +130,7 @@ public class PipelineIntegrationTests
             Path.Combine(TestFixturePath, "SPACINI29", "TINY"), "*.jpg",
             SearchOption.TopDirectoryOnly).Length;
 
-        var result = await new Prism().Process(BuildTinyJobRequest());
+        var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.Equal("Completed", result.Status);
         Assert.Equal(inputCount, result.OkImages.Count + result.KoImages.Count);
@@ -143,7 +143,7 @@ public class PipelineIntegrationTests
     [Fact]
     public async Task SPACINI29_TINY_OkImages_HaveWellFormedFinalNames()
     {
-        var result = await new Prism().Process(BuildTinyJobRequest());
+        var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.Equal("Completed", result.Status);
 
@@ -163,7 +163,7 @@ public class PipelineIntegrationTests
     [Fact]
     public async Task SPACINI29_TINY_KoImages_HaveReasonCode()
     {
-        var result = await new Prism().Process(BuildTinyJobRequest());
+        var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.Equal("Completed", result.Status);
         Assert.All(result.KoImages, row =>
@@ -177,7 +177,7 @@ public class PipelineIntegrationTests
     [Fact]
     public async Task SPACINI29_TINY_PairedImages_ShareFamily()
     {
-        var result = await new Prism().Process(BuildTinyJobRequest());
+        var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.Equal("Completed", result.Status);
 
@@ -214,7 +214,7 @@ public class PipelineIntegrationTests
             ReturnOriginalImages = false
         });
 
-        var result = await new Prism().Process(request);
+        var result = await new PrismService().Process(request);
 
         Assert.Equal("Completed", result.Status);
         Assert.NotNull(result.ZipBytes);

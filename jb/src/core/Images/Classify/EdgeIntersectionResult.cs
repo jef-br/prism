@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Per-edge subject-to-boundary intersection state produced by <see cref="SubjectEdgeDetector"/>.
 /// </summary>

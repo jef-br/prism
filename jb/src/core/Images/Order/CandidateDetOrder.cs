@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// A qualifying (image, det-slot) pair built during det-order candidate evaluation.
 /// </summary>

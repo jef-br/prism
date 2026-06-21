@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Represents one deduplicated product family record built from the Internal Excel Model.
 /// </summary>

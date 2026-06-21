@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Owns pipeline processing and disposal of per-job resources.
 /// Enforces the immutable stage order: Imported → Classified → Matched → Ordered → Renamed → Generated → Transformed → Exported.

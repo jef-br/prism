@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Severity of a safe Excel processing diagnostic.
 /// </summary>

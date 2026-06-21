@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Prism.Api;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -30,7 +31,7 @@ if (apiConfiguration.MaximumRequestBytes > 0)
 }
 
 builder.Services.AddSingleton(apiConfiguration);
-builder.Services.AddSingleton<Prism>();
+builder.Services.AddSingleton<PrismService>();
 builder.Services.AddSingleton<PrismJobCoordinator>();
 
 WebApplication app = builder.Build();

@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Waterfall matching orchestrator for the Matched pipeline stage.
 /// Runs numeric (brackets 1–2), string (bracket 3), and label-evidence (bracket 4) matchers in sequence.

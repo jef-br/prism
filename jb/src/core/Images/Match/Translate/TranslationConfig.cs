@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Loads configured matching synonyms and stop words from TranslationConfig.json.
 /// </summary>

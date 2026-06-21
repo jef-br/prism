@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Result returned by the zip foundation module after extracting processable members.
 /// </summary>

@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Outcome of image preprocessing, cropping, centering, stretching, and cleanup for one image.
 /// Set by the Transformed stage; null until that stage runs.

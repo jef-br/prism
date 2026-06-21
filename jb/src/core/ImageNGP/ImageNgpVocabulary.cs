@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text.Json;
 
+namespace Prism.Core;
+
 /// <summary>
 /// The canonical PRISM image taxonomy loaded from <c>ImageNGP.json</c>: every feature id with its
 /// datatype and allowed values, plus the closed catalogue of phenotype ids.
@@ -113,6 +115,8 @@ public sealed class ImageNgpVocabulary
                 }
             }
 
+            if (result.ContainsKey(id))
+                throw new PrismConfigurationException($"ImageNGP.json at '{path}': duplicate feature id '{id}'.");
             result[id] = new FeatureDefinition { Id = id, Datatype = datatype, Values = values };
         }
 

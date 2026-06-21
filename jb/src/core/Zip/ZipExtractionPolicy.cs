@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Configurable limits used while extracting processable zip members.
 /// </summary>

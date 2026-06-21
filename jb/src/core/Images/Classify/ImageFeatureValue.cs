@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// A single measured image attribute value with provenance and confidence.
 /// Feature ids follow <c>jb/docs/ImageNGP/ImageFeatures.md</c>.

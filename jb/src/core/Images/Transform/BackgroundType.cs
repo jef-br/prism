@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Describes the background type of an image, as determined by the Classified stage preprocessor.
 /// Used by transform strategies to select the appropriate fill technique.

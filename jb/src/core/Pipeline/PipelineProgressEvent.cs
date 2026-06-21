@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Progress event emitted by a PRISM pipeline stage.
 /// </summary>

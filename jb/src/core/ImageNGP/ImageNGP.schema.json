@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ImageNGP.schema.json",
+  "title": "PRISM ImageNGP Taxonomy",
+  "description": "Validates ImageNGP.json: feature ids, datatypes, allowed values, and phenotype catalogue.",
+  "type": "object",
+  "required": ["features", "phenotypes"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "_comment": { "type": "string" },
+    "features": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "datatype"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "datatype": { "type": "string", "enum": ["boolean", "enum", "integer", "float", "string"] },
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        },
+        "if": {
+          "properties": { "datatype": { "enum": ["boolean", "enum"] } },
+          "required": ["datatype"]
+        },
+        "then": {
+          "required": ["values"]
+        }
+      }
+    },
+    "phenotypes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

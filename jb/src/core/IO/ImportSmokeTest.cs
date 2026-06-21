@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Smoke test for the Imported stage. Exercises <see cref="Importer"/> against a local
 /// image folder and Excel file, then prints a result summary.

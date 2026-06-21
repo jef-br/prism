@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Centers the salient object on a square canvas and stretches or fills the background as needed.
 /// Applied to standard packshot and model images where the bounding box does not touch any image edge.

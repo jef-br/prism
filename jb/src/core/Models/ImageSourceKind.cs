@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary> Describes where an image originated. </summary>
 public enum ImageSourceKind {
     /// <summary>Source kind not yet determined.</summary>

@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Top-level structure of <c>ImageRoles.json</c>.
 /// </summary>

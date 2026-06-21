@@ -1,5 +1,5 @@
 {
-  "_comment": "CLIP zero-shot prompt catalogue. Each prompt is a natural-language label scored by the CLIP model; a top-scoring prompt writes (feature, value) into the image feature snapshot for phenotype matching. feature/value pairs are validated against ImageNGP.json at startup. Edit to add or retune prompts without recompiling.",
+  "_comment": "CLIP zero-shot prompt catalogue. Each prompt is a natural-language label scored by the CLIP model; a top-scoring prompt writes (feature, value) into the image feature snapshot for phenotype matching. feature/value pairs are validated against ImageNGP.json at startup. Edit to add or retune prompts without recompiling. A duplicate prompt will overwrite the result of the first prompt.",
 
   "prompts": [
     { "prompt": "a photo of a person wearing clothing",                        "feature": "hero-is-human",   "value": "TRUE" },

@@ -1,3 +1,5 @@
+namespace Prism.Api;
+
 /// <summary>
 /// Pre-core API error payload.
 /// </summary>

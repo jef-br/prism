@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Safe KO record emitted by the Imported stage for one image that could not be normalized.
 /// Projected into <see cref="BatchManifest"/> KO groups.

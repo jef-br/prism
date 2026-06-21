@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Intermediate result of assigning one image to a det slot during ordering.
 /// </summary>

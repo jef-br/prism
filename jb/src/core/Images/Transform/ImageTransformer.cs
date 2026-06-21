@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Entry point for the Transformed stage. Routes each image to the appropriate
 /// <see cref="IImageTransformation"/> strategy based on the image's assigned phenotype

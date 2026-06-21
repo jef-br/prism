@@ -1,5 +1,7 @@
 using System.IO;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Defines the fixed PRISM zip output layout.
 /// </summary>

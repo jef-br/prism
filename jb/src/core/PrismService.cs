@@ -1,10 +1,12 @@
+namespace Prism.Core;
+
 /// <summary>
 /// PRISM facade. Accepts core-facing job requests, validates them, and delegates
 /// real pipeline work to <see cref="Pipeline"/>. Reads like a recipe:
 /// Initialize sets up validated resources; Process expresses the job lifecycle;
 /// helpers below each method do their named step.
 /// </summary>
-public sealed class Prism
+public sealed class PrismService
 {
     private readonly PrismConfiguration configuration;
     private readonly Pipeline pipeline;
@@ -17,7 +19,7 @@ public sealed class Prism
     /// Creates the PRISM facade, loads and validates all configuration on startup.
     /// Throws <see cref="PrismConfigurationException"/> if any required config file or model asset is missing or invalid.
     /// </summary>
-    public Prism()
+    public PrismService()
     {
         (configuration, ModelBuilder modelBuilder) = Initialize();
         pipeline = new Pipeline(configuration, modelBuilder);
@@ -29,7 +31,7 @@ public sealed class Prism
     /// </summary>
     /// <param name="configuration">Pre-validated PRISM configuration.</param>
     /// <param name="modelBuilder">Pre-loaded Excel model builder.</param>
-    public Prism(PrismConfiguration configuration, ModelBuilder modelBuilder)
+    public PrismService(PrismConfiguration configuration, ModelBuilder modelBuilder)
     {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         pipeline = new Pipeline(this.configuration, modelBuilder ?? throw new ArgumentNullException(nameof(modelBuilder)));

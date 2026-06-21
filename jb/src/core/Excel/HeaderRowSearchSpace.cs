@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Worksheet area scanned for a likely header row.
 /// </summary>

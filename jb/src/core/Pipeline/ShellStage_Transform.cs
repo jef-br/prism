@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Shell delegate for the Transformed stage.
 /// Routes each non-KO image to its appropriate <see cref="IImageTransformation"/> strategy

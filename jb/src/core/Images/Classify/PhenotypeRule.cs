@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 
+namespace Prism.Core;
+
 /// <summary>
 /// A single phenotype rule loaded from <c>ImageRoles.json</c>.
 /// An image matches this rule when every condition in <see cref="Required"/> is met.

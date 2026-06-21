@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Orders images within each matched FamilyID group using ImageNGP phenotype qualification,
 /// per-product-type DetOrderRules, filename hints, and deterministic tie-breaking.

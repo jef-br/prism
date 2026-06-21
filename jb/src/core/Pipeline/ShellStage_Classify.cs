@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Shell delegate for the Classified stage.
 /// Deduplicates images by visual hash, extracts ImageFeatures via
@@ -88,6 +90,11 @@ internal static class ShellStage_Classify {
         IReadOnlyList<DedupGroup> groups = hasher.FindDuplicates(okImages);
 
         foreach (DedupGroup group in groups) {
+            // Skip groups whose canonical was rejected during classification —
+            // its duplicates are not confirmed duplicates of a valid image.
+            if (lambdaByImage.TryGetValue(group.Canonical, out ImageRecord_LAMBDA? canonLambda) && canonLambda.IsKo)
+                continue;
+
             foreach (ImageRecord_INPUT duplicate in group.Duplicates) {
                 ImageRecord_LAMBDA IRLambda = lambdaByImage[duplicate];
 

@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Provides CLIP classification label evidence for images after numeric and string brackets complete.
 /// Evidence-only: adjusts MatchEvidence confidence but never creates or overrides FamilyID assignments.

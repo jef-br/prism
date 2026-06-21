@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /*
 Represents one canonical image through the definitive route:
 imported, classified, matched, ordered, renamed, generated, transformed, exported.
@@ -63,12 +65,6 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
 
     /// <summary>True when this image has been rejected by any stage.</summary>
     public bool IsKo { get; set; }
-
-    /// <summary>Machine-readable rejection code (e.g. "VISUAL_DUPLICATE").</summary>
-    public string? KoReasonCode { get; set; }
-
-    /// <summary>Human-readable safe rejection message for the manifest.</summary>
-    public string? KoSafeMessage { get; set; }
 
     // -------------------------------------------------------------------------
     // Generation outputs — populated by the Generated stage

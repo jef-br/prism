@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Builds the Internal Excel Model from one or more workbook files.
 /// </summary>

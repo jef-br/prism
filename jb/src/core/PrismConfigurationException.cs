@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Thrown when PRISM-owned configuration is missing, unreadable, or invalid.
 /// PRISM-owned failures are never converted into per-image KO records.

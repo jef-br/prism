@@ -4,6 +4,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Extracts processable PRISM members from zip archives.
 /// </summary>

@@ -5,6 +5,8 @@ using SixLabors.ImageSharp.Processing;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Prism.Core.Tests")]
 
+namespace Prism.Core;
+
 /// <summary>
 /// Detects whether the image subject intersects one or more image boundaries.
 /// <para>

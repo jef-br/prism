@@ -3,6 +3,8 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Extracts measurable ImageFeatures from a normalized image using CPU-only methods.
 /// Uses ImageSharp for pixel-level analysis; does not require a GPU or external service.

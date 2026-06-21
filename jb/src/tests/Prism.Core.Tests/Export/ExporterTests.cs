@@ -231,7 +231,7 @@ public class ExporterTests : IDisposable
         {
             InitialFullName   = name,
             NormalizedJpgPath = normalizedPath,
-            ImportStatus      = normalizedPath is not null ? ImportStatus.Ok : ImportStatus.Ko
+            ImportStatus      = normalizedPath is not null ? ImportStatus.Ok : ImportStatus.KO
         };
     }
 

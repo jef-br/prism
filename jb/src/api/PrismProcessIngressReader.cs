@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+namespace Prism.Api;
+
 /// <summary>
 /// Reads and validates API multipart process requests before job creation.
 /// </summary>

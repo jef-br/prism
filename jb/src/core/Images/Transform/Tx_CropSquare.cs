@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Crops the image to a square without background extension.
 /// Used when the object is already well-centered and no fill is required.

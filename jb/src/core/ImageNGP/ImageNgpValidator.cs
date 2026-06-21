@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Startup cross-file validator. Checks that every feature id, feature value, and phenotype id used
 /// in <c>ImageRoles.json</c>, <c>DetOrderRules.json</c>, and <c>ClipPrompts.json</c> is defined in the

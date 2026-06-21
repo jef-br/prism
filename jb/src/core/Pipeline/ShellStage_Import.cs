@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Shell delegate for the Imported stage.
 /// Receives raw input records; normalizes images, unpacks zips, and parses Excel into the IEM.

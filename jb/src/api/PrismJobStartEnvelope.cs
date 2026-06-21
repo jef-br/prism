@@ -1,3 +1,5 @@
+namespace Prism.Api;
+
 
 /// <summary>
 /// Envelope returned immediately after a job is accepted.

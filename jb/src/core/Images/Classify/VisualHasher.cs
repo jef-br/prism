@@ -3,6 +3,8 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Computes perceptual difference hashes (dHash) for images to identify visual duplicates.
 /// Groups duplicates within a configurable Hamming distance threshold.

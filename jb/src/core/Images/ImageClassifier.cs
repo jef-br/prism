@@ -7,6 +7,8 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
+namespace Prism.Core;
+
 /// <summary>
 /// CLIP ONNX boundary: sole class permitted to access the InferenceSession.
 /// Encodes images via a vision ONNX model and compares them against text prompts

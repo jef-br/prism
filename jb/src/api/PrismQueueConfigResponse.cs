@@ -1,3 +1,5 @@
+namespace Prism.Api;
+
 /// <summary>
 /// Queue limits safe to expose.
 /// </summary>

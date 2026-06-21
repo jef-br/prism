@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Locates PRISM configuration files on disk using standard search paths.
 /// </summary>

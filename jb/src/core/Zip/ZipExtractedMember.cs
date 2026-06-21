@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Describes a healthy processable member extracted from a zip archive.
 /// </summary>

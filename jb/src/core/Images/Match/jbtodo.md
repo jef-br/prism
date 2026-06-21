@@ -31,6 +31,11 @@
   - Fix: Pass both the original and normalized token through `ExtractImageTokens` (return tuples or a wrapper type), and store the original text in `TokenEvidenceItem.FilenameToken` while using the normalized form for comparison only.
 
 
+- [ ] `Weight_MatchingSignalsConverging` is parsed from config but never consumed, and never range-validated.
+  - Files: `jb/src/core/PrismConfiguration.cs` (property line 41, parsed line 139, `Validate()` lines 190–193), `jb/src/core/Prism_Config.json` (value 0.25).
+  - Intent: A score bonus applied when multiple matching signals agree — the "convergence" case where NumToken + String + Classification all point to the same FamilyID. Config and property exist but no matcher or scorer reads it yet.
+  - Fix: (1) Add `AssertInRange(Weight_MatchingSignalsConverging, 0.0, 1.0, cfgPath, "Classification.Weights.CONVERGENCE_WEIGHT")` after the four existing weight checks in `Validate()`. (2) Implement the convergence bonus in the matcher waterfall — decide where in the scoring pipeline the bonus applies and which signal combinations qualify as "converging".
+
 ## User decisions required
 
 - [ ] Cross-bracket tie resolution requires user decision.

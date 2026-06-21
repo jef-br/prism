@@ -1,3 +1,5 @@
+namespace Prism.Api;
+
 
 /// <summary>
 /// Per-image journey groups returned by JSON result retrieval.

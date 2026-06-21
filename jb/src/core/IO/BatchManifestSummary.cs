@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Batch-level counts projected into the manifest.
 /// </summary>

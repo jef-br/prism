@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Structured PRISM job request after API ingress has normalized caller inputs into core-facing records.
 /// </summary>

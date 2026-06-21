@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Typed loader for MatchingConfig.json — matcher strategies, field names, weights, and thresholds.
 /// </summary>

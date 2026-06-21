@@ -1,12 +1,14 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 
+namespace Prism.Api;
+
 /// <summary>
 /// Single-server in-process job coordinator for T-200 API online behavior.
 /// </summary>
 internal sealed class PrismJobCoordinator
 {
-    private readonly Prism prism;
+    private readonly PrismService prism;
     private readonly PrismApiConfiguration configuration;
     private readonly Channel<PrismApiJob> queue;
     private readonly ConcurrentDictionary<Guid, PrismApiJob> jobs = new();
@@ -16,7 +18,7 @@ internal sealed class PrismJobCoordinator
     /// <summary>
     /// Creates the queue and starts fixed background workers.
     /// </summary>
-    public PrismJobCoordinator(Prism prism, PrismApiConfiguration configuration)
+    public PrismJobCoordinator(PrismService prism, PrismApiConfiguration configuration)
     {
         this.prism = prism;
         this.configuration = configuration;

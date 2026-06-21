@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Header-detection thresholds from ExcelConfig.json.
 /// </summary>

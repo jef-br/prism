@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /*
  * Handles all image transformations
  * 

@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Client-facing result returned by PRISM for one accepted job.
 /// </summary>

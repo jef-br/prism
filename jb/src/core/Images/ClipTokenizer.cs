@@ -2,6 +2,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Minimal CLIP BPE tokenizer: loads vocab.json and merges.txt and converts
 /// a text prompt to token IDs using OpenAI's CLIP byte-pair encoding.

@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Evaluates each FamilyID group and creates <see cref="ImageRecord_GENERATED"/> records
 /// for families below the minimum image count threshold.

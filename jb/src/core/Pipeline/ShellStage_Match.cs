@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Shell delegate for the Matched stage.
 /// Tokenizes each image and resolves a FamilyID above threshold using the matcher waterfall.

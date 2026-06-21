@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Structured result returned by <see cref="Pipeline.RunAsync"/> to the Prism facade.
 /// </summary>

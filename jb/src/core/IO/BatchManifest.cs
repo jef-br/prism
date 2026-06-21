@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Batch-level manifest projected into zip and JSON output.
 /// </summary>

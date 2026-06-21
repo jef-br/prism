@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Shell delegate for the Exported stage.
 /// Packages all output images with manifest.json into the requested output format.

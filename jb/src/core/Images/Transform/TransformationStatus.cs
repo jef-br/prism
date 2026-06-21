@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Outcome of the transform routing and execution decision for a single image.
 /// </summary>

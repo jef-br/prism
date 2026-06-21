@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Loaded configuration for det-slot ordering rules and filename keyword stems.
 /// Parses DetOrderRules.json and DetOrderKeywordStems.json on construction.

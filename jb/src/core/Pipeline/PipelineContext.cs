@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Mutable per-job state threaded through all pipeline stages.
 /// Disposed by <see cref="Pipeline"/> after the Exported stage or on failure.

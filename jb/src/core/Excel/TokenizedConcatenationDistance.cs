@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Computes Tokenized Concatenation Distance for Excel header matching.
 /// </summary>

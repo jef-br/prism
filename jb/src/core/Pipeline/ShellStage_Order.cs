@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Shell delegate for the Ordered stage.
 /// Assigns det-order indices per FamilyID using classification labels and filename tokens.

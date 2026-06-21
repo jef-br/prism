@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Matches images to FamilyIDs using numeric token extraction and TCD scoring.
 /// Bracket 1 (single-token, TCD = 0): one filename digit sequence exactly equals a family numeric value.

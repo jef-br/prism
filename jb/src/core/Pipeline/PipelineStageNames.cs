@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Definitive stage name constants. Matches the immutable pipeline stage order exactly.
 /// </summary>

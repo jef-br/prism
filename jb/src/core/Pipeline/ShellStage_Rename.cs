@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Shell delegate for the Renamed stage.
 /// Validates det-slot uniqueness within each matched family and counts renamed images.

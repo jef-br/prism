@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Shell delegate for the Generated stage.
 /// For families below minimum image count, copies the hero image and creates generated variants.

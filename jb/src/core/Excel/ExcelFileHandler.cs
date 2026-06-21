@@ -6,6 +6,8 @@ using System.IO.Compression;
 using System.Linq;
 using System.Xml.Linq;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Loads worksheet data from supported Excel-like files into simple row and cell objects.
 /// </summary>

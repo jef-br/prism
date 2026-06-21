@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary> Import outcome for a single image. </summary>
 public enum ImportStatus {
     /// <summary>Not yet processed by the Imported stage.</summary>
@@ -7,5 +9,5 @@ public enum ImportStatus {
     Ok = 1,
 
     /// <summary>Failed during import; excluded from downstream stages.</summary>
-    Ko = 2
+    KO = 2
 }

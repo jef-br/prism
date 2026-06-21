@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Validates det-slot uniqueness within each matched family and counts successfully renamed images.
 /// The output filename for each image is the computed <see cref="ImageRecord_Base.NewName"/> value

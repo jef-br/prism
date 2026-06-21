@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Result returned after building the Internal Excel Model.
 /// </summary>

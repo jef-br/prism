@@ -2,6 +2,8 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Packages the pipeline output into the requested export format (zip or JSON).
 /// Zip: manifest.json at root + OK/{NewName}.jpg per non-KO image + KO/{InitialFullName}.jpg per import-OK/pipeline-KO image + first Excel file.

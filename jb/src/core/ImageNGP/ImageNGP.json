@@ -1,4 +1,5 @@
 {
+  "$schema": "./ImageNGP.schema.json",
   "_comment": "Canonical PRISM image taxonomy. Source of truth for feature ids, their allowed values, and the phenotype catalogue. Sourced from jb/docs/ImageNGP/ImageFeatures.md and imagePhenotypes.md. ImageRoles.json, DetOrderRules.json, and ClipPrompts.json are validated against this file at startup (ImageNgpValidator). enum/boolean features constrain their values list; integer/float/string features validate by datatype only. UNKNOWN/unknown is always an accepted value.",
 
   "features": [

@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Result produced by the Exported stage and held on <see cref="PipelineContext.ExportResult"/>.
 /// <see cref="Pipeline"/> reads <see cref="FinalManifest"/> and <see cref="ZipBytes"/> when building the success result.

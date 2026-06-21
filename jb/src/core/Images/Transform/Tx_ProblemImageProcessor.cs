@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Conservative transform path for images whose critical features (salient object bounds,
 /// background type, or phenotype) are unknown or below confidence thresholds.

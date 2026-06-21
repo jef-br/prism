@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Bounded matching decision and evidence for one image produced by the Matched stage.
 /// Immutable; produced by <see cref="ImageMatcher"/> and embedded on <see cref="ImageRecord_LAMBDA"/>.

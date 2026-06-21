@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// One det slot rule: the zero-based slot index, the ordering keyword, and the ordered phenotype preference list.
 /// </summary>

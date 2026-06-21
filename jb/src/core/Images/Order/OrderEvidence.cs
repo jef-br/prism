@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Det-slot assignment decision and tie-breaking evidence produced by the Ordered stage.
 /// Immutable; produced by <see cref="ImageOrderer"/> and embedded on <see cref="ImageRecord_LAMBDA"/>.

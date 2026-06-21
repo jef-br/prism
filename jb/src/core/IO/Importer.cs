@@ -6,6 +6,8 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Normalizes all accepted input records into flat JPEG image artifacts and builds the Internal
 /// Excel Model from accepted Excel workbooks.

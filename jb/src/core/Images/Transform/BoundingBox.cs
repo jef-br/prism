@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Axis-aligned rectangle identifying a region of interest within an image, in pixels.
 /// Used to describe salient object bounds and crop coordinates.

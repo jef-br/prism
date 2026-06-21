@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>Outcome of the generation route decision for a family evaluated by the Generated stage.</summary>
 public enum GenerationRouteState {
     /// <summary>Family has not yet been evaluated by the Generated stage.</summary>

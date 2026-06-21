@@ -1,5 +1,7 @@
 using System;
 
+namespace Prism.Core;
+
 /// <summary>
 /// Lightweight executable-style test cases for translation matching behavior.
 /// Move these cases into the project test runner once a test project exists.

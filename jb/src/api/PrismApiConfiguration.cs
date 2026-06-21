@@ -1,3 +1,5 @@
+namespace Prism.Api;
+
 /// <summary>
 /// API runtime configuration. Every value is sourced from Prism_Config.json via the
 /// core <see cref="PrismConfiguration"/> loader. There is no graceful degradation:

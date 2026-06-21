@@ -1,3 +1,5 @@
+namespace Prism.Core;
+
 /// <summary>
 /// Safe diagnostic emitted for worksheet and row issues during Excel parsing.
 /// </summary>
