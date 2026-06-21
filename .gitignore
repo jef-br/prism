@@ -1,18 +1,9 @@
+
+.gitignore
+
 # Project specific
 jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/model_uint8.onnx
 jb/testing/
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## A streamlined .gitignore for modern .NET projects
 ## including temporary files, build results, and
@@ -198,6 +189,8 @@ dist
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+.vscode/settings.json
+
 
 # pnpm
 .pnpm-store
