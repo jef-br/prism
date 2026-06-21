@@ -1,5 +1,10 @@
 
-.gitignore
+.claude
+.github
+.rtk
+.serena
+.vscode
+
 
 # Project specific
 jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/model_uint8.onnx
@@ -211,7 +216,6 @@ vite.config.ts.timestamp-*
 .vscode/settings.json
 
 #graphify
-graphify-out/cache/
+graphify-out/
 
 #Claude
-.claude
