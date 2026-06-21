@@ -72,7 +72,7 @@ internal sealed class ImageLabelingMatcher
                     ? cls
                     : ExcelColumnClassification.Descriptive;
 
-            if (classification is ExcelColumnClassification.Numerical or ExcelColumnClassification.PrimaryKey)
+            if (classification is ExcelColumnClassification.Numerical or ExcelColumnClassification.FamilyID)
                 continue;
 
             if (property.Value.Any(token => token.Equals(normalizedLabel, StringComparison.OrdinalIgnoreCase)))

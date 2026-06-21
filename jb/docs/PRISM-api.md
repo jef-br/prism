@@ -77,7 +77,7 @@ Returns `application/zip`. No extra headers (`X-Prism-JobID` etc.).
 **Contents:**
 - `manifest.json` at archive root
 - `OK/` — all OK renamed/ordered/transformed output images
-- `KO/` — normalized JPGs for images that imported OK but became KO later (decode failures appear in manifest only)
+- `KO/` — normalized JPGs for images that imported OK but became KO later (decode failures appear in manifest only); KO entry filename = original input filename; when that would conflict with another entry, use sanitized `InitialFullName`
 - First `.xlsx` with first accepted FID column (original filename kept)
 
 ### JSON Output (`format="json"`)

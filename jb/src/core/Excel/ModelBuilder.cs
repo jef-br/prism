@@ -105,9 +105,9 @@ public sealed class ModelBuilder
             return;
         }
 
-        int primaryKeyColumnIndex = FindPrimaryKeyColumnIndex(headerDetectionResult.Headers);
+        int familyIdColumnIndex = FindFamilyIDColumnIndex(headerDetectionResult.Headers);
 
-        if (primaryKeyColumnIndex < 0)
+        if (familyIdColumnIndex < 0)
         {
             diagnostics.Add(ExcelProcessingDiagnostic.WorksheetKo(
                 "excel.primary_key_column_not_found",
@@ -131,7 +131,7 @@ public sealed class ModelBuilder
             worksheet,
             headerDetectionResult.Headers,
             dataRows,
-            primaryKeyColumnIndex,
+            familyIdColumnIndex,
             diagnostics);
 
         IReadOnlyDictionary<string, ExcelColumnClassification> columnClassifications = acceptedColumns
@@ -144,7 +144,7 @@ public sealed class ModelBuilder
 
         foreach (WorksheetDataRow dataRow in dataRows)
         {
-            AddDataRowToModel(worksheet, dataRow, acceptedColumns, primaryKeyColumnIndex, columnClassifications, model, diagnostics);
+            AddDataRowToModel(worksheet, dataRow, acceptedColumns, familyIdColumnIndex, columnClassifications, model, diagnostics);
         }
     }
 
@@ -280,13 +280,13 @@ public sealed class ModelBuilder
         return Math.Max(0.01, 1.0 - distanceRatio);
     }
 
-    private int FindPrimaryKeyColumnIndex(IReadOnlyDictionary<int, HeaderCell> headers)
+    private int FindFamilyIDColumnIndex(IReadOnlyDictionary<int, HeaderCell> headers)
     {
-        string normalizedPrimaryKey = NormalizeHeader(config.RecordPrimaryKey);
+        string normalizedFamilyIdHeader = NormalizeHeader(config.RecordPrimaryKey);
 
         foreach (HeaderCell header in headers.Values)
         {
-            if (NormalizeHeader(header.RawHeader) == normalizedPrimaryKey)
+            if (NormalizeHeader(header.RawHeader) == normalizedFamilyIdHeader)
             {
                 return header.ColumnIndex;
             }
@@ -308,7 +308,7 @@ public sealed class ModelBuilder
         ExcelWorksheet worksheet,
         IReadOnlyDictionary<int, HeaderCell> headers,
         IReadOnlyList<WorksheetDataRow> dataRows,
-        int primaryKeyColumnIndex,
+        int familyIdColumnIndex,
         List<ExcelProcessingDiagnostic> diagnostics)
     {
         List<ColumnPlan> validColumns = [];
@@ -317,7 +317,7 @@ public sealed class ModelBuilder
         {
             IReadOnlyList<string> columnValues = ReadColumnValues(dataRows, header.ColumnIndex);
 
-            if (header.ColumnIndex != primaryKeyColumnIndex && !ColumnHasEnoughUsefulValues(columnValues, dataRows.Count))
+            if (header.ColumnIndex != familyIdColumnIndex && !ColumnHasEnoughUsefulValues(columnValues, dataRows.Count))
             {
                 diagnostics.Add(ExcelProcessingDiagnostic.WorksheetWarning(
                     "excel.column_dropped_low_value_ratio",
@@ -327,8 +327,8 @@ public sealed class ModelBuilder
                 continue;
             }
 
-            ExcelColumnClassification classification = header.ColumnIndex == primaryKeyColumnIndex
-                ? ExcelColumnClassification.PrimaryKey
+            ExcelColumnClassification classification = header.ColumnIndex == familyIdColumnIndex
+                ? ExcelColumnClassification.FamilyID
                 : ClassifyColumn(columnValues);
 
             validColumns.Add(new ColumnPlan(
@@ -447,10 +447,10 @@ public sealed class ModelBuilder
 
     private bool ColumnsShouldMerge(ColumnPlan leftColumn, ColumnPlan rightColumn, IReadOnlyList<WorksheetDataRow> dataRows)
     {
-        if (leftColumn.Classification == ExcelColumnClassification.PrimaryKey || rightColumn.Classification == ExcelColumnClassification.PrimaryKey)
+        if (leftColumn.Classification == ExcelColumnClassification.FamilyID || rightColumn.Classification == ExcelColumnClassification.FamilyID)
         {
-            return leftColumn.Classification == ExcelColumnClassification.PrimaryKey
-                && rightColumn.Classification == ExcelColumnClassification.PrimaryKey
+            return leftColumn.Classification == ExcelColumnClassification.FamilyID
+                && rightColumn.Classification == ExcelColumnClassification.FamilyID
                 && string.Equals(leftColumn.CanonicalName, rightColumn.CanonicalName, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -506,14 +506,14 @@ public sealed class ModelBuilder
         ExcelWorksheet worksheet,
         WorksheetDataRow dataRow,
         IReadOnlyList<ColumnPlan> acceptedColumns,
-        int primaryKeyColumnIndex,
+        int familyIdColumnIndex,
         IReadOnlyDictionary<string, ExcelColumnClassification> columnClassifications,
         InternalExcelModel model,
         List<ExcelProcessingDiagnostic> diagnostics)
     {
-        string familyID = GetCellValue(dataRow.Cells, primaryKeyColumnIndex).Trim();
+        string familyID = GetCellValue(dataRow.Cells, familyIdColumnIndex).Trim();
 
-        if (!IsValidPrimaryKey(familyID))
+        if (!IsValidFamilyID(familyID))
         {
             diagnostics.Add(ExcelProcessingDiagnostic.RowKo(
                 "excel.invalid_primary_key",
@@ -528,7 +528,7 @@ public sealed class ModelBuilder
 
         foreach (ColumnPlan column in acceptedColumns)
         {
-            if (column.SourceColumnIndexes.Contains(primaryKeyColumnIndex))
+            if (column.SourceColumnIndexes.Contains(familyIdColumnIndex))
             {
                 continue;
             }
@@ -542,7 +542,7 @@ public sealed class ModelBuilder
         var extendedClassifications = new Dictionary<string, ExcelColumnClassification>(
             columnClassifications, StringComparer.OrdinalIgnoreCase)
         {
-            [config.RecordPrimaryKey] = ExcelColumnClassification.PrimaryKey
+            [config.RecordPrimaryKey] = ExcelColumnClassification.FamilyID
         };
 
         model.AddOrMergeFamilyRow(familyID, propertyValues, extendedClassifications);
@@ -574,21 +574,21 @@ public sealed class ModelBuilder
         return new ExcelPropertyValue(column.CanonicalName, uniqueSourceValues, sourceLocations);
     }
 
-    private bool IsValidPrimaryKey(string primaryKey)
+    private bool IsValidFamilyID(string familyId)
     {
-        if (string.IsNullOrWhiteSpace(primaryKey))
+        if (string.IsNullOrWhiteSpace(familyId))
         {
             return false;
         }
 
-        string trimmedPrimaryKey = primaryKey.Trim();
+        string trimmedFamilyId = familyId.Trim();
 
-        if (trimmedPrimaryKey.Length != config.FamilyIDProperties.Length)
+        if (trimmedFamilyId.Length != config.FamilyIDProperties.Length)
         {
             return false;
         }
 
-        if (config.FamilyIDProperties.IsNumeric == true && !trimmedPrimaryKey.All(char.IsDigit))
+        if (config.FamilyIDProperties.IsNumeric == true && !trimmedFamilyId.All(char.IsDigit))
         {
             return false;
         }

@@ -37,8 +37,14 @@ function Ensure-PrismApi {
         return
     }
 
-    Write-Host "[Ensure-PrismApi] API not reachable — launching Prism.Api ..."
-    $command = "Set-Location '$RepoRoot'; dotnet run --project jb/src/api/Prism.Api.csproj"
+    # Build synchronously first so build errors fail fast and the detached run cannot race a
+    # concurrent build for obj/ file locks; then launch the prebuilt API.
+    Write-Host "[Ensure-PrismApi] API not reachable — building Prism.Api ..."
+    & dotnet build "$RepoRoot/jb/src/api/Prism.Api.csproj" -clp:ErrorsOnly
+    if ($LASTEXITCODE -ne 0) { throw "Prism.Api build failed (exit $LASTEXITCODE); cannot start the API." }
+
+    Write-Host "[Ensure-PrismApi] Launching Prism.Api ..."
+    $command = "Set-Location '$RepoRoot'; dotnet run --no-build --project jb/src/api/Prism.Api.csproj"
     Start-Process pwsh -ArgumentList '-NoExit', '-Command', $command | Out-Null
 
     $deadline = (Get-Date).AddSeconds(180)
@@ -147,11 +153,13 @@ function Invoke-PrismFolderJob {
     $folderName = Split-Path -Path $Folder -Leaf
     Write-Host "[$folderName] Gathering input files ..."
 
+    # Total per-test duration: spans the whole run (gather + submit + processing wait).
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $workDir = Join-Path ([System.IO.Path]::GetTempPath()) "prism-test-$folderName-$([System.Guid]::NewGuid().ToString('N'))"
     try {
         $files = Get-PrismJobInputFiles -Folder $Folder -ZipExpandDir $workDir
         if ($null -eq $files) {
-            Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId '-' -Total 0 -Ok 0 -Note 'NO_VALID_XLSX'
+            Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId '-' -Total 0 -Ok 0 -DurationSeconds $stopwatch.Elapsed.TotalSeconds -Note 'NO_VALID_XLSX'
             return
         }
         Write-Host "[$folderName] Submitting $($files.Count) files ..."
@@ -160,38 +168,42 @@ function Invoke-PrismFolderJob {
             $envelope = Submit-PrismJob -BaseUrl $BaseUrl -Token $folderName -Files $files -WorkDir $workDir -TimeoutMinutes $TimeoutMinutes
         } catch {
             Write-Warning "[$folderName] Submission failed: $($_.Exception.Message)"
-            Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId '-' -Total 0 -Ok 0 -Note "SUBMIT_ERROR: $($_.Exception.Message)"
+            Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId '-' -Total 0 -Ok 0 -DurationSeconds $stopwatch.Elapsed.TotalSeconds -Note "SUBMIT_ERROR: $($_.Exception.Message)"
             return
         }
 
         $resultUrl = $envelope.ResultUrl
         $jobId = "$($envelope.JobID)"
         if (-not $resultUrl) {
-            Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId $jobId -Total 0 -Ok 0 -Note 'NO_RESULT_URL'
+            Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId $jobId -Total 0 -Ok 0 -DurationSeconds $stopwatch.Elapsed.TotalSeconds -Note 'NO_RESULT_URL'
             return
         }
 
         Write-Host "[$folderName] Job $jobId queued — polling for result ..."
         $manifest = Wait-PrismResult -ResultUrl $resultUrl -TimeoutMinutes $TimeoutMinutes
         if ($null -eq $manifest) {
-            Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId $jobId -Total 0 -Ok 0 -Note "TIMEOUT_OR_NO_RESULT (${TimeoutMinutes}m)"
+            Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId $jobId -Total 0 -Ok 0 -DurationSeconds $stopwatch.Elapsed.TotalSeconds -Note "TIMEOUT_OR_NO_RESULT (${TimeoutMinutes}m)"
             return
         }
 
-        # Base the rate on the DEDUPLICATED image count: group rows by their original source image so
-        # duplicate or extra rows do not inflate the denominator. An image is "ok" when any of its
-        # rows survived matching, ordering, and the transform stage (Status == "Ok").
+        # Base the rate on the DEDUPLICATED image count: drop images the pipeline removed as visual
+        # duplicates (illustrations/labels are exempt upstream and remain), then group the rest by
+        # source image so duplicate rows do not inflate the denominator. An image is "ok" when any of
+        # its rows survived matching, ordering, and the transform stage (Status == "Ok").
         $rows = @($manifest.ImageRows)
-        $bySource = @($rows | Group-Object -Property SourceReference)
+        $deduped = @($rows | Where-Object { $_.KoReasonCode -ne 'VISUAL_DUPLICATE' })
+        $dupExcluded = $rows.Count - $deduped.Count
+        $bySource = @($deduped | Group-Object -Property SourceReference)
         $total = $bySource.Count
         $ok = @($bySource | Where-Object {
             $_.Group | Where-Object { $_.Status -eq 'Ok' -and $_.FamilyId -and ($null -ne $_.DetOrder) }
         }).Count
 
         $note = if ($total -eq 0) { 'NO_IMAGE_ROWS' } else { '' }
-        Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId $jobId -Total $total -Ok $ok -Note $note
+        Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId $jobId -Total $total -Ok $ok -DuplicatesExcluded $dupExcluded -DurationSeconds $stopwatch.Elapsed.TotalSeconds -Note $note
     }
     finally {
+        $stopwatch.Stop()
         if (Test-Path $workDir) {
             Remove-Item -Path $workDir -Recurse -Force -ErrorAction SilentlyContinue
         }
@@ -328,12 +340,15 @@ function Write-PrismLogLine {
         [Parameter(Mandatory)][string]$JobId,
         [Parameter(Mandatory)][int]$Total,
         [Parameter(Mandatory)][int]$Ok,
+        [int]$DuplicatesExcluded = 0,
+        [double]$DurationSeconds = 0,
         [string]$Note = ''
     )
 
     $rate = if ($Total -gt 0) { [Math]::Round(($Ok / $Total) * 100, 1) } else { 0 }
+    $duration = [TimeSpan]::FromSeconds($DurationSeconds).ToString('hh\:mm\:ss')
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    $line = "$timestamp | $Folder | JobID=$JobId | images=$Total ok=$Ok | Job OK rate: $rate%"
+    $line = "$timestamp | $Folder | JobID=$JobId | images=$Total ok=$Ok dedup-excluded=$DuplicatesExcluded | Job OK rate: $rate% | duration: $duration ($([Math]::Round($DurationSeconds, 1))s)"
     if ($Note) { $line += " | $Note" }
 
     Add-Content -Path $LogPath -Value $line

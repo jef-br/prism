@@ -84,9 +84,9 @@ internal sealed class StringMatcher
                     ? cls
                     : ExcelColumnClassification.Descriptive;
 
-            // Numeric and primary-key columns belong to NumericMatcher
+            // Numeric and FamilyID columns belong to NumericMatcher
             if (classification == ExcelColumnClassification.Numerical ||
-                classification == ExcelColumnClassification.PrimaryKey)
+                classification == ExcelColumnClassification.FamilyID)
                 continue;
 
             IReadOnlyList<string> familyTokens = PrepareExcelTokens(property.Value, property.Key, classification);

@@ -42,7 +42,7 @@ public static class ImportSmokeTest
 
         // Load configuration.
         string resolvedConfigPath = ResolveConfigPath(configPath);
-        PrismConfiguration configuration = PrismConfiguration.Load(resolvedConfigPath);
+        PrismConfiguration configuration = PrismConfiguration.LoadPrismConfig(resolvedConfigPath);
 
         string excelConfigPath = Path.Combine(
             Path.GetDirectoryName(resolvedConfigPath)!,

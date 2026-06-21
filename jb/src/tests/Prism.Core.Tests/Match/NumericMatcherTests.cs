@@ -19,12 +19,15 @@ public class NumericMatcherTests
 
     private static readonly IReadOnlyList<MatchingRule> OneRule = [FamilyIdRule];
 
+    // Matches FamilyIdRule.ExcelField: the matcher resolves this field from family.FamilyID directly.
+    private const string FamilyIdColumn = "familyID";
+
     // ─── Bracket 1: happy path ─────────────────────────────────────────────────
 
     [Fact]
     public void Bracket1_SingleTokenExactMatchOneFamily_ReturnsEvidence()
     {
-        NumericMatcher matcher  = new();
+        NumericMatcher matcher  = new(FamilyIdColumn);
         FamilyRecord   family   = new("12345");
         ImageRecord_LAMBDA record = MakeLambda("photo_12345.jpg");
 
@@ -41,7 +44,7 @@ public class NumericMatcherTests
     [Fact]
     public void Bracket1_TokenDoesNotMatchAnyFamily_ReturnsNull()
     {
-        NumericMatcher matcher = new();
+        NumericMatcher matcher = new(FamilyIdColumn);
         FamilyRecord   family  = new("12345");
         ImageRecord_LAMBDA record = MakeLambda("photo_99999.jpg");
 
@@ -55,7 +58,7 @@ public class NumericMatcherTests
     [Fact]
     public void Bracket1_TokenMatchesTwoFamilies_ReturnsNull()
     {
-        NumericMatcher matcher  = new();
+        NumericMatcher matcher  = new(FamilyIdColumn);
         FamilyRecord   famA     = new("12345");
         FamilyRecord   famB     = new("12345X");
         // Both resolve to digits-only "12345"
@@ -90,7 +93,7 @@ public class NumericMatcherTests
     [Fact]
     public void Bracket1_MultipleTokensOneMatchesTarget_ReturnsEvidence()
     {
-        NumericMatcher     matcher = new();
+        NumericMatcher     matcher = new(FamilyIdColumn);
         FamilyRecord       family  = new("12345");
         ImageRecord_LAMBDA record  = MakeLambda("photo_12345_v2.jpg");
 
@@ -105,7 +108,7 @@ public class NumericMatcherTests
     [Fact]
     public void Bracket2_TwoTokensConcatenateToTarget_ReturnsEvidence()
     {
-        NumericMatcher     matcher = new();
+        NumericMatcher     matcher = new(FamilyIdColumn);
         FamilyRecord       family  = new("1234");
         // Equal-length two-token split ("12"+"34"="1234") gives TCD = 1.0 exactly,
         // which satisfies the strict > check against MaxDistance = 1.0.
@@ -124,7 +127,7 @@ public class NumericMatcherTests
     [Fact]
     public void Bracket2_SingleTokenInFilename_ReturnsNull()
     {
-        NumericMatcher     matcher = new();
+        NumericMatcher     matcher = new(FamilyIdColumn);
         FamilyRecord       family  = new("1234");
         ImageRecord_LAMBDA record  = MakeLambda("photo_1234.jpg");
 
@@ -139,7 +142,7 @@ public class NumericMatcherTests
     [Fact]
     public void Bracket2_ConcatenationMatchesTwoFamilies_ReturnsNull()
     {
-        NumericMatcher matcher = new();
+        NumericMatcher matcher = new(FamilyIdColumn);
         FamilyRecord   famA   = new("1234");  // FamilyID digits "1234"
         MatchingRule   eanRule = new()
         {
@@ -166,7 +169,7 @@ public class NumericMatcherTests
     [Fact]
     public void Bracket2_NoConcatenationMatchesAnyFamily_ReturnsNull()
     {
-        NumericMatcher     matcher = new();
+        NumericMatcher     matcher = new(FamilyIdColumn);
         FamilyRecord       family  = new("9999");
         ImageRecord_LAMBDA record  = MakeLambda("photo_12_34.jpg");
 

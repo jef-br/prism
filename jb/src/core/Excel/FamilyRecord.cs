@@ -203,9 +203,9 @@ public sealed class FamilyRecord
 public enum ExcelColumnClassification
 {
     /// <summary>
-    /// The configured primary-key column.
+    /// The FamilyID column — the configured primary key of an Excel record.
     /// </summary>
-    PrimaryKey,
+    FamilyID,
 
     /// <summary>
     /// All useful values are numeric.

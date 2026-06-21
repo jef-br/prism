@@ -100,6 +100,14 @@
         {
             "folderPath": "prism\\jb\\src\\tests\\Prism.Core.Tests\\",
             "color": "foldercolorizer.color_008787"
+        },
+        {
+            "folderPath": "prism\\jb\\testing\\",
+            "color": "foldercolorizer.color_ff5f87"
+        },
+        {
+            "filePath": "prism\\jb\\test-scripts\\testlogs.txt",
+            "color": "foldercolorizer.color_ff5f87"
         }
     ],
     "folder-color.favoriteColors": [

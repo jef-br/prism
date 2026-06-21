@@ -16,17 +16,9 @@ public sealed class Importer
     private readonly PrismConfiguration configuration;
     private readonly ModelBuilder modelBuilder;
 
-    // Accepted image extensions — triaged from bytes but also checked by extension.
-    private static readonly HashSet<string> AcceptedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".jpg", ".jpeg", ".png", ".tif", ".tiff",
-        ".pdf", ".webp", ".bmp", ".gif"
-    };
-
-    private static readonly HashSet<string> AcceptedExcelExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".xlsx"
-    };
+    // Accepted extensions, sourced from Prism_Config.json (Input.Images.extensions / Input.EXCEL.extensions).
+    private readonly HashSet<string> acceptedImageExtensions;
+    private readonly HashSet<string> acceptedExcelExtensions;
 
     // Default JPEG encoding quality for normalized output.
     private const int NormalizedJpegQuality = 92;
@@ -46,6 +38,9 @@ public sealed class Importer
     {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         this.modelBuilder  = modelBuilder  ?? throw new ArgumentNullException(nameof(modelBuilder));
+
+        acceptedImageExtensions = new HashSet<string>(configuration.AcceptedImageExtensions, StringComparer.OrdinalIgnoreCase);
+        acceptedExcelExtensions = new HashSet<string>(configuration.AcceptedExcelExtensions, StringComparer.OrdinalIgnoreCase);
     }
 
     // -------------------------------------------------------------------------
@@ -182,7 +177,7 @@ public sealed class Importer
 
             string extension = Path.GetExtension(record.InitialFullName);
 
-            if (!AcceptedImageExtensions.Contains(extension))
+            if (!acceptedImageExtensions.Contains(extension))
             {
                 imageKoRecords.Add(ImportKoRecord.UnsupportedFormat(
                     record.InitialFullName,
@@ -192,7 +187,7 @@ public sealed class Importer
 
             long byteLength = record.ByteLength ?? new FileInfo(sourcePath).Length;
 
-            if (byteLength < configuration.MinimumImageBytes)
+            if (byteLength < configuration.MinBytesPerImg)
             {
                 imageKoRecords.Add(new ImportKoRecord
                 {
@@ -206,7 +201,7 @@ public sealed class Importer
                 continue;
             }
 
-            if (byteLength > configuration.MaximumImageBytes)
+            if (byteLength > configuration.MaxBytesPerImg)
             {
                 imageKoRecords.Add(new ImportKoRecord
                 {
@@ -239,7 +234,7 @@ public sealed class Importer
     /// <summary>
     /// Collects readable paths for directly supplied Excel records.
     /// </summary>
-    private static void ProcessDirectExcelRecords(
+    private void ProcessDirectExcelRecords(
         IReadOnlyList<InputExcelFileRecord> excelRecords,
         List<string> excelFilePaths)
     {
@@ -248,7 +243,7 @@ public sealed class Importer
             string readablePath = ResolveReadablePath(excelRecord.TempFilePath, excelRecord.SourceReference);
 
             if (File.Exists(readablePath)
-                && AcceptedExcelExtensions.Contains(Path.GetExtension(readablePath)))
+                && acceptedExcelExtensions.Contains(Path.GetExtension(readablePath)))
             {
                 excelFilePaths.Add(readablePath);
             }
@@ -320,15 +315,12 @@ public sealed class Importer
             return;
         }
 
-        ImportedMediaKind mediaKind = DetectMediaKind(originalFileName);
-
         normalizedImages.Add(new ImageRecord_INPUT
         {
             InitialFullName     = originalFileName,
             SourceKind          = sourceKind,
             OriginalContentType = originalContentType,
             ByteLength          = byteLength,
-            AcceptedMediaKind   = mediaKind,
             NormalizedJpgPath   = normalizedPath,
             NormalizedWidth     = normalizedWidth,
             NormalizedHeight    = normalizedHeight,
@@ -491,37 +483,15 @@ public sealed class Importer
     }
 
     /// <summary>
-    /// Maps the original filename extension to an <see cref="ImportedMediaKind"/> value.
-    /// </summary>
-    /// <param name="originalFileName">Original filename.</param>
-    /// <returns>The detected media kind, or <see cref="ImportedMediaKind.Unknown"/>.</returns>
-    private static ImportedMediaKind DetectMediaKind(string originalFileName)
-    {
-        string ext = Path.GetExtension(originalFileName);
-
-        return ext.ToLowerInvariant() switch
-        {
-            ".jpg" or ".jpeg" => ImportedMediaKind.Jpeg,
-            ".png"            => ImportedMediaKind.Png,
-            ".tif" or ".tiff" => ImportedMediaKind.Tiff,
-            ".pdf"            => ImportedMediaKind.Pdf,
-            ".webp"           => ImportedMediaKind.Webp,
-            ".bmp"            => ImportedMediaKind.Bmp,
-            ".gif"            => ImportedMediaKind.Gif,
-            _                 => ImportedMediaKind.Unknown
-        };
-    }
-
-    /// <summary>
     /// Builds a <see cref="ZipExtractionPolicy"/> from the validated PRISM configuration.
     /// </summary>
     private ZipExtractionPolicy BuildZipPolicy()
     {
         return new ZipExtractionPolicy(
-            MaxZipArchiveBytes   : configuration.MaximumZipBytes,
-            MaxImageMemberBytes  : configuration.MaximumImageBytes,
-            MaxExcelMemberBytes  : configuration.MaximumExcelBytes,
-            MaxNestedZipDepth    : configuration.ZipMaxNestDepth,
+            MaxZipArchiveBytes   : configuration.MaxZipBytes,
+            MaxImageMemberBytes  : configuration.MaxBytesPerImg,
+            MaxExcelMemberBytes  : configuration.MaxXLSBytes,
+            MaxNestedZipDepth    : configuration.MaxNestDepthZip,
             HeaderProbeBytes     : 16);
     }
 }

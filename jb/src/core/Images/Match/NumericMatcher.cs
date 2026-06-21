@@ -10,6 +10,21 @@ internal sealed class NumericMatcher
     private static readonly Regex DigitSequencePattern = new(@"\d+", RegexOptions.Compiled);
     private static readonly Regex DigitsOnlyPattern    = new(@"\d",   RegexOptions.Compiled);
 
+    private readonly string familyIdColumnName;
+
+    /// <summary>
+    /// Creates a numeric matcher.
+    /// </summary>
+    /// <param name="familyIdColumnName">
+    /// The rule ExcelField that denotes the FamilyID (ExcelConfig.RecordPrimaryKey). The FamilyID rule
+    /// resolves against the intrinsic <see cref="FamilyRecord.FamilyID"/> — the 8-digit PRISM identifier
+    /// that is also the image filename stem — rather than an Excel column lookup.
+    /// </param>
+    internal NumericMatcher(string familyIdColumnName)
+    {
+        this.familyIdColumnName = familyIdColumnName;
+    }
+
     // ─── Bracket 1 ────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -22,7 +37,7 @@ internal sealed class NumericMatcher
         IReadOnlyList<MatchingRule> numericRules)
     {
         string filename      = record.InitialFullName ?? string.Empty;
-        string[]   tokens    = ExtractNumericTokens(filename);
+        string[]   tokens    = GetNumericTokensFromFilename(filename);
         string     sourceFilename = filename;
         string     imageId   = Path.GetFileNameWithoutExtension(filename);
 
@@ -34,7 +49,7 @@ internal sealed class NumericMatcher
             {
                 foreach (MatchingRule rule in numericRules)
                 {
-                    string? target = GetNumericTarget(family, rule.ExcelField);
+                    string? target = GetFamilyDigitsForField(family, rule.ExcelField);
                     if (target is null || token != target)
                         continue;
 
@@ -72,7 +87,7 @@ internal sealed class NumericMatcher
             [
                 new TokenEvidenceItem(
                     FindMatchingToken(tokens, winner.FamilyId, families, numericRules),
-                    GetNumericTarget(FindFamily(families, winner.FamilyId)!, numericRules[0].ExcelField) ?? winner.FamilyId,
+                    GetFamilyDigitsForField(FindFamily(families, winner.FamilyId)!, numericRules[0].ExcelField) ?? winner.FamilyId,
                     FindMatchedRule(winner.FamilyId, families, numericRules)?.ExcelField ?? string.Empty,
                     winner.FamilyId,
                     1.0)
@@ -95,7 +110,7 @@ internal sealed class NumericMatcher
         IReadOnlyList<MatchingRule> numericRules)
     {
         string   filename      = record.InitialFullName ?? string.Empty;
-        string[] tokens        = ExtractNumericTokens(filename);
+        string[] tokens        = GetNumericTokensFromFilename(filename);
         string   sourceFilename = filename;
         string   imageId       = Path.GetFileNameWithoutExtension(filename);
 
@@ -117,7 +132,7 @@ internal sealed class NumericMatcher
                 {
                     foreach (MatchingRule rule in numericRules)
                     {
-                        string? target = GetNumericTarget(family, rule.ExcelField);
+                        string? target = GetFamilyDigitsForField(family, rule.ExcelField);
                         if (target is null || concatenated != target)
                             continue;
 
@@ -158,7 +173,7 @@ internal sealed class NumericMatcher
             [
                 new TokenEvidenceItem(
                     string.Join("+", match.Value.Subset),
-                    GetNumericTarget(FindFamily(families, match.Key)!, match.Value.PropertyName) ?? string.Empty,
+                    GetFamilyDigitsForField(FindFamily(families, match.Key)!, match.Value.PropertyName) ?? string.Empty,
                     match.Value.PropertyName,
                     match.Key,
                     confidence)
@@ -173,7 +188,7 @@ internal sealed class NumericMatcher
     /// <summary>
     /// Extracts all digit sequences from the filename stem, preserving left-to-right order.
     /// </summary>
-    private static string[] ExtractNumericTokens(string filename)
+    private static string[] GetNumericTokensFromFilename(string filename)
     {
         string stem = Path.GetFileNameWithoutExtension(filename);
         return DigitSequencePattern.Matches(stem)
@@ -182,23 +197,45 @@ internal sealed class NumericMatcher
     }
 
     /// <summary>
-    /// Returns the pure-digit target value for a rule against a given FamilyRecord.
-    /// FamilyID rule uses FamilyRecord.FamilyID directly; other rules use CanonicalProperties.
+    /// The digits PRISM matches a filename token against for one rule field.
+    /// For the FamilyID field this is the intrinsic <see cref="FamilyRecord.FamilyID"/>; for any other
+    /// field it is the digits of the family's Excel column value (CanonicalProperties).
     /// </summary>
-    private static string? GetNumericTarget(FamilyRecord family, string excelField)
+    private string? GetFamilyDigitsForField(FamilyRecord family, string excelField)
+    {
+        if (excelField.Equals(familyIdColumnName, StringComparison.OrdinalIgnoreCase))
+            return DigitsOnly(family.FamilyID);
+
+        return GetDigitsOfFamilyExcelColumn(family, excelField);
+    }
+
+    /// <summary>
+    /// Returns the digits-only value of a family's Excel column (from CanonicalProperties), or null when
+    /// the column is absent/empty or contains no digits. Does not handle the FamilyID — that is routed to
+    /// the intrinsic identifier by <see cref="GetFamilyDigitsForField"/>.
+    /// </summary>
+    private static string? GetDigitsOfFamilyExcelColumn(FamilyRecord family, string excelField)
     {
         if (!family.CanonicalProperties.TryGetValue(excelField, out string? value) ||
             string.IsNullOrWhiteSpace(value))
             return null;
 
-        string digitsOnly = string.Concat(DigitsOnlyPattern.Matches(value).Select(m => m.Value));
-        return digitsOnly.Length > 0 ? digitsOnly : null;
+        return DigitsOnly(value);
+    }
+
+    /// <summary>
+    /// Concatenates every digit character in <paramref name="value"/>; returns null when there are none.
+    /// </summary>
+    private static string? DigitsOnly(string value)
+    {
+        string digits = string.Concat(DigitsOnlyPattern.Matches(value).Select(m => m.Value));
+        return digits.Length > 0 ? digits : null;
     }
 
     private static FamilyRecord? FindFamily(IReadOnlyList<FamilyRecord> families, string familyId) =>
         families.FirstOrDefault(f => f.FamilyID.Equals(familyId, StringComparison.OrdinalIgnoreCase));
 
-    private static string FindMatchingToken(
+    private string FindMatchingToken(
         string[] filenameTokens,
         string familyId,
         IReadOnlyList<FamilyRecord> families,
@@ -211,7 +248,7 @@ internal sealed class NumericMatcher
         {
             foreach (MatchingRule rule in numericRules)
             {
-                string? target = GetNumericTarget(family, rule.ExcelField);
+                string? target = GetFamilyDigitsForField(family, rule.ExcelField);
                 if (target == token) return token;
             }
         }
@@ -219,7 +256,7 @@ internal sealed class NumericMatcher
         return string.Empty;
     }
 
-    private static MatchingRule? FindMatchedRule(
+    private MatchingRule? FindMatchedRule(
         string familyId,
         IReadOnlyList<FamilyRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
@@ -229,7 +266,7 @@ internal sealed class NumericMatcher
 
         foreach (MatchingRule rule in numericRules)
         {
-            if (GetNumericTarget(family, rule.ExcelField) is not null)
+            if (GetFamilyDigitsForField(family, rule.ExcelField) is not null)
                 return rule;
         }
 

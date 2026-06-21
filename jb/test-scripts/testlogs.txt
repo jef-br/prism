@@ -1,0 +1,3 @@
+2026-06-19 14:12:05 | HEROAUT2 | JobID=4d3e2a00-2170-40b6-ac06-0f33ee9d0d11 | images=2612 ok=0 | Job OK rate: 0%
+2026-06-19 14:35:44 | SPACINI29 | JobID=27ee7c1b-6e63-4430-8b94-409766f64aab | images=86 ok=56 | Job OK rate: 65.1% | duration: 00:01:44 (104.9s)
+2026-06-19 15:25:20 | SPACINI29 | JobID=88f9bed4-3c3a-4070-8945-e0c87388aff2 | images=56 ok=56 dedup-excluded=30 | Job OK rate: 100% | duration: 00:01:03 (63.2s)

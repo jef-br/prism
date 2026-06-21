@@ -8,6 +8,8 @@
     <Compile Include="ImageRecord_Base.cs" />
     <Compile Include="ImageRecord_GENERATED.cs" />
     <Compile Include="ImageRecord_INPUT.cs" />
+    <Compile Include="ImageSourceKind.cs" />
+    <Compile Include="ImportStatus.cs" />
     <Compile Include="ImageRecord_LAMBDA.cs" />
     <Compile Include="ImageRecord_OUTPUT.cs" />
     <Compile Include="PrismJobRequest.cs" />

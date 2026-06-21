@@ -5,19 +5,6 @@ using System.Text.Json;
 /// </summary>
 internal static class PrismProcessIngressReader
 {
-    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".tif",
-        ".tiff",
-        ".pdf",
-        ".webp",
-        ".bmp",
-        ".gif"
-    };
-
     /// <summary>
     /// Reads multipart form data and builds a core-facing request or pre-core error.
     /// </summary>
@@ -74,8 +61,9 @@ internal static class PrismProcessIngressReader
             .Where(f => string.Equals(f.Name, "input", StringComparison.OrdinalIgnoreCase))
             .Sum(f => f.Length);
 
-        AddRemoteInputRecords(processRequest.Input, images, excelFiles, zipFiles);
-        await AddUploadedInputRecords(form.Files, configuration, jobTempDir, images, excelFiles, zipFiles, fieldErrors);
+        MediaTypeSets mediaTypes = BuildMediaTypeSets(configuration);
+        AddRemoteInputRecords(processRequest.Input, mediaTypes, images, excelFiles, zipFiles);
+        await AddUploadedInputRecords(form.Files, configuration, mediaTypes, jobTempDir, images, excelFiles, zipFiles, fieldErrors);
 
         if (configuration.MaximumRequestBytes > 0 && totalSubmittedBytes > configuration.MaximumRequestBytes)
         {
@@ -178,8 +166,17 @@ internal static class PrismProcessIngressReader
             || string.Equals(format, "json", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static MediaTypeSets BuildMediaTypeSets(PrismApiConfiguration configuration)
+    {
+        return new MediaTypeSets(
+            new HashSet<string>(configuration.ImageMediaTypes, StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(configuration.ExcelMediaTypes, StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(configuration.ZipMediaTypes, StringComparer.OrdinalIgnoreCase));
+    }
+
     private static void AddRemoteInputRecords(
         IReadOnlyList<string> remoteInputs,
+        MediaTypeSets mediaTypes,
         List<ImageRecord_INPUT> images,
         List<InputExcelFileRecord> excelFiles,
         List<InputZipFileRecord> zipFiles)
@@ -187,19 +184,19 @@ internal static class PrismProcessIngressReader
         foreach (string remoteInput in remoteInputs.Where(input => !string.IsNullOrWhiteSpace(input)))
         {
             string extension = Path.GetExtension(remoteInput);
-            if (ImageExtensions.Contains(extension))
+            if (mediaTypes.Images.Contains(extension))
             {
                 images.Add(new ImageRecord_INPUT { InitialFullName = remoteInput });
                 continue;
             }
 
-            if (string.Equals(extension, ".xlsx", StringComparison.OrdinalIgnoreCase))
+            if (mediaTypes.Excel.Contains(extension))
             {
                 excelFiles.Add(new InputExcelFileRecord { SourceReference = remoteInput });
                 continue;
             }
 
-            if (string.Equals(extension, ".zip", StringComparison.OrdinalIgnoreCase))
+            if (mediaTypes.Zip.Contains(extension))
             {
                 zipFiles.Add(new InputZipFileRecord { SourceReference = remoteInput });
             }
@@ -209,6 +206,7 @@ internal static class PrismProcessIngressReader
     private static async Task AddUploadedInputRecords(
         IFormFileCollection files,
         PrismApiConfiguration configuration,
+        MediaTypeSets mediaTypes,
         string jobTempDir,
         List<ImageRecord_INPUT> images,
         List<InputExcelFileRecord> excelFiles,
@@ -221,7 +219,7 @@ internal static class PrismProcessIngressReader
             string extension = Path.GetExtension(file.FileName);
             string fieldPath = $"multipart.input[{inputIndex}]";
 
-            if (ImageExtensions.Contains(extension))
+            if (mediaTypes.Images.Contains(extension))
             {
                 ValidateFileLength(file, configuration.MinimumImageBytes, configuration.MaximumImageBytes, fieldPath, fieldErrors);
                 string tempPath = await SpillToTempAsync(file, jobTempDir, inputIndex);
@@ -231,7 +229,7 @@ internal static class PrismProcessIngressReader
                     TempFilePath = tempPath
                 });
             }
-            else if (string.Equals(extension, ".xlsx", StringComparison.OrdinalIgnoreCase))
+            else if (mediaTypes.Excel.Contains(extension))
             {
                 ValidateFileLength(file, configuration.MinimumExcelBytes, configuration.MaximumExcelBytes, fieldPath, fieldErrors);
                 string tempPath = await SpillToTempAsync(file, jobTempDir, inputIndex);
@@ -242,7 +240,7 @@ internal static class PrismProcessIngressReader
                     TempFilePath = tempPath
                 });
             }
-            else if (string.Equals(extension, ".zip", StringComparison.OrdinalIgnoreCase))
+            else if (mediaTypes.Zip.Contains(extension))
             {
                 ValidateFileLength(file, 0, configuration.MaximumZipBytes, fieldPath, fieldErrors);
                 string tempPath = await SpillToTempAsync(file, jobTempDir, inputIndex);
@@ -316,6 +314,11 @@ internal static class PrismProcessIngressReader
             fieldErrors);
     }
 }
+
+/// <summary>
+/// Accepted input extensions grouped by record type, sourced from Prism_Config.json.
+/// </summary>
+internal sealed record MediaTypeSets(HashSet<string> Images, HashSet<string> Excel, HashSet<string> Zip);
 
 /// <summary>
 /// API request JSON shape sent in the multipart request part.

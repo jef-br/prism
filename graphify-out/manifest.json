@@ -9,19 +9,14 @@
     "ast_hash": "0abea8e45890afab63a379b0db41aa8d",
     "semantic_hash": ""
   },
-  ".mcp.json": {
-    "mtime": 1781632876.8627765,
-    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
-    "semantic_hash": ""
-  },
   "Bruteforce build.ps1": {
     "mtime": 1781602826.4428113,
     "ast_hash": "ffb99d1dfa13144f74da2e0d1f643d62",
     "semantic_hash": ""
   },
   "Launch_API_CORE_WEBBENCH.ps1": {
-    "mtime": 1781602504.25761,
-    "ast_hash": "bcd83f509efd232ee318e16721ed7287",
+    "mtime": 1781776833.109288,
+    "ast_hash": "0a779f7de02547cb6626b2b9f2147762",
     "semantic_hash": ""
   },
   "jb/src/PRISM.sln": {
@@ -30,18 +25,13 @@
     "semantic_hash": ""
   },
   "jb/src/api/Prism.Api.csproj": {
-    "mtime": 1781079098.2493594,
+    "mtime": 1781860546.2634923,
     "ast_hash": "d6b7e8457a51d9efab4f3ba7e7edbbbb",
     "semantic_hash": ""
   },
   "jb/src/api/PrismApiConfiguration.cs": {
-    "mtime": 1781174314.6271203,
-    "ast_hash": "af2a79eb753c56a506ececeb6edf9beb",
-    "semantic_hash": ""
-  },
-  "jb/src/api/PrismApiModels.cs": {
-    "mtime": 1781674799.2638073,
-    "ast_hash": "3188338bcefe309732f0834688f334f2",
+    "mtime": 1782058693.6252825,
+    "ast_hash": "93c5637ba1f0b4bb820028fbe355fa91",
     "semantic_hash": ""
   },
   "jb/src/api/PrismJobCoordinator.cs": {
@@ -50,13 +40,13 @@
     "semantic_hash": ""
   },
   "jb/src/api/PrismProcessIngressReader.cs": {
-    "mtime": 1781514845.8206987,
-    "ast_hash": "6fc69350eb6efa584f64d6e394435f22",
+    "mtime": 1781870319.5661056,
+    "ast_hash": "06efc09470c0c680c90b767d9a545ea7",
     "semantic_hash": ""
   },
   "jb/src/api/Program.cs": {
-    "mtime": 1781672516.189842,
-    "ast_hash": "9dc3eb346a56e8c9281527dcc939bae1",
+    "mtime": 1781793971.6749444,
+    "ast_hash": "2ad679d14b66d0185a8bfa4e464ab444",
     "semantic_hash": ""
   },
   "jb/src/core/AssemblyInfo.cs": {
@@ -65,8 +55,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/Excel/ExcelConfig.cs": {
-    "mtime": 1781035246.431733,
-    "ast_hash": "26eb5ad72b314ee695336f7e62f06bd6",
+    "mtime": 1781694614.8343158,
+    "ast_hash": "44a92a30e73dc184711a4038d4e7ae3a",
     "semantic_hash": ""
   },
   "jb/src/core/Excel/ExcelConfig.json": {
@@ -80,8 +70,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/Excel/FamilyRecord.cs": {
-    "mtime": 1781034655.9253092,
-    "ast_hash": "095b40b70cf158d83baad4238353331e",
+    "mtime": 1781872879.4255035,
+    "ast_hash": "c4e549e5c8bf01322e8e4e271a627fee",
     "semantic_hash": ""
   },
   "jb/src/core/Excel/InternalExcelModel.cs": {
@@ -90,8 +80,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/Excel/ModelBuilder.cs": {
-    "mtime": 1781035257.8222756,
-    "ast_hash": "5e7a9b4d171dddd424f717e93aa4c79c",
+    "mtime": 1781872980.0119114,
+    "ast_hash": "c522c7aa2f7ee1a58cd7c5b18ad9147d",
     "semantic_hash": ""
   },
   "jb/src/core/Excel/NoiseFilter.cs": {
@@ -165,8 +155,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/IO/ImportSmokeTest.cs": {
-    "mtime": 1781276820.509611,
-    "ast_hash": "1464bd243aa0c682ec271da90c8824df",
+    "mtime": 1782056050.915452,
+    "ast_hash": "86de3d089265644925bd8a18efaec437",
     "semantic_hash": ""
   },
   "jb/src/core/IO/ImportStageResult.cs": {
@@ -175,8 +165,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/IO/Importer.cs": {
-    "mtime": 1781276820.5146122,
-    "ast_hash": "6c6500190e49903a77fdda0ca34d64d2",
+    "mtime": 1782059949.6302488,
+    "ast_hash": "1d1824dd3fd35cef127a9ca59a15b3b8",
     "semantic_hash": ""
   },
   "jb/src/core/IO/ManifestImageRow.cs": {
@@ -189,11 +179,6 @@
     "ast_hash": "6ffe632cba6070bea511e6775e038980",
     "semantic_hash": ""
   },
-  "jb/src/core/ImageNGP/ImageNGP.cs": {
-    "mtime": 1781535537.8668206,
-    "ast_hash": "4a78e4d279a90177985c27be8669bc83",
-    "semantic_hash": ""
-  },
   "jb/src/core/ImageNGP/ImageRoles.json": {
     "mtime": 1781534891.053831,
     "ast_hash": "ca06e5f03c819ae3749645b2c9a4c219",
@@ -204,14 +189,9 @@
     "ast_hash": "67fca5d95e4869810d3c36ffdc36d833",
     "semantic_hash": ""
   },
-  "jb/src/core/Images/Classify/ImageClassifier.cs": {
-    "mtime": 1781535631.3819308,
-    "ast_hash": "816065e776282efd3c9b5f137264ddec",
-    "semantic_hash": ""
-  },
   "jb/src/core/Images/Classify/ImageFeatureAnalyzer.cs": {
-    "mtime": 1781534968.748698,
-    "ast_hash": "09ab4d249f2fac9241d3377d76a21d7c",
+    "mtime": 1781691871.8411822,
+    "ast_hash": "74ab507d2573799cd238424c5dea0b4c",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Classify/ImageFeatureSnapshot.cs": {
@@ -230,8 +210,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/Images/Classify/PhenotypeRule.cs": {
-    "mtime": 1781535796.59127,
-    "ast_hash": "80e91ecf097da865eba0955ce5c03592",
+    "mtime": 1781694593.3245392,
+    "ast_hash": "68225bfa3f4760cd74729cd7dc1c5889",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Classify/PhenotypeRuleSet.cs": {
@@ -240,13 +220,13 @@
     "semantic_hash": ""
   },
   "jb/src/core/Images/Classify/Prism.Core.Images.Classify.csproj": {
-    "mtime": 1781535609.4479918,
-    "ast_hash": "b9b434ee06febf7403d128a5f056c00f",
+    "mtime": 1781859568.7458527,
+    "ast_hash": "9ad567aed5efe67e8a6d641841dc702d",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Classify/VisualHasher.cs": {
-    "mtime": 1781535559.9476175,
-    "ast_hash": "acfe5afde9abea268f7e2b0e78c62e1f",
+    "mtime": 1781694598.1898742,
+    "ast_hash": "d46f684c2561cacbff0eda3a97b6e65c",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Generate/Generate_Config.cs": {
@@ -260,13 +240,13 @@
     "semantic_hash": ""
   },
   "jb/src/core/Images/ImageMatcher.cs": {
-    "mtime": 1781616152.447781,
-    "ast_hash": "c761ddd7b616fad0d910eff1eef31a4e",
+    "mtime": 1781873015.614142,
+    "ast_hash": "40ac51ac55e4759eecc41706cd12eec9",
     "semantic_hash": ""
   },
   "jb/src/core/Images/ImageOrderer.cs": {
-    "mtime": 1781599517.3927314,
-    "ast_hash": "eefca1164c8836a2961e724e07ce12ef",
+    "mtime": 1781772260.3694265,
+    "ast_hash": "d0406d0b80ad826a234d3f94267adbf5",
     "semantic_hash": ""
   },
   "jb/src/core/Images/ImagePreProcessor.cs": {
@@ -285,12 +265,12 @@
     "semantic_hash": ""
   },
   "jb/src/core/Images/Match/ImageLabelingMatcher.cs": {
-    "mtime": 1781595174.7434583,
-    "ast_hash": "f73fb56cff483c5625d0905d00ff19d2",
+    "mtime": 1781872901.7407439,
+    "ast_hash": "67f80ddbfd44ce6bb82f2bbdd22a43c2",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Match/MatchEvidence.cs": {
-    "mtime": 1781595073.8922482,
+    "mtime": 1781789530.600235,
     "ast_hash": "89363b5d0cf7491c84310e8957570d01",
     "semantic_hash": ""
   },
@@ -300,18 +280,18 @@
     "semantic_hash": ""
   },
   "jb/src/core/Images/Match/MatchingConfig.json": {
-    "mtime": 1779466122.1708252,
-    "ast_hash": "8cb3b7be1d27b25adfa2c3b02bd2586b",
+    "mtime": 1781790964.9150782,
+    "ast_hash": "35093dff68438702231d07fbef6e8015",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Match/NumericMatcher.cs": {
-    "mtime": 1781595126.1378992,
-    "ast_hash": "e5ec206adf258a2da53eadacf546a9cd",
+    "mtime": 1781872873.491294,
+    "ast_hash": "c3e6b661fcc2e2846840f2bd946e59ed",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Match/StringMatcher.cs": {
-    "mtime": 1781595158.8729072,
-    "ast_hash": "8495381d9369fae23a8a84e6d62fb1d5",
+    "mtime": 1781872907.491151,
+    "ast_hash": "b70a2747fd559417180c15e4d9b5ca5b",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Match/Translate/TranslationConfig.cs": {
@@ -330,8 +310,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/Images/Order/DetOrderConfig.cs": {
-    "mtime": 1781599424.4015403,
-    "ast_hash": "09e5abc62f8d18be42c1a9f0f5aa8156",
+    "mtime": 1781694632.3350613,
+    "ast_hash": "00f14e1a96b0f7134d8ad109575ce0df",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Order/DetOrderKeywordStems.json": {
@@ -405,23 +385,23 @@
     "semantic_hash": ""
   },
   "jb/src/core/Models/GenerationRouteState.cs": {
-    "mtime": 1781633854.1049764,
-    "ast_hash": "eb2c6147f4c5714118afa5f1f5f0dcc8",
+    "mtime": 1781947559.3882573,
+    "ast_hash": "f346bc3baddad96227d3a6ceeb67a59d",
     "semantic_hash": ""
   },
   "jb/src/core/Models/ImageRecord_Base.cs": {
-    "mtime": 1781633491.8035636,
-    "ast_hash": "ff72887d35ed61b4a194e99a65a4c30a",
+    "mtime": 1781947560.9279358,
+    "ast_hash": "bc64acbbcbed4f04bd994cd48781a091",
     "semantic_hash": ""
   },
   "jb/src/core/Models/ImageRecord_GENERATED.cs": {
-    "mtime": 1781617781.098614,
-    "ast_hash": "cca3006cb50f315a6a483c5a1d78c980",
+    "mtime": 1781947563.3456416,
+    "ast_hash": "110d74d7e837bb41a06c06ccf4d8bda0",
     "semantic_hash": ""
   },
   "jb/src/core/Models/ImageRecord_INPUT.cs": {
-    "mtime": 1781276820.5186124,
-    "ast_hash": "6b6a3b70f5bc7d90b3b451cda29f5d15",
+    "mtime": 1782058676.798183,
+    "ast_hash": "727a4ee73711657e006f09e28f4809dd",
     "semantic_hash": ""
   },
   "jb/src/core/Models/ImageRecord_LAMBDA.cs": {
@@ -435,8 +415,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/Models/Prism.Core.Contracts.csproj": {
-    "mtime": 1781672286.2900245,
-    "ast_hash": "5c33e67170c224b4bd20de29a3cd663e",
+    "mtime": 1781948810.3160148,
+    "ast_hash": "67acbb828e4ceb673c283be82ceca124",
     "semantic_hash": ""
   },
   "jb/src/core/Models/PrismJobRequest.cs": {
@@ -455,8 +435,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/Pipeline.cs": {
-    "mtime": 1781672491.778368,
-    "ast_hash": "ff0ca79a95cdeec33ecd0ee554d872cd",
+    "mtime": 1781773183.6824565,
+    "ast_hash": "b0586193475bdd17b4faffb90e144813",
     "semantic_hash": ""
   },
   "jb/src/core/Pipeline/ExportStageResult.cs": {
@@ -465,8 +445,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/Pipeline/PipelineContext.cs": {
-    "mtime": 1781672375.2528088,
-    "ast_hash": "20334ef6815b419ca4bea65ba878d648",
+    "mtime": 1781773201.7736487,
+    "ast_hash": "aaa6943d79da619056a2a566977ba645",
     "semantic_hash": ""
   },
   "jb/src/core/Pipeline/PipelineProgressEvent.cs": {
@@ -484,29 +464,24 @@
     "ast_hash": "dfb24848ece49ccab53e15f78183c963",
     "semantic_hash": ""
   },
-  "jb/src/core/Pipeline/StageShells.cs": {
-    "mtime": 1781682616.2958393,
-    "ast_hash": "a0125ec2b5c66c800efd83e7f15b0577",
-    "semantic_hash": ""
-  },
   "jb/src/core/Prism.Core.csproj": {
-    "mtime": 1781672290.6655436,
-    "ast_hash": "2b3528d4f64d42a6c1f7af91f344e512",
+    "mtime": 1781859568.7458527,
+    "ast_hash": "c5ee79bf8dd09153cbfbf65c59c47cda",
     "semantic_hash": ""
   },
   "jb/src/core/Prism.cs": {
-    "mtime": 1781672509.9344316,
-    "ast_hash": "4abb33ab2dc54de7bddf29afcddb4697",
+    "mtime": 1782056050.915452,
+    "ast_hash": "9a97127fe62cb6f20ee3c7c20379f362",
     "semantic_hash": ""
   },
   "jb/src/core/PrismConfigLocator.cs": {
-    "mtime": 1781256596.817068,
-    "ast_hash": "a4cb648c3bcd13c28f0f76c8a5436085",
+    "mtime": 1782057525.5083025,
+    "ast_hash": "76dbf323831c0e374a85e87302e14384",
     "semantic_hash": ""
   },
   "jb/src/core/PrismConfiguration.cs": {
-    "mtime": 1781256585.8087227,
-    "ast_hash": "8ebfa36cc2f93285cef839942a088a32",
+    "mtime": 1782059900.0661423,
+    "ast_hash": "aecb00069140bc237ffcaed6dfad060b",
     "semantic_hash": ""
   },
   "jb/src/core/PrismConfigurationException.cs": {
@@ -515,8 +490,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/Prism_Config.json": {
-    "mtime": 1781633857.7445893,
-    "ast_hash": "43c3ffbf1288db71526c44315560dba0",
+    "mtime": 1781952735.900676,
+    "ast_hash": "d2f20ea8ef8681b6aa272c0bb89e1edc",
     "semantic_hash": ""
   },
   "jb/src/core/Zip/ZipCentralDirectoryReader.cs": {
@@ -590,8 +565,8 @@
     "semantic_hash": ""
   },
   "jb/src/tests/Prism.Core.Tests/Match/NumericMatcherTests.cs": {
-    "mtime": 1781675520.724844,
-    "ast_hash": "84a545b504ed53db4ddba59c3c3d6172",
+    "mtime": 1781873052.0522878,
+    "ast_hash": "d981f5f6489932453519dbd800c9eeea",
     "semantic_hash": ""
   },
   "jb/src/tests/Prism.Core.Tests/Match/StringMatcherTests.cs": {
@@ -605,12 +580,12 @@
     "semantic_hash": ""
   },
   "jb/src/tests/Prism.Core.Tests/PipelineIntegrationTests.cs": {
-    "mtime": 1781276590.6352072,
-    "ast_hash": "34869a40588b7dbf7b76a6fb97b48c70",
+    "mtime": 1781852020.7717264,
+    "ast_hash": "bde5fa5f7d77f5de580a2294ab7870ca",
     "semantic_hash": ""
   },
   "jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj": {
-    "mtime": 1781535869.130331,
+    "mtime": 1781859428.2373638,
     "ast_hash": "9861dd2e0d3b4ad827e374ec5056355c",
     "semantic_hash": ""
   },
@@ -620,8 +595,8 @@
     "semantic_hash": ""
   },
   "jb/src/tests/Prism.Core.Tests/Transform/ImageTransformerTests.cs": {
-    "mtime": 1781640680.9579742,
-    "ast_hash": "c692f7ba21d3d476a4fd7444bc8911ea",
+    "mtime": 1782056050.915452,
+    "ast_hash": "6080015c910d0ea8ed2abfe7016702f3",
     "semantic_hash": ""
   },
   "jb/src/workbench/web/app/layout.tsx": {
@@ -660,12 +635,12 @@
     "semantic_hash": ""
   },
   "jb/src/workbench/web/next-env.d.ts": {
-    "mtime": 1781102051.5353918,
-    "ast_hash": "2a74d3909800ca5467fa83b0ab4a4890",
+    "mtime": 1781777211.049335,
+    "ast_hash": "d0f8375ae1199dc7acd3977fc33b78b8",
     "semantic_hash": ""
   },
   "jb/src/workbench/web/next.config.mjs": {
-    "mtime": 1781018212.919445,
+    "mtime": 1781778798.118673,
     "ast_hash": "74e23b60f1c2916a5ca6eb732f16cbed",
     "semantic_hash": ""
   },
@@ -695,13 +670,13 @@
     "semantic_hash": ""
   },
   "jb/src/workbench/web/sections/WorkbenchShell.tsx": {
-    "mtime": 1781080194.540089,
-    "ast_hash": "b0deef50c421150d3691af4abd512cc4",
+    "mtime": 1781777922.1698043,
+    "ast_hash": "7356d94643cf1dfaa9e686870fae9414",
     "semantic_hash": ""
   },
   "jb/src/workbench/web/services/prismApiClient.ts": {
-    "mtime": 1781018451.2847612,
-    "ast_hash": "b25cce5894197ef9712020b9536c1daa",
+    "mtime": 1781794672.3841827,
+    "ast_hash": "f87c77984bb662bcd20822f15ffe06c4",
     "semantic_hash": ""
   },
   "jb/src/workbench/web/services/workbenchSources.ts": {
@@ -725,8 +700,8 @@
     "semantic_hash": ""
   },
   "jb/src/workbench/wpf/Prism.Workbench.Wpf.csproj": {
-    "mtime": 1781079098.483238,
-    "ast_hash": "107174691a7cd6c5b987d5cbba0479f5",
+    "mtime": 1781859428.2476497,
+    "ast_hash": "2f3052cd34a717af99a0b53dab092ab8",
     "semantic_hash": ""
   },
   "jb/src/workbench/wpf/Services/IPrismWorkbenchService.cs": {
@@ -800,38 +775,38 @@
     "semantic_hash": ""
   },
   ".copilot-instructions.md": {
-    "mtime": 1781101607.6957831,
-    "ast_hash": "5c1536493ced7026f4f3b3760dadf379",
+    "mtime": 1781884703.5480926,
+    "ast_hash": "8c8c9fa7218c72ae320b6fc4030b74ca",
     "semantic_hash": ""
   },
   ".github/agents/developer.chatmode.md": {
-    "mtime": 1781104841.5406675,
-    "ast_hash": "84cb94ffd0940ed18b2ead4c37954b73",
+    "mtime": 1781899332.7796698,
+    "ast_hash": "4d09d9b970314070fda25eebef7917e6",
     "semantic_hash": ""
   },
   ".github/agents/domain-expert.chatmode.md": {
-    "mtime": 1781105197.9428108,
-    "ast_hash": "ce2cd480fa3d9c3d53252ce89273563b",
+    "mtime": 1781899332.7796698,
+    "ast_hash": "442855434a8f17433cc5683366b9d5c1",
     "semantic_hash": ""
   },
   ".github/agents/orchestrator.chatmode.md": {
-    "mtime": 1781105254.7529192,
-    "ast_hash": "c8d42921eea6e795a408710b9b4f85e4",
+    "mtime": 1781944040.4613104,
+    "ast_hash": "43fc9f08084d07c61e6696771d7aedad",
     "semantic_hash": ""
   },
   ".github/agents/planner.chatmode.md": {
-    "mtime": 1781105390.9647698,
-    "ast_hash": "0ca23d408ec10e118d88c3c310af442e",
+    "mtime": 1781899332.7796698,
+    "ast_hash": "cfa43159ade02940e9d277700e749764",
     "semantic_hash": ""
   },
   ".github/agents/reviewer.chatmode.md": {
-    "mtime": 1781105389.9223783,
-    "ast_hash": "bab99fc81e44f651c3be37f2ade58b34",
+    "mtime": 1781899332.7953515,
+    "ast_hash": "5d13270fbc461adeb91c297ebd95cdd0",
     "semantic_hash": ""
   },
   ".github/agents/tester.chatmode.md": {
-    "mtime": 1781104539.8337965,
-    "ast_hash": "3cfbab2688a48ebe7ea2d49f317bbaff",
+    "mtime": 1781899332.7973583,
+    "ast_hash": "bf2245522d9cbf020576b9e6fc206911",
     "semantic_hash": ""
   },
   ".github/copilot-instructions.md": {
@@ -840,38 +815,33 @@
     "semantic_hash": ""
   },
   "AGENT-TICKETS.md": {
-    "mtime": 1781684217.4380283,
-    "ast_hash": "2e9f511fc9706f800bb022bbd14e2c4f",
-    "semantic_hash": ""
-  },
-  "AGENTFEEDBACK.md": {
-    "mtime": 1781684138.5689526,
-    "ast_hash": "ea07fcb2fb54186415367e852485a592",
+    "mtime": 1781777089.863941,
+    "ast_hash": "9f46e1a1b413f63684e8bfc205a3d4e7",
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1781080820.0824535,
-    "ast_hash": "141ab28f47be97a0e7d5b2186e7c6df4",
+    "mtime": 1781884701.122819,
+    "ast_hash": "55adfffe18a9ac64523d83029a92d376",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1781632417.5001225,
-    "ast_hash": "a8fa1d89091bd8aa0c26d3c0696e159e",
+    "mtime": 1782055981.8832116,
+    "ast_hash": "a0d4ace0f31b3dd51ac38cd35d7c1577",
     "semantic_hash": ""
   },
   "PRISM-information.md": {
-    "mtime": 1781684073.2295613,
-    "ast_hash": "9b3a2bb6a2e084b83c2d8ccc6dd61343",
+    "mtime": 1781691447.8371677,
+    "ast_hash": "455bd8311ee7258ead4328e5b0406be1",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1779466122.782961,
-    "ast_hash": "fb53e503a954f45b124f7a07664cf1be",
+    "mtime": 1781685954.1605353,
+    "ast_hash": "b5b7b34fd3353709b5319d7aa1d913fb",
     "semantic_hash": ""
   },
   "SKILLS.md": {
-    "mtime": 1781008366.4093003,
-    "ast_hash": "94bdc1f520aad044ae32961ef20d9053",
+    "mtime": 1781884626.1994822,
+    "ast_hash": "b599904b15214122ffe3ab341cae4c0b",
     "semantic_hash": ""
   },
   "jb/docs/ImageNGP/ImageFeatures.md": {
@@ -880,8 +850,8 @@
     "semantic_hash": ""
   },
   "jb/docs/ImageNGP/NGP-architecture.md": {
-    "mtime": 1781256614.9603314,
-    "ast_hash": "30b99dfb0a64a6d75d879c0000e97252",
+    "mtime": 1781884932.987077,
+    "ast_hash": "2ba511d2cbda91f7324c239bfbaa9b3c",
     "semantic_hash": ""
   },
   "jb/docs/ImageNGP/PRODUCTTYPES.MD": {
@@ -895,68 +865,68 @@
     "semantic_hash": ""
   },
   "jb/docs/PRISM-api.md": {
-    "mtime": 1780585355.471944,
-    "ast_hash": "6b8575e6f3c13172c13bbe3cbd768c9f",
+    "mtime": 1781944749.7749429,
+    "ast_hash": "097c91f84dcf1fef8ba2b933134bbc97",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-classify.md": {
-    "mtime": 1781684051.8477821,
-    "ast_hash": "cf4df2a722db21a0b7d85edc2f101da2",
+    "mtime": 1781876018.2890499,
+    "ast_hash": "25c8d6398b5978f15a02f09de4a45941",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-excel.md": {
-    "mtime": 1780575417.505111,
-    "ast_hash": "c107ee8ee01ea60a0874607d648a4b8c",
+    "mtime": 1781691619.6146894,
+    "ast_hash": "884c4d4a93d3a698e43b96d8bc23056e",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-index.md": {
-    "mtime": 1781105392.2117174,
-    "ast_hash": "7a2712929e242313e5dd01eca5ae783f",
+    "mtime": 1781691549.4579113,
+    "ast_hash": "3210e4a9ed423c2eed0ae7ceee2e95ab",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-io-import.md": {
-    "mtime": 1780999713.6565778,
-    "ast_hash": "292a453f6b61efec6b474ed3465d90e5",
+    "mtime": 1781945579.289846,
+    "ast_hash": "c3cbd7cf0fdd096c5aca20f5b88251f6",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-knowledge-base.md": {
-    "mtime": 1781684270.3039227,
-    "ast_hash": "cf685383073d5b93f3829d680865db08",
+    "mtime": 1781692850.7450988,
+    "ast_hash": "092bc9f456aaa9719b9af2b444e7591d",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-match.md": {
-    "mtime": 1780999442.5292423,
-    "ast_hash": "58c317398eee2d765d344a074bce65b1",
+    "mtime": 1781898853.5863595,
+    "ast_hash": "cb49f9064fb2af0f82bf6b2f0e218c92",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-models.md": {
-    "mtime": 1781684369.6047673,
-    "ast_hash": "36b431c4bdd0c03cb8de3e47a5ec74e8",
+    "mtime": 1781692804.8192186,
+    "ast_hash": "c42cd0ac3dfa437b10729469dda2efcb",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-order-rename.md": {
-    "mtime": 1781633486.9481225,
-    "ast_hash": "208168219207eef372b228776a2cdc46",
+    "mtime": 1781691697.59042,
+    "ast_hash": "e1ba211d6392a5a275852d536b3763ac",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-overview.md": {
-    "mtime": 1780575417.456812,
-    "ast_hash": "c9b5b68ac98942089a3e76e132a20878",
+    "mtime": 1781691526.5517645,
+    "ast_hash": "4eb6a4b063b23040146a43f53aca7e9c",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-pipeline-core.md": {
-    "mtime": 1781684298.0016546,
-    "ast_hash": "b77023c8d64582bc5b1f8bf8b1804a7f",
+    "mtime": 1781691599.268744,
+    "ast_hash": "92c379dbebbba734b99754dc72f33670",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-transform-generate.md": {
-    "mtime": 1781683607.5657475,
-    "ast_hash": "634c1df546cd8b565fdd79ca34c183a1",
+    "mtime": 1781692746.6310453,
+    "ast_hash": "0d96b2157e106dfb7d5b70f8f2750954",
     "semantic_hash": ""
   },
   "jb/docs/PRISM-workbench.md": {
-    "mtime": 1781684386.403712,
-    "ast_hash": "520859a1ec9d2f3be39009bc5e16f187",
+    "mtime": 1781691833.7712963,
+    "ast_hash": "007b1013f7f2e61689de6416e00dd900",
     "semantic_hash": ""
   },
   "jb/docs/ideas-on-NGP.md": {
@@ -970,8 +940,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/IO/jbtodo.md": {
-    "mtime": 1781682987.6800036,
-    "ast_hash": "feae5172005e212a22729eb2dd32af38",
+    "mtime": 1781948880.2053154,
+    "ast_hash": "46ed11c6f785fc14a7d7627fad851082",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/merges.txt": {
@@ -980,8 +950,8 @@
     "semantic_hash": ""
   },
   "jb/src/core/Images/Classify/jbtodo.md": {
-    "mtime": 1781682931.3262458,
-    "ast_hash": "4cca80e1312dd77e7761c5f4baf60d50",
+    "mtime": 1781884978.6737602,
+    "ast_hash": "ef8e5bfc6e1e6127975afe17ad1601f9",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Generate/jbtodo.md": {
@@ -990,13 +960,13 @@
     "semantic_hash": ""
   },
   "jb/src/core/Images/Match/jbtodo.md": {
-    "mtime": 1781683025.4190888,
-    "ast_hash": "54fec84e3fd7a70eb7700dd0f94d7c9e",
+    "mtime": 1781772327.8066008,
+    "ast_hash": "ca9c0611f87ac83cd983b7f9be8ce1fa",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Order/jbtodo.md": {
-    "mtime": 1781633594.5735545,
-    "ast_hash": "ce1197b801d1c998bdc9056cac653590",
+    "mtime": 1781952831.7348845,
+    "ast_hash": "c5045fa8b82ab4d7b79ca78b1ce0bd39",
     "semantic_hash": ""
   },
   "jb/src/core/Images/Transform/jbtodo.md": {
@@ -1004,19 +974,359 @@
     "ast_hash": "09aecd302854aa705bfb720690235901",
     "semantic_hash": ""
   },
-  "jb/src/jbtodo.md": {
-    "mtime": 1781614414.0245118,
-    "ast_hash": "5d5a5af44e5c501fa7289a1e5db36dce",
-    "semantic_hash": ""
-  },
   "jb/src/tests/Prism.Core.Tests/README.md": {
-    "mtime": 1781276590.6382122,
-    "ast_hash": "ef0f552985cd1d5f8fdfd0b0b69a12fe",
+    "mtime": 1781852020.7590597,
+    "ast_hash": "b7e375e2364701186c37dd483599c0b1",
     "semantic_hash": ""
   },
   "jb/src/workbench/workbench.md": {
     "mtime": 1781012027.2561703,
     "ast_hash": "db7e26fd71aadaaa14201225721f969c",
+    "semantic_hash": ""
+  },
+  "jb/src/api/PrismHealthResponse.cs": {
+    "mtime": 1781695348.4717107,
+    "ast_hash": "15abc293b307b36dde98f18b394a3767",
+    "semantic_hash": ""
+  },
+  "jb/src/api/PrismJobStartEnvelope.cs": {
+    "mtime": 1781695230.9522524,
+    "ast_hash": "37e3f8ebb917052eaab65a04df64858c",
+    "semantic_hash": ""
+  },
+  "jb/src/api/PrismJobUrls.cs": {
+    "mtime": 1781695305.978511,
+    "ast_hash": "152e883401b44a9adb04495194ebd756",
+    "semantic_hash": ""
+  },
+  "jb/src/api/PrismJsonImagesEnvelope.cs": {
+    "mtime": 1781695017.9030364,
+    "ast_hash": "37ea7931b1b007d35fed0815e769d34c",
+    "semantic_hash": ""
+  },
+  "jb/src/api/PrismJsonResultEnvelope.cs": {
+    "mtime": 1781695217.6365788,
+    "ast_hash": "81136e71d6b1531aae0f768990c98cff",
+    "semantic_hash": ""
+  },
+  "jb/src/api/PrismPreCoreErrorResponse.cs": {
+    "mtime": 1781695205.623059,
+    "ast_hash": "d0840dc6fe622faca661ebce3abe4c9a",
+    "semantic_hash": ""
+  },
+  "jb/src/api/PrismQueueConfigResponse.cs": {
+    "mtime": 1781695315.947,
+    "ast_hash": "e65fc4825778ec487b203f6544a40997",
+    "semantic_hash": ""
+  },
+  "jb/src/api/PrismSafeConfigResponse.cs": {
+    "mtime": 1781695250.425428,
+    "ast_hash": "eab03ebcf52b94a20d0ddcd3888af0fb",
+    "semantic_hash": ""
+  },
+  "jb/src/api/PrismVisibleFeatureFlags.cs": {
+    "mtime": 1781695340.0557523,
+    "ast_hash": "c368dab3d2de61af2926df448c4a3db8",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Excel/ColumnClassificationConfig.cs": {
+    "mtime": 1781694307.791456,
+    "ast_hash": "2d3713949eed3c99e0614a675475a952",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Excel/ColumnValidityConfig.cs": {
+    "mtime": 1781694302.6897345,
+    "ast_hash": "ee091f56524d7387f0ebd28cd0ca043a",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Excel/DuplicateColumnHandlingConfig.cs": {
+    "mtime": 1781694305.3688352,
+    "ast_hash": "531febf58a970a5033169e5f05a48225",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Excel/ExcelDiagnosticSeverity.cs": {
+    "mtime": 1781694325.3083322,
+    "ast_hash": "34cc8c97996e7ed212690c948fbbe130",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Excel/ExcelModelBuildResult.cs": {
+    "mtime": 1781694315.674343,
+    "ast_hash": "0dbc16aa93e0a7150f9a3570075873f8",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Excel/ExcelProcessingDiagnostic.cs": {
+    "mtime": 1781694323.3726661,
+    "ast_hash": "3776fec8dc2783afe9cc708a06885b78",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Excel/FamilyIdProperties.cs": {
+    "mtime": 1781694295.8344777,
+    "ast_hash": "ddb404d85c7aeb198f15f7317495eced",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Excel/HeaderDetectionConfig.cs": {
+    "mtime": 1781694300.801238,
+    "ast_hash": "e9d64904067e0da6c743d226b3fe24bd",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Excel/HeaderRowSearchSpace.cs": {
+    "mtime": 1781694292.7825139,
+    "ast_hash": "f659a503afbaf767ad4934c9c4399b73",
+    "semantic_hash": ""
+  },
+  "jb/src/core/ImageNGP/FeatureDefinition.cs": {
+    "mtime": 1781859568.864484,
+    "ast_hash": "488c045f42afde9d7c64d1713ad8a4ef",
+    "semantic_hash": ""
+  },
+  "jb/src/core/ImageNGP/ImageNGP.json": {
+    "mtime": 1781859568.8665488,
+    "ast_hash": "af13c71f2566a00d7975a6f76754eeca",
+    "semantic_hash": ""
+  },
+  "jb/src/core/ImageNGP/ImageNgpValidator.cs": {
+    "mtime": 1782058882.4100182,
+    "ast_hash": "93ea3ef525a5e0135aa19dec0be246bc",
+    "semantic_hash": ""
+  },
+  "jb/src/core/ImageNGP/ImageNgpVocabulary.cs": {
+    "mtime": 1781859568.8700385,
+    "ast_hash": "ff1a73219e467e3a6efa5d1c4dd5f1ad",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Classify/ClipPromptCatalog.cs": {
+    "mtime": 1782059016.091909,
+    "ast_hash": "7a5ef6d9034544ec7d9ccc4d0c7ad47a",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Classify/ClipPrompts.json": {
+    "mtime": 1781859568.8735971,
+    "ast_hash": "ea5099a87494174f7cbc7d2940077743",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Classify/DedupGroup.cs": {
+    "mtime": 1781694289.3161664,
+    "ast_hash": "6940ca6943aad9c8d4c76b33fe097d43",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Classify/EdgeIntersectionResult.cs": {
+    "mtime": 1781691746.4351556,
+    "ast_hash": "69fea373558f52b5d08fd6bd98eff372",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Classify/FeatureCondition.cs": {
+    "mtime": 1781694285.793089,
+    "ast_hash": "6d43d59b42414df828123c4d202dc7f2",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Classify/ImageRolesConfig.cs": {
+    "mtime": 1781694288.1655176,
+    "ast_hash": "b5d1df77fa43c53083e68785d7c5e707",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Classify/SubjectEdgeDetector.cs": {
+    "mtime": 1781699684.6448398,
+    "ast_hash": "eabc42afa671e2da1209ce7ccdccb2e1",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/ClipTokenizer.cs": {
+    "mtime": 1781694357.1587033,
+    "ast_hash": "ac042bd4b32e4bb33847cba09a176034",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/ImageClassifier.cs": {
+    "mtime": 1781694388.8228927,
+    "ast_hash": "e85151a7829268c13ed36642fde59241",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Order/AssignmentRecord.cs": {
+    "mtime": 1781694332.621181,
+    "ast_hash": "3853d6101331e90e802669a2330afb70",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Order/CandidateDetOrder.cs": {
+    "mtime": 1781772310.2048671,
+    "ast_hash": "e2c41eff0ce3021a9c730ed0dbad8f64",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Order/DetSlotRule.cs": {
+    "mtime": 1781694328.324835,
+    "ast_hash": "e0575ed0d2628ef9f68fed7dbae9632b",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Images/Transform/processingtools/Tx_LowContrastEnhancement.cs": {
+    "mtime": 1781859568.875283,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Pipeline/ShellStage_Classify.cs": {
+    "mtime": 1782059906.8286445,
+    "ast_hash": "24933b8285d94420585168befb63b41d",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Pipeline/ShellStage_Export.cs": {
+    "mtime": 1781773134.7679935,
+    "ast_hash": "c76010833bfea318d747dd9f7a691d51",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Pipeline/ShellStage_Generate.cs": {
+    "mtime": 1781773124.4038663,
+    "ast_hash": "1ab201b668ffdf688b9a165553304f57",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Pipeline/ShellStage_Import.cs": {
+    "mtime": 1781773110.3017924,
+    "ast_hash": "09d1ed26dfe6702d34d4ca6e45b0f9c1",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Pipeline/ShellStage_Match.cs": {
+    "mtime": 1781773112.8703928,
+    "ast_hash": "ac0027fc103b1e84dd50fe9a114758d6",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Pipeline/ShellStage_Order.cs": {
+    "mtime": 1781773115.4283862,
+    "ast_hash": "e5e29ce085de28cc9063c087962c335a",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Pipeline/ShellStage_Rename.cs": {
+    "mtime": 1781773117.5920038,
+    "ast_hash": "11f2640d08cf9fc231d49b57ca005b0e",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Pipeline/ShellStage_Transform.cs": {
+    "mtime": 1781773131.9518814,
+    "ast_hash": "1c8a5f6b7ae9a20f653107123e02f86c",
+    "semantic_hash": ""
+  },
+  "jb/src/tests/Prism.Core.Tests/Classify/SubjectEdgeDetectorRealImageTests.cs": {
+    "mtime": 1781852020.7765317,
+    "ast_hash": "0ec78e2202ac4900236f1b2736f17151",
+    "semantic_hash": ""
+  },
+  "jb/src/tests/Prism.Core.Tests/Classify/SubjectEdgeDetectorTests.cs": {
+    "mtime": 1781692963.6382246,
+    "ast_hash": "fd2c419ba29b778dd826599ee0a234af",
+    "semantic_hash": ""
+  },
+  "jb/src/tests/Prism.Core.Tests/ImageNGP/ImageNgpValidatorTests.cs": {
+    "mtime": 1781859568.8763175,
+    "ast_hash": "bdfd86fc88230e56a6d4612dd539dee6",
+    "semantic_hash": ""
+  },
+  "jb/src/workbench/wpf/Prism.Workbench.Wpf_4er0d4si_wpftmp.csproj": {
+    "mtime": 1781859428.067144,
+    "ast_hash": "2d658dc3cabcac607c347e9ec5e8d0a2",
+    "semantic_hash": ""
+  },
+  "jb/src/workbench/wpf/Prism.Workbench.Wpf_5dqqmhxz_wpftmp.csproj": {
+    "mtime": 1781859428.262194,
+    "ast_hash": "818cc5c7ebb6689688cf294e4d45e6fc",
+    "semantic_hash": ""
+  },
+  "jb/src/workbench/wpf/Prism.Workbench.Wpf_bpy0hnod_wpftmp.csproj": {
+    "mtime": 1781859427.8950877,
+    "ast_hash": "2d658dc3cabcac607c347e9ec5e8d0a2",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/Run_AUTOMAT2.ps1": {
+    "mtime": 1781853393.1364262,
+    "ast_hash": "3b397ecb5158b9d9290c652720f787ff",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/Run_All.ps1": {
+    "mtime": 1781853429.2984595,
+    "ast_hash": "833a7216f2e677306c018bec77fe0adb",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/Run_HEROAUT2.ps1": {
+    "mtime": 1781853394.2012641,
+    "ast_hash": "f58a360b763aa4f8bc1161a369babd62",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/Run_HEROAUT3.ps1": {
+    "mtime": 1781853401.7816277,
+    "ast_hash": "83433860f0c0dd48573843b20dde2047",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/Run_INPUTMA23.ps1": {
+    "mtime": 1781853404.432693,
+    "ast_hash": "3e728825eb45abb91ac8bcdfa590664c",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/Run_INPUTMA24.ps1": {
+    "mtime": 1781853410.1323915,
+    "ast_hash": "cdc05c71c44012ff8473cfbf6ce7c5be",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/Run_INPUTMA25.ps1": {
+    "mtime": 1781853412.9611661,
+    "ast_hash": "4d05712b1f3d471dd872ff2b2d5499ba",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/Run_INPUTMA27.ps1": {
+    "mtime": 1781853415.7709203,
+    "ast_hash": "1031c4f1af429f1ae6348587cb67fcdc",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/Run_MMERO26.ps1": {
+    "mtime": 1781853418.6355276,
+    "ast_hash": "c4dd54467907d8702ec1a7aebe84b027",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/Run_SPACINI29.ps1": {
+    "mtime": 1781853421.0214226,
+    "ast_hash": "cf42cf5981839d198a5680e3759a3d23",
+    "semantic_hash": ""
+  },
+  ".serena/project.local.yml": {
+    "mtime": 1781694642.028308,
+    "ast_hash": "f136e7d47205d9a758913615074760e5",
+    "semantic_hash": ""
+  },
+  ".serena/project.yml": {
+    "mtime": 1781694642.0009117,
+    "ast_hash": "5b5e80a34b416c5ed09ca41621b95371",
+    "semantic_hash": ""
+  },
+  "jb/docs/GLOSSARY.md": {
+    "mtime": 1781884806.6332018,
+    "ast_hash": "bfd2512eabb5e5b89a4f3e8f1b8017bc",
+    "semantic_hash": ""
+  },
+  "jb/docs/meta/MatchingDeltaVsTarget.md": {
+    "mtime": 1781770244.380231,
+    "ast_hash": "366bd9027a0524cb36cacbfdd1236dca",
+    "semantic_hash": ""
+  },
+  "jb/docs/meta/currentMatching.md": {
+    "mtime": 1781770199.2272623,
+    "ast_hash": "7ab19a3bc9d29ba236eabf4192ab60be",
+    "semantic_hash": ""
+  },
+  "jb/src/api/jbtodo.md": {
+    "mtime": 1781692770.7430706,
+    "ast_hash": "d4cda73f808e16f3859dfa323608ab56",
+    "semantic_hash": ""
+  },
+  "jb/test-scripts/testlogs.txt": {
+    "mtime": 1781875520.1100385,
+    "ast_hash": "45419d5ed8bb77887a46ed75508bd172",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Models/ImageSourceKind.cs": {
+    "mtime": 1781948782.0163088,
+    "ast_hash": "e0a9e29bae43dd17d4e0ea087e3efa09",
+    "semantic_hash": ""
+  },
+  "jb/src/core/Models/ImportStatus.cs": {
+    "mtime": 1781948784.0387564,
+    "ast_hash": "de9ab756bb2b4d59782d6dbfb41ea16a",
+    "semantic_hash": ""
+  },
+  "AGENTFEEDBACK.md": {
+    "mtime": 1782058888.0947664,
+    "ast_hash": "4f54e0e083cdb1a63360660ae7fa2d3c",
     "semantic_hash": ""
   }
 }

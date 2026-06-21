@@ -10,10 +10,10 @@ internal sealed class ImageMatcher
     private readonly StringMatcher      stringMatcher;
     private readonly ImageLabelingMatcher labelingMatcher;
 
-    private ImageMatcher(MatchingConfig matchingConfig, TranslationConfig translationConfig)
+    private ImageMatcher(MatchingConfig matchingConfig, TranslationConfig translationConfig, string familyIdColumnName)
     {
         this.matchingConfig = matchingConfig;
-        numericMatcher      = new NumericMatcher();
+        numericMatcher      = new NumericMatcher(familyIdColumnName);
         stringMatcher       = new StringMatcher(translationConfig);
         labelingMatcher     = new ImageLabelingMatcher();
     }
@@ -33,10 +33,15 @@ internal sealed class ImageMatcher
             "Images/Match/Translate/TranslationConfig.json",
             "TranslationConfig.json not found next to Prism_Config.json.");
 
+        string excelConfigPath = LoadConfigPath(
+            "Excel/ExcelConfig.json",
+            "ExcelConfig.json not found next to Prism_Config.json.");
+
         MatchingConfig    matchingConfig    = MatchingConfig.Load(matchingConfigPath);
         TranslationConfig translationConfig = TranslationConfig.Load(translationConfigPath);
+        ExcelConfig       excelConfig       = ExcelConfig.Load(excelConfigPath);
 
-        ImageMatcher matcher = new(matchingConfig, translationConfig);
+        ImageMatcher matcher = new(matchingConfig, translationConfig, excelConfig.RecordPrimaryKey);
         matcher.RunWaterfall(context.LambdaRecords, context.FamilyRecords, context);
     }
 

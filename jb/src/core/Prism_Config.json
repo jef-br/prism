@@ -1,8 +1,18 @@
 {
     "Input": {
-        "AcceptedMediaTypes": [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf", ".webp", ".bmp", ".gif", ".xlsx", ".zip"],
         "MAXIMUM_REQUEST_SIZE": 2684354560,
         "Images": {
+            "extensions": [
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".tif",
+                ".tiff",
+                ".pdf",
+                ".webp",
+                ".bmp",
+                ".gif"
+            ],
             "amount": {
                 "min": 1,
                 "max": 2500
@@ -13,6 +23,9 @@
             }
         },
         "ZIP": {
+            "extensions": [
+                ".zip"
+            ],
             "NestDepth": 5,
             "amount": {
                 "min": 0,
@@ -24,6 +37,9 @@
             }
         },
         "EXCEL": {
+            "extensions": [
+                ".xlsx"
+            ],
             "amount": {
                 "min": 1,
                 "max": 10
@@ -34,13 +50,13 @@
             }
         }
     },
-    "Jobs":{
-        "JobRetentionPeriodInHours":24,
-        "MaxQueuedJobs":100,
-        "MaxConcurrentJobs":1
+    "Jobs": {
+        "JobRetentionPeriodInHours": 24,
+        "MaxQueuedJobs": 100,
+        "MaxConcurrentJobs": 1
     },
-    "Pipeline":{
-        "JobRetries":3
+    "Pipeline": {
+        "JobRetries": 3
     },
     "Output": {
         "Images": {
@@ -74,11 +90,19 @@
     "Classification": {
         "Confidence_Threshold": 0.9,
         "Cutoff_Threshold": 0.25,
+        "Deduplication": {
+            "Enabled": true,
+            "HammingThreshold": 6,
+            "ExemptPhenotypes": [
+                "illustration-technical-drawing",
+                "size-chart"
+            ]
+        },
         "Weights": {
             "NumericToken_Weight": 0.55,
             "StringToken_Weight": 0.15,
             "Classification_Weight": 0.15,
-            "SemanticalRelevanceWeight":0.15,
+            "SemanticalRelevanceWeight": 0.15,
             "CONVERGENCE_WEIGHT": 0.25
         }
     },

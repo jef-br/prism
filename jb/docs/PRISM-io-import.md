@@ -20,7 +20,7 @@
 
 **Multipart (API):** API upload parts converted before pipeline entry into descriptors containing: original filename, content type, byte length, source kind, and either stream ref or job-temp-file ref. API performs edge validation first.
 
-**Directory:** Local folders may be scanned recursively. Recursion stops for any folder whose total byte size is below `Input.Images.filesize.min`. Every file still validated individually against configured file size, extension, request size, and batch image count limits.
+**Directory:** Local folders may be scanned recursively. Recursion stops for any folder whose total byte size is below `Input.Images.filesize.min`. Every file still validated individually against configured file size, extension, request size, and batch image count limits. Full member path preserved in the input descriptor as source metadata — path segments are available for deduplication and matching downstream. Implementation: `ScanDirectory` in `Importer.cs` with `SearchOption.AllDirectories`, filtered by accepted extensions and size limits from `ImportConfig`, with a recursion depth guard and total-file-count limit.
 
 **Link (Remote URL):** Fetched before pipeline entry → temporary input descriptors → handled like local files by `Importer.cs`.
 
@@ -118,3 +118,5 @@ Safe description added for client; internals not disclosed.
 ## Media Kind Triage
 
 Media kind triaged from **bytes**, not only filename or MIME type. PDF and TIFF pages rendered per import rules. Supported image/document → flat JPG. Accepted Excel → Excel collection.
+
+Implementation: read the first 16 bytes of the file and match against known magic-byte signatures (JPEG: `FF D8 FF`; PNG: `89 50 4E 47`; WebP: `52 49 46 46 ... 57 45 42 50`). Extension used as secondary hint only when byte header is ambiguous or absent.

@@ -30,18 +30,11 @@ public static class PrismConfigLocator
     internal static string? FindFolderLocalConfig(string relativePathFromCore)
     {
         string prismConfigPath = FindPrismConfigPath() ?? string.Empty;
-
-        if (string.IsNullOrEmpty(prismConfigPath))
-        {
-            return null;
-        }
+        if (string.IsNullOrEmpty(prismConfigPath))return null;
 
         string coreDirectory = Path.GetDirectoryName(prismConfigPath) ?? string.Empty;
 
-        if (string.IsNullOrEmpty(coreDirectory))
-        {
-            return null;
-        }
+        if (string.IsNullOrEmpty(coreDirectory)) return null;
 
         string candidate = Path.Combine(coreDirectory, relativePathFromCore);
         return File.Exists(candidate) ? candidate : null;

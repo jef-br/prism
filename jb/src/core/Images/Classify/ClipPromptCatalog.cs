@@ -5,25 +5,22 @@ using System.Text.Json;
 /// value it represents. Replaces the former hard-coded prompt dictionary in the Classified stage —
 /// prompts and their feature/value bindings can now change by editing JSON, no recompilation.
 /// </summary>
-public sealed class ClipPromptCatalog
-{
+public sealed class ClipPromptCatalog {
     // prompt label → (feature id, feature value)
     private readonly Dictionary<string, (string Feature, string Value)> byPrompt;
 
-    private ClipPromptCatalog(Dictionary<string, (string Feature, string Value)> byPrompt)
-    {
+    private ClipPromptCatalog( Dictionary<string, (string Feature, string Value)> byPrompt ) {
         this.byPrompt = byPrompt;
     }
 
-    // ─── Factory ──────────────────────────────────────────────────────────────
+    // --- Factory
 
     /// <summary>
     /// Loads and parses <c>ClipPrompts.json</c>.
     /// Throws <see cref="InvalidOperationException"/> on a missing file or bad structure.
     /// </summary>
     /// <param name="jsonPath">Absolute path to ClipPrompts.json.</param>
-    public static ClipPromptCatalog Load(string jsonPath)
-    {
+    public static ClipPromptCatalog Load( string jsonPath ) {
         if (!File.Exists(jsonPath))
             throw new InvalidOperationException($"ClipPrompts.json not found at: {jsonPath}");
 
@@ -32,8 +29,7 @@ public sealed class ClipPromptCatalog
         JsonDocument doc;
         try {
             doc = JsonDocument.Parse(json);
-        }
-        catch (JsonException ex) {
+        } catch (JsonException ex) {
             throw new InvalidOperationException($"Failed to parse ClipPrompts.json at '{jsonPath}': {ex.Message}", ex);
         }
 
@@ -57,18 +53,13 @@ public sealed class ClipPromptCatalog
         }
     }
 
-    // ─── Public API ──────────────────────────────────────────────────────────
+    // --- Public API
 
     /// <summary>All prompt strings to feed the CLIP zero-shot classifier.</summary>
-    public string[] BuildPrompts()
-        => [.. byPrompt.Keys];
+    public string[] BuildPrompts() => [.. byPrompt.Keys];
 
-    /// <summary>
-    /// Maps a CLIP result label back to its feature id and value.
-    /// Returns false for an unrecognised label.
-    /// </summary>
-    public bool TryResolve(string label, out string feature, out string value)
-    {
+    /// <summary> Maps a CLIP result label back to its feature id and value. Returns false for an unrecognised label.</summary>
+    public bool TryResolve( string label, out string feature, out string value ) {
         if (byPrompt.TryGetValue(label, out (string Feature, string Value) mapping)) {
             feature = mapping.Feature;
             value = mapping.Value;

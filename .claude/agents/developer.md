@@ -43,3 +43,21 @@ Follow naming conventions established in the relevant domain doc. If a name is d
 - Minimal footprint: do not modify files unrelated to the current ticket
 - Comment non-obvious logic; skip comments that restate what the code already says
 - Do not leave commented-out code, TODOs, or debug output in the committed result
+
+- **One type per file.** Every class, record, enum, interface, struct, and delegate lives in its own `.cs` file named after the type (e.g. `ImageRole` → `ImageRole.cs`). Never define a second type inside an existing file.
+- **Readable over brief.** Main flow reads like a recipe: `Initialize()` sets up resources, `Process()` / `Run()` expresses the workflow, named helper methods perform each step.
+- Helper methods are defined below the method that calls them within the same class.
+- **XML doc comments** (`/// <summary>`) on every public and internal method.
+- Typed config object per subfolder (e.g. `Classify_Config`). No scattered constructor parameters.
+- Every external resource (`InferenceSession`, `Mat`) is initialized in a dedicated `Initialize()` method, released in `Dispose()`, and held by a class that implements `IDisposable`.
+- Processing lifecycle: validate → initialize → `try/catch/finally` pipeline → release → return structured result object.
+- ONNX: name every tensor input/output with a string constant. State expected input shape and normalization in a comment above tensor construction. One method per preprocessing step.
+- OpenCV: every `Mat` has a name reflecting its state. State color space (BGR/RGB) at every image boundary. Release intermediate `Mat` objects with `using` or explicit `.Dispose()`.
+- K&R braces: opening brace on same line as declaration/statement
+- Method parameters on a single line, never split across lines
+- Object construction: flat `obj.Prop = x;` assignments, NOT object initializer syntax `new Foo { Prop = x }`
+- No XML doc comments on methods; class-level summary only
+- No defensive null-coalescing on internal/known-non-null values
+- Collapse boolean conditions: prefer `!= 1` over separate `== 0` / `> 1` checks
+- Short, practical variable names (fnTokens, famID, me, tei)
+- No `Try` prefix on methods unless returning bool with out param

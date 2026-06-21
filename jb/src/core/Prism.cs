@@ -72,7 +72,7 @@ public sealed class Prism
     private static (PrismConfiguration Config, ModelBuilder ExcelModelBuilder) Initialize()
     {
         string configPath = LocatePrismConfig();
-        PrismConfiguration config = PrismConfiguration.Load(configPath);
+        PrismConfiguration config = PrismConfiguration.LoadPrismConfig(configPath);
         ValidateRequiredFolderLocalConfigs(configPath);
         string coreDir = Path.GetDirectoryName(configPath)!;
         ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(Path.Combine(coreDir, "Excel", "ExcelConfig.json"));

@@ -244,6 +244,6 @@ public class ImageTransformerTests
     private static PrismConfiguration LoadConfig()
     {
         string? configPath = PrismConfigLocator.FindPrismConfigPath();
-        return PrismConfiguration.Load(configPath!);
+        return PrismConfiguration.LoadPrismConfig(configPath!);
     }
 }

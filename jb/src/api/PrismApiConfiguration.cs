@@ -3,8 +3,7 @@
 /// core <see cref="PrismConfiguration"/> loader. There is no graceful degradation:
 /// any missing config file or invalid value fails loud at startup.
 /// </summary>
-internal sealed record PrismApiConfiguration
-{
+internal sealed record PrismApiConfiguration {
     public bool ConfigReady { get; init; }
     public bool RequiredModelAssetsReady { get; init; }
     public bool TempStorageReady { get; init; }
@@ -24,30 +23,30 @@ internal sealed record PrismApiConfiguration
     public int MaximumZipCount { get; init; }
     public long MaximumZipBytes { get; init; }
     public PrismSafeLimitResponse Limits { get; init; } = new();
-    public IReadOnlyList<string> AcceptedMediaTypes { get; init; } = [];
+    public IReadOnlyList<string> ImageMediaTypes { get; init; } = [];
+    public IReadOnlyList<string> ExcelMediaTypes { get; init; } = [];
+    public IReadOnlyList<string> ZipMediaTypes { get; init; } = [];
+    public IReadOnlyList<string> AcceptedMediaTypes => [.. ImageMediaTypes, .. ExcelMediaTypes, .. ZipMediaTypes];
 
     /// <summary>
     /// Loads API configuration from Prism_Config.json via the core loader.
     /// Fails loud with <see cref="PrismConfigurationException"/> if the file is missing,
     /// invalid, or temp storage is unavailable.
     /// </summary>
-    public static PrismApiConfiguration Load()
-    {
+    public static PrismApiConfiguration Load() {
         string configPath = PrismConfigLocator.FindPrismConfigPath()
             ?? throw new PrismConfigurationException(
                 "Prism_Config.json was not found in any expected location. " +
                 "Ensure the file is deployed next to the running assembly.");
 
-        PrismConfiguration core = PrismConfiguration.Load(configPath);
+        PrismConfiguration core = PrismConfiguration.LoadPrismConfig(configPath);
 
-        if (!Directory.Exists(Path.GetTempPath()))
-        {
+        if (!Directory.Exists(Path.GetTempPath())) {
             throw new PrismConfigurationException(
                 $"Temp storage is not available at: {Path.GetTempPath()}");
         }
 
-        return new PrismApiConfiguration
-        {
+        return new PrismApiConfiguration {
             ConfigReady = true,
             RequiredModelAssetsReady = true,
             TempStorageReady = true,
@@ -56,30 +55,31 @@ internal sealed record PrismApiConfiguration
             MaxQueuedJobs = core.MaxQueuedJobs,
             MaxConcurrentJobs = core.MaxConcurrentJobs,
             MaximumRequestBytes = core.MaximumRequestBytes,
-            MinimumImageCount = core.MinimumImageCount,
-            MaximumImageCount = core.MaximumImageCount,
-            MinimumImageBytes = core.MinimumImageBytes,
-            MaximumImageBytes = core.MaximumImageBytes,
-            MinimumExcelCount = core.MinimumExcelCount,
-            MaximumExcelCount = core.MaximumExcelCount,
-            MinimumExcelBytes = core.MinimumExcelBytes,
-            MaximumExcelBytes = core.MaximumExcelBytes,
-            MaximumZipCount = core.MaximumZipCount,
-            MaximumZipBytes = core.MaximumZipBytes,
-            AcceptedMediaTypes = core.AcceptedMediaTypes,
-            Limits = new PrismSafeLimitResponse
-            {
+            MinimumImageCount = core.MinimumImageCountPerJob,
+            MaximumImageCount = core.MaximumImageCountPerJob,
+            MinimumImageBytes = core.MinBytesPerImg,
+            MaximumImageBytes = core.MaxBytesPerImg,
+            MinimumExcelCount = core.MinXLSCount,
+            MaximumExcelCount = core.MaxXLSCount,
+            MinimumExcelBytes = core.MinXLSBytes,
+            MaximumExcelBytes = core.MaxXLSBytes,
+            MaximumZipCount = core.MaxZipCount,
+            MaximumZipBytes = core.MaxZipBytes,
+            ImageMediaTypes = core.AcceptedImageExtensions,
+            ExcelMediaTypes = core.AcceptedExcelExtensions,
+            ZipMediaTypes = core.AcceptedZipExtensions,
+            Limits = new PrismSafeLimitResponse {
                 MaximumRequestBytes = core.MaximumRequestBytes,
-                MinimumImageCount = core.MinimumImageCount,
-                MaximumImageCount = core.MaximumImageCount,
-                MinimumImageBytes = core.MinimumImageBytes,
-                MaximumImageBytes = core.MaximumImageBytes,
-                MinimumExcelCount = core.MinimumExcelCount,
-                MaximumExcelCount = core.MaximumExcelCount,
-                MinimumExcelBytes = core.MinimumExcelBytes,
-                MaximumExcelBytes = core.MaximumExcelBytes,
-                MaximumZipCount = core.MaximumZipCount,
-                MaximumZipBytes = core.MaximumZipBytes
+                MinimumImageCount = core.MinimumImageCountPerJob,
+                MaximumImageCount = core.MaximumImageCountPerJob,
+                MinimumImageBytes = core.MinBytesPerImg,
+                MaximumImageBytes = core.MaxBytesPerImg,
+                MinimumExcelCount = core.MinXLSCount,
+                MaximumExcelCount = core.MaxXLSCount,
+                MinimumExcelBytes = core.MinXLSBytes,
+                MaximumExcelBytes = core.MaxXLSBytes,
+                MaximumZipCount = core.MaxZipCount,
+                MaximumZipBytes = core.MaxZipBytes
             }
         };
     }
@@ -88,8 +88,7 @@ internal sealed record PrismApiConfiguration
 /// <summary>
 /// Safe public limits derived from PRISM configuration.
 /// </summary>
-internal sealed record PrismSafeLimitResponse
-{
+internal sealed record PrismSafeLimitResponse {
     public long MaximumRequestBytes { get; init; }
     public int MinimumImageCount { get; init; }
     public int MaximumImageCount { get; init; }

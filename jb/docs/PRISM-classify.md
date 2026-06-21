@@ -19,7 +19,19 @@ INGP = phenotype derived from a combination of IFs. Not a single trait list like
 
 INGP taxonomy: 26 phenotypes in `jb/docs/ImageNGP/imagePhenotypes.md` and `jb/docs/ImageNGP/PRODUCTTYPES.MD`.
 
-**Current impl**: Most IFs set to `UNKNOWN` via `RecordUnknownFeatures()` in `ImageFeatureAnalyzer.cs`. CLIP runs for: `hero-is-human`, `hero-orientation`, `head-visible`, `body-visible` using natural-language prompts in `StageShells.cs`. Open work in `jb/src/core/Images/Classify/jbtodo.md`.
+**Current impl**: Most IFs set to `UNKNOWN` via `RecordUnknownFeatures()` in `ImageFeatureAnalyzer.cs`. CLIP runs for: `hero-is-human`, `hero-orientation`, `head-visible`, `body-visible` using natural-language prompts from `ClipPrompts.json`. Open work in `jb/src/core/Images/Classify/jbtodo.md`.
+
+---
+
+## Taxonomy & Prompt Configuration
+
+INGP classification is config-driven — editable without recompiling the server:
+
+- `ImageNGP.json` (`jb/src/core/ImageNGP/`) — canonical taxonomy: every IF id with its datatype and allowed values, plus the 26-phenotype catalogue.
+- `ImageRoles.json` (same folder) — IF→phenotype rules, evaluated first-match by `PhenotypeRuleSet.cs`.
+- `ClipPrompts.json` (`jb/src/core/Images/Classify/`) — CLIP prompt → (IF, value) bindings, loaded by `ClipPromptCatalog.cs`.
+
+At startup `ImageNgpValidator` cross-checks every IF id, value, and phenotype id used in `ImageRoles.json`, `DetOrderRules.json`, and `ClipPrompts.json` against `ImageNGP.json`. Any unknown id/value **fails fast and loud** — no silent UNKNOWN-on-typo.
 
 ---
 

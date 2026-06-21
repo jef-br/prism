@@ -163,7 +163,8 @@ public static class ImageNgpValidator
 
         try {
             string json = File.ReadAllText(path, System.Text.Encoding.UTF8);
-            return JsonDocument.Parse(json).RootElement.Clone();
+            using JsonDocument document = JsonDocument.Parse(json);
+            return document.RootElement.Clone();
         }
         catch (JsonException ex) {
             problems.Add($"Failed to parse '{path}': {ex.Message}");

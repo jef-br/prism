@@ -5,7 +5,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 On the first prompt of every session, read these files before doing anything else:
 1. `AGENT-TICKETS.md` — best record of current project/solution work
 2. `jb/docs/PRISM-index.md` — source of truth; maps tasks to documentation files
-3. `AGENTFEEDBACK.md` — agent reload memory, open work index, current decisions
 
 ## Commands
 
@@ -91,6 +90,7 @@ Every parameter lives in a JSON config file placed next to the code that uses it
 | `ExcelConfig.json` | `jb/src/core/Excel/` |
 | `MatchingConfig.json` | `jb/src/core/Images/Match/` |
 | `ImageNGP.json` / `ImageRoles.json` | `jb/src/core/ImageNGP/` |
+| `ClipPrompts.json` | `jb/src/core/Images/Classify/` |
 | `DetOrderRules.json` | `jb/src/core/Images/Order/` |
 | `HostRules.json` | `jb/src/core/IO/cfg/` |
 | `TranslationConfig.json` | `jb/src/core/Images/Match/Translate/` |
@@ -99,6 +99,7 @@ On API startup, `PrismApiConfiguration.Load()` validates all config and model as
 
 ## Code style (C#)
 
+- **One type per file.** Every class, record, enum, interface, struct, and delegate lives in its own `.cs` file named after the type (e.g. `ImageRole` → `ImageRole.cs`). Never define a second type inside an existing file.
 - **Readable over brief.** Main flow reads like a recipe: `Initialize()` sets up resources, `Process()` / `Run()` expresses the workflow, named helper methods perform each step.
 - Helper methods are defined below the method that calls them within the same class.
 - **XML doc comments** (`/// <summary>`) on every public and internal method.
@@ -109,7 +110,6 @@ On API startup, `PrismApiConfiguration.Load()` validates all config and model as
 - OpenCV: every `Mat` has a name reflecting its state. State color space (BGR/RGB) at every image boundary. Release intermediate `Mat` objects with `using` or explicit `.Dispose()`.
 - K&R braces: opening brace on same line as declaration/statement
 - Method parameters on a single line, never split across lines
-- Object construction: flat `obj.Prop = x;` assignments, NOT object initializer syntax `new Foo { Prop = x }`
 - No XML doc comments on methods; class-level summary only
 - No defensive null-coalescing on internal/known-non-null values
 - Collapse boolean conditions: prefer `!= 1` over separate `== 0` / `> 1` checks
@@ -129,8 +129,6 @@ Use `resolve-library-id` first, then `get-library-docs` with the relevant topic 
 ## Documentation
 
 All accepted project knowledge is in `jb/docs/`. The index at `jb/docs/PRISM-index.md` maps tasks to the relevant doc file — always use it to load only what the current task needs rather than loading everything.
-
-`AGENTFEEDBACK.md` tracks the current open-work index (3 non-empty `jbtodo.md` files, 13 open todos as of last sync). One frozen todo exists at `jb/src/` (fixture folder structure) — keep it frozen until the user explicitly thaws it.
 
 Folder-local `jbtodo.md` files hold unresolved decisions. Once a todo answer is accepted, its decision moves to `jb/docs/` and the todo block is removed. See `AGENTS.md` for the full todo lifecycle protocol.
 
