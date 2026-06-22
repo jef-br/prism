@@ -15,7 +15,7 @@
     <Compile Include="PrismJobRequest.cs" />
     <Compile Include="PrismJobResult.cs" />
     <Compile Include="PrismProcessingParameters.cs" />
-    <Compile Include="..\Excel\FamilyRecord.cs" Link="FamilyRecord.cs" />
+    <Compile Include="..\Excel\FamilyIDRecord.cs" Link="FamilyIDRecord.cs" />
     <Compile Include="..\IO\BatchManifest.cs" Link="BatchManifest.cs" />
     <Compile Include="..\IO\BatchManifestSummary.cs" Link="BatchManifestSummary.cs" />
     <Compile Include="..\IO\ManifestImageRow.cs" Link="ManifestImageRow.cs" />

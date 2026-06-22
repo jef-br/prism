@@ -221,6 +221,27 @@ public class PipelineIntegrationTests
         Assert.True(result.ZipBytes!.Length > 0);
     }
 
+    /// <summary>
+    /// Non-vacuous guard: real OK rows must exist and carry a FamilyID. This is the assertion the other
+    /// SPACINI29 tests lack — they are all satisfied when every image is KO. A classification (CLIP)
+    /// failure must never KO an image, so filename-token matching can still assign a FamilyID.
+    /// </summary>
+    [Fact]
+    public async Task SPACINI29_TINY_ImagesAreAssociatedToFamilyId()
+    {
+        var result = await new PrismService().Process(BuildTinyJobRequest());
+
+        Assert.Equal("Completed", result.Status);
+        Assert.NotEmpty(result.OkImages);
+
+        int withFamily = result.OkImages.Count(r => !string.IsNullOrWhiteSpace(r.FamilyId));
+        Assert.True(withFamily > 0,
+            $"Expected OK images associated to a FamilyID; got {withFamily} with a FamilyID of {result.OkImages.Count} OK and {result.KoImages.Count} KO.");
+
+        // A CLIP failure must degrade gracefully, not KO the image.
+        Assert.DoesNotContain(result.KoImages, r => r.KoReasonCode == "CLASSIFY_ERROR");
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

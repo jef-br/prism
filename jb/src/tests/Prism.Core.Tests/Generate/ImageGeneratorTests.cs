@@ -7,6 +7,7 @@ namespace PrismCoreTests.Generate;
 /// Records are built inline per test with Family and DetOrder pre-set
 /// (as they would be after the Ordered stage). Config is loaded from the deployed
 /// Prism_Config.json, so thresholds reflect the real configuration values.
+/// <see cref="ImageGenerator.Run"/> returns the new generated records directly.
 /// </summary>
 public class ImageGeneratorTests
 {
@@ -15,32 +16,27 @@ public class ImageGeneratorTests
     [Fact]
     public void Run_GenerationDisabled_AllNonKoImagesSkipped()
     {
-        PipelineContext context = MakeContext(
+        List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("img1.jpg", "FAM001", 0, width: 2000, height: 2000),
             MakeLambda("img2.jpg", "FAM002", 0, width: 2000, height: 2000)
-        ],
-        generationEnabled: false);
+        ];
 
-        ImageGenerator.Run(context);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: false);
 
-        Assert.All(context.LambdaRecords, r =>
+        Assert.All(records, r =>
             Assert.Equal(GenerationRouteState.Skipped, r.GenerationRouteState));
-        Assert.Equal(0, context.GeneratedCount);
+        Assert.Empty(generated);
     }
 
     [Fact]
     public void Run_GenerationDisabled_KoImagesNotTouched()
     {
-        PipelineContext context = MakeContext(
-        [
-            MakeLambda("ko.jpg", "FAM001", 0, isKo: true)
-        ],
-        generationEnabled: false);
+        List<ImageRecord_LAMBDA> records = [MakeLambda("ko.jpg", "FAM001", 0, isKo: true)];
 
-        ImageGenerator.Run(context);
+        ImageGenerator.Run(records, generationEnabled: false);
 
-        Assert.Equal(GenerationRouteState.NotEvaluated, context.LambdaRecords[0].GenerationRouteState);
+        Assert.Equal(GenerationRouteState.NotEvaluated, records[0].GenerationRouteState);
     }
 
     // ─── Family above threshold ───────────────────────────────────────────────
@@ -49,17 +45,17 @@ public class ImageGeneratorTests
     public void Run_FamilyAboveThreshold_AllSkipped()
     {
         // MinImagesPerFamily = 1 in config; 2 images = above threshold
-        PipelineContext context = MakeContext(
+        List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("img1.jpg", "FAM001", 0, width: 2000, height: 2000),
             MakeLambda("img2.jpg", "FAM001", 1, width: 2000, height: 2000)
-        ]);
+        ];
 
-        ImageGenerator.Run(context);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
 
-        Assert.All(context.LambdaRecords, r =>
+        Assert.All(records, r =>
             Assert.Equal(GenerationRouteState.Skipped, r.GenerationRouteState));
-        Assert.Equal(0, context.GeneratedCount);
+        Assert.Empty(generated);
     }
 
     // ─── Quality check ────────────────────────────────────────────────────────
@@ -68,15 +64,12 @@ public class ImageGeneratorTests
     public void Run_HeroTooSmall_AllMembersSkippedLowQuality()
     {
         // 800×800 is below the 1600×1600 minimum in config
-        PipelineContext context = MakeContext(
-        [
-            MakeLambda("small.jpg", "FAM001", 0, width: 800, height: 800)
-        ]);
+        List<ImageRecord_LAMBDA> records = [MakeLambda("small.jpg", "FAM001", 0, width: 800, height: 800)];
 
-        ImageGenerator.Run(context);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
 
-        Assert.Equal(GenerationRouteState.SkippedLowQuality, context.LambdaRecords[0].GenerationRouteState);
-        Assert.Equal(0, context.GeneratedCount);
+        Assert.Equal(GenerationRouteState.SkippedLowQuality, records[0].GenerationRouteState);
+        Assert.Empty(generated);
     }
 
     [Fact]
@@ -84,14 +77,11 @@ public class ImageGeneratorTests
     {
         // Width=0, Height=0 means the Imported stage did not record dimensions.
         // Unknown dimensions pass the quality check.
-        PipelineContext context = MakeContext(
-        [
-            MakeLambda("unknown.jpg", "FAM001", 0, width: 0, height: 0)
-        ]);
+        List<ImageRecord_LAMBDA> records = [MakeLambda("unknown.jpg", "FAM001", 0, width: 0, height: 0)];
 
-        ImageGenerator.Run(context);
+        ImageGenerator.Run(records, generationEnabled: true);
 
-        Assert.Equal(GenerationRouteState.Gated, context.LambdaRecords[0].GenerationRouteState);
+        Assert.Equal(GenerationRouteState.Gated, records[0].GenerationRouteState);
     }
 
     // ─── Gated path ──────────────────────────────────────────────────────────
@@ -99,43 +89,33 @@ public class ImageGeneratorTests
     [Fact]
     public void Run_QualifiedHero_BackendUnavailable_RouteStateIsGated()
     {
-        PipelineContext context = MakeContext(
-        [
-            MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)
-        ]);
+        List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
 
-        ImageGenerator.Run(context);
+        ImageGenerator.Run(records, generationEnabled: true);
 
-        Assert.Equal(GenerationRouteState.Gated, context.LambdaRecords[0].GenerationRouteState);
+        Assert.Equal(GenerationRouteState.Gated, records[0].GenerationRouteState);
     }
 
     [Fact]
     public void Run_QualifiedHero_GeneratedChildAttachedToHero()
     {
-        PipelineContext context = MakeContext(
-        [
-            MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)
-        ]);
+        List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
 
-        ImageGenerator.Run(context);
+        ImageGenerator.Run(records, generationEnabled: true);
 
-        Assert.Single(context.LambdaRecords[0].GeneratedChildren);
-        Assert.Equal(GenerationStatus.Gated, context.LambdaRecords[0].GeneratedChildren[0].Status);
-        Assert.Equal("FAM001", context.LambdaRecords[0].GeneratedChildren[0].SourceFamilyId);
+        Assert.Single(records[0].GeneratedChildren);
+        Assert.Equal(GenerationStatus.Gated, records[0].GeneratedChildren[0].Status);
+        Assert.Equal("FAM001", records[0].GeneratedChildren[0].SourceFamilyId);
     }
 
     [Fact]
     public void Run_QualifiedHero_GeneratedCountIncremented()
     {
-        PipelineContext context = MakeContext(
-        [
-            MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)
-        ]);
+        List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
 
-        ImageGenerator.Run(context);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
 
-        Assert.Equal(1, context.GeneratedCount);
-        Assert.Single(context.GeneratedRecords);
+        Assert.Single(generated);
     }
 
     // ─── KO passthrough ───────────────────────────────────────────────────────
@@ -144,17 +124,17 @@ public class ImageGeneratorTests
     public void Run_KoImageNotCountedInFamilySize_FamilyProceedsToGeneration()
     {
         // 1 non-KO + 1 KO = effective family size of 1 → proceed to generation path
-        PipelineContext context = MakeContext(
+        List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000),
             MakeLambda("ko.jpg",   "FAM001", 1, isKo: true)
-        ]);
+        ];
 
-        ImageGenerator.Run(context);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
 
-        Assert.Equal(GenerationRouteState.Gated,         context.LambdaRecords[0].GenerationRouteState);
-        Assert.Equal(GenerationRouteState.NotEvaluated,  context.LambdaRecords[1].GenerationRouteState);
-        Assert.Equal(1, context.GeneratedCount);
+        Assert.Equal(GenerationRouteState.Gated,         records[0].GenerationRouteState);
+        Assert.Equal(GenerationRouteState.NotEvaluated,  records[1].GenerationRouteState);
+        Assert.Single(generated);
     }
 
     // ─── Multi-family isolation ───────────────────────────────────────────────
@@ -164,19 +144,19 @@ public class ImageGeneratorTests
     {
         // FAM001 has 1 image → proceeds to gated generation.
         // FAM002 has 2 images → skipped (above threshold).
-        PipelineContext context = MakeContext(
+        List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("fam1a.jpg", "FAM001", 0, width: 2000, height: 2000),
             MakeLambda("fam2a.jpg", "FAM002", 0, width: 2000, height: 2000),
             MakeLambda("fam2b.jpg", "FAM002", 1, width: 2000, height: 2000)
-        ]);
+        ];
 
-        ImageGenerator.Run(context);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
 
-        Assert.Equal(GenerationRouteState.Gated,   context.LambdaRecords[0].GenerationRouteState);
-        Assert.Equal(GenerationRouteState.Skipped, context.LambdaRecords[1].GenerationRouteState);
-        Assert.Equal(GenerationRouteState.Skipped, context.LambdaRecords[2].GenerationRouteState);
-        Assert.Equal(1, context.GeneratedCount);
+        Assert.Equal(GenerationRouteState.Gated,   records[0].GenerationRouteState);
+        Assert.Equal(GenerationRouteState.Skipped, records[1].GenerationRouteState);
+        Assert.Equal(GenerationRouteState.Skipped, records[2].GenerationRouteState);
+        Assert.Single(generated);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -203,26 +183,5 @@ public class ImageGeneratorTests
             IsKo            = isKo,
             KoReasonCode    = isKo ? "TEST_KO" : null
         };
-    }
-
-    /// <summary>
-    /// Builds a minimal <see cref="PipelineContext"/> populated with the given lambda records.
-    /// </summary>
-    private static PipelineContext MakeContext(
-        IReadOnlyList<ImageRecord_LAMBDA> images,
-        bool generationEnabled = true)
-    {
-        PipelineContext context = new(
-            Guid.NewGuid(),
-            imageRecords:   [],
-            excelRecords:   [],
-            zipFileRecords: [],
-            parameters:     new PrismProcessingParameters { Format = "json", Generation = generationEnabled },
-            startedAt:      DateTimeOffset.UtcNow);
-
-        foreach (ImageRecord_LAMBDA img in images)
-            context.LambdaRecords.Add(img);
-
-        return context;
     }
 }

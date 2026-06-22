@@ -9,25 +9,31 @@ namespace Prism.Core;
 internal static class ImageRenamer
 {
     /// <summary>
-    /// Runs the Renamed stage for a job context.
+    /// Runs the Renamed stage over a matched LAMBDA collection.
     /// Skips KO records and records without a family assignment.
-    /// Groups accepted records by FamilyID, detects det-slot collisions, KOs the whole
-    /// family on collision, and increments <see cref="PipelineContext.OkRenamedCount"/>.
+    /// Groups accepted records by FamilyID, detects det-slot collisions, and KOs the whole
+    /// family on collision.
     /// </summary>
-    /// <param name="context">Mutable per-job pipeline context.</param>
-    internal static void Run(PipelineContext context)
+    /// <param name="records">Ordered LAMBDA records.</param>
+    /// <returns>Count of successfully renamed images and count of images KO'd by collision.</returns>
+    internal static (int OkRenamed, int KoAdded) Run(List<ImageRecord_LAMBDA> records)
     {
-        IEnumerable<IGrouping<string, ImageRecord_LAMBDA>> families = context.LambdaRecords
+        IEnumerable<IGrouping<string, ImageRecord_LAMBDA>> families = records
             .Where(r => !r.IsKo && !string.IsNullOrEmpty(r.Family))
             .GroupBy(r => r.Family);
+
+        int okRenamed = 0;
+        int koAdded   = 0;
 
         foreach (IGrouping<string, ImageRecord_LAMBDA> family in families)
         {
             if (HasDetCollision(family))
-                KoFamily(family, context);
+                koAdded += KoFamily(family);
             else
-                context.OkRenamedCount += family.Count();
+                okRenamed += family.Count();
         }
+
+        return (okRenamed, koAdded);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -42,14 +48,17 @@ internal static class ImageRenamer
     /// <summary>
     /// Marks every image in the family as KO with reason code <c>RENAME_COLLISION</c>.
     /// </summary>
-    private static void KoFamily(IGrouping<string, ImageRecord_LAMBDA> family, PipelineContext context)
+    /// <returns>Number of records KO'd.</returns>
+    private static int KoFamily(IGrouping<string, ImageRecord_LAMBDA> family)
     {
+        int koAdded = 0;
         foreach (ImageRecord_LAMBDA record in family)
         {
             record.IsKo          = true;
             record.KoReasonCode  = "RENAME_COLLISION";
             record.KoSafeMessage = $"Det-slot collision in family '{record.Family}': multiple images share the same det index.";
-            context.KoRecordCount++;
+            koAdded++;
         }
+        return koAdded;
     }
 }

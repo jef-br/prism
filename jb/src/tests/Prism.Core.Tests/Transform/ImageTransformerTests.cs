@@ -4,10 +4,10 @@ namespace PrismCoreTests.Transform;
 
 /// <summary>
 /// Unit tests for <see cref="ImageTransformer"/> transform routing and
-/// <see cref="ShellStage_Transform"/> skip-flag behaviour.
+/// <see cref="TransformService"/> skip-flag behaviour.
 /// Transform routing tests call <see cref="ImageTransformer.TransformImage"/> directly
 /// (no configuration dependency — processor gating is unconditional in this build).
-/// Shell behaviour tests verify the skip path and context counter via the full shell signature.
+/// Service behaviour tests verify the skip path and the OkTransformed count via the typed result.
 /// </summary>
 public class ImageTransformerTests
 {
@@ -113,81 +113,78 @@ public class ImageTransformerTests
         Assert.Equal(1600, lambda.TransformationResult?.InputHeight);
     }
 
-    // ─── Shell — transform disabled ──────────────────────────────────────────
+    // ─── Service — transform disabled ────────────────────────────────────────
 
     [Fact]
-    public void Shell_TransformDisabled_AllNonKoImagesAreSkipped()
+    public async Task Service_TransformDisabled_AllNonKoImagesAreSkipped()
     {
-        PipelineContext context = MakeContext(
+        MatchingResult matched = MakeMatching(
         [
             MakeLambda("a.jpg", "FAM001", phenotype: "packshot-front"),
             MakeLambda("b.jpg", "FAM001", phenotype: null)
-        ],
-        transformEnabled: false);
+        ]);
 
-        ShellStage_Transform.Run(context, LoadConfig());
+        await new TransformService().TransformAsync(matched, transformEnabled: false, null, default);
 
-        Assert.All(context.LambdaRecords, r =>
+        Assert.All(matched.LambdaRecords, r =>
             Assert.Equal(TransformationStatus.Skipped, r.TransformationResult?.Status));
     }
 
     [Fact]
-    public void Shell_TransformDisabled_KoImagesNotTouched()
+    public async Task Service_TransformDisabled_KoImagesNotTouched()
     {
-        PipelineContext context = MakeContext(
+        MatchingResult matched = MakeMatching(
         [
             MakeLambda("ko.jpg", "FAM001", phenotype: null, isKo: true)
-        ],
-        transformEnabled: false);
+        ]);
 
-        ShellStage_Transform.Run(context, LoadConfig());
+        await new TransformService().TransformAsync(matched, transformEnabled: false, null, default);
 
-        Assert.Null(context.LambdaRecords[0].TransformationResult);
+        Assert.Null(matched.LambdaRecords[0].TransformationResult);
     }
 
     [Fact]
-    public void Shell_TransformDisabled_OkTransformedCountIsZero()
+    public async Task Service_TransformDisabled_OkTransformedCountIsZero()
     {
-        PipelineContext context = MakeContext(
+        MatchingResult matched = MakeMatching(
         [
             MakeLambda("a.jpg", "FAM001", phenotype: "packshot-front")
-        ],
-        transformEnabled: false);
+        ]);
 
-        ShellStage_Transform.Run(context, LoadConfig());
+        TransformResult result = await new TransformService().TransformAsync(matched, transformEnabled: false, null, default);
 
-        Assert.Equal(0, context.OkTransformedCount);
+        Assert.Equal(0, result.OkTransformedCount);
     }
 
-    // ─── Shell — transform enabled ────────────────────────────────────────────
+    // ─── Service — transform enabled ──────────────────────────────────────────
 
     [Fact]
-    public void Shell_TransformEnabled_OkTransformedCountMatchesNonKoImages()
+    public async Task Service_TransformEnabled_OkTransformedCountMatchesNonKoImages()
     {
-        PipelineContext context = MakeContext(
+        MatchingResult matched = MakeMatching(
         [
             MakeLambda("a.jpg", "FAM001", phenotype: "packshot-front"),
             MakeLambda("b.jpg", "FAM001", phenotype: null),
             MakeLambda("ko.jpg", "FAM002", phenotype: null, isKo: true)
         ]);
 
-        ShellStage_Transform.Run(context, LoadConfig());
+        TransformResult result = await new TransformService().TransformAsync(matched, transformEnabled: true, null, default);
 
-        Assert.Equal(2, context.OkTransformedCount);
+        Assert.Equal(2, result.OkTransformedCount);
     }
 
     [Fact]
-    public void Shell_TransformEnabled_KoImagesNotTransformed()
+    public async Task Service_TransformEnabled_KoImagesNotTransformed()
     {
-        PipelineContext context = MakeContext(
+        MatchingResult matched = MakeMatching(
         [
             MakeLambda("ko.jpg", "FAM001", phenotype: null, isKo: true)
         ]);
 
-        ShellStage_Transform.Run(context, LoadConfig());
+        TransformResult result = await new TransformService().TransformAsync(matched, transformEnabled: true, null, default);
 
-        Assert.Null(context.LambdaRecords[0].TransformationResult);
-        Assert.Equal(0, context.OkTransformedCount);
+        Assert.Null(matched.LambdaRecords[0].TransformationResult);
+        Assert.Equal(0, result.OkTransformedCount);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -223,27 +220,25 @@ public class ImageTransformerTests
         return lambda;
     }
 
-    private static PipelineContext MakeContext(
-        IReadOnlyList<ImageRecord_LAMBDA> images,
-        bool transformEnabled = true)
+    /// <summary>
+    /// Builds a minimal <see cref="MatchingResult"/> carrying the given LAMBDA records, with an empty
+    /// <see cref="IngestResult"/> — enough for the Transform service, which only reads the LAMBDA list.
+    /// </summary>
+    private static MatchingResult MakeMatching(IReadOnlyList<ImageRecord_LAMBDA> images)
     {
-        PipelineContext context = new(
-            Guid.NewGuid(),
-            imageRecords:   [],
-            excelRecords:   [],
-            zipFileRecords: [],
-            parameters:     new PrismProcessingParameters { Format = "json", Transform = transformEnabled },
-            startedAt:      DateTimeOffset.UtcNow);
+        IngestResult ingest = new()
+        {
+            JobID            = Guid.NewGuid(),
+            Parameters       = new PrismProcessingParameters { Format = "json" },
+            NormalizedImages = [],
+            FamilyRecords    = [],
+            JobTempFolder    = string.Empty
+        };
 
-        foreach (ImageRecord_LAMBDA img in images)
-            context.LambdaRecords.Add(img);
-
-        return context;
-    }
-
-    private static PrismConfiguration LoadConfig()
-    {
-        string? configPath = PrismConfigLocator.FindPrismConfigPath();
-        return PrismConfiguration.LoadPrismConfig(configPath!);
+        return new MatchingResult
+        {
+            Ingest        = ingest,
+            LambdaRecords = [.. images]
+        };
     }
 }

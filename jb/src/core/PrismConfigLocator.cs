@@ -41,4 +41,46 @@ public static class PrismConfigLocator
         string candidate = Path.Combine(coreDirectory, relativePathFromCore);
         return File.Exists(candidate) ? candidate : null;
     }
+
+    /// <summary>
+    /// Resolves a large model asset (e.g. the CLIP ONNX model) that is deliberately not copied into every
+    /// build output. Resolution order:
+    /// <list type="number">
+    /// <item>Beside Prism_Config.json — a production deployment ships the model with the config.</item>
+    /// <item><c>PRISM_ONNX_MODEL_DIR</c> environment override, joined with the asset's relative path.</item>
+    /// <item>The single source-tree copy under <c>jb/src/core/</c>, found by walking up from the binary —
+    /// a dev/test convenience so the 146 MB model is never duplicated per project or per test run.</item>
+    /// </list>
+    /// Returns <c>null</c> when the asset cannot be found in any location.
+    /// </summary>
+    /// <param name="relativePathFromCore">Relative path from the core root, e.g. "Images/Classify/ONNX/clip-vit-b32-uint8/model_uint8.onnx".</param>
+    internal static string? FindModelAsset(string relativePathFromCore)
+    {
+        string? besideConfig = FindFolderLocalConfig(relativePathFromCore);
+        if (besideConfig is not null) return besideConfig;
+
+        string? modelRoot = Environment.GetEnvironmentVariable("PRISM_ONNX_MODEL_DIR");
+        if (!string.IsNullOrWhiteSpace(modelRoot))
+        {
+            string overridden = Path.Combine(modelRoot, relativePathFromCore);
+            if (File.Exists(overridden)) return overridden;
+        }
+
+        return FindInSourceTree(relativePathFromCore);
+    }
+
+    /// <summary>
+    /// Walks up from the running binary looking for <c>{ancestor}/jb/src/core/{relativePathFromCore}</c>,
+    /// the canonical single copy of source-tracked assets. Returns the first match, or <c>null</c>.
+    /// </summary>
+    private static string? FindInSourceTree(string relativePathFromCore)
+    {
+        for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            string candidate = Path.Combine(dir.FullName, "jb", "src", "core", relativePathFromCore);
+            if (File.Exists(candidate)) return candidate;
+        }
+
+        return null;
+    }
 }

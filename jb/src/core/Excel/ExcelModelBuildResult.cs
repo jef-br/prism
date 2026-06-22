@@ -8,7 +8,7 @@ public sealed record ExcelModelBuildResult(
     IReadOnlyList<ExcelProcessingDiagnostic> Diagnostics)
 {
     /// <summary>
-    /// FamilyRecord projection consumed by downstream matching.
+    /// FamilyIDRecord projection consumed by downstream matching.
     /// </summary>
-    public IReadOnlyList<FamilyRecord> FamilyRecords => Model.ToFamilyRecords();
+    public IReadOnlyList<FamilyIDRecord> FamilyRecords => Model.ToFamilyRecords();
 }

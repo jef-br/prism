@@ -7,39 +7,37 @@ namespace Prism.Core;
 /// <summary>
 /// Packages the pipeline output into the requested export format (zip or JSON).
 /// Zip: manifest.json at root + OK/{NewName}.jpg per non-KO image + KO/{InitialFullName}.jpg per import-OK/pipeline-KO image + first Excel file.
-/// JSON: sets FinalManifest on context; API serializes it via PrismJsonResultEnvelope.
+/// JSON: returns FinalManifest only; the API serializes it via PrismJsonResultEnvelope.
+/// Reads everything it needs from a single explicit <see cref="ExportRequest"/>.
 /// </summary>
 internal static class Exporter
 {
     /// <summary>
     /// Builds output records for all non-KO lambdas, then produces the requested export format.
-    /// Sets <see cref="PipelineContext.ExportResult"/> before returning.
     /// </summary>
-    /// <param name="context">Mutable per-job pipeline context.</param>
-    /// <param name="configuration">Validated PRISM configuration.</param>
-    internal static void Run(PipelineContext context, PrismConfiguration configuration)
+    /// <param name="request">Final LAMBDA records, normalized images, and the accumulated manifest counts.</param>
+    /// <returns>The canonical manifest plus ZIP bytes when ZIP format was requested.</returns>
+    internal static ExportArtifacts Run(ExportRequest request)
     {
-        BuildOutputRecords(context);
+        BuildOutputRecords(request);
 
-        string format = context.Parameters.Format ?? "json";
-
-        context.ExportResult = string.Equals(format, "zip", StringComparison.OrdinalIgnoreCase)
-            ? BuildZip(context)
-            : BuildJson(context);
+        return string.Equals(request.Format, "zip", StringComparison.OrdinalIgnoreCase)
+            ? BuildZip(request)
+            : BuildJson(request);
     }
 
     // ─── Output record construction ───────────────────────────────────────────
 
     /// <summary>
     /// Attaches an <see cref="ImageRecord_OUTPUT"/> to each non-KO lambda record.
-    /// Uses <see cref="PipelineContext.NormalizedImages"/> to resolve the artifact path.
+    /// Uses <see cref="ExportRequest.NormalizedImages"/> to resolve the artifact path.
     /// </summary>
-    private static void BuildOutputRecords(PipelineContext context)
+    private static void BuildOutputRecords(ExportRequest request)
     {
-        Dictionary<string, ImageRecord_INPUT> inputLookup = context.NormalizedImages
+        Dictionary<string, ImageRecord_INPUT> inputLookup = request.NormalizedImages
             .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
 
-        foreach (ImageRecord_LAMBDA lambda in context.LambdaRecords)
+        foreach (ImageRecord_LAMBDA lambda in request.LambdaRecords)
         {
             if (lambda.IsKo) continue;
 
@@ -69,19 +67,19 @@ internal static class Exporter
     /// <summary>
     /// Builds a ZIP archive containing manifest.json, OK images, KO images, and the first Excel file.
     /// </summary>
-    private static ExportStageResult BuildZip(PipelineContext context)
+    private static ExportArtifacts BuildZip(ExportRequest request)
     {
-        BatchManifest manifest = BuildManifest(context);
+        BatchManifest manifest = BuildManifest(request);
         MemoryStream ms = new();
 
         using (ZipArchive zip = new(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
             AddTextEntry(zip, "manifest.json", JsonSerializer.Serialize(manifest));
 
-            Dictionary<string, ImageRecord_INPUT> inputLookup = context.NormalizedImages
+            Dictionary<string, ImageRecord_INPUT> inputLookup = request.NormalizedImages
                 .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
 
-            foreach (ImageRecord_LAMBDA lambda in context.LambdaRecords)
+            foreach (ImageRecord_LAMBDA lambda in request.LambdaRecords)
             {
                 if (lambda.IsKo) continue;
 
@@ -91,7 +89,7 @@ internal static class Exporter
                 AddBytesEntry(zip, $"OK/{lambda.NewName}", File.ReadAllBytes(artifactPath));
             }
 
-            foreach (ImageRecord_LAMBDA lambda in context.LambdaRecords)
+            foreach (ImageRecord_LAMBDA lambda in request.LambdaRecords)
             {
                 if (!lambda.IsKo) continue;
 
@@ -103,15 +101,11 @@ internal static class Exporter
                 AddBytesEntry(zip, $"KO/{lambda.InitialFullName}", File.ReadAllBytes(koPath));
             }
 
-            if (context.ExcelRecords.Count > 0)
-            {
-                string? excelPath = context.ExcelRecords[0].TempFilePath;
-                if (excelPath is not null && File.Exists(excelPath))
-                    AddBytesEntry(zip, Path.GetFileName(excelPath), File.ReadAllBytes(excelPath));
-            }
+            if (request.FirstExcelTempPath is not null && File.Exists(request.FirstExcelTempPath))
+                AddBytesEntry(zip, Path.GetFileName(request.FirstExcelTempPath), File.ReadAllBytes(request.FirstExcelTempPath));
         }
 
-        return new ExportStageResult { ZipBytes = ms.ToArray(), FinalManifest = manifest };
+        return new ExportArtifacts { ZipBytes = ms.ToArray(), Manifest = manifest };
     }
 
     // ─── JSON export ──────────────────────────────────────────────────────────
@@ -119,41 +113,40 @@ internal static class Exporter
     /// <summary>
     /// Builds the manifest for JSON output. ZIP bytes remain null; the API serializes the result via PrismJsonResultEnvelope.
     /// </summary>
-    private static ExportStageResult BuildJson(PipelineContext context)
+    private static ExportArtifacts BuildJson(ExportRequest request)
     {
-        return new ExportStageResult { ZipBytes = null, FinalManifest = BuildManifest(context) };
+        return new ExportArtifacts { ZipBytes = null, Manifest = BuildManifest(request) };
     }
 
     // ─── Manifest builder ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// Builds the canonical <see cref="BatchManifest"/> from the current pipeline context.
-    /// Called once per export; the result is stored on <see cref="ExportStageResult.FinalManifest"/>
-    /// so Pipeline.BuildSuccessResult can reuse it without rebuilding.
+    /// Builds the canonical <see cref="BatchManifest"/> from the export request.
+    /// Called once per export; the result is reused for both the response and ZIP entry.
     /// </summary>
-    private static BatchManifest BuildManifest(PipelineContext context)
+    private static BatchManifest BuildManifest(ExportRequest request)
     {
-        IReadOnlyList<ManifestImageRow> rows = context.LambdaRecords
+        IReadOnlyList<ManifestImageRow> rows = request.LambdaRecords
             .Select(ToManifestRow)
             .ToList();
 
         return new BatchManifest
         {
-            JobID     = context.JobID,
+            JobID     = request.JobID,
             Summary   = new BatchManifestSummary
             {
-                ImageCount     = context.ImageRecords.Count,
-                ExcelCount     = context.ExcelRecords.Count,
-                ZipCount       = context.ZipFileRecords.Count,
-                OkRenamed      = context.OkRenamedCount,
-                KoRecords      = context.KoRecordCount,
-                OkTransformed  = context.OkTransformedCount,
+                ImageCount     = request.ImageCount,
+                ExcelCount     = request.ExcelCount,
+                ZipCount       = request.ZipCount,
+                OkRenamed      = request.OkRenamedCount,
+                KoRecords      = request.KoRecordCount,
+                OkTransformed  = request.OkTransformedCount,
                 KoTransformed  = 0,
-                GeneratedCount = context.GeneratedCount
+                GeneratedCount = request.GeneratedCount
             },
             ImageRows      = rows,
             RouteSummaries = Pipeline.StageOrder.Select(stage => $"{stage}: completed.").ToArray(),
-            Warnings       = context.Warnings
+            Warnings       = request.Warnings
         };
     }
 

@@ -79,7 +79,7 @@ public sealed class Importer
         ProcessDirectImageRecords(imageRecords, jobTempFolder, normalizedImages, imageKoRecords);
         ProcessDirectExcelRecords(excelRecords, excelFilePaths);
 
-        IReadOnlyList<FamilyRecord> familyRecords = BuildFamilyRecords(excelFilePaths, excelDiagnostics);
+        IReadOnlyList<FamilyIDRecord> familyRecords = BuildFamilyRecords(excelFilePaths, excelDiagnostics);
 
         return new ImportStageResult
         {
@@ -258,9 +258,9 @@ public sealed class Importer
 
     /// <summary>
     /// Builds the Internal Excel Model from all collected Excel file paths and
-    /// projects the result into a FamilyRecord list.
+    /// projects the result into a FamilyIDRecord list.
     /// </summary>
-    private IReadOnlyList<FamilyRecord> BuildFamilyRecords(
+    private IReadOnlyList<FamilyIDRecord> BuildFamilyRecords(
         IReadOnlyList<string> excelFilePaths,
         List<ExcelProcessingDiagnostic> diagnostics)
     {

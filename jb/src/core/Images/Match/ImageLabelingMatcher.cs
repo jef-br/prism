@@ -15,7 +15,7 @@ internal sealed class ImageLabelingMatcher
     /// <returns>Evidence items for each label-to-family match found.</returns>
     internal IReadOnlyList<LabelEvidenceItem> BuildEvidence(
         ImageRecord_LAMBDA record,
-        IReadOnlyList<FamilyRecord> families,
+        IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> labelRules)
     {
         ClassificationToken[] influentialTags = record.Tags.Influential;
@@ -32,7 +32,7 @@ internal sealed class ImageLabelingMatcher
             {
                 bool isAllLabels = rule.ExcelField.Equals("ALL", StringComparison.OrdinalIgnoreCase);
 
-                foreach (FamilyRecord family in families)
+                foreach (FamilyIDRecord family in families)
                 {
                     if (isAllLabels)
                     {
@@ -65,7 +65,7 @@ internal sealed class ImageLabelingMatcher
     /// <summary>
     /// Returns true when the normalized label appears as a token in any non-numeric column of the family.
     /// </summary>
-    private static bool HasTokenOverlapInAnyStringColumn(string normalizedLabel, FamilyRecord family)
+    private static bool HasTokenOverlapInAnyStringColumn(string normalizedLabel, FamilyIDRecord family)
     {
         foreach (KeyValuePair<string, IReadOnlyList<string>> property in family.NormalizedTokens)
         {

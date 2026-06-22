@@ -1,0 +1,228 @@
+namespace Prism.Core;
+
+/// <summary>
+/// In-process Matching implementation — owns the ImageRecord_INPUT → ImageRecord_LAMBDA conversion.
+/// Per image it fans out to FeatureAnalysis and Classification, fans in to ImageNGP for the phenotype,
+/// then runs the matching waterfall, det-order assignment, and rename validation. Emits the Classified,
+/// Matched, Ordered, and Renamed stage events in order and persists each LAMBDA document to the artifact
+/// store so downstream services can read a stage's output without a shared mutable context.
+/// </summary>
+public sealed class MatchingService : IMatchingService
+{
+    private readonly PrismConfiguration configuration;
+
+    /// <summary>Creates the service with the validated PRISM configuration (thresholds, dedup policy).</summary>
+    public MatchingService(PrismConfiguration configuration)
+        => this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+
+    /// <inheritdoc/>
+    public async Task<MatchingResult> MatchAsync(
+        IngestResult ingest,
+        IArtifactStore store,
+        Func<PipelineProgressEvent, Task>? progress,
+        CancellationToken cancellationToken)
+    {
+        // ── Classified: build one LAMBDA per normalized image (FeatureAnalysis + Classification + ImageNGP) ──
+        await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Classified, cancellationToken);
+
+        List<ImageRecord_INPUT> okImages = ingest.NormalizedImages
+            .Where(r => r.ImportStatus == ImportStatus.Ok && r.NormalizedJpgPath is not null)
+            .ToList();
+
+        IImageNgpService ngp                     = new ImageNgpService(LoadRuleSet());
+        IFeatureAnalysisService featureAnalysis  = new FeatureAnalysisService();
+        using IClassificationService classification = ClassificationService.Create(configuration);
+
+        List<ImageRecord_LAMBDA> lambdaRecords = [];
+        Dictionary<ImageRecord_INPUT, ImageRecord_LAMBDA> lambdaByImage = new();
+        int classifyKo        = 0;
+        int classifyDegraded  = 0;
+        int phenotypeAssigned = 0;
+
+        foreach (ImageRecord_INPUT image in okImages)
+        {
+            ImageRecord_LAMBDA lambda = BuildLambda(image, featureAnalysis, classification, ngp,
+                ref classifyKo, ref classifyDegraded, ref phenotypeAssigned);
+            lambdaByImage[image] = lambda;
+            lambdaRecords.Add(lambda);
+        }
+
+        int duplicatesRemoved = configuration.ShouldDeduplicate
+            ? Deduplicate(okImages, lambdaByImage, classification)
+            : 0;
+
+        // ── Matched: resolve a FamilyID for each image via the waterfall ──
+        await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Matched, cancellationToken);
+        int matchKo = ImageMatcher.Run(lambdaRecords, ingest.FamilyRecords);
+
+        // ── Ordered: assign det slots within each family ──
+        await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Ordered, cancellationToken);
+        ImageOrderer.Run(lambdaRecords, ingest.FamilyRecords);
+
+        // ── Renamed: validate det-slot uniqueness, count renamed images ──
+        await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Renamed, cancellationToken);
+        (int okRenamed, int renameKo) = ImageRenamer.Run(lambdaRecords);
+
+        PersistLambdaDocuments(store, ingest.JobID, lambdaRecords);
+
+        return new MatchingResult
+        {
+            Ingest                 = ingest,
+            LambdaRecords          = lambdaRecords,
+            OkRenamedCount         = okRenamed,
+            KoRecordCount          = classifyKo + duplicatesRemoved + matchKo + renameKo,
+            DuplicatesRemoved      = duplicatesRemoved,
+            PhenotypeAssignedCount = phenotypeAssigned,
+            Warnings               = BuildWarnings(classifyDegraded)
+        };
+    }
+
+    /// <summary>
+    /// Surfaces classification degradation as one aggregated, non-silent manifest warning.
+    /// Empty when every image classified cleanly.
+    /// </summary>
+    private static IReadOnlyList<string> BuildWarnings(int classifyDegraded)
+    {
+        if (classifyDegraded == 0) return [];
+        return [$"CLIP classification unavailable for {classifyDegraded} image(s); matched on filename tokens only."];
+    }
+
+    // ─── Per-image classification (fan-out FA + Classification, fan-in ImageNGP) ───
+
+    /// <summary>
+    /// Builds and classifies one LAMBDA. FeatureAnalysis is the core measurement — a failure there KOs the
+    /// image. CLIP tagging is optional enrichment — a failure there is caught and degrades the image to
+    /// "no tags" (it is still measured by FeatureAnalysis and still matches on filename tokens), never KO.
+    /// </summary>
+    private ImageRecord_LAMBDA BuildLambda(
+        ImageRecord_INPUT source,
+        IFeatureAnalysisService featureAnalysis,
+        IClassificationService classification,
+        IImageNgpService ngp,
+        ref int classifyKo,
+        ref int classifyDegraded,
+        ref int phenotypeAssigned)
+    {
+        ImageRecord_LAMBDA lambda = new()
+        {
+            InitialFullName = source.InitialFullName,
+            Width  = source.NormalizedWidth  > 0 ? source.NormalizedWidth  : source.Width,
+            Height = source.NormalizedHeight > 0 ? source.NormalizedHeight : source.Height
+        };
+
+        if (source.NormalizedJpgPath is not null)
+        {
+            // FeatureAnalysis failure → KO: the geometric/visual measurement feeds ImageNGP and ordering.
+            try
+            {
+                featureAnalysis.Analyze(source.NormalizedJpgPath, lambda.Features);
+            }
+            catch (Exception ex)
+            {
+                lambda.IsKo          = true;
+                lambda.KoReasonCode  = "CLASSIFY_ERROR";
+                lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
+                classifyKo++;
+                return lambda;
+            }
+
+            // CLIP failure → degrade, never KO: tags are optional enrichment, and FamilyID matching keys
+            // off filename tokens, so the image must still flow to ImageNGP and the matching waterfall.
+            if (classification.IsReady)
+            {
+                try
+                {
+                    classification.ApplyClipTags(source.NormalizedJpgPath, lambda,
+                        configuration.ThresholdForInfluentialTags,
+                        configuration.ThresholdForDiscardingClassificationTags);
+                }
+                catch
+                {
+                    classifyDegraded++;
+                }
+            }
+        }
+
+        string[] candidates = ngp.EvaluateCandidates(lambda.Features);
+        lambda.CandidatePhenotypes = candidates;
+        lambda.SelectedPhenotype   = candidates.Length > 0 ? candidates[0] : null;
+
+        if (lambda.SelectedPhenotype is not null)
+            phenotypeAssigned++;
+
+        return lambda;
+    }
+
+    // ─── Post-classification visual deduplication ─────────────────────────────
+
+    /// <summary>
+    /// KOs visual duplicates after classification, exempting configured phenotypes (illustrations,
+    /// technical drawings, labels). Returns the number of duplicates suppressed.
+    /// </summary>
+    private int Deduplicate(
+        IReadOnlyList<ImageRecord_INPUT> okImages,
+        Dictionary<ImageRecord_INPUT, ImageRecord_LAMBDA> lambdaByImage,
+        IClassificationService classification)
+    {
+        HashSet<string> exempt = new(configuration.DeduplicationExemptPhenotypes, StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<DedupGroup> groups = classification.FindDuplicates(okImages);
+        int removed = 0;
+
+        foreach (DedupGroup group in groups)
+        {
+            // Skip groups whose canonical was rejected during classification —
+            // its duplicates are not confirmed duplicates of a valid image.
+            if (lambdaByImage.TryGetValue(group.Canonical, out ImageRecord_LAMBDA? canonLambda) && canonLambda.IsKo)
+                continue;
+
+            foreach (ImageRecord_INPUT duplicate in group.Duplicates)
+            {
+                ImageRecord_LAMBDA lambda = lambdaByImage[duplicate];
+
+                // Already rejected (e.g. CLASSIFY_ERROR) — keep its original reason.
+                if (lambda.IsKo) continue;
+
+                // Illustrations, technical drawings, and labels are exempt so EU energy labels and
+                // tech drawings pass; packshots, closeups, and zooms are removed as duplicates.
+                if (lambda.SelectedPhenotype is not null && exempt.Contains(lambda.SelectedPhenotype)) continue;
+
+                lambda.IsKo          = true;
+                lambda.KoReasonCode  = "VISUAL_DUPLICATE";
+                lambda.KoSafeMessage = $"Visual duplicate of {Path.GetFileName(group.Canonical.InitialFullName)}";
+                removed++;
+            }
+        }
+
+        return removed;
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    private static PhenotypeRuleSet LoadRuleSet()
+    {
+        string? imageRolesPath = PrismConfigLocator.FindFolderLocalConfig("ImageNGP/ImageRoles.json");
+        if (imageRolesPath is null)
+            throw new PrismConfigurationException(
+                "ImageRoles.json not found. Ensure ImageNGP/ImageRoles.json is present next to Prism_Config.json.");
+
+        return PhenotypeRuleSet.Load(imageRolesPath);
+    }
+
+    /// <summary>
+    /// Writes each LAMBDA out as a JSON document under the job folder. This is the retrieval substrate
+    /// for distributed deployment; a write failure must never fail an otherwise-successful job, so
+    /// persistence is best-effort in the modular monolith.
+    /// </summary>
+    private static void PersistLambdaDocuments(IArtifactStore store, Guid jobId, IReadOnlyList<ImageRecord_LAMBDA> lambdas)
+    {
+        try
+        {
+            foreach (ImageRecord_LAMBDA lambda in lambdas)
+                store.SaveLambdaDocument(jobId, lambda.InitialFullName, lambda);
+        }
+        catch
+        {
+            // Substrate persistence only — never block job completion on a document write.
+        }
+    }
+}

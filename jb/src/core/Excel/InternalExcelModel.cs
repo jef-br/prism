@@ -12,14 +12,14 @@ public sealed class InternalExcelModel
     /// <summary>
     /// All deduplicated family records keyed by FamilyID.
     /// </summary>
-    public IReadOnlyDictionary<string, FamilyRecord> RecordsByFamilyID => recordsByFamilyID;
+    public IReadOnlyDictionary<string, FamilyIDRecord> RecordsByFamilyID => recordsByFamilyID;
 
     /// <summary>
     /// Token index used by matchers to resolve normalized Excel evidence quickly.
     /// </summary>
     public ExcelTokenStore TokenStore { get; } = new();
 
-    private readonly Dictionary<string, FamilyRecord> recordsByFamilyID = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, FamilyIDRecord> recordsByFamilyID = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Adds one validated worksheet row into the model and merges it with an existing FamilyID when needed.
@@ -37,7 +37,7 @@ public sealed class InternalExcelModel
             throw new ArgumentException("FamilyID is required.", nameof(familyID));
         }
 
-        FamilyRecord familyRecord = GetOrCreateFamilyRecord(familyID.Trim());
+        FamilyIDRecord familyIDRecord = GetOrCreateFamilyRecord(familyID.Trim());
 
         foreach (ExcelPropertyValue propertyValue in propertyValues)
         {
@@ -45,39 +45,39 @@ public sealed class InternalExcelModel
                 ? configuredClassification
                 : ExcelColumnClassification.Descriptive;
 
-            familyRecord.MergeProperty(propertyValue, classification);
+            familyIDRecord.MergeProperty(propertyValue, classification);
         }
 
-        TokenStore.RefreshFromRecord(familyRecord);
+        TokenStore.RefreshFromRecord(familyIDRecord);
     }
 
     /// <summary>
-    /// Maps the Internal Excel Model to the canonical FamilyRecord collection.
+    /// Maps the Internal Excel Model to the canonical FamilyIDRecord collection.
     /// </summary>
-    /// <returns>One FamilyRecord per valid FamilyID.</returns>
-    public IReadOnlyList<FamilyRecord> ToFamilyRecords()
+    /// <returns>One FamilyIDRecord per valid FamilyID.</returns>
+    public IReadOnlyList<FamilyIDRecord> ToFamilyRecords()
     {
         return recordsByFamilyID.Values
             .OrderBy(record => record.FamilyID, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
-    private FamilyRecord GetOrCreateFamilyRecord(string familyID)
+    private FamilyIDRecord GetOrCreateFamilyRecord(string familyID)
     {
-        if (recordsByFamilyID.TryGetValue(familyID, out FamilyRecord? existingRecord))
+        if (recordsByFamilyID.TryGetValue(familyID, out FamilyIDRecord? existingRecord))
         {
             return existingRecord;
         }
 
-        FamilyRecord familyRecord = new(familyID);
-        recordsByFamilyID.Add(familyID, familyRecord);
+        FamilyIDRecord familyIDRecord = new(familyID);
+        recordsByFamilyID.Add(familyID, familyIDRecord);
 
-        return familyRecord;
+        return familyIDRecord;
     }
 }
 
 /// <summary>
-/// Searchable token store derived from FamilyRecord normalized tokens.
+/// Searchable token store derived from FamilyIDRecord normalized tokens.
 /// </summary>
 public sealed class ExcelTokenStore
 {
@@ -95,16 +95,16 @@ public sealed class ExcelTokenStore
     /// <summary>
     /// Rebuilds token entries for one family record.
     /// </summary>
-    /// <param name="familyRecord">The family record whose current token state should be indexed.</param>
-    public void RefreshFromRecord(FamilyRecord familyRecord)
+    /// <param name="familyIDRecord">The family record whose current token state should be indexed.</param>
+    public void RefreshFromRecord(FamilyIDRecord familyIDRecord)
     {
-        RemoveExistingTokensForFamily(familyRecord.FamilyID);
+        RemoveExistingTokensForFamily(familyIDRecord.FamilyID);
 
-        foreach (KeyValuePair<string, IReadOnlyList<string>> propertyTokens in familyRecord.NormalizedTokens)
+        foreach (KeyValuePair<string, IReadOnlyList<string>> propertyTokens in familyIDRecord.NormalizedTokens)
         {
             foreach (string normalizedToken in propertyTokens.Value)
             {
-                AddToken(familyRecord.FamilyID, propertyTokens.Key, normalizedToken);
+                AddToken(familyIDRecord.FamilyID, propertyTokens.Key, normalizedToken);
             }
         }
     }

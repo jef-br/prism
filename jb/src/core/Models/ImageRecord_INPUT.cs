@@ -51,6 +51,6 @@ public class ImageRecord_INPUT : ImageRecord_Base {
     /// <summary>Classification tokens attached during the Classified stage.</summary>
     public ClassificationToken[] ClassificationTokens { get; set; } = [];
 
-    /// <summary>FamilyRecord candidates resolved during the Matched stage.</summary>
-    public FamilyRecord[] FamilyIDCandidates { get; set; } = [];
+    /// <summary>FamilyIDRecord candidates resolved during the Matched stage.</summary>
+    public FamilyIDRecord[] FamilyIDCandidates { get; set; } = [];
 }

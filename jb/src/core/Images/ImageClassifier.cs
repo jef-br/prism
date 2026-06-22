@@ -1,6 +1,3 @@
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using SixLabors.ImageSharp;
@@ -11,23 +8,25 @@ namespace Prism.Core;
 
 /// <summary>
 /// CLIP ONNX boundary: sole class permitted to access the InferenceSession.
-/// Encodes images via a vision ONNX model and compares them against text prompts
-/// when the ONNX model supports both image and text encoding in the same file.
+/// This export is a single combined CLIP graph — image and text branches are entangled, so every
+/// <see cref="InferenceSession.Run"/> must supply all three inputs (pixel_values, input_ids,
+/// attention_mask) together. <see cref="ClassifyImage"/> encodes the image and every prompt in one Run
+/// and returns the model's raw <c>logits_per_image</c> per prompt (≈ logit_scale × cosine). The caller
+/// (<see cref="ClassificationService"/>) softmaxes these within each mutually-exclusive feature group to
+/// obtain calibrated 0–1 probabilities — the correct CLIP zero-shot computation.
 ///
-/// Degrades gracefully at every step:
-/// when the model file or tokenizer files are absent, <see cref="IsReady"/> is false
+/// Degrades gracefully: when the model or tokenizer files are absent, <see cref="IsReady"/> is false
 /// and <see cref="ClassifyImage"/> returns an empty array.
 /// </summary>
 public sealed class ImageClassifier : IDisposable
 {
-    // ONNX tensor names for the CLIP vision encoder.
-    private const string TensorPixelValues = "pixel_values";
-    private const string TensorImageEmbeds = "image_embeds";
-
-    // ONNX tensor names for the CLIP text encoder (may be absent in vision-only exports).
+    // ONNX tensor names — inputs.
+    private const string TensorPixelValues   = "pixel_values";
     private const string TensorInputIds      = "input_ids";
     private const string TensorAttentionMask = "attention_mask";
-    private const string TensorTextEmbeds    = "text_embeds";
+
+    // ONNX tensor name — output. logits_per_image has shape [image_batch, text_batch] = [1, N].
+    private const string TensorLogitsPerImage = "logits_per_image";
 
     // CLIP ViT-B/32 image preprocessing — 224×224 CHW, RGB, ImageNet-style normalization.
     private const int InputWidth  = 224;
@@ -44,7 +43,7 @@ public sealed class ImageClassifier : IDisposable
 
     /// <summary>
     /// True when the ONNX session is loaded and text encoding is available,
-    /// enabling full zero-shot classification via cosine similarity.
+    /// enabling full zero-shot classification.
     /// </summary>
     public bool IsReady => session is not null && tokenizer is not null && supportsTextEncoding;
 
@@ -69,7 +68,7 @@ public sealed class ImageClassifier : IDisposable
             supportsTextEncoding =
                 inputMeta.ContainsKey(TensorInputIds) &&
                 inputMeta.ContainsKey(TensorAttentionMask) &&
-                outputMeta.ContainsKey(TensorTextEmbeds);
+                outputMeta.ContainsKey(TensorLogitsPerImage);
 
             if (File.Exists(vocabPath) && File.Exists(mergesPath))
                 tokenizer = new ClipTokenizer(vocabPath, mergesPath);
@@ -85,50 +84,43 @@ public sealed class ImageClassifier : IDisposable
     }
 
     /// <summary>
-    /// Encodes the image against each prompt and returns classification tokens
-    /// ranked by descending cosine similarity.
+    /// Encodes the image against every prompt in a single combined inference pass and returns one token
+    /// per prompt carrying the raw <c>logits_per_image</c> value in <see cref="ClassificationToken.Confidence"/>.
+    /// Tokens are returned in prompt order (not ranked) — the caller groups and softmaxes them per feature.
     /// Returns an empty array when <see cref="IsReady"/> is false.
     /// </summary>
     /// <param name="imagePath">Absolute path to the normalized JPEG image.</param>
-    /// <param name="prompts">Text prompts to rank against the image.</param>
+    /// <param name="prompts">Text prompts to score against the image.</param>
     public ClassificationToken[] ClassifyImage(string imagePath, string[] prompts)
     {
         if (!IsReady || prompts.Length == 0)
             return [];
 
-        float[] imageEmbedding = EncodeImage(imagePath);
-        var tokens = new List<ClassificationToken>(prompts.Length);
-
-        foreach (string prompt in prompts)
-        {
-            float[] textEmbedding = EncodeText(prompt);
-            float similarity = CosineSimilarity(imageEmbedding, textEmbedding);
-            tokens.Add(new ClassificationToken { Label = prompt, Confidence = similarity });
-        }
-
-        return [.. tokens.OrderByDescending(t => t.Confidence)];
-    }
-
-    // ─── Image encoding ───────────────────────────────────────────────────────
-
-    private float[] EncodeImage(string imagePath)
-    {
+        // The graph is entangled: one Run must carry the image AND all prompts together.
         DenseTensor<float> pixelValues = PreprocessImage(imagePath);
+        (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = TokenizePrompts(prompts);
 
         var inputs = new List<NamedOnnxValue>
         {
-            NamedOnnxValue.CreateFromTensor(TensorPixelValues, pixelValues)
+            NamedOnnxValue.CreateFromTensor(TensorPixelValues,   pixelValues),
+            NamedOnnxValue.CreateFromTensor(TensorInputIds,      inputIds),
+            NamedOnnxValue.CreateFromTensor(TensorAttentionMask, attentionMask)
         };
 
         using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
-            session!.Run(inputs, [TensorImageEmbeds]);
+            session!.Run(inputs, [TensorLogitsPerImage]);
 
-#if DEBUG
-        ValidateOutputShape(outputs[0], TensorImageEmbeds, expectedRank: 2, expectedDim0: 1);
-#endif
+        // logits_per_image is [1, N] — row 0 holds the image-vs-each-prompt logit.
+        Tensor<float> logits = outputs.First(o => o.Name == TensorLogitsPerImage).AsTensor<float>();
 
-        return [.. outputs[0].AsEnumerable<float>()];
+        var tokens = new ClassificationToken[prompts.Length];
+        for (int i = 0; i < prompts.Length; i++)
+            tokens[i] = new ClassificationToken { Label = prompts[i], Confidence = logits[0, i] };
+
+        return tokens;
     }
+
+    // ─── Image encoding ───────────────────────────────────────────────────────
 
     private static DenseTensor<float> PreprocessImage(string imagePath)
     {
@@ -159,67 +151,31 @@ public sealed class ImageClassifier : IDisposable
 
     // ─── Text encoding ────────────────────────────────────────────────────────
 
-    private float[] EncodeText(string prompt)
+    /// <summary>
+    /// Tokenizes every prompt to the CLIP context length (77) and stacks them into batched
+    /// [N, 77] input_ids and attention_mask tensors. Padding tokens (id 0) get an attention mask of 0.
+    /// </summary>
+    private (DenseTensor<long> InputIds, DenseTensor<long> AttentionMask) TokenizePrompts(string[] prompts)
     {
-        long[] tokenIds = tokenizer!.Encode(prompt);
-        long[] attentionMask = tokenIds.Select(id => id == 0L ? 0L : 1L).ToArray();
+        long[][] encoded = prompts.Select(p => tokenizer!.Encode(p)).ToArray();
+        int rows = encoded.Length;
+        int seqLen = encoded[0].Length;
 
-        int seqLen = tokenIds.Length;
-        var inputIdTensor   = new DenseTensor<long>([1, seqLen]);
-        var attentionTensor = new DenseTensor<long>([1, seqLen]);
+        var inputIds      = new DenseTensor<long>([rows, seqLen]);
+        var attentionMask = new DenseTensor<long>([rows, seqLen]);
 
-        for (int i = 0; i < seqLen; i++)
+        for (int r = 0; r < rows; r++)
         {
-            inputIdTensor[0, i]   = tokenIds[i];
-            attentionTensor[0, i] = attentionMask[i];
+            for (int c = 0; c < seqLen; c++)
+            {
+                long id = encoded[r][c];
+                inputIds[r, c]      = id;
+                attentionMask[r, c] = id == 0L ? 0L : 1L;
+            }
         }
 
-        var inputs = new List<NamedOnnxValue>
-        {
-            NamedOnnxValue.CreateFromTensor(TensorInputIds,      inputIdTensor),
-            NamedOnnxValue.CreateFromTensor(TensorAttentionMask, attentionTensor)
-        };
-
-        using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
-            session!.Run(inputs, [TensorTextEmbeds]);
-
-        return [.. outputs[0].AsEnumerable<float>()];
+        return (inputIds, attentionMask);
     }
-
-    // ─── Similarity ───────────────────────────────────────────────────────────
-
-    private static float CosineSimilarity(float[] a, float[] b)
-    {
-        int len = Math.Min(a.Length, b.Length);
-        if (len == 0) return 0f;
-
-        float dot = 0f, normA = 0f, normB = 0f;
-        for (int i = 0; i < len; i++)
-        {
-            dot   += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-
-        float denom = MathF.Sqrt(normA) * MathF.Sqrt(normB);
-        return denom == 0f ? 0f : dot / denom;
-    }
-
-    // ─── Debug contract validation ────────────────────────────────────────────
-
-#if DEBUG
-    private static void ValidateOutputShape(
-        DisposableNamedOnnxValue output, string name, int expectedRank, long expectedDim0)
-    {
-        long[] shape = output.AsTensor<float>().Dimensions.ToArray().Select(d => (long)d).ToArray();
-        if (shape.Length != expectedRank || shape[0] != expectedDim0)
-        {
-            throw new InvalidOperationException(
-                $"CLIP {name} shape mismatch: expected [{expectedDim0}, D], " +
-                $"got [{string.Join(", ", shape)}]");
-        }
-    }
-#endif
 
     // ─── IDisposable ─────────────────────────────────────────────────────────
 

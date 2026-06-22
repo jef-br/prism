@@ -20,6 +20,9 @@
             "filesize": {
                 "min": 2048,
                 "max": 26214400
+            }, "MINIMUM_SIZE_IN_PIXELS":{
+                "width":570,
+                "height":570
             }
         },
         "ZIP": {
@@ -88,7 +91,7 @@
         }
     },
     "Classification": {
-        "Confidence_Threshold": 0.9,
+        "Confidence_Threshold": 0.5,
         "Cutoff_Threshold": 0.25,
         "Deduplication": {
             "Enabled": true,

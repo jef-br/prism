@@ -11,26 +11,29 @@ namespace Prism.Core;
 internal static class ImageGenerator
 {
     /// <summary>
-    /// Runs the generation decision shell for all non-KO images in the context.
+    /// Runs the generation decision over all non-KO images, enriching each hero LAMBDA in place and
+    /// returning the new synthetic records it created.
     /// </summary>
-    /// <param name="context">Mutable per-job pipeline context.</param>
-    internal static void Run(PipelineContext context)
+    /// <param name="records">Matched LAMBDA records.</param>
+    /// <param name="generationEnabled">Whether generation is enabled for this job.</param>
+    /// <returns>The generated synthetic image records (empty when generation produced none).</returns>
+    internal static IReadOnlyList<ImageRecord_GENERATED> Run(List<ImageRecord_LAMBDA> records, bool generationEnabled)
     {
-        if (!context.Parameters.Generation)
+        if (!generationEnabled)
         {
-            foreach (ImageRecord_LAMBDA lambda in context.LambdaRecords)
+            foreach (ImageRecord_LAMBDA lambda in records)
             {
                 if (!lambda.IsKo)
                     lambda.GenerationRouteState = GenerationRouteState.Skipped;
             }
-            return;
+            return [];
         }
 
         Generate_Config config = LoadConfig();
+        List<ImageRecord_GENERATED> generatedImages = [];
 
         IEnumerable<IGrouping<string, ImageRecord_LAMBDA>> familyGroups =
-            context.LambdaRecords
-                   .Where(r => !r.IsKo && !string.IsNullOrEmpty(r.Family))
+            records.Where(r => !r.IsKo && !string.IsNullOrEmpty(r.Family))
                    .GroupBy(r => r.Family);
 
         foreach (IGrouping<string, ImageRecord_LAMBDA> group in familyGroups)
@@ -64,8 +67,7 @@ internal static class ImageGenerator
             ImageRecord_GENERATED generated = BuildGeneratedRecord(hero, GenerationMethod.DetailCrop);
             hero.GeneratedChildren      = [generated];
             hero.GenerationRouteState   = GenerationRouteState.Gated;
-            context.GeneratedRecords.Add(generated);
-            context.GeneratedCount++;
+            generatedImages.Add(generated);
 
             foreach (ImageRecord_LAMBDA remaining in images)
             {
@@ -73,6 +75,8 @@ internal static class ImageGenerator
                     remaining.GenerationRouteState = GenerationRouteState.Skipped;
             }
         }
+
+        return generatedImages;
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────

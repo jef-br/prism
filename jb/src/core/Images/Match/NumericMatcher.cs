@@ -19,7 +19,7 @@ internal sealed class NumericMatcher
     /// </summary>
     /// <param name="familyIdColumnName">
     /// The rule ExcelField that denotes the FamilyID (ExcelConfig.RecordPrimaryKey). The FamilyID rule
-    /// resolves against the intrinsic <see cref="FamilyRecord.FamilyID"/> — the 8-digit PRISM identifier
+    /// resolves against the intrinsic <see cref="FamilyIDRecord.FamilyID"/> — the 8-digit PRISM identifier
     /// that is also the image filename stem — rather than an Excel column lookup.
     /// </param>
     internal NumericMatcher(string familyIdColumnName)
@@ -35,7 +35,7 @@ internal sealed class NumericMatcher
     /// <returns>Accepted MatchEvidence when exactly one FamilyID matches; null otherwise.</returns>
     internal MatchEvidence? TryMatchBracket1(
         ImageRecord_LAMBDA record,
-        IReadOnlyList<FamilyRecord> families,
+        IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
         string filename      = record.InitialFullName ?? string.Empty;
@@ -47,7 +47,7 @@ internal sealed class NumericMatcher
 
         foreach (string token in tokens)
         {
-            foreach (FamilyRecord family in families)
+            foreach (FamilyIDRecord family in families)
             {
                 foreach (MatchingRule rule in numericRules)
                 {
@@ -108,7 +108,7 @@ internal sealed class NumericMatcher
     /// <returns>Accepted MatchEvidence for the best match when exactly one FamilyID qualifies; null otherwise.</returns>
     internal MatchEvidence? TryMatchBracket2(
         ImageRecord_LAMBDA record,
-        IReadOnlyList<FamilyRecord> families,
+        IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
         string   filename      = record.InitialFullName ?? string.Empty;
@@ -130,7 +130,7 @@ internal sealed class NumericMatcher
                 string[] subset       = tokens.Skip(start).Take(length).ToArray();
                 string   concatenated = string.Concat(subset);
 
-                foreach (FamilyRecord family in families)
+                foreach (FamilyIDRecord family in families)
                 {
                     foreach (MatchingRule rule in numericRules)
                     {
@@ -200,10 +200,10 @@ internal sealed class NumericMatcher
 
     /// <summary>
     /// The digits PRISM matches a filename token against for one rule field.
-    /// For the FamilyID field this is the intrinsic <see cref="FamilyRecord.FamilyID"/>; for any other
+    /// For the FamilyID field this is the intrinsic <see cref="FamilyIDRecord.FamilyID"/>; for any other
     /// field it is the digits of the family's Excel column value (CanonicalProperties).
     /// </summary>
-    private string? GetFamilyDigitsForField(FamilyRecord family, string excelField)
+    private string? GetFamilyDigitsForField(FamilyIDRecord family, string excelField)
     {
         if (excelField.Equals(familyIdColumnName, StringComparison.OrdinalIgnoreCase))
             return DigitsOnly(family.FamilyID);
@@ -216,7 +216,7 @@ internal sealed class NumericMatcher
     /// the column is absent/empty or contains no digits. Does not handle the FamilyID — that is routed to
     /// the intrinsic identifier by <see cref="GetFamilyDigitsForField"/>.
     /// </summary>
-    private static string? GetDigitsOfFamilyExcelColumn(FamilyRecord family, string excelField)
+    private static string? GetDigitsOfFamilyExcelColumn(FamilyIDRecord family, string excelField)
     {
         if (!family.CanonicalProperties.TryGetValue(excelField, out string? value) ||
             string.IsNullOrWhiteSpace(value))
@@ -234,16 +234,16 @@ internal sealed class NumericMatcher
         return digits.Length > 0 ? digits : null;
     }
 
-    private static FamilyRecord? FindFamily(IReadOnlyList<FamilyRecord> families, string familyId) =>
+    private static FamilyIDRecord? FindFamily(IReadOnlyList<FamilyIDRecord> families, string familyId) =>
         families.FirstOrDefault(f => f.FamilyID.Equals(familyId, StringComparison.OrdinalIgnoreCase));
 
     private string FindMatchingToken(
         string[] filenameTokens,
         string familyId,
-        IReadOnlyList<FamilyRecord> families,
+        IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
-        FamilyRecord? family = FindFamily(families, familyId);
+        FamilyIDRecord? family = FindFamily(families, familyId);
         if (family is null) return string.Empty;
 
         foreach (string token in filenameTokens)
@@ -260,10 +260,10 @@ internal sealed class NumericMatcher
 
     private MatchingRule? FindMatchedRule(
         string familyId,
-        IReadOnlyList<FamilyRecord> families,
+        IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
-        FamilyRecord? family = FindFamily(families, familyId);
+        FamilyIDRecord? family = FindFamily(families, familyId);
         if (family is null) return null;
 
         foreach (MatchingRule rule in numericRules)

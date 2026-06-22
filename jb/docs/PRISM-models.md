@@ -77,7 +77,7 @@ Generation-specific details for generated child images. IRL records only skip/cr
 
 ---
 
-## FR — `FamilyRecord.cs`
+## FR — `FamilyIDRecord.cs`
 
 Canonical catalog entity from IEM. Duplicate FIDs cannot exist; conflicting rows/columns preserve unique values as tokenized evidence.
 

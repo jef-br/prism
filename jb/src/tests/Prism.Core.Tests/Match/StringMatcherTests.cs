@@ -13,7 +13,7 @@ public class StringMatcherTests
     public void TryMatch_FilenameTokenMatchesOneFamily_ReturnsEvidence()
     {
         StringMatcher      matcher = new(EmptyTranslation);
-        FamilyRecord       family  = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
+        FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("blue-shirt.jpg");
 
         MatchEvidence? evidence = matcher.TryMatch(record, [family]);
@@ -31,7 +31,7 @@ public class StringMatcherTests
     public void TryMatch_FilenameTokenMatchesNoFamily_ReturnsNull()
     {
         StringMatcher      matcher = new(EmptyTranslation);
-        FamilyRecord       family  = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
+        FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("red-shirt.jpg");
 
         MatchEvidence? evidence = matcher.TryMatch(record, [family]);
@@ -45,8 +45,8 @@ public class StringMatcherTests
     public void TryMatch_FilenameTokenMatchesTwoFamilies_ReturnsNull()
     {
         StringMatcher      matcher = new(EmptyTranslation);
-        FamilyRecord       famA    = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
-        FamilyRecord       famB    = FamilyWithProperty("FAM002", "color", "blue", ExcelColumnClassification.Categorical);
+        FamilyIDRecord       famA    = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
+        FamilyIDRecord       famB    = FamilyWithProperty("FAM002", "color", "blue", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("blue-shirt.jpg");
 
         MatchEvidence? evidence = matcher.TryMatch(record, [famA, famB]);
@@ -60,7 +60,7 @@ public class StringMatcherTests
     public void TryMatch_FilenameHasOnlyDigits_ReturnsNull()
     {
         StringMatcher      matcher = new(EmptyTranslation);
-        FamilyRecord       family  = FamilyWithProperty("FAM001", "color", "12345", ExcelColumnClassification.Categorical);
+        FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "12345", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("12345.jpg");
 
         // Digit tokens are excluded from StringMatcher token extraction
@@ -84,7 +84,7 @@ public class StringMatcherTests
         };
 
         StringMatcher      matcher = new(withSynonyms);
-        FamilyRecord       family  = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
+        FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("blau-shirt.jpg"); // German synonym for blue
 
         MatchEvidence? evidence = matcher.TryMatch(record, [family]);
@@ -105,13 +105,13 @@ public class StringMatcherTests
     private static ImageRecord_LAMBDA MakeLambda(string filename) =>
         new() { InitialFullName = filename };
 
-    private static FamilyRecord FamilyWithProperty(
+    private static FamilyIDRecord FamilyWithProperty(
         string familyId,
         string propName,
         string propValue,
         ExcelColumnClassification classification)
     {
-        FamilyRecord family = new(familyId);
+        FamilyIDRecord family = new(familyId);
         family.MergeProperty(
             new ExcelPropertyValue(propName, [propValue], []),
             classification);

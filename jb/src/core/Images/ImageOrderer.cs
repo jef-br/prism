@@ -9,26 +9,28 @@ namespace Prism.Core;
 internal static class ImageOrderer
 {
     /// <summary>
-    /// Runs the Ordered stage for the given job context.
+    /// Runs the Ordered stage over a matched LAMBDA collection.
     /// Groups non-KO matched records by FinalFamilyId, assigns det slots per product type rules,
     /// and records ordering evidence on each record.
     /// </summary>
-    internal static void Run(PipelineContext context)
+    /// <param name="records">Matched LAMBDA records.</param>
+    /// <param name="families">Family records resolved from the Internal Excel Model.</param>
+    internal static void Run(List<ImageRecord_LAMBDA> records, IReadOnlyList<FamilyIDRecord> families)
     {
         DetOrderConfig config = LoadConfig();
 
-        List<IGrouping<string, ImageRecord_LAMBDA>> familyGroups = context.LambdaRecords
+        List<IGrouping<string, ImageRecord_LAMBDA>> familyGroups = records
             .Where(r => !r.IsKo && r.MatchEvidence?.FinalFamilyId is not null)
             .GroupBy(r => r.MatchEvidence!.FinalFamilyId!)
             .ToList();
 
-        Dictionary<string, FamilyRecord> familyLookup = context.FamilyRecords
+        Dictionary<string, FamilyIDRecord> familyLookup = families
             .ToDictionary(f => f.FamilyID, f => f, StringComparer.OrdinalIgnoreCase);
 
         foreach (IGrouping<string, ImageRecord_LAMBDA> group in familyGroups)
         {
-            familyLookup.TryGetValue(group.Key, out FamilyRecord? familyRecord);
-            ProcessFamily(group.Key, group.ToList(), familyRecord, config);
+            familyLookup.TryGetValue(group.Key, out FamilyIDRecord? familyIDRecord);
+            ProcessFamily(group.Key, group.ToList(), familyIDRecord, config);
         }
     }
 
@@ -42,10 +44,10 @@ internal static class ImageOrderer
     private static void ProcessFamily(
         string familyId,
         List<ImageRecord_LAMBDA> images,
-        FamilyRecord? familyRecord,
+        FamilyIDRecord? familyIDRecord,
         DetOrderConfig config)
     {
-        string productTypeId = ResolveProductType(familyRecord, config);
+        string productTypeId = ResolveProductType(familyIDRecord, config);
         IReadOnlyList<DetSlotRule> slots = config.GetSlots(productTypeId);
         int lastConfiguredSlot = slots.Count > 0 ? slots[^1].SlotIndex : -1;
 
@@ -172,15 +174,15 @@ internal static class ImageOrderer
     // ─── Product type resolution ──────────────────────────────────────────────
 
     /// <summary>
-    /// Resolves the product type id from the FamilyRecord's canonical properties.
+    /// Resolves the product type id from the FamilyIDRecord's canonical properties.
     /// Normalises each value to kebab-case and checks against known product type ids.
     /// Returns "default" when no match is found.
     /// </summary>
-    private static string ResolveProductType(FamilyRecord? familyRecord, DetOrderConfig config)
+    private static string ResolveProductType(FamilyIDRecord? familyIDRecord, DetOrderConfig config)
     {
-        if (familyRecord is null) return "default";
+        if (familyIDRecord is null) return "default";
 
-        foreach (string value in familyRecord.CanonicalProperties.Values)
+        foreach (string value in familyIDRecord.CanonicalProperties.Values)
         {
             string normalized = value.ToLowerInvariant()
                 .Replace(' ', '-')

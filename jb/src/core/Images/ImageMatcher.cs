@@ -21,11 +21,13 @@ internal sealed class ImageMatcher
     }
 
     /// <summary>
-    /// Entry point called by <see cref="ShellStage_Match"/>.
+    /// Entry point called by the Matching service.
     /// Loads configs, runs the waterfall, and writes MatchEvidence to every lambda record.
     /// </summary>
-    /// <param name="context">Mutable per-job pipeline context.</param>
-    internal static void Run(PipelineContext context)
+    /// <param name="records">LAMBDA records to match against the family catalogue.</param>
+    /// <param name="families">Family records resolved from the Internal Excel Model.</param>
+    /// <returns>Number of records KO'd because no FamilyID match was found.</returns>
+    internal static int Run(List<ImageRecord_LAMBDA> records, IReadOnlyList<FamilyIDRecord> families)
     {
         string matchingConfigPath = LoadConfigPath(
             "Images/Match/MatchingConfig.json",
@@ -44,15 +46,14 @@ internal sealed class ImageMatcher
         ExcelConfig       excelConfig       = ExcelConfig.Load(excelConfigPath);
 
         ImageMatcher matcher = new(matchingConfig, translationConfig, excelConfig.RecordPrimaryKey);
-        matcher.RunWaterfall(context.LambdaRecords, context.FamilyRecords, context);
+        return matcher.RunWaterfall(records, families);
     }
 
     // ─── Waterfall ─────────────────────────────────────────────────────────────
 
-    private void RunWaterfall(
+    private int RunWaterfall(
         List<ImageRecord_LAMBDA> allRecords,
-        IReadOnlyList<FamilyRecord> families,
-        PipelineContext context)
+        IReadOnlyList<FamilyIDRecord> families)
     {
         IReadOnlyList<MatchingRule> numericRules = matchingConfig.NumericRules;
         IReadOnlyList<MatchingRule> labelRules   = matchingConfig.LabelRules;
@@ -72,10 +73,12 @@ internal sealed class ImageMatcher
         AddLabelEvidence(allRecords, families, labelRules);
 
         // Bracket 4 cleanup: KO any image still without a FamilyID assignment
-        KoUnmatched(unmatched, context);
+        int koAdded = KoUnmatched(unmatched);
 
         // Bracket 5: finalize clustering (single-pass waterfall means no structural ties)
         FinalizeMatches(allRecords);
+
+        return koAdded;
     }
 
     // ─── Bracket 1 ────────────────────────────────────────────────────────────
@@ -85,7 +88,7 @@ internal sealed class ImageMatcher
     /// </summary>
     private List<ImageRecord_LAMBDA> RunBracket1(
         List<ImageRecord_LAMBDA> candidates,
-        IReadOnlyList<FamilyRecord> families,
+        IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
@@ -110,7 +113,7 @@ internal sealed class ImageMatcher
     /// </summary>
     private List<ImageRecord_LAMBDA> RunBracket2(
         List<ImageRecord_LAMBDA> candidates,
-        IReadOnlyList<FamilyRecord> families,
+        IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
@@ -135,7 +138,7 @@ internal sealed class ImageMatcher
     /// </summary>
     private List<ImageRecord_LAMBDA> RunBracket3(
         List<ImageRecord_LAMBDA> candidates,
-        IReadOnlyList<FamilyRecord> families)
+        IReadOnlyList<FamilyIDRecord> families)
     {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
 
@@ -160,7 +163,7 @@ internal sealed class ImageMatcher
     /// </summary>
     private void AddLabelEvidence(
         List<ImageRecord_LAMBDA> allRecords,
-        IReadOnlyList<FamilyRecord> families,
+        IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> labelRules)
     {
         if (labelRules.Count == 0)
@@ -193,9 +196,8 @@ internal sealed class ImageMatcher
     /// <summary>
     /// KOs any image that was not matched by brackets 1–3.
     /// </summary>
-    private static void KoUnmatched(
-        List<ImageRecord_LAMBDA> unmatched,
-        PipelineContext context)
+    /// <returns>Number of records KO'd.</returns>
+    private static int KoUnmatched(List<ImageRecord_LAMBDA> unmatched)
     {
         foreach (ImageRecord_LAMBDA record in unmatched)
         {
@@ -213,9 +215,9 @@ internal sealed class ImageMatcher
                 KoReason        = "MATCH_NOT_FOUND",
                 SafeExplanation = $"'{imageId}' was not matched to any FamilyID after all matching brackets."
             };
-
-            context.KoRecordCount++;
         }
+
+        return unmatched.Count;
     }
 
     // ─── Bracket 5: finalize ─────────────────────────────────────────────────

@@ -49,7 +49,7 @@ Dimension patterns (`800x1200`), dates (`2024-05-18`, `18/05/2024`, `05.18.24`),
 
 Trusted numeric columns (not noise-filtered): `FamilyID`, `FamID`, `EAN`, `SKU`, `Ref`, `Reference`.
 
-The FamilyID rule resolves against the intrinsic `FamilyRecord.FamilyID` (the 8-digit identifier, also the output filename stem) — not a column lookup; other numeric rules (`EAN`, …) resolve against their IEM column values. The FamilyID column name comes from `ExcelConfig.RecordPrimaryKey`.
+The FamilyID rule resolves against the intrinsic `FamilyIDRecord.FamilyID` (the 8-digit identifier, also the output filename stem) — not a column lookup; other numeric rules (`EAN`, …) resolve against their IEM column values. The FamilyID column name comes from `ExcelConfig.RecordPrimaryKey`.
 
 `NoiseFilter.cs` owns filtering code.
 

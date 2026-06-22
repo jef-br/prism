@@ -29,7 +29,7 @@ internal sealed class StringMatcher
     /// <returns>Accepted MatchEvidence when exactly one FamilyID matches; null otherwise.</returns>
     internal MatchEvidence? TryMatch(
         ImageRecord_LAMBDA record,
-        IReadOnlyList<FamilyRecord> families)
+        IReadOnlyList<FamilyIDRecord> families)
     {
         string filename      = record.InitialFullName ?? string.Empty;
         string sourceFilename = filename;
@@ -40,9 +40,9 @@ internal sealed class StringMatcher
             return null;
 
         // Build evidence for every family; keep only families that have at least one token match
-        List<(FamilyRecord Family, List<TokenEvidenceItem> Evidence)> candidates = [];
+        List<(FamilyIDRecord Family, List<TokenEvidenceItem> Evidence)> candidates = [];
 
-        foreach (FamilyRecord family in families)
+        foreach (FamilyIDRecord family in families)
         {
             List<TokenEvidenceItem> evidence = BuildStringEvidence(imageTokens, family);
             if (evidence.Count > 0)
@@ -52,7 +52,7 @@ internal sealed class StringMatcher
         if (candidates.Count != 1)
             return null; // zero → no match; two+ → tie
 
-        (FamilyRecord matched, List<TokenEvidenceItem> tokenEvidence) = candidates[0];
+        (FamilyIDRecord matched, List<TokenEvidenceItem> tokenEvidence) = candidates[0];
         double score = ComputeStringScore(tokenEvidence.Count, imageTokens.Count);
         string matcherName = "StringMatcher.Bracket3";
 
@@ -75,7 +75,7 @@ internal sealed class StringMatcher
 
     private List<TokenEvidenceItem> BuildStringEvidence(
         IReadOnlyList<string> imageTokens,
-        FamilyRecord family)
+        FamilyIDRecord family)
     {
         List<TokenEvidenceItem> evidence = [];
 

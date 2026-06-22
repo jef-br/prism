@@ -42,9 +42,10 @@ public sealed class PrismService
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Processes one PRISM job through the full pipeline.
-    /// Validates the request, delegates all stage work to <see cref="Pipeline"/>,
-    /// and returns a structured result to the caller.
+    /// Processes one PRISM job through the full pipeline. Reads top to bottom like the pipeline route:
+    /// import the batch, match every image into a LAMBDA, generate supplemental images, transform, then
+    /// export. Each step hands a typed result to the next — there is no shared mutable context. Real stage
+    /// work is delegated to <see cref="Pipeline"/> and its services.
     /// </summary>
     /// <param name="request">The normalized core-facing job request.</param>
     /// <param name="progress">Progress callback used by API SSE transport and workbench direct invocation.</param>
@@ -57,10 +58,66 @@ public sealed class PrismService
     {
         ValidateRequest(request);
 
-        PipelineResult pipelineResult = await pipeline.RunAsync(request, progress, cancellationToken);
+        try
+        {
+            IngestResult    normalizedImagesAndFamilies   = await Import(request, progress, cancellationToken);
+            MatchingResult  matchedImages                 = await Match(normalizedImagesAndFamilies, progress, cancellationToken);
+            (MatchingResult matchedWithGenerations, IReadOnlyList<ImageRecord_GENERATED> generatedImages)
+                                                          = await GenerateSupplementalImages(matchedImages, progress, cancellationToken);
+            TransformResult transformedImages             = await TransformImages(matchedWithGenerations, progress, cancellationToken);
+            ExportArtifacts manifestAndZip                = await Export(transformedImages, generatedImages, request, progress, cancellationToken);
 
-        return BuildJobResult(request, pipelineResult);
+            return BuildSuccessResult(request, manifestAndZip);
+        }
+        catch (Exception exception) when (exception is not PrismConfigurationException)
+        {
+            return BuildFailedResult(request, exception);
+        }
     }
+
+    // -------------------------------------------------------------------------
+    // Pipeline route — each step delegates to Pipeline and names what it produces.
+    // -------------------------------------------------------------------------
+
+    /// <summary>Imports the batch: normalized images on the local job folder + FamilyRecords from Excel.</summary>
+    private Task<IngestResult> Import(
+        PrismJobRequest request,
+        Func<PipelineProgressEvent, Task>? progress,
+        CancellationToken cancellationToken)
+        => pipeline.ImportAsync(request, progress, cancellationToken);
+
+    /// <summary>Converts every normalized image into an enriched LAMBDA (classify → match → order → rename).</summary>
+    private Task<MatchingResult> Match(
+        IngestResult normalizedImagesAndFamilies,
+        Func<PipelineProgressEvent, Task>? progress,
+        CancellationToken cancellationToken)
+        => pipeline.MatchAsync(normalizedImagesAndFamilies, progress, cancellationToken);
+
+    /// <summary>
+    /// Generates supplemental images. Returns both outputs explicitly: the LAMBDA collection enriched in
+    /// place with generation route state, and the new synthetic image records.
+    /// </summary>
+    private Task<GenerateResult> GenerateSupplementalImages(
+        MatchingResult matchedImages,
+        Func<PipelineProgressEvent, Task>? progress,
+        CancellationToken cancellationToken)
+        => pipeline.GenerateAsync(matchedImages, matchedImages.Ingest.Parameters.Generation, progress, cancellationToken);
+
+    /// <summary>Transforms each non-KO image, enriching its LAMBDA with a TransformationResult.</summary>
+    private Task<TransformResult> TransformImages(
+        MatchingResult matchedWithGenerations,
+        Func<PipelineProgressEvent, Task>? progress,
+        CancellationToken cancellationToken)
+        => pipeline.TransformAsync(matchedWithGenerations, matchedWithGenerations.Ingest.Parameters.Transform, progress, cancellationToken);
+
+    /// <summary>Exports the fully-enriched LAMBDAs and generated images into the manifest and optional ZIP.</summary>
+    private Task<ExportArtifacts> Export(
+        TransformResult transformedImages,
+        IReadOnlyList<ImageRecord_GENERATED> generatedImages,
+        PrismJobRequest request,
+        Func<PipelineProgressEvent, Task>? progress,
+        CancellationToken cancellationToken)
+        => pipeline.ExportAsync(transformedImages, generatedImages, request, progress, cancellationToken);
 
     // -------------------------------------------------------------------------
     // Helpers — called by Initialize
@@ -160,24 +217,61 @@ public sealed class PrismService
     }
 
     /// <summary>
-    /// Projects a completed <see cref="PipelineResult"/> into the caller-facing <see cref="PrismJobResult"/>.
+    /// Projects the completed Export artifacts into the caller-facing <see cref="PrismJobResult"/>.
     /// </summary>
-    private static PrismJobResult BuildJobResult(PrismJobRequest request, PipelineResult pipelineResult)
+    private static PrismJobResult BuildSuccessResult(PrismJobRequest request, ExportArtifacts manifestAndZip)
     {
-        IReadOnlyList<ManifestImageRow> rows = pipelineResult.Manifest.ImageRows;
+        BatchManifest manifest = manifestAndZip.Manifest;
+        IReadOnlyList<ManifestImageRow> rows = manifest.ImageRows;
 
         return new PrismJobResult
         {
             JobID              = request.JobID,
             ClientRequestToken = request.ClientRequestToken,
-            Status             = pipelineResult.Status,
-            OutputFormat       = pipelineResult.OutputFormat,
-            FailureReason      = pipelineResult.FailureReason,
-            Warnings           = pipelineResult.Warnings,
-            Manifest           = pipelineResult.Manifest,
-            ZipBytes           = pipelineResult.ZipBytes,
+            Status             = "Completed",
+            OutputFormat       = request.PrismProcessingParameters?.Format ?? "json",
+            FailureReason      = null,
+            Warnings           = manifest.Warnings,
+            Manifest           = manifest,
+            ZipBytes           = manifestAndZip.ZipBytes,
             OkImages           = rows.Where(r => r.Status == "Ok").ToList(),
             KoImages           = rows.Where(r => r.Status == "Ko").ToList()
+        };
+    }
+
+    /// <summary>
+    /// Builds a failed-job result when an unexpected (non-configuration) exception aborts the pipeline.
+    /// Every input image is reported as KO; no artifacts are produced.
+    /// </summary>
+    private static PrismJobResult BuildFailedResult(PrismJobRequest request, Exception exception)
+    {
+        BatchManifest manifest = new()
+        {
+            JobID   = request.JobID,
+            Summary = new BatchManifestSummary
+            {
+                ImageCount = request.ImageRecords.Count,
+                ExcelCount = request.ExcelRecords.Count,
+                ZipCount   = request.ZipFileRecords.Count,
+                OkRenamed  = 0,
+                KoRecords  = request.ImageRecords.Count
+            },
+            RouteSummaries = [$"Pipeline failed: {exception.Message}"],
+            Warnings       = []
+        };
+
+        return new PrismJobResult
+        {
+            JobID              = request.JobID,
+            ClientRequestToken = request.ClientRequestToken,
+            Status             = "Failed",
+            OutputFormat       = request.PrismProcessingParameters?.Format ?? "json",
+            FailureReason      = exception.Message,
+            Warnings           = [],
+            Manifest           = manifest,
+            ZipBytes           = null,
+            OkImages           = [],
+            KoImages           = []
         };
     }
 }

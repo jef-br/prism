@@ -12,7 +12,7 @@ Used across all `jb/docs/` files, `AGENTFEEDBACK.md`, and `PRISM-information.md`
 | IEM | InternalExcelModel (collated, deduplicated Excel worksheets) |
 | FID | FamilyID (primary product identifier; becomes output filename stem) |
 | PK | Primary Key |
-| FR | FamilyRecord |
+| FR | FamilyIDRecord |
 | IRI | ImageRecord_INPUT |
 | IRL | ImageRecord_LAMBDA |
 | IRO | ImageRecord_OUTPUT |

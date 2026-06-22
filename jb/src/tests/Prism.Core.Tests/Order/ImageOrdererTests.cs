@@ -5,6 +5,7 @@ namespace PrismCoreTests.Order;
 /// <summary>
 /// Unit tests for <see cref="DetOrderConfig"/> loading and <see cref="ImageOrderer"/> ordering logic.
 /// Uses the real DetOrderRules.json and DetOrderKeywordStems.json; records are built inline per test.
+/// <see cref="ImageOrderer.Run"/> takes the LAMBDA list and family records directly.
 /// </summary>
 public class ImageOrdererTests
 {
@@ -65,13 +66,11 @@ public class ImageOrdererTests
     public void Run_SingleImage_AssignsDet0WithCorrectFamily()
     {
         // front-packshot qualifies for det0 in default rules.
-        PipelineContext context = MakeContext(
-            images: [MakeLambda("product_front.jpg", "front-packshot", "FAM001")],
-            families: [MakeFamily("FAM001")]);
+        List<ImageRecord_LAMBDA> records = [MakeLambda("product_front.jpg", "front-packshot", "FAM001")];
 
-        ImageOrderer.Run(context);
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
 
-        ImageRecord_LAMBDA result = context.LambdaRecords[0];
+        ImageRecord_LAMBDA result = records[0];
         Assert.Equal("FAM001", result.Family);
         Assert.Equal(0, result.DetOrder);
         Assert.NotNull(result.OrderEvidence);
@@ -83,18 +82,16 @@ public class ImageOrdererTests
     public void Run_TwoImages_ClearPhenotypeWinner_CorrectOrder()
     {
         // front-packshot → det0, back-packshot → det1 (no competition).
-        PipelineContext context = MakeContext(
-            images:
-            [
-                MakeLambda("img_front.jpg", "front-packshot", "FAM001"),
-                MakeLambda("img_back.jpg",  "back-packshot",  "FAM001")
-            ],
-            families: [MakeFamily("FAM001")]);
+        List<ImageRecord_LAMBDA> records =
+        [
+            MakeLambda("img_front.jpg", "front-packshot", "FAM001"),
+            MakeLambda("img_back.jpg",  "back-packshot",  "FAM001")
+        ];
 
-        ImageOrderer.Run(context);
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
 
-        ImageRecord_LAMBDA front = context.LambdaRecords.Single(r => r.SelectedPhenotype == "front-packshot");
-        ImageRecord_LAMBDA back  = context.LambdaRecords.Single(r => r.SelectedPhenotype == "back-packshot");
+        ImageRecord_LAMBDA front = records.Single(r => r.SelectedPhenotype == "front-packshot");
+        ImageRecord_LAMBDA back  = records.Single(r => r.SelectedPhenotype == "back-packshot");
 
         Assert.Equal(0, front.DetOrder);
         Assert.Equal(1, back.DetOrder);
@@ -116,18 +113,16 @@ public class ImageOrdererTests
         ImageRecord_LAMBDA imageB = MakeLambda("imgB.jpg", "front-packshot", "FAM001");
         SetFeatureCount(imageB, 1);
 
-        PipelineContext context = MakeContext(
-            images: [imageA, imageB],
-            families: [MakeFamily("FAM001")]);
+        List<ImageRecord_LAMBDA> records = [imageA, imageB];
 
-        ImageOrderer.Run(context);
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
 
         // imageA (index 0) wins det0; imageB (index 1) is overflow (det 8+)
-        Assert.Equal(0, context.LambdaRecords[0].DetOrder);
-        Assert.False(context.LambdaRecords[0].OrderEvidence!.IsOverflow);
-        Assert.Equal("ngp-confidence", context.LambdaRecords[0].OrderEvidence!.TieBreakerWon);
+        Assert.Equal(0, records[0].DetOrder);
+        Assert.False(records[0].OrderEvidence!.IsOverflow);
+        Assert.Equal("ngp-confidence", records[0].OrderEvidence!.TieBreakerWon);
 
-        Assert.True(context.LambdaRecords[1].OrderEvidence!.IsOverflow,
+        Assert.True(records[1].OrderEvidence!.IsOverflow,
             "Losing front-packshot image should be overflow since front-packshot does not qualify for det1.");
     }
 
@@ -142,18 +137,16 @@ public class ImageOrdererTests
         ImageRecord_LAMBDA imageB = MakeLambda("product_image.jpg", "front-packshot", "FAM001");
         SetFeatureCount(imageB, 2);
 
-        PipelineContext context = MakeContext(
-            images: [imageA, imageB],
-            families: [MakeFamily("FAM001")]);
+        List<ImageRecord_LAMBDA> records = [imageA, imageB];
 
-        ImageOrderer.Run(context);
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
 
         // imageA has "front" hint, should win det0
-        Assert.Equal(0, context.LambdaRecords[0].DetOrder);
-        Assert.False(context.LambdaRecords[0].OrderEvidence!.IsOverflow);
-        Assert.Equal("filename-hint", context.LambdaRecords[0].OrderEvidence!.TieBreakerWon);
+        Assert.Equal(0, records[0].DetOrder);
+        Assert.False(records[0].OrderEvidence!.IsOverflow);
+        Assert.Equal("filename-hint", records[0].OrderEvidence!.TieBreakerWon);
 
-        Assert.True(context.LambdaRecords[1].OrderEvidence!.IsOverflow,
+        Assert.True(records[1].OrderEvidence!.IsOverflow,
             "Losing front-packshot image should be overflow since front-packshot does not qualify for det1.");
     }
 
@@ -168,17 +161,15 @@ public class ImageOrdererTests
         ImageRecord_LAMBDA imageB = MakeLambda("img2.jpg", "front-packshot", "FAM001");
         SetFeatureCount(imageB, 2);
 
-        PipelineContext context = MakeContext(
-            images: [imageA, imageB],
-            families: [MakeFamily("FAM001")]);
+        List<ImageRecord_LAMBDA> records = [imageA, imageB];
 
-        ImageOrderer.Run(context);
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
 
-        Assert.Equal(0, context.LambdaRecords[0].DetOrder);
-        Assert.False(context.LambdaRecords[0].OrderEvidence!.IsOverflow);
-        Assert.Equal("source-index", context.LambdaRecords[0].OrderEvidence!.TieBreakerWon);
+        Assert.Equal(0, records[0].DetOrder);
+        Assert.False(records[0].OrderEvidence!.IsOverflow);
+        Assert.Equal("source-index", records[0].OrderEvidence!.TieBreakerWon);
 
-        Assert.True(context.LambdaRecords[1].OrderEvidence!.IsOverflow,
+        Assert.True(records[1].OrderEvidence!.IsOverflow,
             "Losing front-packshot image should be overflow since front-packshot does not qualify for det1.");
     }
 
@@ -189,35 +180,27 @@ public class ImageOrdererTests
     {
         // Image with null phenotype cannot qualify for any det slot.
         // It should appear as overflow after the last configured slot (det7 in default = index 7).
-        ImageRecord_LAMBDA image = MakeLambda("product.jpg", phenotype: null, familyId: "FAM001");
+        List<ImageRecord_LAMBDA> records = [MakeLambda("product.jpg", phenotype: null, familyId: "FAM001")];
 
-        PipelineContext context = MakeContext(
-            images: [image],
-            families: [MakeFamily("FAM001")]);
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
 
-        ImageOrderer.Run(context);
-
-        Assert.True(context.LambdaRecords[0].OrderEvidence!.IsOverflow);
-        Assert.True(context.LambdaRecords[0].DetOrder >= 8,
-            $"Expected overflow slot >= 8 (after default det7), got {context.LambdaRecords[0].DetOrder}");
-        Assert.Equal("FAM001", context.LambdaRecords[0].Family);
+        Assert.True(records[0].OrderEvidence!.IsOverflow);
+        Assert.True(records[0].DetOrder >= 8,
+            $"Expected overflow slot >= 8 (after default det7), got {records[0].DetOrder}");
+        Assert.Equal("FAM001", records[0].Family);
     }
 
     [Fact]
     public void Run_IllustrationTechnicalDrawing_AssignedToDet7()
     {
         // illustration-technical-drawing is in det7 of default rules.
-        ImageRecord_LAMBDA image = MakeLambda("technical.jpg", "illustration-technical-drawing", "FAM001");
+        List<ImageRecord_LAMBDA> records = [MakeLambda("technical.jpg", "illustration-technical-drawing", "FAM001")];
 
-        PipelineContext context = MakeContext(
-            images: [image],
-            families: [MakeFamily("FAM001")]);
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
 
-        ImageOrderer.Run(context);
-
-        Assert.Equal(7, context.LambdaRecords[0].DetOrder);
-        Assert.False(context.LambdaRecords[0].OrderEvidence!.IsOverflow);
-        Assert.Equal("illustration-technical-drawing", context.LambdaRecords[0].OrderEvidence!.WinningPhenotype);
+        Assert.Equal(7, records[0].DetOrder);
+        Assert.False(records[0].OrderEvidence!.IsOverflow);
+        Assert.Equal("illustration-technical-drawing", records[0].OrderEvidence!.WinningPhenotype);
     }
 
     [Fact]
@@ -228,11 +211,9 @@ public class ImageOrdererTests
         koImage.IsKo = true;
         koImage.KoReasonCode = "VISUAL_DUPLICATE";
 
-        PipelineContext context = MakeContext(
-            images: [koImage],
-            families: [MakeFamily("FAM001")]);
+        List<ImageRecord_LAMBDA> records = [koImage];
 
-        ImageOrderer.Run(context);
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
 
         // KO image must not have Family or OrderEvidence written by the orderer.
         Assert.Equal(string.Empty, koImage.Family);
@@ -264,9 +245,9 @@ public class ImageOrdererTests
     }
 
     /// <summary>
-    /// Creates a minimal <see cref="FamilyRecord"/> with just the FamilyID set.
+    /// Creates a minimal <see cref="FamilyIDRecord"/> with just the FamilyID set.
     /// </summary>
-    private static FamilyRecord MakeFamily(string familyId) => new(familyId);
+    private static FamilyIDRecord MakeFamily(string familyId) => new(familyId);
 
     /// <summary>
     /// Sets a fixed number of non-UNKNOWN features on the image to control NGP confidence.
@@ -277,34 +258,6 @@ public class ImageOrdererTests
         {
             lambda.Features.Set($"test-feature-{i}", "true", 1.0, "test");
         }
-    }
-
-    /// <summary>
-    /// Builds a minimal <see cref="PipelineContext"/> populated with the given images and families.
-    /// </summary>
-    private static PipelineContext MakeContext(
-        IReadOnlyList<ImageRecord_LAMBDA> images,
-        IReadOnlyList<FamilyRecord> families)
-    {
-        PipelineContext context = new(
-            Guid.NewGuid(),
-            imageRecords:   [],
-            excelRecords:   [],
-            zipFileRecords: [],
-            parameters:     new PrismProcessingParameters { Format = "json" },
-            startedAt:      DateTimeOffset.UtcNow);
-
-        foreach (ImageRecord_LAMBDA img in images)
-            context.LambdaRecords.Add(img);
-
-        // Inject an ImportStageResult so FamilyRecords are available during Run().
-        context.ImportResult = new ImportStageResult
-        {
-            NormalizedImages = [],
-            FamilyRecords    = families
-        };
-
-        return context;
     }
 
     /// <summary>

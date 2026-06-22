@@ -1,19 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace Prism.Core;
 
 /// <summary>
 /// Represents one deduplicated product family record built from the Internal Excel Model.
 /// </summary>
-public sealed class FamilyRecord
+public sealed class FamilyIDRecord
 {
     /// <summary>
     /// Creates a family record with the configured primary-key value.
     /// </summary>
     /// <param name="familyID">The validated family identifier.</param>
-    public FamilyRecord(string familyID)
+    public FamilyIDRecord(string familyID)
     {
         if (string.IsNullOrWhiteSpace(familyID))
         {
@@ -21,6 +22,34 @@ public sealed class FamilyRecord
         }
 
         FamilyID = familyID.Trim();
+    }
+
+    /// <summary>
+    /// JSON round-trip constructor — rehydrates a family record transmitted between PRISM services over HTTP.
+    /// Without this, the get-only dictionaries (e.g. <see cref="CanonicalProperties"/>) deserialize empty and
+    /// every non-FamilyID matcher rule silently fails. Rebuilds them with the case-insensitive comparer the
+    /// matchers rely on.
+    /// </summary>
+    [JsonConstructor]
+    public FamilyIDRecord(
+        string familyID,
+        IReadOnlyDictionary<string, string>? canonicalProperties,
+        IReadOnlyDictionary<string, ExcelColumnClassification>? columnClassifications,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? normalizedTokens,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? originalSourceCellValues,
+        IReadOnlyList<FamilyConflictEvidence>? conflictEvidence)
+        : this(familyID)
+    {
+        if (canonicalProperties is not null)
+            foreach (KeyValuePair<string, string> kv in canonicalProperties) this.canonicalProperties[kv.Key] = kv.Value;
+        if (columnClassifications is not null)
+            foreach (KeyValuePair<string, ExcelColumnClassification> kv in columnClassifications) this.columnClassifications[kv.Key] = kv.Value;
+        if (normalizedTokens is not null)
+            foreach (KeyValuePair<string, IReadOnlyList<string>> kv in normalizedTokens) this.normalizedTokens[kv.Key] = kv.Value;
+        if (originalSourceCellValues is not null)
+            foreach (KeyValuePair<string, IReadOnlyList<string>> kv in originalSourceCellValues) this.originalSourceCellValues[kv.Key] = kv.Value;
+        if (conflictEvidence is not null)
+            this.conflictEvidence.AddRange(conflictEvidence);
     }
 
     /// <summary>

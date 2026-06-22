@@ -7,6 +7,7 @@ namespace PrismCoreTests.Export;
 /// Unit tests for <see cref="Exporter"/> — both zip and JSON export modes.
 /// Each test that needs a file on disk calls <see cref="WriteTempJpeg"/>.
 /// All temp files are cleaned up in <see cref="Dispose"/>.
+/// <see cref="Exporter.Run"/> takes an explicit <see cref="ExportRequest"/> and returns the artifacts.
 /// </summary>
 public class ExporterTests : IDisposable
 {
@@ -24,14 +25,12 @@ public class ExporterTests : IDisposable
     public void Run_ZipFormat_ContainsManifestJson()
     {
         string imgPath = WriteTempJpeg("ok_img.jpg");
-        PipelineContext context = MakeContext(
+        ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ok_img.jpg", imgPath)],
             [MakeLambda("ok_img.jpg", "FAM001", 0)],
-            "zip");
+            "zip"));
 
-        Exporter.Run(context, null!);
-
-        using ZipArchive zip = new(new MemoryStream(context.ExportResult!.ZipBytes!));
+        using ZipArchive zip = new(new MemoryStream(result.ZipBytes!));
         Assert.Contains(zip.Entries, e => e.FullName == "manifest.json");
     }
 
@@ -41,14 +40,12 @@ public class ExporterTests : IDisposable
     public void Run_ZipFormat_OkImageAppearsInOkFolder()
     {
         string imgPath = WriteTempJpeg("ok_img.jpg");
-        PipelineContext context = MakeContext(
+        ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ok_img.jpg", imgPath)],
             [MakeLambda("ok_img.jpg", "FAM001", 0)],
-            "zip");
+            "zip"));
 
-        Exporter.Run(context, null!);
-
-        using ZipArchive zip = new(new MemoryStream(context.ExportResult!.ZipBytes!));
+        using ZipArchive zip = new(new MemoryStream(result.ZipBytes!));
         Assert.Contains(zip.Entries, e => e.FullName == "OK/FAM001_det0.jpg");
     }
 
@@ -58,14 +55,12 @@ public class ExporterTests : IDisposable
     public void Run_ZipFormat_KoImageAppearsInKoFolder()
     {
         string imgPath = WriteTempJpeg("ko_img.jpg");
-        PipelineContext context = MakeContext(
+        ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ko_img.jpg", imgPath)],
             [MakeLambda("ko_img.jpg", "FAM001", 0, isKo: true)],
-            "zip");
+            "zip"));
 
-        Exporter.Run(context, null!);
-
-        using ZipArchive zip = new(new MemoryStream(context.ExportResult!.ZipBytes!));
+        using ZipArchive zip = new(new MemoryStream(result.ZipBytes!));
         Assert.Contains(zip.Entries, e => e.FullName == "KO/ko_img.jpg");
     }
 
@@ -76,15 +71,13 @@ public class ExporterTests : IDisposable
     {
         string imgPath = WriteTempJpeg("ok_img.jpg");
         string xlsPath = WriteTempFile("catalogue.xlsx", [0x50, 0x4B]);
-        PipelineContext context = MakeContext(
+        ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ok_img.jpg", imgPath)],
             [MakeLambda("ok_img.jpg", "FAM001", 0)],
             "zip",
-            excelPath: xlsPath);
+            excelPath: xlsPath));
 
-        Exporter.Run(context, null!);
-
-        using ZipArchive zip = new(new MemoryStream(context.ExportResult!.ZipBytes!));
+        using ZipArchive zip = new(new MemoryStream(result.ZipBytes!));
         Assert.Contains(zip.Entries, e => e.FullName == "catalogue.xlsx");
     }
 
@@ -93,14 +86,12 @@ public class ExporterTests : IDisposable
     [Fact]
     public void Run_ZipFormat_KoWithNoNormalizedJpg_NotInZip()
     {
-        PipelineContext context = MakeContext(
+        ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("import_fail.jpg", normalizedPath: null)],
             [MakeLambda("import_fail.jpg", "FAM001", 0, isKo: true)],
-            "zip");
+            "zip"));
 
-        Exporter.Run(context, null!);
-
-        using ZipArchive zip = new(new MemoryStream(context.ExportResult!.ZipBytes!));
+        using ZipArchive zip = new(new MemoryStream(result.ZipBytes!));
         Assert.DoesNotContain(zip.Entries, e => e.FullName.StartsWith("KO/"));
     }
 
@@ -111,12 +102,10 @@ public class ExporterTests : IDisposable
     {
         string imgPath = WriteTempJpeg("ok_img.jpg");
         ImageRecord_LAMBDA lambda = MakeLambda("ok_img.jpg", "FAM001", 0);
-        PipelineContext context = MakeContext(
+        Exporter.Run(MakeRequest(
             [MakeInput("ok_img.jpg", imgPath)],
             [lambda],
-            "zip");
-
-        Exporter.Run(context, null!);
+            "zip"));
 
         Assert.NotNull(lambda.OutputRecord);
         Assert.Equal("FAM001_det0.jpg", lambda.OutputRecord!.FinalFileName);
@@ -127,14 +116,12 @@ public class ExporterTests : IDisposable
     [Fact]
     public void Run_JsonFormat_ZipBytesNull()
     {
-        PipelineContext context = MakeContext(
+        ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ok_img.jpg", null)],
             [MakeLambda("ok_img.jpg", "FAM001", 0)],
-            "json");
+            "json"));
 
-        Exporter.Run(context, null!);
-
-        Assert.Null(context.ExportResult!.ZipBytes);
+        Assert.Null(result.ZipBytes);
     }
 
     // ─── JSON: ImageRows count matches lambda count ───────────────────────────
@@ -142,14 +129,12 @@ public class ExporterTests : IDisposable
     [Fact]
     public void Run_JsonFormat_ManifestImageRowsMatchLambdaCount()
     {
-        PipelineContext context = MakeContext(
+        ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("a.jpg", null), MakeInput("b.jpg", null)],
             [MakeLambda("a.jpg", "FAM001", 0), MakeLambda("b.jpg", "FAM001", 1)],
-            "json");
+            "json"));
 
-        Exporter.Run(context, null!);
-
-        Assert.Equal(2, context.ExportResult!.FinalManifest!.ImageRows.Count);
+        Assert.Equal(2, result.Manifest.ImageRows.Count);
     }
 
     // ─── JSON: OK row has FinalFileName ──────────────────────────────────────
@@ -157,14 +142,12 @@ public class ExporterTests : IDisposable
     [Fact]
     public void Run_JsonFormat_OkRowHasFinalFileName()
     {
-        PipelineContext context = MakeContext(
+        ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ok_img.jpg", null)],
             [MakeLambda("ok_img.jpg", "FAM001", 0)],
-            "json");
+            "json"));
 
-        Exporter.Run(context, null!);
-
-        ManifestImageRow row = context.ExportResult!.FinalManifest!.ImageRows[0];
+        ManifestImageRow row = result.Manifest.ImageRows[0];
         Assert.Equal("FAM001_det0.jpg", row.FinalFileName);
     }
 
@@ -173,14 +156,12 @@ public class ExporterTests : IDisposable
     [Fact]
     public void Run_JsonFormat_KoRowHasNullFinalFileName()
     {
-        PipelineContext context = MakeContext(
+        ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ko_img.jpg", null)],
             [MakeLambda("ko_img.jpg", "FAM001", 0, isKo: true, koCode: "MATCH_FAIL")],
-            "json");
+            "json"));
 
-        Exporter.Run(context, null!);
-
-        ManifestImageRow row = context.ExportResult!.FinalManifest!.ImageRows[0];
+        ManifestImageRow row = result.Manifest.ImageRows[0];
         Assert.Null(row.FinalFileName);
         Assert.Equal("MATCH_FAIL", row.KoReasonCode);
     }
@@ -201,28 +182,24 @@ public class ExporterTests : IDisposable
         return path;
     }
 
-    private static PipelineContext MakeContext(
+    private static ExportRequest MakeRequest(
         IReadOnlyList<ImageRecord_INPUT> inputs,
         IReadOnlyList<ImageRecord_LAMBDA> lambdas,
         string format,
         string? excelPath = null)
     {
-        List<InputExcelFileRecord> excelRecords = excelPath is not null
-            ? [new InputExcelFileRecord { SourceReference = Path.GetFileName(excelPath), TempFilePath = excelPath }]
-            : [];
-
-        PipelineContext context = new(
-            Guid.NewGuid(),
-            imageRecords:   inputs,
-            excelRecords:   excelRecords,
-            zipFileRecords: [],
-            parameters:     new PrismProcessingParameters { Format = format },
-            startedAt:      DateTimeOffset.UtcNow);
-
-        foreach (ImageRecord_LAMBDA lambda in lambdas)
-            context.LambdaRecords.Add(lambda);
-
-        return context;
+        return new ExportRequest
+        {
+            JobID              = Guid.NewGuid(),
+            LambdaRecords      = lambdas,
+            NormalizedImages   = inputs,
+            FirstExcelTempPath = excelPath,
+            Format             = format,
+            ImageCount         = inputs.Count,
+            ExcelCount         = excelPath is not null ? 1 : 0,
+            ZipCount           = 0,
+            Warnings           = []
+        };
     }
 
     private static ImageRecord_INPUT MakeInput(string name, string? normalizedPath)

@@ -5,6 +5,8 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Prism.Core;
 
+/*JB: Note to Claude: Haar-Features can help detect facial features. */
+
 /// <summary>
 /// Extracts measurable ImageFeatures from a normalized image using CPU-only methods.
 /// Uses ImageSharp for pixel-level analysis; does not require a GPU or external service.

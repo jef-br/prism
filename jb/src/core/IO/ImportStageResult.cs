@@ -15,7 +15,7 @@ public sealed record ImportStageResult
     /// <summary>
     /// Family records built from all accepted Excel workbooks via the Internal Excel Model.
     /// </summary>
-    public IReadOnlyList<FamilyRecord> FamilyRecords { get; init; } = [];
+    public IReadOnlyList<FamilyIDRecord> FamilyRecords { get; init; } = [];
 
     /// <summary>
     /// Excel processing diagnostics emitted during IEM construction.

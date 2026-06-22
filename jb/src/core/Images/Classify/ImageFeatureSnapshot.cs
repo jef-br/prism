@@ -1,15 +1,31 @@
+using System.Text.Json.Serialization;
+
 namespace Prism.Core;
 
 /// <summary>
 /// Collected ImageFeature measurements for one canonical image after the Classified stage.
 /// Feature ids match <c>jb/docs/ImageNGP/ImageFeatures.md</c>.
 /// Values are stored as strings for interoperability with the JSON-driven
-/// <c>ImageRoles.json</c> phenotype rule evaluator.
+/// <c>ImageRoles.json</c> phenotype rule evaluator. The snapshot round-trips through System.Text.Json
+/// so it can be persisted as part of a LAMBDA document and reloaded by any downstream service.
 /// </summary>
 public sealed class ImageFeatureSnapshot
 {
-    private readonly Dictionary<string, ImageFeatureValue> features =
-        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ImageFeatureValue> features;
+
+    /// <summary>Creates an empty snapshot.</summary>
+    public ImageFeatureSnapshot()
+        => features = new Dictionary<string, ImageFeatureValue>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Rehydrates a snapshot from a persisted LAMBDA document. Matches the <see cref="All"/> property
+    /// by name so System.Text.Json restores every measured feature.
+    /// </summary>
+    [JsonConstructor]
+    public ImageFeatureSnapshot(IReadOnlyDictionary<string, ImageFeatureValue>? all)
+        => features = all is null
+            ? new Dictionary<string, ImageFeatureValue>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, ImageFeatureValue>(all, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Records a measured feature value, overwriting any previous value for the same feature id.
