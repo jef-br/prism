@@ -33,10 +33,15 @@ public sealed class TransformService : ITransformService
             return new TransformResult { Matched = matched, OkTransformedCount = 0 };
         }
 
+        Dictionary<string, string?> pathByName = matched.Ingest.NormalizedImages
+            .ToDictionary(r => r.InitialFullName, r => r.NormalizedJpgPath, StringComparer.OrdinalIgnoreCase);
+
         int okTransformed = 0;
         foreach (ImageRecord_LAMBDA lambda in matched.LambdaRecords)
         {
             if (lambda.IsKo) continue;
+            pathByName.TryGetValue(lambda.InitialFullName, out string? imgPath);
+            ImagePreProcessor.Preprocess(lambda, imgPath);
             ImageTransformer.TransformImage(lambda);
             okTransformed++;
         }
