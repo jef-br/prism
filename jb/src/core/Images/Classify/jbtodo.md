@@ -19,7 +19,12 @@
     Vision pipelines keep measured attributes separate from derived image phenotypes, then document the feature combinations that produce each phenotype so downstream stages can make deterministic decisions.
   - Recommended solution:
     Use the accepted `jb/docs/PRISM-classify.md` decision as the baseline: ImageFeatures are measured attributes with source/confidence/unknown state, and `ImageNGP` is a phenotype derived from combinations of ImageFeatures rather than a single `TypeOfShot` list. Complete this todo by listing the concrete ImageNGP values and their required feature combinations.
-  - Answer:
+  - Answer (proposed pointer from existing data — PRISM-classify.md "Taxonomy & Prompt Configuration"; PRISM-index.md File Map; pending approval):
+    The enumerated taxonomy already exists as accepted artifacts — this todo is reconciliation/transcription, not net-new design:
+      - Canonical machine source: `jb/src/core/ImageNGP/ImageNGP.json` — every IF id with datatype/allowed values, plus the 26-phenotype catalogue (the runtime authority; `ImageNgpValidator` fails fast on any drift).
+      - IF→phenotype feature combinations: `jb/src/core/ImageNGP/ImageRoles.json` (first-match rules).
+      - Human-readable definitions: `jb/docs/ImageNGP/imagePhenotypes.md` (26 phenotypes) and `jb/docs/ImageNGP/PRODUCTTYPES.md`; IF catalog in `jb/docs/ImageNGP/ImageFeatures.md` (40 IFs).
+    Recommended close-out: confirm `ImageNGP.json` ↔ `imagePhenotypes.md` ↔ `ImageRoles.json` agree on the 26 phenotypes and their required IF combinations, then record that reconciled list here. (No new phenotypes should be invented in this step.) NOTE: the `ghost-front` ordering bug and `illustration-technical-drawing` scope todos below must be settled as part of confirming the feature combinations.
 
 - [ ] Fix `ImageRoles.json` ordering bug: `ghost-front` is permanently unreachable because `front-packshot` appears before it and matches the same five conditions first.
   - Impact:
@@ -29,7 +34,8 @@
     First-match-wins rule engines always place more-specific rules (more required conditions) before less-specific ones. `ghost-front` is a strict superset of `front-packshot` requirements; it must come first.
   - Recommended solution:
     In `jb/src/core/ImageNGP/ImageRoles.json`, move `ghost-front`, `ghost-back`, and `ghost-side` to appear immediately before their corresponding packshot variants (`front-packshot`, `back-packshot`, `side-packshot`). Update the corresponding assertion in `PhenotypeRuleSetTests.Assign_GhostFront_OrderingBug_CurrentlyReturnsFrontPackshot` from `"front-packshot"` to `"ghost-front"` after the fix.
-  - Answer:
+  - Answer (proposed from existing docs — PRISM-classify.md "Taxonomy & Prompt Configuration" states `ImageRoles.json` is evaluated *first-match* by `PhenotypeRuleSet.cs`; pending approval):
+    Adopt the recommended fix. This is a deterministic correctness bug, not a course change: under a documented first-match-wins engine, a more-specific rule (`ghost-*`, a strict superset of the packshot conditions) must precede the less-specific packshot rule, otherwise it is unreachable. Reorder `ghost-front`/`ghost-back`/`ghost-side` immediately before their packshot variants and flip the test assertion as described. No new data or taxonomy change required.
 
 - [ ] Resolve whether `illustration-technical-drawing` should remain a broad catch-all or require additional conditions.
   - Impact:
@@ -39,7 +45,8 @@
     Catch-all rules in phenotype taxonomies are either placed at the very bottom and clearly scoped (e.g. "all remaining lifestyle images → lifestyle-context") or gated by a positive signal (e.g. a CLIP prompt confidence for "graphic/schematic rendering"). A rule that means "graphic/schematic" but fires for any non-human image is an unscoped catch-all masquerading as a specific phenotype.
   - Recommended solution:
     Either (a) add CLIP-based conditions to tighten the rule (e.g. require a classification token above threshold for "technical drawing", "vector illustration", or "schematic"), or (b) replace the current rule with a null assignment so unrecognized non-human images get no phenotype and are handled by deterministic fallback in the Ordered stage. Option (b) is safer until the CLIP-based signal is proven reliable.
-  - Answer:
+  - Answer (proposed recommendation, decision still yours — grounded in PRISM-classify.md "UNKNOWN States" (below-threshold → UNKNOWN, never default) and current impl where most IFs are UNKNOWN/no CLIP prompt writes a "schematic" token; pending approval):
+    Existing data favours option (b) for now: there is currently no CLIP prompt or analyzer that writes a positive "technical drawing / vector illustration / schematic" signal, so an unscoped catch-all firing on any non-human image would systematically misclassify plain products once `hero-is-human = FALSE` becomes available. Replacing it with a null/no-phenotype assignment keeps unrecognized non-human images in the deterministic Ordered-stage fallback (consistent with the docs' rule that absent evidence stays UNKNOWN rather than defaulting). Option (a) becomes the preferred long-term fix only after a dedicated CLIP prompt for "schematic/technical drawing" is added and proven on the validation set — which is new data, so it is out of scope for this pass. Final pick is your call.
 
 - [ ] interior-shot phenotype is silently unreachable in CPU-only mode.
   - File: `jb/src/core/ImageNGP/ImageRoles.json` — interior-shot entry requires `packaging-visible = false`.
