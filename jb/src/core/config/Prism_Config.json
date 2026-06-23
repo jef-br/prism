@@ -56,7 +56,7 @@
     "Jobs": {
         "JobRetentionPeriodInHours": 24,
         "MaxQueuedJobs": 100,
-        "MaxConcurrentJobs": 1
+        "MaxConcurrentJobs": 5
     },
     "Pipeline": {
         "JobRetries": 3

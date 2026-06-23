@@ -12,7 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\core\Models\Prism.Core.Contracts.csproj" />
     <ProjectReference Include="..\..\core\Prism.Core.csproj" />
   </ItemGroup>
 </Project>
