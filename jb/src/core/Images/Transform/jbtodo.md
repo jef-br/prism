@@ -21,14 +21,9 @@
     - all other phenotyped images → CenterAndStretch (or CropSquare if disqualified by edge intersect)
     Routing also reads `OrderEvidence.DetSlot` + product type (see DetailCropper det-slot exclusion todo).
 
+    
+
 - [ ] Define transform failure, fallback, and fill-KO policy: list which transform problems become KO, which eligible fill failures can still export, and what fallback path is used after border-intersection no-reposition cases are excluded.
-  - Impact:
-    - Project progress: High - Failure and fallback policy decides when visual quality is too risky to export while preventing transform exceptions from becoming full-batch failures.
-    - Effect on other TODOs: Blocks - It affects KO reasons, `ImageTransformationResult`, manifest projection, JSON/zip status, background fill, center-and-stretch behavior, and output quality warnings.
-  - Industry standard:
-    Batch image processors distinguish recoverable quality warnings from unrecoverable transform failures, use deterministic fallback paths for low-confidence geometry, and record per-item KO instead of crashing the batch.
-  - Recommended solution:
-    KO images when decode/normalized input is invalid, object bounds are unusable for required transforms, required output size or margins cannot be met, or fill/crop artifacts exceed configured quality thresholds. Export with warnings only when fallback resize/crop/fill output remains acceptable.
   - Answer:
     KO the image when:
     - Decoded input is invalid (corrupt, unsupported encoding after format conversion).
@@ -50,21 +45,6 @@
     - `Warnings` — anchor notes, quality warnings.
     No new fields required.
 
-- [ ] Define background fill policy for eligible crop and center operations: choose allowed methods for images that are not blocked by border-intersection no-reposition rules.
-  - Impact:
-    - Project progress: High - Fill policy controls visual quality, compute cost, and whether external dependencies are needed.
-    - Effect on other TODOs: Blocks - It gates detail crop fill, center-and-stretch extension, cleanup, KO rejection, and no-fill handling for border-intersecting images.
-  - Industry standard:
-    Product-image pipelines use deterministic cheap fills first, then controlled inpainting/generation only when allowed and traceable.
-  - Recommended solution:
-    Allow edge extension, local blur/clone, solid fill, and optional local inpainting for eligible images; do not rely on external SaaS generation for core transforms.
-  - Answer:
-    Tiered by required extension ratio (filled area relative to source image area):
-    - ≤125% of source: basic edge extension (mirror or clamp border pixels outward).
-    - ≤142% of source: content-aware edge extension (patch-based or frequency-aware border propagation).
-    - >142% of source: OpenCV inpainting (INPAINT_TELEA preferred; INPAINT_NS as alternative).
-    - >250% of source: solid white fill (#FFFFFF).
-    Never use Gaussian blur alone as a fill method. Apply seam feathering at extension boundary after edge extension passes.
 
 - [ ] Define resize decision output: say how preprocessor reports upscale, downscale, or no-resize decisions.
   - Impact:

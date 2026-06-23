@@ -43,10 +43,10 @@ Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, 
 
 | Milestone | Feature area | Gate condition |
 |---|---|---|
-| M5 Classification Groundwork | ImageNGP taxonomy + rule correctness | All Classify `jbtodo.md` decisions answered; ghost-front ordering bug fixed; ONNX session migrated to singleton |
+| M5 Classification Groundwork | ImageNGP taxonomy + rule correctness | All Classify `jbtodo.md` decisions answered; ONNX session migrated to singleton |
 | M6 Human & Model Detection | `hero-is-human`, `contains-mannequin`, `has-human`, `head-visible`, `face-visible` | On-model and ghost phenotypes (`front-on-model-*`, `ghost-front/back/side`) fire correctly on labeled images |
 | M7 Orientation & Pose | `hero-orientation`, `pose-type`, `camera-angle`, `top-view` | Packshot orientation-split phenotypes (`front-packshot`, `back-packshot`, `side-packshot`) fire from real signal |
-| M8 Product & Packaging | `packaging-visible`, `product-type-label`, `multiple-products` | `interior-shot` and packshot phenotypes fire from CLIP; `packaging-visible` no longer always UNKNOWN |
+| M8 Product & Packaging | `packaging-visible`, `product-type-label`, `multiple-products` | packshot phenotypes fire from CLIP; `packaging-visible` no longer always UNKNOWN |
 | M9 Composition & Spatial | `product-coverage-ratio`, `image-occupancy`, `salient-bbox`, `vertical-centering`, `horizontal-centering` | Composition phenotypes measured; overflow slot assignment accuracy confirmed |
 | M10 Semantic & Content | `text-present`, `logo-present`, `dominant-colors`, `lighting` | Content features populated; transform routing that depends on them verified |
 | M11 Production Validation | All 26 phenotypes | < 5% misassignment on labeled validation set; no systematic error on any single phenotype |
@@ -112,6 +112,34 @@ Public shared links (`dropbox.com/s/...?dl=0`) can be normalized (`?dl=1`) and d
 **Resolution — not a bug.** `ImageRecord_OUTPUT` inherits from `ImageRecord_Base` which already declares `Width`, `Height`, and `Checksum`. All `ImageRecord*` types carry these fields via inheritance. No fix required.
 
 **Files:** `jb/src/core/Models/ImageRecord_Base.cs` (no changes)
+
+---
+
+### T-1700 · Implement Tx_util_BgStretch
+**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+
+Implement the tiered background fill utility in `jb/src/core/Images/Transform/Tx_util_BgStretch.cs`.
+Called as a sub-step from `Tx_CenterAndStretch` and `Tx_DetailCropper`. Not an `IImageTransformation` implementor.
+
+**Tiers (extension ratio = filled canvas area / source image area):**
+- ≤ 125%: basic edge extension (mirror or clamp border pixels outward)
+- ≤ 142%: content-aware edge extension (patch-based or frequency-aware border propagation)
+- > 142%: OpenCV inpainting — INPAINT_TELEA preferred, INPAINT_NS as alternative
+- > 250%: solid white fill (#FFFFFF)
+
+**Rules:**
+- Never use Gaussian blur as a fill method.
+- Apply seam feathering at extension boundary after tiers 1 and 2.
+- Tier 3 inpainting handles its own seam implicitly.
+- Expose `Process(byte[] arr, int stride, float upscale_factor)` per the dual-interface contract.
+
+**Acceptance:**
+- All four tiers select the correct method for the given extension ratio.
+- Seam feathering applied after tiers 1 and 2; not after tiers 3 or 4.
+- `Process()` signature matches dual-interface contract.
+- `dotnet build jb/src/PRISM.sln` passes.
+
+**Files:** `jb/src/core/Images/Transform/Tx_util_BgStretch.cs`
 
 ---
 

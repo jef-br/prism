@@ -6,7 +6,7 @@ Agent-owned reload memory. Not authoritative project docs. Accepted knowledge in
 
 **M5 Classification Groundwork** — active gate. Blocks M6+.
 
-Gate: All Classify `jbtodo.md` decisions answered; ghost-front ordering bug fixed; ONNX session migrated to application-scoped singleton.
+Gate: All Classify `jbtodo.md` decisions answered; ONNX session migrated to application-scoped singleton.
 
 ## Active Tickets
 
@@ -25,7 +25,7 @@ Gate: All Classify `jbtodo.md` decisions answered; ghost-front ordering bug fixe
 
 | Folder | Count | Topics |
 |---|---|---|
-| `Images/Classify/` | 7 | ONNX singleton (answered, not yet implemented), taxonomy list, ghost-front ordering bug, illustration-technical-drawing scope, interior-shot unreachable, RecordUnknownFeatures() stub, production validation protocol |
+| `Images/Classify/` | 7 | ONNX singleton (answered, not yet implemented), taxonomy list, illustration-technical-drawing scope, RecordUnknownFeatures() stub, production validation protocol |
 | `Images/Match/` | 5 | 4 spec deviations (scoring formula, ME missing fields, Bracket-3 duplicate guard, original token text) + 1 user decision (cross-bracket tie resolution) |
 | `Images/Order/` | 1 | det0 SIDE fallback — algorithm change vs. post-process promotion |
 | `Images/Transform/` | 15 | 11 design decisions (crop/fill/resize/headcut/saliency/KO policy) + 4 impl stubs |

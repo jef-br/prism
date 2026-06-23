@@ -7,11 +7,12 @@
   - Sessions are "application-scoped." Current code creates a fresh session per job and disposes it when the job ends.
   - Trade-off: Per-job sessions are safe (no cross-job state) but add ONNX model load time per job (~100–500 ms). Application-scoped sessions would amortize load cost but require thread-safe session management across concurrent jobs.
   - Decision needed: Accept per-job session lifecycle (current), or move to application-scoped singleton session with thread-safe access?
-  - Answer: move to application-scoped singleton session with thread-safe access
+  - Answer: Given the duration of a typical job is definitely above 1 minute: Pick the option that balances least-simultaneously-used-server-resources with speed-per-job considering that an onnx delay of maximum 5 seconds is acceptable.
 
 
 
 - [ ] Define final ImageNGP taxonomy and feature combinations: list all possible ImageNGPs and the ImageFeature values required to derive each phenotype.
+- [ ] 
   - Impact:
     - Project progress: High - ImageFeatures and ImageNGPs control matching evidence, transform behavior, DetOrder assignment, and output quality rules.
     - Effect on other TODOs: Blocks - It gates ordering rules, `ImageNGP.cs` fields, `ImageRecord_LAMBDA.cs` fields, transform-facing phenotype use, and unknown-state handling for derived phenotypes.
@@ -19,23 +20,19 @@
     Vision pipelines keep measured attributes separate from derived image phenotypes, then document the feature combinations that produce each phenotype so downstream stages can make deterministic decisions.
   - Recommended solution:
     Use the accepted `jb/docs/PRISM-classify.md` decision as the baseline: ImageFeatures are measured attributes with source/confidence/unknown state, and `ImageNGP` is a phenotype derived from combinations of ImageFeatures rather than a single `TypeOfShot` list. Complete this todo by listing the concrete ImageNGP values and their required feature combinations.
+
   - Answer (proposed pointer from existing data — PRISM-classify.md "Taxonomy & Prompt Configuration"; PRISM-index.md File Map; pending approval):
     The enumerated taxonomy already exists as accepted artifacts — this todo is reconciliation/transcription, not net-new design:
       - Canonical machine source: `jb/src/core/ImageNGP/ImageNGP.json` — every IF id with datatype/allowed values, plus the 26-phenotype catalogue (the runtime authority; `ImageNgpValidator` fails fast on any drift).
       - IF→phenotype feature combinations: `jb/src/core/ImageNGP/ImageRoles.json` (first-match rules).
       - Human-readable definitions: `jb/docs/ImageNGP/imagePhenotypes.md` (26 phenotypes) and `jb/docs/ImageNGP/PRODUCTTYPES.md`; IF catalog in `jb/docs/ImageNGP/ImageFeatures.md` (40 IFs).
-    Recommended close-out: confirm `ImageNGP.json` ↔ `imagePhenotypes.md` ↔ `ImageRoles.json` agree on the 26 phenotypes and their required IF combinations, then record that reconciled list here. (No new phenotypes should be invented in this step.) NOTE: the `ghost-front` ordering bug and `illustration-technical-drawing` scope todos below must be settled as part of confirming the feature combinations.
+    Recommended close-out: confirm `ImageNGP.json` ↔ `imagePhenotypes.md` ↔ `ImageRoles.json` agree on the 26 phenotypes and their required IF combinations, then record that reconciled list here. (No new phenotypes should be invented in this step.) NOTE: the `illustration-technical-drawing` scope todos below must be settled as part of confirming the feature combinations.
 
-- [ ] Fix `ImageRoles.json` ordering bug: `ghost-front` is permanently unreachable because `front-packshot` appears before it and matches the same five conditions first.
-  - Impact:
-    - Project progress: Medium — invisible in CPU-only mode (hero-is-human is UNKNOWN so neither rule fires), but becomes a silent misclassification once CLIP provides `hero-is-human = FALSE`. Every ghost garment will be assigned `front-packshot` instead.
-    - Effect on other TODOs: Directly affects DetOrder slot assignment (ghost vs. packshot may map to different slots in `DetOrderRules.json`) and transform behavior.
-  - Industry standard:
-    First-match-wins rule engines always place more-specific rules (more required conditions) before less-specific ones. `ghost-front` is a strict superset of `front-packshot` requirements; it must come first.
-  - Recommended solution:
-    In `jb/src/core/ImageNGP/ImageRoles.json`, move `ghost-front`, `ghost-back`, and `ghost-side` to appear immediately before their corresponding packshot variants (`front-packshot`, `back-packshot`, `side-packshot`). Update the corresponding assertion in `PhenotypeRuleSetTests.Assign_GhostFront_OrderingBug_CurrentlyReturnsFrontPackshot` from `"front-packshot"` to `"ghost-front"` after the fix.
-  - Answer (proposed from existing docs — PRISM-classify.md "Taxonomy & Prompt Configuration" states `ImageRoles.json` is evaluated *first-match* by `PhenotypeRuleSet.cs`; pending approval):
-    Adopt the recommended fix. This is a deterministic correctness bug, not a course change: under a documented first-match-wins engine, a more-specific rule (`ghost-*`, a strict superset of the packshot conditions) must precede the less-specific packshot rule, otherwise it is unreachable. Reorder `ghost-front`/`ghost-back`/`ghost-side` immediately before their packshot variants and flip the test assertion as described. No new data or taxonomy change required.
+
+
+
+
+
 
 - [ ] Resolve whether `illustration-technical-drawing` should remain a broad catch-all or require additional conditions.
   - Impact:
@@ -51,12 +48,57 @@
 - [ ] interior-shot phenotype is silently unreachable in CPU-only mode.
   - File: `jb/src/core/ImageNGP/ImageRoles.json` — interior-shot entry requires `packaging-visible = false`.
   - Issue: `packaging-visible` is always UNKNOWN in CPU-only mode. UNKNOWN never satisfies a condition in PhenotypeRuleSet. No CLIP prompt or analyzer currently writes `packaging-visible`. interior-shot can never be assigned.
-  - Fix: Either add a CLIP prompt or analyzer that writes `packaging-visible`, or change the interior-shot phenotype rule to not require it. Requires user decision.
+  - Fix:
+    - add producttype requirements to interior-shot:
+      - has to be a wallet, bag, suitcases or similar
+      - cannot be clothing
+    - Create an Analyzer class for interiors:
+      - Core Pattern: the image must satisfy
+          1. Large enclosed region.
+          2. Surrounded by a strong boundary.
+          3. Contained within a larger foreground object.
+          4. Number of connections with the image border add confidence.
+          5. Interior differs from its surroundings.
+          Topology:Background > Foreground Object > Boundary (zipper / seam / opening) > Interior Region
+        
+      - Do not attempt to recognize bags, zippers, leather, fabric, or handles.
+      - Treat it as geometric and topological analysis: "A large cavity enclosed by a strong boundary and contained within a larger object."
+
+      - Analyzer Pipeline:
+        1. Canny Edge map > dilate to close gaps > Extract closed contours ignoring tiny contours
+        2. Per contour: Compute enclosed mask, area, perimeter, mean edge strength along contour.
+        3. For each enclosed region: Measure texture, color variance, brightness, and distance to image border. > Measure surroundings. Expand region outward by N pixels > Compute texture/color statistics in the surrounding ring > Compute edge density in the surrounding ring.
+
+      - Interior Candidate Requirements:
+        ✓ Region is enclosed
+        ✓ Region area exceeds threshold
+        ✓ Boundary strength exceeds threshold
+
+      - confidence enhancers: 
+        ✓ Interior texture < surrounding texture.
+        ✓ Interior variance < surrounding variance.
+        ✓ Region lies inside a larger foreground component.
+        ✓ Boundary forms a substantial closed loop.
+
+      - Scoring: AreaScore + EnclosureScore + BoundaryStrengthScore + InteriorVsSurroundingTextureScore+ ForegroundContainmentScore + BorderDistanceScore
+
+      - Reject if: Area too small, Boundary weak, pr  No larger enclosing foreground object exists
+
+      - Usage: regardless of detorder, fires for images with a qualifying producttype in the FamilyID excel column. CLIP labels don't matter here (might not have been recognized) If a det0 or det1 gets tagged as interior-shot, it gets bumped to a position after det1 it qualifies for, or added to the end.
+
+
+
+
+
 
 - [ ] Code stub: `RecordUnknownFeatures()` in `ImageFeatureAnalyzer.cs` marks 35+ features as UNKNOWN.
   - File: `jb/src/core/Images/Classify/ImageFeatureAnalyzer.cs` lines 195–235.
   - Block: These features require a CLIP-backed classifier or specialized detectors that are not yet wired in. The open todos above (ImageNGP taxonomy definition and `illustration-technical-drawing` scope) must be resolved first — they determine which features need CLIP prompts and which need separate detectors.
   - Fix: After taxonomy and role todos are answered, replace each `SetUnknownIfNotSet` call with a real measurement call to the appropriate analyzer (CLIP classifier for semantic features like `hero-is-human`, `hero-orientation`, `product-type-label`; specialized detectors for `salient-bbox`, `dominant-colors`, `pose-type`, etc.). Features with no planned analyzer keep `SetUnknownIfNotSet` until a detector is available.
+  - Answer:
+
+
+
 
 - [ ] Phenotype production validation: define the protocol and acceptance criteria required before phenotype assignment can be trusted in production.
   - Issue: The 26 phenotypes in `imagePhenotypes.md` were defined from spec and taxonomy documentation without real-image testing. Production-quality assignment requires validation against a representative labeled image set. Currently most features are UNKNOWN (see RecordUnknownFeatures stub), so phenotype assignment is unreliable for any image where CLIP evidence is needed.
@@ -64,9 +106,9 @@
     1. A labeled validation set — minimum ~100 images per major phenotype category across the product types in `DetOrderRules.json` (packshots, ghost images, on-model, lifestyle, technical drawings).
     2. All four Tx class stubs must be implemented so that transform routing can be validated end-to-end, not just assignment.
     3. The `RecordUnknownFeatures()` stub must be replaced with real measurements so phenotype rules fire from actual signals.
-    4. Known rule bugs fixed: `ghost-front`/`front-packshot` ordering bug corrected; `illustration-technical-drawing` scope resolved.
+    4. `illustration-technical-drawing` scope resolved.
     5. A confusion matrix showing predicted vs. expected phenotype per image, with per-class precision and recall.
     6. CLIP confidence thresholds tuned per feature (not uniform) to minimize misassignment on the validation set.
     7. Edge-case pass: ghost images, extreme orientations, lifestyle images, and illustrations all assign a correct or null phenotype — no silent misassignment to a wrong category.
   - Acceptance criteria: < 5% misassignment rate on the labeled validation set across all 26 phenotypes, with no systematic error pattern on any single phenotype category.
-  - Fix: Schedule a validation sprint after RecordUnknownFeatures() and the ghost-front ordering bug are resolved. Build or curate the labeled image set, run the pipeline, measure assignment accuracy, and tune thresholds iteratively.
+  - Fix: Schedule a validation sprint after RecordUnknownFeatures() is resolved. Build or curate the labeled image set, run the pipeline, measure assignment accuracy, and tune thresholds iteratively.

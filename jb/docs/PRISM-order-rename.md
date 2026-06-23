@@ -11,7 +11,26 @@ Orders images associated to a single FID using IFs, derived INGPs, DO rules, and
 
 - Always **zero-based** (`_det0`, `_det1`, `_det2`, …).
 - Order gaps **allowed** when missing det positions can be filled by generation.
-- After generation/renaming, remaining gaps are **closed**.
+- After generation/renaming, remaining gaps are **closed** per the gap policy below.
+
+### Gap policy (`DET-ORDER-GAPS-ALLOWED`)
+
+Gap closing is controlled by the boolean `DET-ORDER-GAPS-ALLOWED` in `Prism_Config.json`:
+
+- `true` → det indices are kept exactly as the Order stage assigned them; gaps (e.g. an empty `_det0` when a family has only a SIDE image) are preserved.
+- `false` → each family's det indices are compacted to be contiguous from `0`.
+
+The Order stage itself is **unchanged** by this policy: the phenotype/DO chain plays out fully and each image is assigned to its best-ranked slot (a SIDE image stays in its `det2` slot, leaving `det0` empty when no FRONT/DIAGONAL image exists). Gap handling is a **separate export-time pass**, not an ordering change.
+
+Compaction rules when `false`:
+- Applies to the **entire non-KO ("OK") collection** — all families, all product types.
+- For each family, take its images in ascending current `DetOrder` and reassign contiguous `0..n-1`.
+- **Only closes gaps — never reorders.** The relative det order assigned by the Order stage is preserved exactly under all circumstances.
+
+Implementation placement:
+- Handled during **export**, as the first step of `Exporter.Run` (before output-record and manifest building, both of which read `DetOrder`). `DetOrderConfig` and `ImageOrderer` are untouched; the flag reaches `Exporter.Run` via `ExportRequest`.
+- Compaction only renumbers `DetOrder`. `ImageRecord_Base.NewName` is computed (`{Family}_det{DetOrder}.jpg`), so the output filename, manifest row, and `ImageRecord_OUTPUT.DetOrder` follow automatically — no filename string rewriting.
+- Safe against rename collisions: `ImageRenamer.HasDetCollision` runs upstream, and a monotonic gap-closing renumber of already-distinct indices cannot introduce a collision.
 
 ---
 

@@ -65,11 +65,22 @@ Margin applied so there is whitespace between object and image edge. Method: cro
 
 ## Background Extension
 
-For eligible images (not blocked by intersection):
-- Repositioning centers object by cropping/expanding geometry → configured margin exists between object and image edge.
-- New pixels → filled to mimic existing background.
-- Object geometry must be preserved.
-- Intersecting-border images remain governed by the no-reposition rule in blocked directions.
+For eligible images (not blocked by intersection): repositioning centers the object by cropping/expanding geometry so the configured margin exists between object and image edge. New pixels are filled to mimic existing background. Object geometry must be preserved. Intersecting-border images remain governed by the no-reposition rule in blocked directions.
+
+### Fill Method — Tiered by Extension Ratio
+
+Extension ratio = filled canvas area / source image area.
+
+| Tier | Extension ratio | Method |
+|---|---|---|
+| 1 | ≤ 125% | Basic edge extension (mirror or clamp border pixels outward) |
+| 2 | ≤ 142% | Content-aware edge extension (patch-based or frequency-aware border propagation) |
+| 3 | > 142% | OpenCV inpainting — INPAINT_TELEA preferred; INPAINT_NS as alternative |
+| 4 | > 250% | Solid white fill (#FFFFFF) |
+
+- Never use Gaussian blur as a fill method.
+- Apply seam feathering at the extension boundary after tiers 1 and 2. Tier 3 handles its own seam implicitly.
+- Implemented by `Tx_util_BgStretch.cs` (sub-step helper, not an `IImageTransformation` implementor).
 
 ---
 
