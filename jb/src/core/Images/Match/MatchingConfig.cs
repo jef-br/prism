@@ -10,13 +10,22 @@ public sealed record MatchingConfig
     /// <summary>All configured matching rules.</summary>
     public IReadOnlyList<MatchingRule> Rules { get; init; } = [];
 
+    /// <summary>
+    /// Minimum combined evidence score for Bracket 4 semantic matching to accept an assignment.
+    /// Computed as the average of CLIP, numeric, and string signals scaled to [0, 1].
+    /// </summary>
+    public double SemanticThreshold { get; init; } = 0.9;
+
+    /// <summary>Weight applied to each semantic signal when computing MatchEvidence.FinalScore for Bracket 4.</summary>
+    public double SemanticWeight { get; init; } = 0.15;
+
     /// <summary>Rules that drive numeric token matching (familyID, EAN).</summary>
     public IReadOnlyList<MatchingRule> NumericRules =>
         Rules.Where(r => r.Type.Equals("numeric", StringComparison.OrdinalIgnoreCase)).ToList();
 
-    /// <summary>Rules that drive classification label evidence (ProductColor, ProductType, etc.).</summary>
+    /// <summary>Rules that drive CLIP label evidence (ProductColor, ProductType, etc.).</summary>
     public IReadOnlyList<MatchingRule> LabelRules =>
-        Rules.Where(r => r.Strategy.Equals("ImageLabelingMatcher", StringComparison.OrdinalIgnoreCase)).ToList();
+        Rules.Where(r => r.Strategy.Equals("ClipLabelEnricher", StringComparison.OrdinalIgnoreCase)).ToList();
 
     /// <summary>
     /// Loads matching configuration from MatchingConfig.json.
@@ -56,7 +65,7 @@ public sealed record MatchingRule
     /// <summary>Rule type: "numeric", "string", or "image_labels".</summary>
     public string Type { get; init; } = string.Empty;
 
-    /// <summary>Matcher strategy name: "NumericalMatcher", "ImageLabelingMatcher".</summary>
+    /// <summary>Matcher strategy name: "NumericalMatcher", "ClipLabelEnricher".</summary>
     public string Strategy { get; init; } = string.Empty;
 
     /// <summary>Evidence weight in [0, 1] — higher means stronger influence on confidence.</summary>

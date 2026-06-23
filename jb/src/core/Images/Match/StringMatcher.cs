@@ -134,6 +134,32 @@ internal sealed class StringMatcher
         return tokens;
     }
 
+    // ─── Bracket 4 support ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Scores each candidate by how many filename string tokens appear in its columns.
+    /// Used by SemanticMatcher (Bracket 4) to rank and reduce the candidate pool.
+    /// Returns all candidates that have at least one token match, ordered by match count descending.
+    /// </summary>
+    internal IReadOnlyList<(FamilyIDRecord Family, int MatchCount, List<TokenEvidenceItem> Evidence)>
+        ScoreCandidatesByStringTokens(string filename, IReadOnlyList<FamilyIDRecord> candidates)
+    {
+        IReadOnlyList<string> imageTokens = ExtractImageTokens(filename);
+        if (imageTokens.Count == 0)
+            return [];
+
+        List<(FamilyIDRecord Family, int MatchCount, List<TokenEvidenceItem> Evidence)> results = [];
+
+        foreach (FamilyIDRecord family in candidates)
+        {
+            List<TokenEvidenceItem> evidence = BuildStringEvidence(imageTokens, family);
+            if (evidence.Count > 0)
+                results.Add((family, evidence.Count, evidence));
+        }
+
+        return [..results.OrderByDescending(r => r.MatchCount)];
+    }
+
     // ─── Token extraction ─────────────────────────────────────────────────────
 
     /// <summary>

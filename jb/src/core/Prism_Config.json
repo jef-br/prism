@@ -91,7 +91,7 @@
         }
     },
     "Classification": {
-        "Confidence_Threshold": 0.5,
+        "Confidence_Threshold": 0.9,
         "Cutoff_Threshold": 0.25,
         "Deduplication": {
             "Enabled": true,

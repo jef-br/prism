@@ -138,4 +138,3 @@
   - Image processor: ImageSharp resize is sufficient — no saliency or fill required for the conservative path.
   - Note: This class can be implemented before the other Tx classes because it requires no saliency features. It can serve as the integration scaffold for the image processor dependency.
   - Fix: Implement after the failure/KO policy todo is answered and ImageSharp is wired to the processor gate.
-

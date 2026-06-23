@@ -14,8 +14,16 @@ Single pass. Matched images removed from consideration after each bracket.
 **Bracket 1:** Only numerical **single-token** matches with **edit distance 0**.
 **Bracket 2:** Numerical **multiple-token** matches with final **TCD ≤ 2.55**.
 **Bracket 3:** Multiple-string-token matches only if: image matches exactly one FID AND that FID has no existing candidate of that image type.
-**Bracket 4 cleanup:** KO remaining unmatched images. Not renamed; kept in manifest with original filename.
-**Bracket 5 finalize:** Finalize image→FID assignments; cluster into FID groups → move to DO.
+**Bracket 4 semantic:** Applies to remaining unmatched images only. Candidate pool is restricted to FamilyIDs with **0 images assigned** in Brackets 1–3. Each image is evaluated against this pool using a combined CLIP + numeric + string signal:
+- **CLIP — hard filter (ProductType):** At least one influential CLIP `ProductType` tag must match the candidate family's ProductType column value. Candidates without a matching product type are excluded.
+- **CLIP — hard filter (ProductColor, conditional):** If the Excel model contains a ProductColor column for any remaining candidate, at least one CLIP color tag must match that candidate's color value. Candidates with a color value that contradicts all CLIP color tags are excluded.
+- **Numeric tokens — candidate reduction:** Digit tokens from the filename are compared against candidate family numeric columns. Tokens that match some but not all candidates narrow the pool to only the matching families. Tokens that match all or none of the remaining candidates have no effect.
+- **String tokens — candidate scoring:** Filename string tokens are matched against all non-numeric columns of each remaining candidate. The candidate with the most matching tokens wins. If the top match count is shared by multiple candidates, the match is a tie and the image is not assigned.
+- **Acceptance:** Exactly one candidate must remain after CLIP and numeric filtering, with a unique highest string-token score ≥ `SemanticThreshold` (`MatchingConfig.json`).
+- **Weighting:** All three signals use `SemanticWeight` (`MatchingConfig.json`) when computing `MatchEvidence.FinalScore`.
+
+**Bracket 5 cleanup:** KO remaining unmatched images. Not renamed; kept in manifest with original filename.
+**Bracket 6 finalize:** Finalize image→FID assignments; cluster into FID groups → move to DO.
 
 **Tie-breaking:** Image remains candidate for multiple FIDs → KO unless it can sit at the exact same `_det` position in every matching FID.
 
@@ -83,20 +91,22 @@ Parses input string → logical string tokens; compares against categorical, des
 
 ---
 
-## `ImageLabelingMatcher.cs`
+## `ClipLabelEnricher.cs`
 
 Uses `clip-vit-b32-uint8` at `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/`.
 
-Image-label evidence weights (from MCFG):
+**Not a matcher** — never assigns FamilyIDs. Provides CLIP label evidence for already-matched records (Brackets 1–3) and supplies the hard-filter signal for `SemanticMatcher` (Bracket 4).
+
+CLIP label evidence weights (from MCFG):
 
 | Evidence | Weight |
 |---|---|
 | `ProductColor` | `1.0` |
 | `ProductType` | `0.8` |
 | `ProductMaterial` | `0.5` |
-| ALL image-label overlap | `0.6` |
+| ALL CLIP label overlap | `0.6` |
 
-Weights support/weaken candidate confidence but do **not** override exact numeric identity evidence. Only influential labels (≥ `Confidence_Threshold`) drive decisions.
+Weights support/weaken candidate confidence but do **not** override exact numeric identity evidence. Only influential CLIP labels (≥ `Confidence_Threshold` at classification time) are included in `Tags.Influential`.
 
 ---
 

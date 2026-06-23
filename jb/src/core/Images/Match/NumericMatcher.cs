@@ -185,6 +185,39 @@ internal sealed class NumericMatcher
         };
     }
 
+    // ─── Bracket 4 support ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Reduces the candidate pool for Bracket 4 semantic matching by eliminating families
+    /// whose numeric fields are contradicted by tokens in the filename.
+    /// Tokens that match some but not all candidates narrow the pool to only the matching families.
+    /// Tokens that match all or none of the remaining candidates have no effect.
+    /// </summary>
+    internal IReadOnlyList<FamilyIDRecord> ReduceCandidatesByNumericTokens(
+        string filename,
+        IReadOnlyList<FamilyIDRecord> candidates,
+        IReadOnlyList<MatchingRule> numericRules)
+    {
+        string[] tokens = GetNumericTokensFromFilename(filename);
+        if (tokens.Length == 0 || candidates.Count <= 1)
+            return candidates;
+
+        List<FamilyIDRecord> remaining = [..candidates];
+
+        foreach (string token in tokens)
+        {
+            List<FamilyIDRecord> matching = remaining
+                .Where(f => numericRules.Any(r => GetFamilyDigitsForField(f, r.ExcelField) == token))
+                .ToList();
+
+            // Only reduce when the token is discriminating (matches some but not all)
+            if (matching.Count > 0 && matching.Count < remaining.Count)
+                remaining = matching;
+        }
+
+        return remaining;
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     /// <summary>

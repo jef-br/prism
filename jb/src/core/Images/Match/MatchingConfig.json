@@ -1,4 +1,6 @@
 {
+  "semanticThreshold": 0.9,
+  "semanticWeight": 0.15,
   "rules": [
     {
       "excelField": "FamilyID",
@@ -35,25 +37,25 @@
     {
       "excelField": "ProductColor",
       "type": "string",
-      "strategy": "ImageLabelingMatcher",
+      "strategy": "ClipLabelEnricher",
       "weight": 1.0
     },
     {
       "excelField": "ProductType",
       "type": "string",
-      "strategy": "ImageLabelingMatcher",
+      "strategy": "ClipLabelEnricher",
       "weight": 0.8
     },
     {
       "excelField": "ProductMaterial",
       "type": "string",
-      "strategy": "ImageLabelingMatcher",
+      "strategy": "ClipLabelEnricher",
       "weight": 0.5
     },
     {
       "excelField": "ALL",
       "type": "image_labels",
-      "strategy": "ImageLabelingMatcher",
+      "strategy": "ClipLabelEnricher",
       "Overlap": 2,
       "weight": 0.6
     }

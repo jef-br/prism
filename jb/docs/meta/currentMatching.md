@@ -25,11 +25,11 @@ The matcher doesn't give up after one try. It runs **four attempts in a row**. O
 ```
 Photo pile
    │
-   ├─ Attempt 1: Look for a single exact product code  ───────── matched? → done
+   ├─ Attempt 1: Look for a single exact product code   : matched? → done
    │
-   ├─ Attempt 2: Assemble a product code from pieces   ───────── matched? → done
+   ├─ Attempt 2: Assemble a product code from pieces    : matched? → done
    │
-   ├─ Attempt 3: Match on words (name, color, material) ──────── matched? → done
+   ├─ Attempt 3: Match on words (name, color, material) : matched? → done
    │
    ├─ Attempt 4: (Not a matching step — adds extra clues to already-matched photos)
    │

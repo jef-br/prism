@@ -2,22 +2,30 @@ namespace Prism.Core;
 
 /// <summary>
 /// Waterfall matching orchestrator for the Matched pipeline stage.
-/// Runs numeric (brackets 1–2), string (bracket 3), and label-evidence (bracket 4) matchers in sequence.
-/// Matched images are removed from subsequent brackets. Remaining images are KO'd.
+/// Runs numeric (brackets 1–2), string (bracket 3), semantic combined (bracket 4), and
+/// CLIP label enrichment in sequence. Matched images are removed from subsequent brackets.
+/// Remaining images are KO'd in bracket 5.
 /// </summary>
 internal sealed class ImageMatcher
 {
-    private readonly MatchingConfig     matchingConfig;
-    private readonly NumericMatcher     numericMatcher;
-    private readonly StringMatcher      stringMatcher;
-    private readonly ImageLabelingMatcher labelingMatcher;
+    private readonly MatchingConfig    matchingConfig;
+    private readonly NumericMatcher    numericMatcher;
+    private readonly StringMatcher     stringMatcher;
+    private readonly ClipLabelEnricher clipLabelEnricher;
+    private readonly SemanticMatcher   semanticMatcher;
 
     private ImageMatcher(MatchingConfig matchingConfig, TranslationConfig translationConfig, string familyIdColumnName)
     {
         this.matchingConfig = matchingConfig;
         numericMatcher      = new NumericMatcher(familyIdColumnName);
         stringMatcher       = new StringMatcher(translationConfig);
-        labelingMatcher     = new ImageLabelingMatcher();
+        clipLabelEnricher   = new ClipLabelEnricher();
+        semanticMatcher     = new SemanticMatcher(
+            numericMatcher,
+            stringMatcher,
+            clipLabelEnricher,
+            matchingConfig.SemanticThreshold,
+            matchingConfig.SemanticWeight);
     }
 
     /// <summary>
@@ -69,13 +77,16 @@ internal sealed class ImageMatcher
         // Bracket 3: string tokens, exactly-1-FamilyID
         unmatched = RunBracket3(unmatched, families);
 
-        // Bracket 4: add label evidence to matched records (no new assignments)
-        AddLabelEvidence(allRecords, families, labelRules);
+        // Bracket 4: semantic combined (CLIP + numeric + string) for 0-image families
+        unmatched = RunBracket4(unmatched, allRecords, families, numericRules, labelRules);
 
-        // Bracket 4 cleanup: KO any image still without a FamilyID assignment
+        // Add CLIP label evidence to already-matched records (no new assignments)
+        AddClipLabelEvidence(allRecords, families, labelRules);
+
+        // Bracket 5 cleanup: KO any image still without a FamilyID assignment
         int koAdded = KoUnmatched(unmatched);
 
-        // Bracket 5: finalize clustering (single-pass waterfall means no structural ties)
+        // Bracket 6: finalize clustering (single-pass waterfall means no structural ties)
         FinalizeMatches(allRecords);
 
         return koAdded;
@@ -155,13 +166,54 @@ internal sealed class ImageMatcher
         return stillUnmatched;
     }
 
-    // ─── Bracket 4: label evidence ────────────────────────────────────────────
+    // ─── Bracket 4: semantic combined ─────────────────────────────────────────
+
+    /// <summary>
+    /// Runs SemanticMatcher (CLIP + numeric + string) against FamilyIDs with 0 assigned images.
+    /// Returns images still unmatched after this bracket.
+    /// </summary>
+    private List<ImageRecord_LAMBDA> RunBracket4(
+        List<ImageRecord_LAMBDA>      candidates,
+        List<ImageRecord_LAMBDA>      allRecords,
+        IReadOnlyList<FamilyIDRecord> families,
+        IReadOnlyList<MatchingRule>   numericRules,
+        IReadOnlyList<MatchingRule>   labelRules)
+    {
+        HashSet<string> assignedFamilyIds = allRecords
+            .Where(r => !r.IsKo && r.MatchEvidence?.FinalFamilyId is not null)
+            .Select(r => r.MatchEvidence!.FinalFamilyId!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        IReadOnlyList<FamilyIDRecord> unassignedFamilies = families
+            .Where(f => !assignedFamilyIds.Contains(f.FamilyID))
+            .ToList();
+
+        if (unassignedFamilies.Count == 0)
+            return candidates;
+
+        List<ImageRecord_LAMBDA> stillUnmatched = [];
+
+        foreach (ImageRecord_LAMBDA record in candidates)
+        {
+            MatchEvidence? evidence = semanticMatcher.TryMatch(
+                record, unassignedFamilies, numericRules, labelRules);
+
+            if (evidence is not null)
+                record.MatchEvidence = evidence;
+            else
+                stillUnmatched.Add(record);
+        }
+
+        return stillUnmatched;
+    }
+
+    // ─── CLIP label enrichment ────────────────────────────────────────────────
 
     /// <summary>
     /// Appends CLIP label evidence to the MatchEvidence of already-matched records.
     /// Never creates or overrides FamilyID assignments.
     /// </summary>
-    private void AddLabelEvidence(
+    private void AddClipLabelEvidence(
         List<ImageRecord_LAMBDA> allRecords,
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> labelRules)
@@ -174,10 +226,10 @@ internal sealed class ImageMatcher
             if (record.IsKo || record.MatchEvidence?.FinalFamilyId is null)
                 continue;
 
-            IReadOnlyList<LabelEvidenceItem> labelEvidence =
-                labelingMatcher.BuildEvidence(record, families, labelRules);
+            IReadOnlyList<LabelEvidenceItem> clipEvidence =
+                clipLabelEnricher.BuildEvidence(record, families, labelRules);
 
-            if (labelEvidence.Count == 0)
+            if (clipEvidence.Count == 0)
                 continue;
 
             record.MatchEvidence = record.MatchEvidence with
@@ -185,16 +237,16 @@ internal sealed class ImageMatcher
                 ClassificationLabelEvidence =
                 [
                     ..record.MatchEvidence.ClassificationLabelEvidence,
-                    ..labelEvidence
+                    ..clipEvidence
                 ]
             };
         }
     }
 
-    // ─── Bracket 4 cleanup ────────────────────────────────────────────────────
+    // ─── Bracket 5 cleanup ────────────────────────────────────────────────────
 
     /// <summary>
-    /// KOs any image that was not matched by brackets 1–3.
+    /// KOs any image that was not matched by brackets 1–4.
     /// </summary>
     /// <returns>Number of records KO'd.</returns>
     private static int KoUnmatched(List<ImageRecord_LAMBDA> unmatched)
@@ -220,7 +272,7 @@ internal sealed class ImageMatcher
         return unmatched.Count;
     }
 
-    // ─── Bracket 5: finalize ─────────────────────────────────────────────────
+    // ─── Bracket 6: finalize ─────────────────────────────────────────────────
 
     /// <summary>
     /// Finalizes FamilyID clusters. Single-pass waterfall produces no structural ties; this step

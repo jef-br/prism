@@ -54,61 +54,85 @@ Imported → Classified → Matched → Ordered → Renamed → Generated → Tr
 ## Configuration: CFG
 
 **Location:** `jb/src/core/Prism_Config.json`
-
-### Input Constraints
-```json
-{
-  "Input": {
-    "MAXIMUM_REQUEST_SIZE": 2684354560,
-    "Images":  { "amount": { "min": 1, "max": 2500 }, "filesize": { "min": 2048, "max": 26214400 } },
-    "ZIP":     { "NestDepth": 5, "amount": { "min": 0, "max": 50 }, "filesize": { "min": 1048, "max": 2147483648 } },
-    "EXCEL":   { "amount": { "min": 1, "max": 10 }, "filesize": { "min": 9216, "max": 1048576 } }
-  }
-}
+```md
+| Configuration Area | JSON Path |
+|-------------------|-----------|
+| Input Constraints | `Input` |
+| Maximum Request Size | `Input.MAXIMUM_REQUEST_SIZE` |
+| Images | `Input.Images` |
+| Image Amount | `Input.Images.amount` |
+| Image Amount Min | `Input.Images.amount.min` |
+| Image Amount Max | `Input.Images.amount.max` |
+| Image Filesize | `Input.Images.filesize` |
+| Image Filesize Min | `Input.Images.filesize.min` |
+| Image Filesize Max | `Input.Images.filesize.max` |
+| ZIP | `Input.ZIP` |
+| ZIP Nest Depth | `Input.ZIP.NestDepth` |
+| ZIP Amount | `Input.ZIP.amount` |
+| ZIP Amount Min | `Input.ZIP.amount.min` |
+| ZIP Amount Max | `Input.ZIP.amount.max` |
+| ZIP Filesize | `Input.ZIP.filesize` |
+| ZIP Filesize Min | `Input.ZIP.filesize.min` |
+| ZIP Filesize Max | `Input.ZIP.filesize.max` |
+| EXCEL | `Input.EXCEL` |
+| EXCEL Amount | `Input.EXCEL.amount` |
+| EXCEL Amount Min | `Input.EXCEL.amount.min` |
+| EXCEL Amount Max | `Input.EXCEL.amount.max` |
+| EXCEL Filesize | `Input.EXCEL.filesize` |
+| EXCEL Filesize Min | `Input.EXCEL.filesize.min` |
+| EXCEL Filesize Max | `Input.EXCEL.filesize.max` |
+| Output Constraints | `Output` |
+| Output Images | `Output.Images` |
+| Processed Images | `Output.Images.Processed` |
+| Processed Minimum Size | `Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS` |
+| Processed Minimum Width | `Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS.width` |
+| Processed Minimum Height | `Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS.height` |
+| Processed Maximum Size | `Output.Images.Processed.MAXIMUM_SIZE_IN_PIXELS` |
+| Processed Maximum Width | `Output.Images.Processed.MAXIMUM_SIZE_IN_PIXELS.width` |
+| Processed Maximum Height | `Output.Images.Processed.MAXIMUM_SIZE_IN_PIXELS.height` |
+| Resize | `Output.Images.Resize` |
+| Maximum Upscale | `Output.Images.Resize.MAXIMUM_UpScale` |
+| Maximum Downscale | `Output.Images.Resize.MAXIMUM_DownScale` |
+| Generated Images | `Output.Images.Generated` |
+| Generated Minimum Size | `Output.Images.Generated.MINIMUM_SIZE_IN_PIXELS` |
+| Generated Minimum Width | `Output.Images.Generated.MINIMUM_SIZE_IN_PIXELS.width` |
+| Generated Minimum Height | `Output.Images.Generated.MINIMUM_SIZE_IN_PIXELS.height` |
+| Generated Maximum Size | `Output.Images.Generated.MAXIMUM_SIZE_IN_PIXELS` |
+| Generated Maximum Width | `Output.Images.Generated.MAXIMUM_SIZE_IN_PIXELS.width` |
+| Generated Maximum Height | `Output.Images.Generated.MAXIMUM_SIZE_IN_PIXELS.height` |
+| Matching Weights | `Classification` |
+| Confidence Threshold | `Classification.Confidence_Threshold` |
+| Cutoff Threshold | `Classification.Cutoff_Threshold` |
+| Weights | `Classification.Weights` |
+| Numeric Token Weight | `Classification.Weights.NumericToken_Weight` |
+| String Token Weight | `Classification.Weights.StringToken_Weight` |
+| Classification Weight | `Classification.Weights.Classification_Weight` |
+| Semantic Relevance Weight | `Classification.Weights.SemanticalRelevanceWeight` |
+| Convergence Weight | `Classification.Weights.CONVERGENCE_WEIGHT` |
+| Generation | `Generation` |
+| Generation Input Images | `Generation.InputImages` |
+| Generation Minimum Size | `Generation.InputImages.MINIMUM_SIZE_IN_PIXELS` |
+| Generation Minimum Width | `Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.width` |
+| Generation Minimum Height | `Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.height` |
+| Generation Maximum Size | `Generation.InputImages.MAXIMUM_SIZE_IN_PIXELS` |
+| Generation Maximum Width | `Generation.InputImages.MAXIMUM_SIZE_IN_PIXELS.width` |
+| Generation Maximum Height | `Generation.InputImages.MAXIMUM_SIZE_IN_PIXELS.height` |
+| Transformation | `Transformation` |
+| Positioning | `Transformation.Positioning` |
+| Center | `Transformation.Positioning.Center` |
+| Margin | `Transformation.Positioning.Margin` |
+| Both Axis | `Transformation.Positioning.BothAxis` |
+| Cropping | `Transformation.Cropping` |
+| Coverage | `Transformation.Cropping.Coverage` |
+| Extension | `Transformation.Cropping.Extension` |
+| One-Sided Extension | `Transformation.Cropping.Extension.OneSided` |
+| Bi-Directional Extension | `Transformation.Cropping.Extension.BiDirectional` |
+| Pipeline | `Pipeline` |
+| Job Retries | `Pipeline.JobRetries` |
+| Jobs | `Jobs` |
+| Job Retention Period | `Jobs.JobRetentionPeriodInHours` |
 ```
 
-### Output Constraints
-```json
-{
-  "Output": {
-    "Images": {
-      "Processed":  { "MINIMUM_SIZE_IN_PIXELS": { "width": 800, "height": 800 }, "MAXIMUM_SIZE_IN_PIXELS": { "width": 2000, "height": 2000 } },
-      "Resize":     { "MAXIMUM_UpScale": 1.42, "MAXIMUM_DownScale": 0.001 },
-      "Generated":  { "MINIMUM_SIZE_IN_PIXELS": { "width": 800, "height": 800 }, "MAXIMUM_SIZE_IN_PIXELS": { "width": 1410, "height": 1410 } }
-    }
-  }
-}
-```
-
-### Matching Weights
-```json
-{
-  "Classification": {
-    "Confidence_Threshold": 0.9,
-    "Cutoff_Threshold": 0.25,
-    "Weights": {
-      "NumericToken_Weight": 0.55,
-      "StringToken_Weight": 0.15,
-      "Classification_Weight": 0.15,
-      "SemanticalRelevanceWeight": 0.15,
-      "CONVERGENCE_WEIGHT": 0.25
-    }
-  }
-}
-```
-
-### Other Keys
-```json
-{
-  "Generation": { "InputImages": { "MINIMUM_SIZE_IN_PIXELS": { "width": 1600, "height": 1600 }, "MAXIMUM_SIZE_IN_PIXELS": { "width": 4000, "height": 6000 } } },
-  "Transformation": {
-    "Positioning": { "Center": true, "Margin": 0.042, "BothAxis": true },
-    "Cropping": { "Coverage": 0.8, "Extension": { "OneSided": 0.14, "BiDirectional": 0.25 } }
-  },
-  "Pipeline": { "JobRetries": 3 },
-  "Jobs": { "JobRetentionPeriodInHours": 24 }
-}
-```
 
 ---
 
