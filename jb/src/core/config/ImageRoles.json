@@ -103,8 +103,7 @@
         { "feature": "hero-is-human", "equals": "FALSE" },
         { "feature": "hero-orientation", "equals": "FRONT" },
         { "anyOf": [
-            { "feature": "background-type", "equals": "SOLIDCOLOR" },
-            { "feature": "clipping-path", "equals": "true" }
+            { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
         { "feature": "occlusion-level", "equals": "full-product" },
         { "feature": "intersection-count", "equals": "0" }
@@ -117,8 +116,7 @@
         { "feature": "hero-is-human", "equals": "FALSE" },
         { "feature": "hero-orientation", "equals": "BACK" },
         { "anyOf": [
-            { "feature": "background-type", "equals": "SOLIDCOLOR" },
-            { "feature": "clipping-path", "equals": "true" }
+            { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
         { "feature": "occlusion-level", "equals": "full-product" },
         { "feature": "intersection-count", "equals": "0" }
@@ -131,8 +129,7 @@
         { "feature": "hero-is-human", "equals": "FALSE" },
         { "feature": "hero-orientation", "equals": "SIDEON" },
         { "anyOf": [
-            { "feature": "background-type", "equals": "SOLIDCOLOR" },
-            { "feature": "clipping-path", "equals": "true" }
+            { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
         { "feature": "occlusion-level", "equals": "full-product" }
       ]
@@ -144,8 +141,7 @@
         { "feature": "hero-is-human", "equals": "FALSE" },
         { "feature": "hero-orientation", "equals": "DIAGONAL" },
         { "anyOf": [
-            { "feature": "background-type", "equals": "SOLIDCOLOR" },
-            { "feature": "clipping-path", "equals": "true" }
+            { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
         { "feature": "occlusion-level", "equals": "full-product" }
       ]
@@ -157,8 +153,7 @@
         { "feature": "hero-is-human", "equals": "FALSE" },
         { "feature": "hero-orientation", "equals": "TOP" },
         { "anyOf": [
-            { "feature": "background-type", "equals": "SOLIDCOLOR" },
-            { "feature": "clipping-path", "equals": "true" }
+            { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
         { "feature": "occlusion-level", "equals": "full-product" }
       ]
@@ -170,8 +165,7 @@
         { "feature": "hero-is-human", "equals": "FALSE" },
         { "feature": "hero-orientation", "equals": "BOTTOM" },
         { "anyOf": [
-            { "feature": "background-type", "equals": "SOLIDCOLOR" },
-            { "feature": "clipping-path", "equals": "true" }
+            { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
         { "feature": "occlusion-level", "equals": "full-product" }
       ]
@@ -296,11 +290,11 @@
       "id": "interior-shot",
       "required": [
         { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "intersection-count", "min": 3 },
         { "anyOf": [
             { "feature": "hero-orientation", "equals": "FRONT" },
             { "feature": "hero-orientation", "equals": "TOP" }
-        ]},
-        { "feature": "packaging-visible", "equals": "false" }
+        ]}
       ]
     },
 
