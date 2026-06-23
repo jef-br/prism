@@ -38,16 +38,16 @@ internal sealed class ImageMatcher
     internal static int Run(List<ImageRecord_LAMBDA> records, IReadOnlyList<FamilyIDRecord> families)
     {
         string matchingConfigPath = LoadConfigPath(
-            "Images/Match/MatchingConfig.json",
-            "MatchingConfig.json not found next to Prism_Config.json.");
+            "MatchingConfig.json",
+            "MatchingConfig.json not found in the config directory next to Prism_Config.json.");
 
         string translationConfigPath = LoadConfigPath(
-            "Images/Match/Translate/TranslationConfig.json",
-            "TranslationConfig.json not found next to Prism_Config.json.");
+            "TranslationConfig.json",
+            "TranslationConfig.json not found in the config directory next to Prism_Config.json.");
 
         string excelConfigPath = LoadConfigPath(
-            "Excel/ExcelConfig.json",
-            "ExcelConfig.json not found next to Prism_Config.json.");
+            "ExcelConfig.json",
+            "ExcelConfig.json not found in the config directory next to Prism_Config.json.");
 
         MatchingConfig    matchingConfig    = MatchingConfig.Load(matchingConfigPath);
         TranslationConfig translationConfig = TranslationConfig.Load(translationConfigPath);

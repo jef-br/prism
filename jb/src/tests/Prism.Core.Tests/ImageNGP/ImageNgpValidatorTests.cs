@@ -9,7 +9,7 @@ namespace PrismCoreTests.ImageNGP;
 public class ImageNgpValidatorTests
 {
     private static readonly string CoreConfigDirectory = ResolveCoreConfigDirectory();
-    private static readonly string VocabularyPath = Path.Combine(CoreConfigDirectory, "ImageNGP", "ImageNGP.json");
+    private static readonly string VocabularyPath = Path.Combine(CoreConfigDirectory, "ImageNGP.json");
 
     // ─── Real config ───────────────────────────────────────────────────────────
 
@@ -113,11 +113,9 @@ public class ImageNgpValidatorTests
         public ConfigFixture()
         {
             Root = Path.Combine(Path.GetTempPath(), "prism-ngp-test-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(Root, "ImageNGP"));
-            Directory.CreateDirectory(Path.Combine(Root, "Images", "Order"));
-            Directory.CreateDirectory(Path.Combine(Root, "Images", "Classify"));
+            Directory.CreateDirectory(Root);
 
-            Write("ImageNGP", "ImageNGP.json", """
+            Write("ImageNGP.json", """
                 { "features": [
                     { "id": "hero-is-human",      "datatype": "enum",    "values": ["TRUE","FALSE","UNKNOWN"] },
                     { "id": "hero-orientation",   "datatype": "enum",    "values": ["FRONT","BACK","SIDEON","DIAGONAL","TOP","BOTTOM","UNKNOWN"] },
@@ -131,16 +129,16 @@ public class ImageNgpValidatorTests
             WriteDetOrder("""
                 { "productTypes": { "default": { "det0": { "keyword": "front", "phenotypes": ["front-packshot"] } } } }
                 """);
-            Write("Images/Classify", "ClipPrompts.json", """
+            Write("ClipPrompts.json", """
                 { "prompts": [ { "prompt": "a front view", "feature": "hero-orientation", "value": "FRONT" } ] }
                 """);
         }
 
-        public void WriteImageRoles(string json) => Write("ImageNGP", "ImageRoles.json", json);
-        public void WriteDetOrder(string json) => Write("Images/Order", "DetOrderRules.json", json);
+        public void WriteImageRoles(string json) => Write("ImageRoles.json", json);
+        public void WriteDetOrder(string json) => Write("DetOrderRules.json", json);
 
-        private void Write(string subdir, string file, string json)
-            => File.WriteAllText(Path.Combine(Root, Path.Combine(subdir.Split('/')), file), json, System.Text.Encoding.UTF8);
+        private void Write(string file, string json)
+            => File.WriteAllText(Path.Combine(Root, file), json, System.Text.Encoding.UTF8);
 
         public void Dispose()
         {
@@ -156,16 +154,16 @@ public class ImageNgpValidatorTests
         var current = new DirectoryInfo(assemblyDir);
         while (current.Parent != null)
         {
-            var candidate = Path.Combine(current.FullName, "jb", "src", "core");
-            if (File.Exists(Path.Combine(candidate, "ImageNGP", "ImageNGP.json")))
+            var candidate = Path.Combine(current.FullName, "jb", "src", "core", "config");
+            if (File.Exists(Path.Combine(candidate, "ImageNGP.json")))
                 return candidate;
             current = current.Parent;
         }
 
-        var fallback = @"c:\Users\JefB\Documents\JBGITROOT\prism\jb\src\core";
-        if (File.Exists(Path.Combine(fallback, "ImageNGP", "ImageNGP.json")))
+        var fallback = @"c:\Users\JefB\Documents\JBGITROOT\prism\jb\src\core\config";
+        if (File.Exists(Path.Combine(fallback, "ImageNGP.json")))
             return fallback;
 
-        throw new FileNotFoundException("Core config directory (with ImageNGP/ImageNGP.json) not found.");
+        throw new FileNotFoundException("Core config directory (with ImageNGP.json) not found.");
     }
 }

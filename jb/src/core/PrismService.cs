@@ -134,7 +134,7 @@ public sealed class PrismService
         PrismConfiguration config = PrismConfiguration.LoadPrismConfig(configPath);
         ValidateRequiredFolderLocalConfigs(configPath);
         string coreDir = Path.GetDirectoryName(configPath)!;
-        ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(Path.Combine(coreDir, "Excel", "ExcelConfig.json"));
+        ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(Path.Combine(coreDir, "ExcelConfig.json"));
         return (config, modelBuilder);
     }
 
@@ -156,12 +156,12 @@ public sealed class PrismService
     {
         string[] requiredFolderLocalConfigs =
         [
-            "Excel/ExcelConfig.json",
-            "IO/cfg/HostRules.json",
-            "Images/Match/MatchingConfig.json",
-            "Images/Match/Translate/TranslationConfig.json",
-            "Images/Order/DetOrderRules.json",
-            "Images/Order/DetOrderKeywordStems.json"
+            "ExcelConfig.json",
+            "HostRules.json",
+            "MatchingConfig.json",
+            "TranslationConfig.json",
+            "DetOrderRules.json",
+            "DetOrderKeywordStems.json"
         ];
 
         string coreDirectory = Path.GetDirectoryName(prismConfigPath)

@@ -343,13 +343,13 @@ public class PhenotypeRuleSetTests
         var current = new DirectoryInfo(assemblyDir);
         while (current.Parent != null)
         {
-            var candidate = Path.Combine(current.FullName, "jb", "src", "core", "ImageNGP", "ImageRoles.json");
+            var candidate = Path.Combine(current.FullName, "jb", "src", "core", "config", "ImageRoles.json");
             if (File.Exists(candidate))
                 return candidate;
             current = current.Parent;
         }
 
-        var fallback = @"c:\Users\JefB\Documents\JBGITROOT\prism\jb\src\core\ImageNGP\ImageRoles.json";
+        var fallback = @"c:\Users\JefB\Documents\JBGITROOT\prism\jb\src\core\config\ImageRoles.json";
         if (File.Exists(fallback))
             return fallback;
 

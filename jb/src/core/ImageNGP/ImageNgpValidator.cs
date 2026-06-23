@@ -20,10 +20,10 @@ public static class ImageNgpValidator
     /// <param name="coreConfigDirectory">Directory containing Prism_Config.json (the core config root).</param>
     public static void Validate(string coreConfigDirectory)
     {
-        string vocabularyPath = Path.Combine(coreConfigDirectory, "ImageNGP", "ImageNGP.json");
-        string imageRolesPath = Path.Combine(coreConfigDirectory, "ImageNGP", "ImageRoles.json");
-        string detOrderPath   = Path.Combine(coreConfigDirectory, "Images", "Order", "DetOrderRules.json");
-        string clipPromptsPath = Path.Combine(coreConfigDirectory, "Images", "Classify", "ClipPrompts.json");
+        string vocabularyPath = Path.Combine(coreConfigDirectory, "ImageNGP.json");
+        string imageRolesPath = Path.Combine(coreConfigDirectory, "ImageRoles.json");
+        string detOrderPath   = Path.Combine(coreConfigDirectory, "DetOrderRules.json");
+        string clipPromptsPath = Path.Combine(coreConfigDirectory, "ClipPrompts.json");
 
         ImageNgpVocabulary vocabulary = ImageNgpVocabulary.Load(vocabularyPath);
 

@@ -9,8 +9,8 @@ namespace PrismCoreTests.Order;
 /// </summary>
 public class ImageOrdererTests
 {
-    private static readonly string RulesPath  = ResolveConfigPath("Images/Order/DetOrderRules.json");
-    private static readonly string StemsPath  = ResolveConfigPath("Images/Order/DetOrderKeywordStems.json");
+    private static readonly string RulesPath  = ResolveConfigPath("config/DetOrderRules.json");
+    private static readonly string StemsPath  = ResolveConfigPath("config/DetOrderKeywordStems.json");
 
     // ─── DetOrderConfig.Load contract ─────────────────────────────────────────
 

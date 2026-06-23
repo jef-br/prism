@@ -124,10 +124,10 @@ public sealed class ClassificationService : IClassificationService
 
     private static ClipPromptCatalog LoadPromptCatalog()
     {
-        string? clipPromptsPath = PrismConfigLocator.FindFolderLocalConfig("Images/Classify/ClipPrompts.json");
+        string? clipPromptsPath = PrismConfigLocator.FindFolderLocalConfig("ClipPrompts.json");
         if (clipPromptsPath is null)
             throw new PrismConfigurationException(
-                "ClipPrompts.json not found. Ensure Images/Classify/ClipPrompts.json is present next to Prism_Config.json.");
+                "ClipPrompts.json not found. Ensure ClipPrompts.json is present in the config directory next to Prism_Config.json.");
 
         return ClipPromptCatalog.Load(clipPromptsPath);
     }

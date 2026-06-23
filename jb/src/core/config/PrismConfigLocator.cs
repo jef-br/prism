@@ -14,10 +14,11 @@ public static class PrismConfigLocator
     {
         string[] candidates =
         [
+            Path.Combine(AppContext.BaseDirectory, "config", "Prism_Config.json"),
             Path.Combine(AppContext.BaseDirectory, "Prism_Config.json"),
-            Path.Combine(Directory.GetCurrentDirectory(), "Prism_Config.json"),
-            Path.Combine(Directory.GetCurrentDirectory(), "..", "core", "Prism_Config.json"),
-            Path.Combine(Directory.GetCurrentDirectory(), "jb", "src", "core", "Prism_Config.json")
+            Path.Combine(Directory.GetCurrentDirectory(), "config", "Prism_Config.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "core", "config", "Prism_Config.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "jb", "src", "core", "config", "Prism_Config.json")
         ];
 
         return Array.Find(candidates, File.Exists);
@@ -27,7 +28,7 @@ public static class PrismConfigLocator
     /// Resolves the absolute path to a folder-local config file relative to the core root.
     /// Returns <c>null</c> if the file is not found.
     /// </summary>
-    /// <param name="relativePathFromCore">Relative path from the core config root, e.g. "Excel/ExcelConfig.json".</param>
+    /// <param name="relativePathFromCore">Flat filename in the config directory, e.g. "ExcelConfig.json".</param>
     /// <returns>Absolute path to the folder-local config, or <c>null</c>.</returns>
     internal static string? FindFolderLocalConfig(string relativePathFromCore)
     {

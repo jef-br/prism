@@ -1,6 +1,6 @@
 # PRISM Agent Tickets
 
-Main Codex thread is the orchestrator: owns ticket status, final integration, conflict resolution, and user-facing summaries.
+Main thread is the orchestrator: owns ticket status, final integration, conflict resolution, and user-facing summaries.
 
 ## Team Rules
 
@@ -33,7 +33,7 @@ Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, 
 
 | Profile | Model | Use |
 |---|---|---|
-| `P0-orchestrator` | parent/default | Main Codex thread, integration, conflict resolution, milestone decisions |
+| `P0-orchestrator` | parent/default | Main thread, integration, conflict resolution, milestone decisions |
 | `P1-feature-worker` | parent/default | Primary implementation tickets |
 | `P2-verifier` | haiku | Smoke-test agents — run commands, inspect results, report blockers |
 | `P3-scout` | haiku | Read-only exploration, architecture maps, dependency checks |
