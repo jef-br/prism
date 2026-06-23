@@ -29,6 +29,10 @@ public class Tx_DetailCropper : IImageTransformation
         return InputImage;
     }
 
+    /// <inheritdoc/>
+    public byte[] Process(byte[] arr, int stride, float upscale_factor)
+        => throw new System.NotSupportedException($"Pixel processing not yet implemented for {nameof(Tx_DetailCropper)}.");
+
     /// <summary>Returns true when the salient-object preprocessor is deployed and ready.</summary>
     private static bool ImageProcessorAvailable() => false;
 }

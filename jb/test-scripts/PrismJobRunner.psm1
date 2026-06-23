@@ -243,6 +243,7 @@ function Submit-PrismJob {
     # Get-PrismJobInputFiles), so ZIP entry names do not collide.
     $zipPath = $null
     if ($rest.Count -gt 0) {
+        New-Item -ItemType Directory -Path $WorkDir -Force | Out-Null
         $zipPath = Join-Path $WorkDir '__prism_upload_images.zip'
         $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
         try {

@@ -10,6 +10,7 @@
     <Compile Remove="Images\ImageClassifier.cs" />
     <Compile Remove="Images\ClipTokenizer.cs" />
     <Compile Remove="Images\Transform\**\*.cs" />
+    <Compile Remove="Images\ImageTransformer.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,7 +5,7 @@
 
   <ItemGroup>
     <Compile Include="IImageTransformation.cs" />
-    <Compile Include="ImageTransformer.cs" />
+    <Compile Include="..\ImageTransformer.cs" />
     <Compile Include="Tx_CenterAndStretch.cs" />
     <Compile Include="Tx_CropSquare.cs" />
     <Compile Include="Tx_DetailCropper.cs" />
