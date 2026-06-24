@@ -1,112 +1,71 @@
-# Finishable now
-
-## Match — jb/src/core/Images/Match/jbtodo.md
-
-1. Numeric scoring formula → 3-component deduction model in NumericMatcher.cs
-2. MatchEvidence missing 3 fields (ThresholdStatus, RejectedNearTieEvidence, MatcherWeights)
-3. StringMatcher Bracket 3 duplicate-phenotype guard (StringMatcher.cs:41-50)
-4. Original pre-normalization token text (StringMatcher.cs:100-108)
-5. Weight_MatchingSignalsConverging — HALF (AssertInRange ready; bonus placement needs a call)
-
-## API — jb/src/api/jbtodo.md
-6. SD-13 JSON images shape → ImageJourneyItem + Exporter.cs projection
-
-## Transform close-outs (answered → move to docs) — jb/src/core/Images/Transform/jbtodo.md
-7. Transform-facing ImageFeature/ImageNGP routing inputs
-8. Transform failure / fallback / fill-KO policy
-9. Crop decision output (existing fields sufficient)
-10. Resize decision output (existing fields sufficient)
-11. Border-intersecting detail-crop result
-12. Center-and-stretch cleanup method
-13. Dual Tx interface (Process() on IImageTransformation)
-14. Det-slot exclusions (clothing-* prefix)
-15. Full ImageTransformer routing matrix (needs ProductTypeId on ImageRecord_LAMBDA)
-
-## Transform implementation (prereqs met)
-16. Implement Tx_ProblemImageProcessor
-17. Implement Tx_CropSquare
-
-## Classify — jb/src/core/Images/Classify/jbtodo.md
-18. ONNX InferenceSession scope
-19. interior-shot unreachable (product-type gate + interior Analyzer)
-
-# Blocked (not actionable):
-- Match cross-bracket tie resolution
-- Generate backend
-- Tx_CenterAndStretch/Tx_DetailCropper + their empty-Answer sub-todos
-- RecordUnknownFeatures
-- phenotype validation
-- illustration-technical-drawing/taxonomy (pending approval)
-
-
-
-
-
-
-
-
-
-
-
-
-----------------------------------------------------
-
-
-
-
-
-
 # Daily Brief
 
 Scope of this pass: review all `jbtodo.md` files, `AGENT-TICKETS.md`, `jb/docs/`, and
-`AGENTFEEDBACK.md`; improve open-todo answers **using only existing documented data**;
-do not finalize/close anything without approval; do not touch `AGENT-TICKETS.md`,
-`jb/docs/` or `AGENTFEEDBACK.md`.
+`AGENTFEEDBACK.md`; improve open-todo answers **using only existing documented data**; do
+not finalize/close anything without approval; do not invent data, change course, or touch
+`AGENT-TICKETS.md`, `jb/docs/`, or `AGENTFEEDBACK.md`.
+
+## State since last brief
+
+Commit `0c509ec` landed: **Tx_CropSquare + Tx_ProblemImageProcessor implemented**, and
+**Match #1 (numeric scoring)** plus the Transform "define output" answers closed out. The
+previous brief's "finishable now" list is therefore largely consumed — this brief reflects
+what is actually left.
 
 ## Files reviewed
 
-- 7 `jbtodo.md` files: `jb/src/api/`, `jb/src/core/IO/`, and `jb/src/core/Images/{Transform,Match,Generate,Classify,Order}/`.
-- `jb/docs/` (all 18 PRISM-* docs + `ImageNGP/` + `meta/`).
-- `AGENT-TICKETS.md` and `AGENTFEEDBACK.md` — now present on `main` as of `63ec17a`.
+- 5 `jbtodo.md`: `api/`, `Images/{Transform,Match,Generate,Classify}/`. (No `IO/` or `Order/`
+  `jbtodo.md` exist on disk — the `AGENTFEEDBACK.md` Open-Work table lists folders whose local
+  todo files were already removed; nothing actionable there this pass.)
+- `jb/docs/` (all PRISM-* docs + `ImageNGP/` + `meta/`), `AGENT-TICKETS.md`, `AGENTFEEDBACK.md`.
 
-## What changed (all proposals, nothing finalized)
+## What changed this pass (proposals only — nothing finalized)
 
-Every edit is a proposed answer written into the existing `Answer:` field, prefixed
-`Answer (proposed … pending approval)`, citing the exact doc section it was synthesized from.
-**No checkboxes were ticked; no new data invented; no project course changed.**
+Four previously-**empty** `Answer:` fields were filled by **transcribing/cross-referencing
+existing accepted specs** into the todo. Each is prefixed `Answer (proposed … pending
+approval)` and cites the exact source. No checkboxes ticked, no new data, no course change.
 
-| Todo | File | Basis (existing doc) |
+| Todo | File | Basis (existing data) |
 |---|---|---|
-| Transform-facing IF/INGP output | `Transform/jbtodo.md` | PRISM-transform-generate "Transform-Facing Classification Tags" + UNKNOWN routing; PRISM-classify thresholds |
-| Transform failure/fallback/fill-KO policy | `Transform/jbtodo.md` | PRISM-transform-generate UNKNOWN→Problem + Border Intersection; PRISM-models ITR; KO-vs-Failed |
-| Crop decision output | `Transform/jbtodo.md` | PRISM-models ITR; PRISM-transform-generate Salient Bounds + Border Intersection |
-| Background fill policy | `Transform/jbtodo.md` | PRISM-transform-generate Background Extension/Identification + "External SaaS NOT Permitted" |
-| Resize decision output | `Transform/jbtodo.md` | PRISM-models ITR resize fields |
-| Border-intersecting detail-crop result | `Transform/jbtodo.md` | PRISM-transform-generate No-Reposition rule; cross-linked to failure/KO policy |
-| `ghost-front` ordering bug | `Classify/jbtodo.md` | PRISM-classify first-match-wins rule engine — deterministic bug fix |
-| Final ImageNGP taxonomy (pointer) | `Classify/jbtodo.md` | PRISM-classify Taxonomy config; existing `ImageNGP.json`/`ImageRoles.json`/`imagePhenotypes.md` |
-| `illustration-technical-drawing` scope | `Classify/jbtodo.md` | PRISM-classify UNKNOWN States; no positive "schematic" CLIP prompt exists yet → recommend (b) |
-| SD-13 JSON `images` journey shape | `api/jbtodo.md` | PRISM-api JSON Output per-journey-item shape; PRISM-models IRL/IRO |
-| Cross-bracket tie resolution (context) | `Match/jbtodo.md` | PRISM-match Waterfall tie-break line; flagged spec-compliant option (a) |
+| ONNX `InferenceSession` scope | `Classify/jbtodo.md` | `PRISM-classify.md` "ONNX Ownership" ("Sessions application-scoped") + M5 gate wording in `AGENTFEEDBACK.md` → application-scoped singleton |
+| Implement `Tx_util_BgStretch` (tiered fill) | `Transform/jbtodo.md` | `PRISM-transform-generate.md` "Fill Method — Tiered by Extension Ratio" + ticket T-1700 |
+| `Tx_CenterAndStretch` three-step flow | `Transform/jbtodo.md` | todo body + `PRISM-transform-generate.md` "Repositioning/Background Extension"; cross-ref to already-answered cleanup + BgStretch |
+| `ImagePreProcessor` 5-step flow | `Transform/jbtodo.md` | todo body + `PRISM-classify.md` "Border Intersection Detection"; config limits already named in body |
 
 ## Proposed next steps (your call)
 
-1. **Approve / adjust the proposed answers above.** Highest-confidence, ready-to-finalize:
-   - `ghost-front` ordering bug (pure correctness fix, no new data).
-   - SD-13 JSON journey shape (realigns impl to the existing PRISM-api contract).
-   - The 5 Transform "define output" answers (all map directly to existing ITR / transform-facing-tag docs).
-   These can move to implementation immediately on your OK.
+1. **Approve the 4 proposed answers above.** All are reconciliation of *existing* specs into
+   empty answer fields — highest confidence, ready to move to implementation on your OK:
+   - **ONNX singleton** is the M5 gate item; approving it unblocks closing M5 and advancing to M6.
+   - **`Tx_util_BgStretch`** is ticket **T-1700** (Status: Ready) — answer + ticket now agree;
+     it can be picked up by a P1 worker immediately.
+   - **`ImagePreProcessor` + `Tx_CenterAndStretch` flow** are the next implementation steps for
+     the Transform stage now that CropSquare/ProblemImageProcessor exist.
 
-2. **Decisions that need *you*, not more data:**
-   - **Match — cross-bracket tie resolution:** spec-compliant (a) vs accept-as-V1-limitation (b). Scope call.
-   - **Classify — `illustration-technical-drawing`:** recommend (b) null-assignment until a proven CLIP "schematic" prompt exists; confirm.
-   - **Classify — `interior-shot` unreachable** (`packaging-visible` always UNKNOWN in CPU-only): add a prompt/analyzer or relax the rule.
-   - **Order — det0 SIDE fallback:** existing answer truncated mid-sentence ("DET-ORDER-GAPS-ALLOWED…") — please finish or confirm the intended param semantics.
+2. **Match stage — mechanical fixes already fully specified (need your go, not more data):**
+   - MatchEvidence missing 3 fields; StringMatcher Bracket-3 duplicate-phenotype guard;
+     original pre-normalization token text; `Weight_MatchingSignalsConverging` AssertInRange +
+     bonus placement. Each has a concrete `Fix:` in `Match/jbtodo.md`.
 
-3. **Blocked on new data / external choices:**
-   - **Generate — image-generation backend:** ComfyUI + Flux.1-schnell recommended; needs hardware commitment.
-   - **Classify — `RecordUnknownFeatures()` stub (35+ IFs UNKNOWN):** needs CLIP prompts/detectors wired in.
-   - **Classify — phenotype production validation:** needs labeled image set + threshold tuning.
-   - **Transform — quality-threshold numbers and resize limits:** new CFG values required.
-   - **Transform — detail-crop micro-decisions** (saliency, headcut thresholds, greedy retention, cleanup): gated behind classifier features.
-   - **IO — `Fetch_WeTransfer`:** feasibility Low; no V1 action.
+3. **Decisions that need *you*, not data (left untouched):**
+   - Match **cross-bracket tie resolution** — scope call: spec-compliant accumulator (a) vs.
+     accept V1 limitation (b).
+   - Classify **`illustration-technical-drawing`** scope — recommend null-assignment (b) until a
+     positive "schematic" CLIP prompt exists.
+   - Classify **ONNX taxonomy reconciliation** — confirm `ImageNGP.json` ↔ `imagePhenotypes.md`
+     ↔ `ImageRoles.json` agree on the 26 phenotypes.
+
+4. **Still genuinely blocked (need new data/design — not touched):**
+   - Transform: detail-crop **saliency map**, **headcut thresholds**, **greedy crop**,
+     **`Tx_LowContrastEnhancement`** scope, **`Tx_util_HeadCutter`** landmark-model choice — all
+     have open design questions requiring decisions, not transcription.
+   - Generate: real generation backend (ComfyUI + Flux.1-schnell recommended; needs a server).
+   - Classify: **`RecordUnknownFeatures()`** (blocked on taxonomy) and **phenotype production
+     validation** (needs a labeled image set).
+
+## Note on push target
+
+This session is assigned development branch `claude/hopeful-dirac-4b7mm7`, while `CLAUDE.md`
+says daily-brief commits go directly to `main`. These conflict. I committed the `jbtodo.md`
+improvements **and** this brief to the assigned branch and did **not** push to `main`. Tell me
+if you want the brief cherry-picked to `main` per the usual convention.

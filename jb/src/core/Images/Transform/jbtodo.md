@@ -168,7 +168,13 @@
        - Between 570 and 800 → Upscale; max allowed scale factor = `Output.Images.Resize.MAXIMUM_UpScale` (1.42)
        - Required scale > 1.42 → KO
     5. Return intermediate image bytes and the populated `BoundingBox` to `ImageTransformer`.
-  - Answer:
+  - Answer (proposed transcription from existing data — this todo body + `PRISM-classify.md` "Border Intersection Detection" (Stage 1 salient bounds → Canny → Hough) and the config limits already named in the body; pending approval):
+    The five steps and all thresholds are already specified — implement in the stated order, no new constants:
+    1. Apply EXIF orientation (rotate/flip pixels, strip the EXIF tag).
+    2. Flatten to single-layer sRGB JPG (no alpha, no layers).
+    3. Compute the salient-object `BoundingBox` via the in-file Canny + local-contrast Python reference, ported to C# with EmguCV — consistent with `PRISM-classify.md` "Border Intersection Detection" Stage 1 (salient bounds first). `BoundingBox` carries integer `X/Y/Width/Height/Top/Left/Right/Bottom` only (per `PRISM-transform-generate.md` "Salient Object Bounds"); no confidence/method fields.
+    4. Upscale decision on the bbox largest dimension against the already-named config limits: `< Input.Images.MINIMUM_SIZE_IN_PIXELS` (570) → KO; `≥ Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS` (800) → OK no resize; 570–800 → upscale capped at `Output.Images.Resize.MAXIMUM_UpScale` (1.42); required scale > 1.42 → KO. This is the same KO rule already stated in the answered "transform failure/fallback/fill-KO policy" todo above.
+    5. Return the intermediate bytes + populated `BoundingBox` to `ImageTransformer`; a UNKNOWN/absent bbox routes to `Tx_ProblemImageProcessor` per the routing matrix. No new data introduced.
 
 -------
 - [ ] Define and implement the full ImageTransformer routing matrix.
@@ -213,7 +219,14 @@
   - Step 1 — Tight crop: shrink source canvas to the (adjusted) `salient-bbox`, removing excess background.
   - Step 2 — Center: place the cropped object on the target square canvas so the object center aligns with the canvas center, with `Transformation.Positioning.Margin` (4.2%) applied on all sides. This leaves uncovered canvas area where background was removed.
   - Step 3 — Fill: call `Tx_util_BgStretch` on all uncovered canvas edges.
-  - Answer:
+  - Answer (proposed transcription from existing data — this todo body + `PRISM-transform-generate.md` "Repositioning and Margin Application" / "Background Extension"; the two pre-steps are the already-answered routing inputs at the top of this file; pending approval):
+    The flow is already specified — fix the order and cross-references rather than invent behavior:
+    - Pre-step A (`low-contrast` IF true): run `Tx_LowContrastEnhancement` on the source first (see its own todo — algorithm/scope still open, so this pre-step is gated on that answer).
+    - Pre-step B (`shadow-present` IF true): shrink the `salient-bbox` bottom edge upward above the detected shadow band before cropping.
+    - Step 1 (tight crop): shrink the source canvas to the adjusted `salient-bbox`, removing excess background — matches doc "crop original image using bounding box coordinates".
+    - Step 2 (center): place the cropped object on the target square canvas with object-center aligned to canvas-center and `Transformation.Positioning.Margin` (4.2%) on all sides; this leaves uncovered canvas where background was removed — matches doc "Repositioning and Margin Application". Border-intersection no-reposition does NOT apply here: `Tx_CenterAndStretch` is only reached on the no-edge-intersect routing branch.
+    - Step 3 (fill): call `Tx_util_BgStretch` (see its answered tiered-fill todo) on every uncovered canvas edge, then the answered cleanup (seam feathering + local smoothing).
+    Populate `ImageTransformationResult` (`CropRectangle`, `BackgroundFillMethod`, resize fields, `Warnings`) per the answered "crop/resize decision output" todos. No new data — all four referenced sub-decisions are already answered in this file or in `PRISM-transform-generate.md`.
 
 -------
 - [ ] Implement Tx_util_BgStretch with the confirmed tiered fill strategy.
@@ -226,7 +239,13 @@
   - Never use Gaussian blur as a fill method.
   - Apply seam feathering at extension boundary after edge extension passes (tiers 1 and 2).
   - Must satisfy the dual-interface todo: `Process(byte[] arr, int stride, float upscale_factor)` webservice form + callable as sub-step from other Tx_ classes.
-  - Answer:
+  - Answer (proposed transcription from existing data — `PRISM-transform-generate.md` "Background Extension → Fill Method — Tiered by Extension Ratio" + ticket `AGENT-TICKETS.md` T-1700; pending approval):
+    The strategy is already fully specified and agreed across two accepted artifacts — this answer is reconciliation, not new design. Implement exactly the four tiers keyed on extension ratio (= filled canvas area / source image area):
+    - Tier 1 (≤125%): basic edge extension — mirror or clamp border pixels outward.
+    - Tier 2 (≤142%): content-aware edge extension — patch-based or frequency-aware border propagation.
+    - Tier 3 (>142%): OpenCV inpainting (via EmguCV) — `INPAINT_TELEA` preferred, `INPAINT_NS` alternative.
+    - Tier 4 (>250%): solid white fill `#FFFFFF`.
+    Rules (same source): never Gaussian blur; apply seam feathering at the extension boundary after tiers 1 and 2 only (tier 3 inpainting handles its own seam implicitly, tier 4 needs none); this is a sub-step helper, NOT an `IImageTransformation` implementor. Expose `Process(byte[] arr, int stride, float upscale_factor)` per the dual-interface contract so it is callable both from the webservice and as a sub-step from `Tx_CenterAndStretch`/`Tx_DetailCropper`. Cleanup is the already-answered "center-and-stretch cleanup method" todo above (feathering + local smoothing at seams; no separate blur pass). No new data introduced.
 
 -------
 - [ ] Define and implement Tx_LowContrastEnhancement: decide algorithm and application scope.
