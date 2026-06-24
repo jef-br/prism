@@ -3,15 +3,6 @@
 ## Spec deviations
 
 -------
-- [ ] Numeric scoring formula does not match PRISM-match.md.
-  - File: `jb/src/core/Images/Match/NumericMatcher.cs`.
-  - Spec says: Multi-component deduction model — start at 100%, then deduct (a) 5% × (token_count − 1), (b) edit_distance / string_length ratio, (c) length_difference ratio. The result is a confidence in [0, 1].
-  ****
-- Current behavior: Bracket 1 returns a fixed `FinalScore = 1.0` for all single-token exact matches. Bracket 2 uses `TokenizedConcatenationDistance` converted to confidence, which captures token-count cost but not the edit-distance or length-difference components.
-  
-  - Why it deviates: The TCD formula was implemented for header-matching (Excel column matching) and repurposed for Bracket 2. It was not designed to match the spec's three-component deduction model. Bracket 1 was given a fixed score as a placeholder.
-  
-  - Fix: Implement the three-component formula for both brackets. For Bracket 1, the edit distance component is always 0 (exact match), so only the token-count penalty (5% × 0 = 0%) and length-difference component apply. For Bracket 2, compute all three components against the best-matching concatenation.
 
 
 

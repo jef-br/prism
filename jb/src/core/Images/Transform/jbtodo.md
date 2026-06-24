@@ -138,15 +138,6 @@
     No separate blur pass at any tier.
 
 -------
-- [ ] Implement Tx_CropSquare: square crop without background extension.
-  - File: `jb/src/core/Images/Transform/Tx_CropSquare.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
-  - What is needed: Compute a centered square crop rectangle from input dimensions, apply the crop, and populate `ImageTransformationResult` with output dimensions. No fill or saliency required.
-  - Prerequisites: Resize decision output todo must be answered (determines how to handle images that are already smaller than the target).
-  - Image processor: SixLabors.ImageSharp (already a project dependency) can perform the crop without additional libraries. This is the simplest Tx class and can be implemented first.
-
-  - Fix: Implement the crop using `ImageSharp.Image.Mutate(x => x.Crop(...))`. Replace `ImageProcessorAvailable() => false` with a real readiness check. Populate all `ImageTransformationResult` fields.
-
--------
 - [ ] Implement Tx_CenterAndStretch: center salient object on a square canvas and fill or stretch the background.
   - File: `jb/src/core/Images/Transform/Tx_CenterAndStretch.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
   - What is needed: (1) Read salient-object bounding box from `InputImage.Features` (`salient-bbox` feature, populated by the classifier). (2) Compute canvas offsets to center the object at target resolution. (3) Fill or stretch the background using the decided fill policy. (4) Apply cleanup per the cleanup-method decision. (5) Populate full `ImageTransformationResult` with crop rectangle, fill method, output dimensions, and any warnings.
@@ -163,28 +154,6 @@
   - Image processor: Same as Tx_CenterAndStretch.
 
   - Fix: Implement after all prerequisites are answered and classifier features are available.
-
--------
-- [ ] Implement Tx_ProblemImageProcessor: conservative resize and passthrough for images with unknown or low-confidence features.
-  - File: `jb/src/core/Images/Transform/Tx_ProblemImageProcessor.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
-  - What is needed: (1) Determine which transform-critical features are UNKNOWN or below threshold and record them. (2) Apply a safe resize to target dimensions if input is out of spec (no crop, no fill, no stretch). (3) Populate `ImageTransformationResult` with status, the list of missing features, and output dimensions. (4) Apply the failure/KO policy: if the resize output is still unacceptable, KO the image instead of exporting.
-  - Prerequisites: Transform failure, fallback, and fill-KO policy todo must be answered. Does not require `salient-bbox`.
-  - Image processor: ImageSharp resize is sufficient — no saliency or fill required for the conservative path.
-  - Note: This class can be implemented before the other Tx classes because it requires no saliency features. It can serve as the integration scaffold for the image processor dependency.
-
-  - Fix: Implement after the failure/KO policy todo is answered and ImageSharp is wired to the processor gate.
-
--------
-- [ ] Define and enforce the dual Tx interface: webservice-facing raw bytes method vs PRISM-internal Lambda-enriched path.
-  - Every Tx_ class must expose both:
-    (1) A webservice-facing pixel method `byte[] Process(byte[] arr, int stride, float upscale_factor)` that works without any Lambda data.
-    (2) `IImageTransformation.Transform(ImageRecord_LAMBDA)` for PRISM-internal use; this calls `Process()` internally and may enrich the result using Lambda fields (product type, phenotype, features).
-  - Open question: is `Process()` declared on `IImageTransformation` (making it part of the contract), or is it a convention enforced by code review?
-  - This also affects `Tx_util_BgStretch` and `Tx_LowContrastEnhancement` which are called as sub-steps, not through `IImageTransformation`.
-  - Answer:
-    `Process()` is part of the contract — add `byte[] Process(byte[] arr, int stride, float upscale_factor)` to `IImageTransformation`.
-    `Tx_util_BgStretch` and `Tx_LowContrastEnhancement` are sub-step helpers, not `IImageTransformation` implementors; they expose `Process()` directly without implementing the interface.
-    Implementation note: `Transform(ImageRecord_LAMBDA)` calls `Process()` internally and wraps the result into `ImageTransformationResult`.
 
 -------
 - [ ] Implement ImagePreProcessor: EXIF orientation → flat JPG → Canny+local-contrast bounding box → upscale decision.

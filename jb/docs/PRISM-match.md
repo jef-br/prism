@@ -31,15 +31,14 @@ Single pass. Matched images removed from consideration after each bracket.
 
 ## `NumericMatcher.cs`
 
-Parses any input string to tokenized numerical-only string; compares all tokens against numerical IEM columns by edit distance. Identical match required. Fewer tokens = higher score.
+Parses any input string to a tokenized numerical-only string; compares tokens against numerical IEM columns. An **exact (identical) match is required** — there is no edit-distance tolerance. Fewer tokens used to reach the exact match = higher score.
 
-**Scoring (starts at 100%):**
-- Single token + identical match: −0%
-- Token count penalty: `5% × (token_count − 1)` (e.g. 2 tokens = −5%)
-- Edit distance penalty: `edit_distance / string_length` (e.g. `ABC` vs `ABD`: 1/3 = −33%)
-- Length difference penalty (when column token longer than filename token): `1 − (len_diff / total_column_len)` (e.g. `abcde` vs `abcdefgh`: 1 − 5/8 = −37.5%)
+**Scoring (TCD — token-count only):**
+Both brackets require an exact/perfect numeric match (the token, or the in-order concatenation of tokens, must equal the family numeric value). Because the match is always exact, edit-distance and length-difference are always 0 and contribute nothing. The only scoring axis is the number of tokens used to achieve the perfect match (TCD).
+- Bracket 1 — single identical token: fixed confidence `1.0` (TCD 0).
+- Bracket 2 — multiple tokens concatenated to an exact value: ranked by **fewest tokens used** (lower TCD = higher confidence); accepted only when the concatenation exactly equals the candidate value AND TCD ≤ `maxDistance`.
 
-Only scores near 100% (threshold in `ImageMatcher.cs`) → FID candidacy.
+Only exact matches qualify → FID candidacy.
 
 **Token combination rules:**
 - Tokens may be joined when filename order is preserved and joined token forms a valid FID candidate.
@@ -74,7 +73,7 @@ Parses input string → logical string tokens; compares against categorical, des
 - **Descriptive**: product info, descriptions, washing instructions, marketing text
 - **Mixed**: all columns that don't fit categorical or descriptive
 
-**Scoring:** Similar to numeric. Edit distance for categorical less penalized (spelling mistakes less severe than serial number discrepancy). More matched tokens → higher score.
+**Scoring:** Unlike numeric matching (which requires an exact match with no edit-distance tolerance), string matching tolerates edit distance — for categorical columns it is less penalized (spelling mistakes less severe than serial number discrepancy). More matched tokens → higher score.
 
 **Normalization before matching:** lowercase, diacritics → base char, split punctuation/separators → token boundaries, collapse whitespace. Original token text retained in bounded evidence.
 

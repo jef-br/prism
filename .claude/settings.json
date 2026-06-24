@@ -1,3 +1,9 @@
-"Bash(git add daily-brief.md)",
-"Bash(git commit*daily-brief*)",
-"Bash(git push origin main)"
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add daily-brief.md)",
+      "Bash(git commit*daily-brief*)",
+      "Bash(git push origin main)" 
+    ]
+  }
+}
