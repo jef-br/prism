@@ -1,5 +1,6 @@
 # Image Transform Todo
 
+-------
 - [ ] Define transform-facing ImageFeature and ImageNGP output: say which ImageFeatures and selected ImageNGP phenotypes feed crop and center logic, including what happens when transform-critical features are unknown.
   - Impact:
     - Project progress: High - Transform rules depend on selected ImageNGP phenotype plus features such as type-of-shot, orientation, background, human/head evidence, edge intersections, object bounds, and detail/whole-product evidence.
@@ -23,6 +24,7 @@
 
     
 
+-------
 - [ ] Define transform failure, fallback, and fill-KO policy: list which transform problems become KO, which eligible fill failures can still export, and what fallback path is used after border-intersection no-reposition cases are excluded.
   - Answer:
     KO the image when:
@@ -30,6 +32,7 @@
     - Image is smaller than `Input.Images.MINIMUM_SIZE_IN_PIXELS` (570 px) in any dimension AND upscaling would exceed `MAXIMUM_UpScale` (1.42×) — so the required output cannot be reached.
     All fill/stretch failures, unknown features, and low-confidence geometry are handled by `Tx_ProblemImageProcessor` (safe resize, export with warnings). No other transform failure triggers KO.
 
+-------
 - [ ] Define crop decision output for eligible images: say how crop coordinates, anchors, confidence, and non-repositionable border-intersection decisions are represented.
   - Impact:
     - Project progress: High - Crop decisions are the main transform artifact that diagnostics and output generation need.
@@ -46,6 +49,7 @@
     No new fields required.
 
 
+-------
 - [ ] Define resize decision output: say how preprocessor reports upscale, downscale, or no-resize decisions.
   - Impact:
     - Project progress: Medium - Resize metadata supports quality control and manifest diagnostics.
@@ -62,6 +66,7 @@
     - `Warnings` — warning when upscale approaches `MAXIMUM_UpScale` (1.42×).
     No new fields required.
 
+-------
 - [ ] Define transform result for border-intersecting detail crops: say how the no-reposition decision is recorded and whether the image exports unchanged or becomes KO.
   - Impact:
     - Project progress: Medium - Border-intersecting detail crops need a deterministic output status after classification has marked them as non-repositionable.
@@ -73,6 +78,7 @@
   - Answer:
     When `Tx_DetailCropper` detects that a crop cannot be repositioned (border intersection blocks manipulation), it delegates to `Tx_CropSquare` internally. The image is not KO'd and not exported unchanged — it receives a square crop without background extension. `ImageTransformationResult.TransformerType` records `Tx_CropSquare`; `Warnings` records the reason for the fallback.
 
+-------
 - [ ] Define detail crop saliency map behavior for eligible images: say how the most important object region influences square crop placement when no border intersection blocks repositioning.
   - Impact:
     - Project progress: Medium - Saliency improves detail crops but depends on object bounds and crop policy.
@@ -83,6 +89,7 @@
     Center the square crop on the dominant saliency region while respecting edge anchors and minimum content retention.
   - Answer:
 
+-------
 - [ ] Define detail crop headcut thresholds and placement: say which human/head confidence thresholds enable headcut and how top crop placement changes for eligible non-intersecting images.
   - Impact:
     - Project progress: Medium - Headcut rules affect fashion/clothing outputs and must be predictable.
@@ -93,6 +100,7 @@
     Apply headcut only when configured and the answered human/head detection signals meet explicit thresholds; otherwise preserve the detected head region.
   - Answer:
 
+-------
 - [ ] Define detail crop greedy crop behavior for eligible images: say how much original content to keep when no headcut is requested and no border intersection blocks repositioning.
   - Impact:
     - Project progress: Medium - Greedy crop behavior controls balance between detail focus and preserving context.
@@ -103,6 +111,7 @@
     Keep as much original content as possible while meeting target aspect ratio and configured margin, using fill only when needed.
   - Answer:
 
+-------
 - [ ] Define detail crop fill policy for eligible images: say how missing pixels are created when the crop extends beyond the original image and border-intersection rules do not block manipulation.
   - Impact:
     - Project progress: Medium - Detail crop fill must align with global background fill quality rules.
@@ -114,6 +123,7 @@
   - Answer:
     Use the global background fill policy from the "background fill policy" todo (tiered by extension ratio). No separate detail-crop fill policy needed.
 
+-------
 - [ ] Define center-and-stretch cleanup method: choose the cleanup technique used after stretching or filling background.
   - Impact:
     - Project progress: Medium - Cleanup improves visual quality but follows fill method selection.
@@ -127,35 +137,44 @@
     Inpainting handles its own seam implicitly when it is the fill method (>142% tier).
     No separate blur pass at any tier.
 
+-------
 - [ ] Implement Tx_CropSquare: square crop without background extension.
   - File: `jb/src/core/Images/Transform/Tx_CropSquare.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
   - What is needed: Compute a centered square crop rectangle from input dimensions, apply the crop, and populate `ImageTransformationResult` with output dimensions. No fill or saliency required.
   - Prerequisites: Resize decision output todo must be answered (determines how to handle images that are already smaller than the target).
   - Image processor: SixLabors.ImageSharp (already a project dependency) can perform the crop without additional libraries. This is the simplest Tx class and can be implemented first.
+
   - Fix: Implement the crop using `ImageSharp.Image.Mutate(x => x.Crop(...))`. Replace `ImageProcessorAvailable() => false` with a real readiness check. Populate all `ImageTransformationResult` fields.
 
+-------
 - [ ] Implement Tx_CenterAndStretch: center salient object on a square canvas and fill or stretch the background.
   - File: `jb/src/core/Images/Transform/Tx_CenterAndStretch.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
   - What is needed: (1) Read salient-object bounding box from `InputImage.Features` (`salient-bbox` feature, populated by the classifier). (2) Compute canvas offsets to center the object at target resolution. (3) Fill or stretch the background using the decided fill policy. (4) Apply cleanup per the cleanup-method decision. (5) Populate full `ImageTransformationResult` with crop rectangle, fill method, output dimensions, and any warnings.
   - Prerequisites: Transform-facing ImageFeature definition, background fill policy, and cleanup method todos must be answered. `salient-bbox` must be written by the classifier (currently UNKNOWN).
   - Image processor: OpenCV (via EmguCV) or ImageSharp advanced operations for background extension. Inpainting requires a dedicated model if chosen as fill method.
+
   - Fix: Implement after prerequisites are answered and `salient-bbox` is populated by the classifier.
 
+-------
 - [ ] Implement Tx_DetailCropper: square crop anchored at bounding box edges, with optional headcut and greedy crop.
   - File: `jb/src/core/Images/Transform/Tx_DetailCropper.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
   - What is needed: (1) Read `salient-bbox` from `InputImage.Features`. (2) Detect whether the bounding box intersects an image edge. (3) For non-intersecting images: apply greedy crop centered on saliency region; apply headcut placement when `head-visible` and `hero-is-human` features are above configured thresholds. (4) For border-intersecting images: anchor crop to touched edges; record the no-reposition decision. (5) Apply fill when the crop extends beyond original bounds. (6) Populate full `ImageTransformationResult` including crop rectangle, headcut flag, border-intersection flag, fill method used, and warnings.
   - Prerequisites: Saliency map behavior, headcut thresholds, greedy crop behavior, fill policy, and border-intersection result todos must all be answered. `salient-bbox`, `head-visible`, and `hero-is-human` features must be populated by the classifier.
   - Image processor: Same as Tx_CenterAndStretch.
+
   - Fix: Implement after all prerequisites are answered and classifier features are available.
 
+-------
 - [ ] Implement Tx_ProblemImageProcessor: conservative resize and passthrough for images with unknown or low-confidence features.
   - File: `jb/src/core/Images/Transform/Tx_ProblemImageProcessor.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
   - What is needed: (1) Determine which transform-critical features are UNKNOWN or below threshold and record them. (2) Apply a safe resize to target dimensions if input is out of spec (no crop, no fill, no stretch). (3) Populate `ImageTransformationResult` with status, the list of missing features, and output dimensions. (4) Apply the failure/KO policy: if the resize output is still unacceptable, KO the image instead of exporting.
   - Prerequisites: Transform failure, fallback, and fill-KO policy todo must be answered. Does not require `salient-bbox`.
   - Image processor: ImageSharp resize is sufficient — no saliency or fill required for the conservative path.
   - Note: This class can be implemented before the other Tx classes because it requires no saliency features. It can serve as the integration scaffold for the image processor dependency.
+
   - Fix: Implement after the failure/KO policy todo is answered and ImageSharp is wired to the processor gate.
 
+-------
 - [ ] Define and enforce the dual Tx interface: webservice-facing raw bytes method vs PRISM-internal Lambda-enriched path.
   - Every Tx_ class must expose both:
     (1) A webservice-facing pixel method `byte[] Process(byte[] arr, int stride, float upscale_factor)` that works without any Lambda data.
@@ -167,6 +186,7 @@
     `Tx_util_BgStretch` and `Tx_LowContrastEnhancement` are sub-step helpers, not `IImageTransformation` implementors; they expose `Process()` directly without implementing the interface.
     Implementation note: `Transform(ImageRecord_LAMBDA)` calls `Process()` internally and wraps the result into `ImageTransformationResult`.
 
+-------
 - [ ] Implement ImagePreProcessor: EXIF orientation → flat JPG → Canny+local-contrast bounding box → upscale decision.
   - File: `jb/src/core/Images/ImagePreProcessor.cs`
   - Steps in order:
@@ -181,6 +201,7 @@
     5. Return intermediate image bytes and the populated `BoundingBox` to `ImageTransformer`.
   - Answer:
 
+-------
 - [ ] Define and implement the full ImageTransformer routing matrix.
   - File: `jb/src/core/Images/Transform/ImageTransformer.cs` — update `SelectTransformer()`.
   - Decision tree (evaluated in order):
@@ -197,6 +218,7 @@
     - `Tx_DetailCropper` may also internally delegate to `Tx_CropSquare` when it detects a no-reposition case during pixel processing (border intersection blocks manipulation). This is an internal fallback, not a routing decision.
     - `Tx_ProblemImageProcessor` never calls `Tx_CropSquare` — it applies safe resize only.
 
+-------
 - [ ] Define the exact det-slot exclusions that prevent routing to Tx_DetailCropper.
   - From the product design:
     - Default product type: images in Det0, Det1, or Det2 are excluded from DetailCropper (→ CropSquare).
@@ -213,6 +235,7 @@
       - Default (non-clothing): det-slots 0, 1, 2 are excluded from `DetailCropper` → `CropSquare`.
       - Clothing (`clothing-*`): det-slots 0, 1 are excluded → `CropSquare`.
 
+-------
 - [ ] Document and implement the Tx_CenterAndStretch three-step internal flow.
   - File: `jb/src/core/Images/Transform/Tx_CenterAndStretch.cs`
   - Pre-steps (applied to source image before any pixel repositioning):
@@ -223,6 +246,7 @@
   - Step 3 — Fill: call `Tx_util_BgStretch` on all uncovered canvas edges.
   - Answer:
 
+-------
 - [ ] Implement Tx_util_BgStretch with the confirmed tiered fill strategy.
   - File: `jb/src/core/Images/Transform/Tx_util_BgStretch.cs`.
   - Tiers based on extension ratio (filled canvas area / source image area):
@@ -235,6 +259,7 @@
   - Must satisfy the dual-interface todo: `Process(byte[] arr, int stride, float upscale_factor)` webservice form + callable as sub-step from other Tx_ classes.
   - Answer:
 
+-------
 - [ ] Define and implement Tx_LowContrastEnhancement: decide algorithm and application scope.
   - File: `jb/src/core/Images/Transform/processingtools/Tx_LowContrastEnhancement.cs` (currently empty).
   - Called as a pre-step inside `Tx_CenterAndStretch` when the `low-contrast` ImageFeature is true.
@@ -243,6 +268,7 @@
   - Open question: apply enhancement to the full image or only the detected background region?
   - Answer:
 
+-------
 - [ ] Spec and implement Tx_util_HeadCutter: utility class that crops a human head at the nose-to-lips boundary, with family-aware fallback for covered or out-of-shot faces.
   - File: `jb/src/core/Images/Transform/processingtools/Tx_util_HeadCutter.cs` (to be created).
   - Called by `ImageTransformer.cs` before any `Tx_*` script is launched, when `ImageFeatureAnalyzer` has flagged the image with any of: `has-human = true`, `has-head = true`, or `skin-tone-area > 0`.

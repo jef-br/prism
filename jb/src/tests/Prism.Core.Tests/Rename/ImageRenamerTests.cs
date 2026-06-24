@@ -10,7 +10,7 @@ namespace PrismCoreTests.Rename;
 /// </summary>
 public class ImageRenamerTests
 {
-    // ─── OkRenamedCount ───────────────────────────────────────────────────────
+    //  OkRenamedCount 
 
     [Fact]
     public void Run_SingleAcceptedImage_CountsAsRenamed()
@@ -51,7 +51,7 @@ public class ImageRenamerTests
         Assert.Equal(3, okRenamed);
     }
 
-    // ─── Collision handling ───────────────────────────────────────────────────
+    //  Collision handling 
 
     [Fact]
     public void Run_SameDetInSameFamily_KosEntireFamily()
@@ -93,7 +93,7 @@ public class ImageRenamerTests
         Assert.True(records[2].IsKo);
     }
 
-    // ─── KO passthrough ───────────────────────────────────────────────────────
+    //  KO passthrough 
 
     [Fact]
     public void Run_AlreadyKoImage_SkippedAndNotCounted()
@@ -122,7 +122,7 @@ public class ImageRenamerTests
         Assert.Equal(0, koAdded);
     }
 
-    // ─── Unmatched images (no Family) ────────────────────────────────────────
+    //  Unmatched images (no Family) 
 
     [Fact]
     public void Run_EmptyFamilyField_Skipped()
@@ -135,7 +135,7 @@ public class ImageRenamerTests
         Assert.Equal(0, okRenamed);
     }
 
-    // ─── Overflow images ──────────────────────────────────────────────────────
+    //  Overflow images 
 
     [Fact]
     public void Run_OverflowImage_CountedAndNewNameCorrect()
@@ -149,7 +149,7 @@ public class ImageRenamerTests
         Assert.Equal("FAM001_det8.jpg", records[0].NewName);
     }
 
-    // ─── NewName contract ─────────────────────────────────────────────────────
+    //  NewName contract 
 
     [Fact]
     public void Run_AcceptedImage_NewNameIsCorrectForm()
@@ -184,7 +184,7 @@ public class ImageRenamerTests
         });
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     /// <summary>
     /// Creates a minimal <see cref="ImageRecord_LAMBDA"/> with Family and DetOrder set,

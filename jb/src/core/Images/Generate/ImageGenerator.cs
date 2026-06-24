@@ -79,7 +79,7 @@ internal static class ImageGenerator
         return generatedImages;
     }
 
-    // ─── Private helpers ──────────────────────────────────────────────────────
+    //  Private helpers 
 
     /// <summary>
     /// Returns the non-KO record with the lowest <see cref="ImageRecord_Base.DetOrder"/>.

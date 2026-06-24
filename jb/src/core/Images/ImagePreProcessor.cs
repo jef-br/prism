@@ -149,7 +149,7 @@ public static class ImagePreProcessor {
         } catch { /* Leave salient-bbox at UNKNOWN on any failure. */ }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    //  Helpers 
 
     private static Mat ScaleDown( Mat src ) {
         int maxDim = Math.Max(src.Cols, src.Rows);

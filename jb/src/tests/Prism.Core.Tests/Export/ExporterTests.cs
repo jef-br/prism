@@ -19,7 +19,7 @@ public class ExporterTests : IDisposable
         Directory.CreateDirectory(tempDir);
     }
 
-    // ─── ZIP: manifest.json ────────────────────────────────────────────────────
+    //  ZIP: manifest.json 
 
     [Fact]
     public void Run_ZipFormat_ContainsManifestJson()
@@ -34,7 +34,7 @@ public class ExporterTests : IDisposable
         Assert.Contains(zip.Entries, e => e.FullName == "manifest.json");
     }
 
-    // ─── ZIP: OK image in OK/ folder ──────────────────────────────────────────
+    //  ZIP: OK image in OK/ folder 
 
     [Fact]
     public void Run_ZipFormat_OkImageAppearsInOkFolder()
@@ -49,7 +49,7 @@ public class ExporterTests : IDisposable
         Assert.Contains(zip.Entries, e => e.FullName == "OK/FAM001_det0.jpg");
     }
 
-    // ─── ZIP: KO image in KO/ folder ──────────────────────────────────────────
+    //  ZIP: KO image in KO/ folder 
 
     [Fact]
     public void Run_ZipFormat_KoImageAppearsInKoFolder()
@@ -64,7 +64,7 @@ public class ExporterTests : IDisposable
         Assert.Contains(zip.Entries, e => e.FullName == "KO/ko_img.jpg");
     }
 
-    // ─── ZIP: Excel file included ─────────────────────────────────────────────
+    //  ZIP: Excel file included 
 
     [Fact]
     public void Run_ZipFormat_ExcelFileIncluded()
@@ -81,7 +81,7 @@ public class ExporterTests : IDisposable
         Assert.Contains(zip.Entries, e => e.FullName == "catalogue.xlsx");
     }
 
-    // ─── ZIP: KO with no normalized jpg not added to KO/ ─────────────────────
+    //  ZIP: KO with no normalized jpg not added to KO/ 
 
     [Fact]
     public void Run_ZipFormat_KoWithNoNormalizedJpg_NotInZip()
@@ -95,7 +95,7 @@ public class ExporterTests : IDisposable
         Assert.DoesNotContain(zip.Entries, e => e.FullName.StartsWith("KO/"));
     }
 
-    // ─── ZIP: OutputRecord attached to OK lambda ──────────────────────────────
+    //  ZIP: OutputRecord attached to OK lambda 
 
     [Fact]
     public void Run_ZipFormat_OutputRecordAttachedToOkLambda()
@@ -111,7 +111,7 @@ public class ExporterTests : IDisposable
         Assert.Equal("FAM001_det0.jpg", lambda.OutputRecord!.FinalFileName);
     }
 
-    // ─── JSON: ZipBytes is null ───────────────────────────────────────────────
+    //  JSON: ZipBytes is null 
 
     [Fact]
     public void Run_JsonFormat_ZipBytesNull()
@@ -124,7 +124,7 @@ public class ExporterTests : IDisposable
         Assert.Null(result.ZipBytes);
     }
 
-    // ─── JSON: ImageRows count matches lambda count ───────────────────────────
+    //  JSON: ImageRows count matches lambda count 
 
     [Fact]
     public void Run_JsonFormat_ManifestImageRowsMatchLambdaCount()
@@ -137,7 +137,7 @@ public class ExporterTests : IDisposable
         Assert.Equal(2, result.Manifest.ImageRows.Count);
     }
 
-    // ─── JSON: OK row has FinalFileName ──────────────────────────────────────
+    //  JSON: OK row has FinalFileName 
 
     [Fact]
     public void Run_JsonFormat_OkRowHasFinalFileName()
@@ -151,7 +151,7 @@ public class ExporterTests : IDisposable
         Assert.Equal("FAM001_det0.jpg", row.FinalFileName);
     }
 
-    // ─── JSON: KO row has null FinalFileName and KoReasonCode set ────────────
+    //  JSON: KO row has null FinalFileName and KoReasonCode set 
 
     [Fact]
     public void Run_JsonFormat_KoRowHasNullFinalFileName()
@@ -166,7 +166,7 @@ public class ExporterTests : IDisposable
         Assert.Equal("MATCH_FAIL", row.KoReasonCode);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     public void Dispose()
     {

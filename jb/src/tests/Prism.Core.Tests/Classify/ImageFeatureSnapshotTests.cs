@@ -7,7 +7,7 @@ namespace PrismCoreTests.Classify;
 /// </summary>
 public class ImageFeatureSnapshotTests
 {
-    // ─── Default / UNKNOWN contract ────────────────────────────────────────────
+    //  Default / UNKNOWN contract 
 
     [Fact]
     public void GetValue_UnsetFeature_ReturnsUNKNOWN()
@@ -23,7 +23,7 @@ public class ImageFeatureSnapshotTests
         Assert.NotNull(snapshot.GetValue("nonexistent-feature"));
     }
 
-    // ─── Round-trip: Set → GetValue ────────────────────────────────────────────
+    //  Round-trip: Set → GetValue 
 
     [Fact]
     public void GetValue_AfterSet_ReturnsValue()
@@ -50,7 +50,7 @@ public class ImageFeatureSnapshotTests
         Assert.Equal("", snapshot.GetValue("product-color"));
     }
 
-    // ─── Case-insensitive key lookup ───────────────────────────────────────────
+    //  Case-insensitive key lookup 
 
     [Fact]
     public void GetValue_CaseInsensitive_FindsFeatureRegardlessOfCase()
@@ -63,7 +63,7 @@ public class ImageFeatureSnapshotTests
         Assert.Equal("0.7500", snapshot.GetValue("aspect-ratio"));
     }
 
-    // ─── TryGet contract ───────────────────────────────────────────────────────
+    //  TryGet contract 
 
     [Fact]
     public void TryGet_WhenNotSet_ReturnsFalseAndNullValue()
@@ -119,7 +119,7 @@ public class ImageFeatureSnapshotTests
         Assert.Equal("heuristic", value!.Source);
     }
 
-    // ─── All dictionary ────────────────────────────────────────────────────────
+    //  All dictionary 
 
     [Fact]
     public void All_ReturnsAllSetFeatures()

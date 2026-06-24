@@ -34,7 +34,7 @@ internal static class ImageOrderer
         }
     }
 
-    // ─── Family processing ────────────────────────────────────────────────────
+    //  Family processing 
 
     /// <summary>
     /// Assigns det slots to all images within one FamilyID group.
@@ -104,7 +104,7 @@ internal static class ImageOrderer
         }
     }
 
-    // ─── Candidate building ───────────────────────────────────────────────────
+    //  Candidate building 
 
     /// <summary>
     /// Builds all (image, slot) candidates where the image's selected phenotype qualifies for the slot.
@@ -137,7 +137,7 @@ internal static class ImageOrderer
         return result;
     }
 
-    // ─── Candidate comparison ─────────────────────────────────────────────────
+    //  Candidate comparison 
 
     /// <summary>
     /// Sorts candidates so the best assignment comes first.
@@ -152,7 +152,7 @@ internal static class ImageOrderer
         return a.SourceIndex.CompareTo(b.SourceIndex);
     }
 
-    // ─── Tie-breaker labelling ────────────────────────────────────────────────
+    //  Tie-breaker labelling 
 
     /// <summary>
     /// Returns which tie-breaker determined the winner over competitors at the same slot and phenotype rank.
@@ -171,7 +171,7 @@ internal static class ImageOrderer
         return "source-index";
     }
 
-    // ─── Product type resolution ──────────────────────────────────────────────
+    //  Product type resolution 
 
     /// <summary>
     /// Resolves the product type id from the FamilyIDRecord's canonical properties.
@@ -194,7 +194,7 @@ internal static class ImageOrderer
         return "default";
     }
 
-    // ─── Config loader ────────────────────────────────────────────────────────
+    //  Config loader 
 
     /// <summary>
     /// Locates and loads both order config files using PrismConfigLocator conventions.

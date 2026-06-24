@@ -36,7 +36,7 @@ internal static class ImageRenamer
         return (okRenamed, koAdded);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     /// <summary>
     /// Returns true when any two images in the family share the same det-slot index.

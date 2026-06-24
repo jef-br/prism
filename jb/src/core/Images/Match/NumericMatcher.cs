@@ -27,7 +27,7 @@ internal sealed class NumericMatcher
         this.familyIdColumnName = familyIdColumnName;
     }
 
-    // ─── Bracket 1 ────────────────────────────────────────────────────────────
+    //  Bracket 1 
 
     /// <summary>
     /// Attempts Bracket 1 matching: a single numeric token in the filename exactly equals a family numeric value.
@@ -99,7 +99,7 @@ internal sealed class NumericMatcher
         };
     }
 
-    // ─── Bracket 2 ────────────────────────────────────────────────────────────
+    //  Bracket 2 
 
     /// <summary>
     /// Attempts Bracket 2 matching: consecutive numeric tokens concatenated (in filename order) match a family
@@ -185,7 +185,7 @@ internal sealed class NumericMatcher
         };
     }
 
-    // ─── Bracket 4 support ───────────────────────────────────────────────────
+    //  Bracket 4 support 
 
     /// <summary>
     /// Reduces the candidate pool for Bracket 4 semantic matching by eliminating families
@@ -218,7 +218,7 @@ internal sealed class NumericMatcher
         return remaining;
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     /// <summary>
     /// Extracts all digit sequences from the filename stem, preserving left-to-right order.

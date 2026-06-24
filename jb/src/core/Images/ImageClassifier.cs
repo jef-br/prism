@@ -120,7 +120,7 @@ public sealed class ImageClassifier : IDisposable
         return tokens;
     }
 
-    // ─── Image encoding ───────────────────────────────────────────────────────
+    //  Image encoding 
 
     private static DenseTensor<float> PreprocessImage(string imagePath)
     {
@@ -149,7 +149,7 @@ public sealed class ImageClassifier : IDisposable
         return tensor;
     }
 
-    // ─── Text encoding ────────────────────────────────────────────────────────
+    //  Text encoding 
 
     /// <summary>
     /// Tokenizes every prompt to the CLIP context length (77) and stacks them into batched
@@ -177,7 +177,7 @@ public sealed class ImageClassifier : IDisposable
         return (inputIds, attentionMask);
     }
 
-    // ─── IDisposable ─────────────────────────────────────────────────────────
+    //  IDisposable 
 
     /// <inheritdoc/>
     public void Dispose()

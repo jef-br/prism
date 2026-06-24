@@ -1,3 +1,61 @@
+# Finishable now
+
+## Match — jb/src/core/Images/Match/jbtodo.md
+
+1. Numeric scoring formula → 3-component deduction model in NumericMatcher.cs
+2. MatchEvidence missing 3 fields (ThresholdStatus, RejectedNearTieEvidence, MatcherWeights)
+3. StringMatcher Bracket 3 duplicate-phenotype guard (StringMatcher.cs:41-50)
+4. Original pre-normalization token text (StringMatcher.cs:100-108)
+5. Weight_MatchingSignalsConverging — HALF (AssertInRange ready; bonus placement needs a call)
+
+## API — jb/src/api/jbtodo.md
+6. SD-13 JSON images shape → ImageJourneyItem + Exporter.cs projection
+
+## Transform close-outs (answered → move to docs) — jb/src/core/Images/Transform/jbtodo.md
+7. Transform-facing ImageFeature/ImageNGP routing inputs
+8. Transform failure / fallback / fill-KO policy
+9. Crop decision output (existing fields sufficient)
+10. Resize decision output (existing fields sufficient)
+11. Border-intersecting detail-crop result
+12. Center-and-stretch cleanup method
+13. Dual Tx interface (Process() on IImageTransformation)
+14. Det-slot exclusions (clothing-* prefix)
+15. Full ImageTransformer routing matrix (needs ProductTypeId on ImageRecord_LAMBDA)
+
+## Transform implementation (prereqs met)
+16. Implement Tx_ProblemImageProcessor
+17. Implement Tx_CropSquare
+
+## Classify — jb/src/core/Images/Classify/jbtodo.md
+18. ONNX InferenceSession scope
+19. interior-shot unreachable (product-type gate + interior Analyzer)
+
+# Blocked (not actionable):
+- Match cross-bracket tie resolution
+- Generate backend
+- Tx_CenterAndStretch/Tx_DetailCropper + their empty-Answer sub-todos
+- RecordUnknownFeatures
+- phenotype validation
+- illustration-technical-drawing/taxonomy (pending approval)
+
+
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------
+
+
+
+
+
+
 # Daily Brief
 
 Scope of this pass: review all `jbtodo.md` files, `AGENT-TICKETS.md`, `jb/docs/`, and

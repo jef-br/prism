@@ -76,7 +76,7 @@ internal sealed class ClipTokenizer
         return [.. tokens];
     }
 
-    // ─── BPE ─────────────────────────────────────────────────────────────
+    //  BPE 
 
     private string[] BpeEncode(string word)
     {
@@ -111,7 +111,7 @@ internal sealed class ClipTokenizer
         return [.. chars];
     }
 
-    // ─── Loaders ─────────────────────────────────────────────────────────
+    //  Loaders 
 
     private static Dictionary<string, int> LoadVocab(string path)
     {
@@ -137,7 +137,7 @@ internal sealed class ClipTokenizer
         return merges;
     }
 
-    // ─── Byte encoder ─────────────────────────────────────────────────────
+    //  Byte encoder 
 
     private static string[] BuildByteEncoder()
     {
@@ -168,7 +168,7 @@ internal sealed class ClipTokenizer
         return encoder;
     }
 
-    // ─── Text normalisation ───────────────────────────────────────────────
+    //  Text normalisation 
 
     private static string CleanText(string text)
     {

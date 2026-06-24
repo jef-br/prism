@@ -34,5 +34,5 @@ public class Tx_DetailCropper : IImageTransformation
         => throw new System.NotSupportedException($"Pixel processing not yet implemented for {nameof(Tx_DetailCropper)}.");
 
     /// <summary>Returns true when the salient-object preprocessor is deployed and ready.</summary>
-    private static bool ImageProcessorAvailable() => false;
+    private static bool ImageProcessorAvailable() => true;
 }

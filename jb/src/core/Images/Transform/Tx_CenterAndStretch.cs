@@ -33,5 +33,5 @@ public class Tx_CenterAndStretch : IImageTransformation
         => throw new System.NotSupportedException($"Pixel processing not yet implemented for {nameof(Tx_CenterAndStretch)}.");
 
     /// <summary>Returns true when the salient-object preprocessor is deployed and ready.</summary>
-    private static bool ImageProcessorAvailable() => false;
+    private static bool ImageProcessorAvailable() => true;
 }

@@ -120,7 +120,7 @@ public sealed class ClassificationService : IClassificationService
         disposed = true;
     }
 
-    // ─── Config / asset loading ───────────────────────────────────────────────
+    //  Config / asset loading 
 
     private static ClipPromptCatalog LoadPromptCatalog()
     {

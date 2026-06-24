@@ -22,7 +22,7 @@ public sealed class MatchingService : IMatchingService
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
     {
-        // ── Classified: build one LAMBDA per normalized image (FeatureAnalysis + Classification + ImageNGP) ──
+        //  Classified: build one LAMBDA per normalized image (FeatureAnalysis + Classification + ImageNGP) 
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Classified, cancellationToken);
 
         List<ImageRecord_INPUT> okImages = ingest.NormalizedImages
@@ -51,15 +51,15 @@ public sealed class MatchingService : IMatchingService
             ? Deduplicate(okImages, lambdaByImage, classification)
             : 0;
 
-        // ── Matched: resolve a FamilyID for each image via the waterfall ──
+        //  Matched: resolve a FamilyID for each image via the waterfall 
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Matched, cancellationToken);
         int matchKo = ImageMatcher.Run(lambdaRecords, ingest.FamilyRecords);
 
-        // ── Ordered: assign det slots within each family ──
+        //  Ordered: assign det slots within each family 
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Ordered, cancellationToken);
         ImageOrderer.Run(lambdaRecords, ingest.FamilyRecords);
 
-        // ── Renamed: validate det-slot uniqueness, count renamed images ──
+        //  Renamed: validate det-slot uniqueness, count renamed images 
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Renamed, cancellationToken);
         (int okRenamed, int renameKo) = ImageRenamer.Run(lambdaRecords);
 
@@ -87,7 +87,7 @@ public sealed class MatchingService : IMatchingService
         return [$"CLIP classification unavailable for {classifyDegraded} image(s); matched on filename tokens only."];
     }
 
-    // ─── Per-image classification (fan-out FA + Classification, fan-in ImageNGP) ───
+    //  Per-image classification (fan-out FA + Classification, fan-in ImageNGP) 
 
     /// <summary>
     /// Builds and classifies one LAMBDA. FeatureAnalysis is the core measurement — a failure there KOs the
@@ -153,7 +153,7 @@ public sealed class MatchingService : IMatchingService
         return lambda;
     }
 
-    // ─── Post-classification visual deduplication ─────────────────────────────
+    //  Post-classification visual deduplication 
 
     /// <summary>
     /// KOs visual duplicates after classification, exempting configured phenotypes (illustrations,
@@ -196,7 +196,7 @@ public sealed class MatchingService : IMatchingService
         return removed;
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
+    //  Helpers 
 
     private static PhenotypeRuleSet LoadRuleSet()
     {

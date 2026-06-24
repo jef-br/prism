@@ -21,7 +21,7 @@ internal sealed class StringMatcher
         this.translationConfig = translationConfig;
     }
 
-    // ─── Bracket 3 ────────────────────────────────────────────────────────────
+    //  Bracket 3 
 
     /// <summary>
     /// Attempts Bracket 3 matching: filename string tokens narrow down to exactly one FamilyID.
@@ -71,7 +71,7 @@ internal sealed class StringMatcher
         };
     }
 
-    // ─── Evidence building ────────────────────────────────────────────────────
+    //  Evidence building 
 
     private List<TokenEvidenceItem> BuildStringEvidence(
         IReadOnlyList<string> imageTokens,
@@ -134,7 +134,7 @@ internal sealed class StringMatcher
         return tokens;
     }
 
-    // ─── Bracket 4 support ───────────────────────────────────────────────────
+    //  Bracket 4 support 
 
     /// <summary>
     /// Scores each candidate by how many filename string tokens appear in its columns.
@@ -160,7 +160,7 @@ internal sealed class StringMatcher
         return [..results.OrderByDescending(r => r.MatchCount)];
     }
 
-    // ─── Token extraction ─────────────────────────────────────────────────────
+    //  Token extraction 
 
     /// <summary>
     /// Extracts and normalizes string tokens from a filename.
@@ -178,7 +178,7 @@ internal sealed class StringMatcher
             .ToList();
     }
 
-    // ─── Scoring ─────────────────────────────────────────────────────────────
+    //  Scoring 
 
     private static double ComputeStringScore(int matchedTokenCount, int totalImageTokenCount)
     {
@@ -191,7 +191,7 @@ internal sealed class StringMatcher
     private static string? BuildNgpSummary(ImageRecord_LAMBDA record) =>
         record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}";
 
-    // ─── Normalization ────────────────────────────────────────────────────────
+    //  Normalization 
 
     private static string NormalizeDiacritics(string input)
     {

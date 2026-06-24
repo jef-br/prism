@@ -11,7 +11,7 @@ public class PhenotypeRuleSetTests
 {
     private static readonly string ImageRolesPath = ResolveImageRolesPath();
 
-    // ─── Load contract ─────────────────────────────────────────────────────────
+    //  Load contract 
 
     [Fact]
     public void Load_ValidPath_DoesNotThrow_AndKnownPhenotypeIsReachable()
@@ -72,7 +72,7 @@ public class PhenotypeRuleSetTests
         }
     }
 
-    // ─── UNKNOWN feature blocking ───────────────────────────────────────────────
+    //  UNKNOWN feature blocking 
 
     [Fact]
     public void Assign_AllUnknownFeatures_ReturnsNull()
@@ -113,7 +113,7 @@ public class PhenotypeRuleSetTests
         Assert.Null(ruleSet.Assign(snapshot));
     }
 
-    // ─── Condition types ────────────────────────────────────────────────────────
+    //  Condition types 
 
     [Fact]
     public void Assign_EqualsCondition_Matches()
@@ -210,7 +210,7 @@ public class PhenotypeRuleSetTests
         Assert.NotEqual("front-on-model-full-product", ruleSet.Assign(snapshot));
     }
 
-    // ─── Priority / CPU-only reachability ──────────────────────────────────────
+    //  Priority / CPU-only reachability 
 
     [Fact]
     public void Assign_LifestyleContext_ReachableFromCpuOnlyFeatures()
@@ -263,7 +263,7 @@ public class PhenotypeRuleSetTests
         Assert.Equal("lifestyle-context", ruleSet.Assign(snapshot));
     }
 
-    // ─── Ordering bug: ghost-front unreachable ──────────────────────────────────
+    //  Ordering bug: ghost-front unreachable 
 
     [Fact]
     public void Assign_GhostFront_OrderingBug_CurrentlyReturnsFrontPackshot()
@@ -287,7 +287,7 @@ public class PhenotypeRuleSetTests
         Assert.Equal("front-packshot", ruleSet.Assign(snapshot));
     }
 
-    // ─── EvaluateCandidates ────────────────────────────────────────────────────
+    //  EvaluateCandidates 
 
     [Fact]
     public void EvaluateCandidates_ReturnsAllMatchingPhenotypesInOrder()
@@ -331,7 +331,7 @@ public class PhenotypeRuleSetTests
         Assert.Equal(candidates[0], assigned);
     }
 
-    // ─── Helpers ───────────────────────────────────────────────────────────────
+    //  Helpers 
 
     private static ImageFeatureSnapshot AllUnknownSnapshot() => new();
 

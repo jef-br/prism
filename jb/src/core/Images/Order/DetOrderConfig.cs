@@ -22,7 +22,7 @@ public sealed class DetOrderConfig
         this.stemsByKeyword     = stemsByKeyword;
     }
 
-    // ─── Factory ──────────────────────────────────────────────────────────────
+    //  Factory 
 
     /// <summary>
     /// Loads and parses both JSON config files.
@@ -37,7 +37,7 @@ public sealed class DetOrderConfig
         return new DetOrderConfig(slots, stems);
     }
 
-    // ─── Public API ──────────────────────────────────────────────────────────
+    //  Public API 
 
     /// <summary>
     /// Returns the ordered det slot rules for the given product type id.
@@ -87,7 +87,7 @@ public sealed class DetOrderConfig
         return false;
     }
 
-    // ─── Parsers ──────────────────────────────────────────────────────────────
+    //  Parsers 
 
     /// <summary>
     /// Parses DetOrderRules.json.
@@ -170,7 +170,7 @@ public sealed class DetOrderConfig
         return result;
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     private static string ReadJsonFile(string path)
     {

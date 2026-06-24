@@ -39,7 +39,7 @@ public static class ImageNgpValidator
         }
     }
 
-    // ─── ImageRoles.json ──────────────────────────────────────────────────────
+    //  ImageRoles.json 
 
     private static void ValidateImageRoles(string path, ImageNgpVocabulary vocabulary, List<string> problems)
     {
@@ -97,7 +97,7 @@ public static class ImageNgpValidator
         }
     }
 
-    // ─── DetOrderRules.json ───────────────────────────────────────────────────
+    //  DetOrderRules.json 
 
     private static void ValidateDetOrderRules(string path, ImageNgpVocabulary vocabulary, List<string> problems)
     {
@@ -123,7 +123,7 @@ public static class ImageNgpValidator
         }
     }
 
-    // ─── ClipPrompts.json ─────────────────────────────────────────────────────
+    //  ClipPrompts.json 
 
     private static void ValidateClipPrompts(string path, ImageNgpVocabulary vocabulary, List<string> problems)
     {
@@ -150,7 +150,7 @@ public static class ImageNgpValidator
         }
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
+    //  Helpers 
 
     /// <summary>
     /// Reads and parses a JSON file. On a missing file or parse error, records a problem and returns

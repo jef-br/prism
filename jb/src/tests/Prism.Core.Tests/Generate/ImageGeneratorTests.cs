@@ -11,7 +11,7 @@ namespace PrismCoreTests.Generate;
 /// </summary>
 public class ImageGeneratorTests
 {
-    // ─── Generation disabled ──────────────────────────────────────────────────
+    //  Generation disabled 
 
     [Fact]
     public void Run_GenerationDisabled_AllNonKoImagesSkipped()
@@ -39,7 +39,7 @@ public class ImageGeneratorTests
         Assert.Equal(GenerationRouteState.NotEvaluated, records[0].GenerationRouteState);
     }
 
-    // ─── Family above threshold ───────────────────────────────────────────────
+    //  Family above threshold 
 
     [Fact]
     public void Run_FamilyAboveThreshold_AllSkipped()
@@ -58,7 +58,7 @@ public class ImageGeneratorTests
         Assert.Empty(generated);
     }
 
-    // ─── Quality check ────────────────────────────────────────────────────────
+    //  Quality check 
 
     [Fact]
     public void Run_HeroTooSmall_AllMembersSkippedLowQuality()
@@ -84,7 +84,7 @@ public class ImageGeneratorTests
         Assert.Equal(GenerationRouteState.Gated, records[0].GenerationRouteState);
     }
 
-    // ─── Gated path ──────────────────────────────────────────────────────────
+    //  Gated path 
 
     [Fact]
     public void Run_QualifiedHero_BackendUnavailable_RouteStateIsGated()
@@ -118,7 +118,7 @@ public class ImageGeneratorTests
         Assert.Single(generated);
     }
 
-    // ─── KO passthrough ───────────────────────────────────────────────────────
+    //  KO passthrough 
 
     [Fact]
     public void Run_KoImageNotCountedInFamilySize_FamilyProceedsToGeneration()
@@ -137,7 +137,7 @@ public class ImageGeneratorTests
         Assert.Single(generated);
     }
 
-    // ─── Multi-family isolation ───────────────────────────────────────────────
+    //  Multi-family isolation 
 
     [Fact]
     public void Run_MixedFamilies_EachEvaluatedIndependently()
@@ -159,7 +159,7 @@ public class ImageGeneratorTests
         Assert.Single(generated);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     /// <summary>
     /// Creates a minimal <see cref="ImageRecord_LAMBDA"/> with Family, DetOrder, and dimensions set,

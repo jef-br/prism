@@ -36,7 +36,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
         try { Directory.Delete(_tempDir, recursive: true); } catch { /* best-effort */ }
     }
 
-    // ─── No intersection ─────────────────────────────────────────────────────
+    //  No intersection 
 
     [Fact]
     public void Detect_ProductCentred_FullyInFrame()
@@ -58,7 +58,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
         Assert.False(       r.IntersectsRight);
     }
 
-    // ─── Single edge intersections ────────────────────────────────────────────
+    //  Single edge intersections 
 
     [Fact]
     public void Detect_DarkRectTouchesTopEdge_OnlyTopFlagged()
@@ -137,7 +137,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
         Assert.False(   r.IntersectsLeft);
     }
 
-    // ─── All four edges ───────────────────────────────────────────────────────
+    //  All four edges 
 
     [Fact]
     public void Detect_SubjectFillsAllEdges_Count4()
@@ -159,7 +159,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
         Assert.True(    r.IntersectsRight);
     }
 
-    // ─── Run-length noise filter ──────────────────────────────────────────────
+    //  Run-length noise filter 
 
     [Fact]
     public void Detect_SingleIsolatedPixelAtEachBorder_NotFlagged()
@@ -218,7 +218,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
         Assert.False(r.IntersectsTop);
     }
 
-    // ─── Determinism ─────────────────────────────────────────────────────────
+    //  Determinism 
 
     [Fact]
     public void Detect_SameFileTwice_ReturnsIdenticalResult()
@@ -255,7 +255,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
         Assert.Equal(fromFile, fromImage);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     private string CreateJpeg(string name, Action<Image<Rgba32>> paint)
     {

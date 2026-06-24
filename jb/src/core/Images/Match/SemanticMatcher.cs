@@ -121,7 +121,7 @@ internal sealed class SemanticMatcher
         };
     }
 
-    // ─── CLIP filters ────────────────────────────────────────────────────────
+    //  CLIP filters 
 
     /// <summary>
     /// Removes candidates where no influential CLIP ProductType tag matches the family's ProductType column.

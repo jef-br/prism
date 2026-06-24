@@ -12,7 +12,7 @@ public class ImageOrdererTests
     private static readonly string RulesPath  = ResolveConfigPath("config/DetOrderRules.json");
     private static readonly string StemsPath  = ResolveConfigPath("config/DetOrderKeywordStems.json");
 
-    // ─── DetOrderConfig.Load contract ─────────────────────────────────────────
+    //  DetOrderConfig.Load contract 
 
     [Fact]
     public void Load_ValidPath_Has19ProductTypesIncludingDefault()
@@ -60,7 +60,7 @@ public class ImageOrdererTests
         }
     }
 
-    // ─── ImageOrderer.Run — basic assignment ──────────────────────────────────
+    //  ImageOrderer.Run — basic assignment 
 
     [Fact]
     public void Run_SingleImage_AssignsDet0WithCorrectFamily()
@@ -99,7 +99,7 @@ public class ImageOrdererTests
         Assert.Equal("FAM001", back.Family);
     }
 
-    // ─── Tie-breakers ─────────────────────────────────────────────────────────
+    //  Tie-breakers 
 
     [Fact]
     public void Run_TieBreakerByNgpConfidence_HigherConfidenceWinsDet0()
@@ -173,7 +173,7 @@ public class ImageOrdererTests
             "Losing front-packshot image should be overflow since front-packshot does not qualify for det1.");
     }
 
-    // ─── Overflow and edge cases ──────────────────────────────────────────────
+    //  Overflow and edge cases 
 
     [Fact]
     public void Run_NullPhenotype_AssignedAsOverflowAfterConfiguredSlots()
@@ -220,7 +220,7 @@ public class ImageOrdererTests
         Assert.Null(koImage.OrderEvidence);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     /// <summary>
     /// Creates a minimal <see cref="ImageRecord_LAMBDA"/> with MatchEvidence set for ordering.

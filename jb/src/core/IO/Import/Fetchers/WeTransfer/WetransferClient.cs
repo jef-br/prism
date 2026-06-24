@@ -91,7 +91,7 @@ internal class WetransferClient
         try {
             await page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle });
 
-            // ── Phase 1: OneTrust cookie banner ───────────────────────────────────────
+            //  Phase 1: OneTrust cookie banner 
             // The OneTrust overlay intercepts pointer events on everything below it.
             // We must dismiss it via its stable DOM ID before touching anything else.
             var oneTrustSdk = page.Locator("#onetrust-consent-sdk");
@@ -110,7 +110,7 @@ internal class WetransferClient
                 } catch { }
             }
 
-            // ── Phase 2: provider-specific consent banners ────────────────────────────
+            //  Phase 2: provider-specific consent banners 
             async Task<bool> TryClickConsentAsync(string label) {
                 try {
                     var buttons = await page.GetByRole(AriaRole.Button, new() { Name = label, Exact = true }).AllAsync();
@@ -142,7 +142,7 @@ internal class WetransferClient
 
             ct.ThrowIfCancellationRequested();
 
-            // ── Phase 3: optional password prompt ─────────────────────────────────────
+            //  Phase 3: optional password prompt 
             // WeTransfer uses HTML placeholder attributes; SwissTransfer uses floating labels.
             if (!string.IsNullOrWhiteSpace(password)) {
                 // EN, FR, NL, De, ES, IT
@@ -195,7 +195,7 @@ internal class WetransferClient
                 }
             }
 
-            // ── Phase 4: find and click the download button ───────────────────────────
+            //  Phase 4: find and click the download button 
             async Task<ILocator?> FindDownloadButtonAsync() {
                 foreach (string label in DownloadLabels) {
                     var btns = await page.GetByRole(AriaRole.Button, new() { Name = label, Exact = true }).AllAsync();

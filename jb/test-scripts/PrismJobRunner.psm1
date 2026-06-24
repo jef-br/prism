@@ -180,7 +180,9 @@ function Invoke-PrismFolderJob {
         }
 
         Write-Host "[$folderName] Job $jobId queued — polling for result ..."
-        $manifest = Wait-PrismResult -ResultUrl $resultUrl -TimeoutMinutes $TimeoutMinutes
+        $desktop = [Environment]::GetFolderPath('Desktop')
+        $zipSavePath = Join-Path $desktop "PRISM-$folderName-$(Get-Date -Format 'yyyyMMdd-HHmmss').zip"
+        $manifest = Wait-PrismResult -ResultUrl $resultUrl -ZipSavePath $zipSavePath -TimeoutMinutes $TimeoutMinutes
         if ($null -eq $manifest) {
             Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId $jobId -Total 0 -Ok 0 -DurationSeconds $stopwatch.Elapsed.TotalSeconds -Note "TIMEOUT_OR_NO_RESULT (${TimeoutMinutes}m)"
             return
@@ -262,7 +264,7 @@ function Submit-PrismJob {
         rename               = $true
         transform            = $true
         generation           = $true
-        format               = 'json'
+        format               = 'zip'
         ReturnOriginalImages = $false
     }
     $requestJson = $requestObject | ConvertTo-Json -Compress
@@ -308,27 +310,77 @@ function Submit-PrismJob {
 function Wait-PrismResult {
     <#
       Polls $ResultUrl until it returns 200 (job complete) or the timeout elapses.
-      Returns the parsed Manifest object, or $null on timeout / missing manifest.
+      On a zip-format completion the response is the binary archive: it is saved to $ZipSavePath
+      and the manifest is read back out of the archive's manifest.json entry. A non-zip 200 (e.g. a
+      failed job that the API serializes as JSON) is parsed inline. Returns the parsed Manifest
+      object, or $null on timeout / missing manifest.
     #>
     param(
         [Parameter(Mandatory)][string]$ResultUrl,
+        [string]$ZipSavePath,
         [int]$TimeoutMinutes = 30
     )
 
     $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
     while ((Get-Date) -lt $deadline) {
-        $response = Invoke-WebRequest -Uri $ResultUrl -Method Get -SkipHttpErrorCheck -TimeoutSec 60
+        $response = Invoke-WebRequest -Uri $ResultUrl -Method Get -SkipHttpErrorCheck -TimeoutSec 120
         if ($response.StatusCode -eq 200) {
-            $parsed = $response.Content | ConvertFrom-Json
+            $contentType = "$($response.Headers['Content-Type'])"
+            if ($contentType -match 'zip' -and $ZipSavePath) {
+                Save-ResponseBytes -Response $response -Path $ZipSavePath
+                Write-Host "[Wait-PrismResult] Saved result zip → $ZipSavePath"
+                return Read-ManifestFromZip -ZipPath $ZipSavePath
+            }
+            # Non-zip completion (failed job serialized as JSON): parse the envelope inline.
+            $parsed = ([System.Text.Encoding]::UTF8.GetString($response.Content)) | ConvertFrom-Json
             return $parsed.Manifest
         }
         if ($response.StatusCode -ne 202) {
-            Write-Warning "Unexpected HTTP $($response.StatusCode) from result endpoint: $($response.Content)"
+            Write-Warning "Unexpected HTTP $($response.StatusCode) from result endpoint."
             return $null
         }
         Start-Sleep -Seconds 3
     }
     return $null
+}
+
+function Save-ResponseBytes {
+    <# Writes the raw bytes of an Invoke-WebRequest response to $Path. #>
+    param(
+        [Parameter(Mandatory)]$Response,
+        [Parameter(Mandatory)][string]$Path
+    )
+
+    $stream = $Response.RawContentStream
+    $stream.Position = 0
+    $fileStream = [System.IO.File]::Create($Path)
+    try {
+        $stream.CopyTo($fileStream)
+    } finally {
+        $fileStream.Dispose()
+    }
+}
+
+function Read-ManifestFromZip {
+    <# Extracts manifest.json from the result archive and returns it parsed, or $null if absent. #>
+    param([Parameter(Mandatory)][string]$ZipPath)
+
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+    try {
+        $entry = $archive.Entries | Where-Object { $_.FullName -eq 'manifest.json' } | Select-Object -First 1
+        if ($null -eq $entry) {
+            Write-Warning "Result zip '$ZipPath' has no manifest.json."
+            return $null
+        }
+        $reader = New-Object System.IO.StreamReader($entry.Open())
+        try {
+            return ($reader.ReadToEnd() | ConvertFrom-Json)
+        } finally {
+            $reader.Dispose()
+        }
+    } finally {
+        $archive.Dispose()
+    }
 }
 
 function Write-PrismLogLine {

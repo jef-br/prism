@@ -22,7 +22,7 @@ public sealed class ImageNgpVocabulary
         this.phenotypeIds = phenotypeIds;
     }
 
-    // ─── Factory ──────────────────────────────────────────────────────────────
+    //  Factory 
 
     /// <summary>
     /// Loads and parses <c>ImageNGP.json</c>.
@@ -51,7 +51,7 @@ public sealed class ImageNgpVocabulary
         }
     }
 
-    // ─── Public API ──────────────────────────────────────────────────────────
+    //  Public API 
 
     /// <summary>True when the feature id is defined in the taxonomy (case-insensitive).</summary>
     public bool HasFeature(string featureId)
@@ -88,7 +88,7 @@ public sealed class ImageNgpVocabulary
         }
     }
 
-    // ─── Parsers ──────────────────────────────────────────────────────────────
+    //  Parsers 
 
     private static Dictionary<string, FeatureDefinition> ParseFeatures(JsonElement root, string path)
     {

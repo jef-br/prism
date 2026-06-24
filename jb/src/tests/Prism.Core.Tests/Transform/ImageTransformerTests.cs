@@ -11,11 +11,16 @@ namespace PrismCoreTests.Transform;
 /// </summary>
 public class ImageTransformerTests
 {
-    // ─── Routing — problem processor ─────────────────────────────────────────
+    // NOTE: ImageTransformer.BypassPhenotypes is currently ON (temporary PoC gate). While on,
+    // SelectedPhenotype does not affect routing — only salient-bbox and edge intersects do.
+    // These tests assert the gate-on behavior. See jb/src/core/Images/Classify/jbtodo.md.
+
+    //  Routing — problem processor 
 
     [Fact]
-    public void TransformImage_NoPhenotype_RoutesToProblemImageProcessor()
+    public void TransformImage_NoBbox_RoutesToProblemImageProcessor()
     {
+        // No salient-bbox set → bbox guard fires regardless of phenotype.
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null);
 
         ImageTransformer.TransformImage(lambda);
@@ -33,34 +38,36 @@ public class ImageTransformerTests
         Assert.NotEmpty(lambda.TransformationResult?.Warnings ?? []);
     }
 
-    // ─── Routing — detail cropper ─────────────────────────────────────────────
+    //  Routing — phenotype is bypassed 
 
     [Fact]
-    public void TransformImage_CloseupImage_RoutesToDetailCropper()
+    public void TransformImage_CloseupWithBboxAndIntersect_RoutesToCropSquare()
     {
-        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "closeup-image");
+        // Gate on: DetailCropper is unreachable; closeup + intersect falls back to the square crop.
+        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "closeup-image", hasBbox: true, intersects: true);
 
         ImageTransformer.TransformImage(lambda);
 
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult?.TransformerType);
+        Assert.Equal(nameof(Tx_CropSquare), lambda.TransformationResult?.TransformerType);
     }
 
     [Fact]
-    public void TransformImage_ModelDetailCloseup_RoutesToDetailCropper()
+    public void TransformImage_BboxAndIntersect_RoutesToCropSquare()
     {
-        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "model-detail-closeup");
+        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null, hasBbox: true, intersects: true);
 
         ImageTransformer.TransformImage(lambda);
 
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult?.TransformerType);
+        Assert.Equal(nameof(Tx_CropSquare), lambda.TransformationResult?.TransformerType);
     }
 
-    // ─── Routing — center and stretch ────────────────────────────────────────
+    //  Routing — center and stretch 
 
     [Fact]
-    public void TransformImage_GenericPhenotype_RoutesToCenterAndStretch()
+    public void TransformImage_BboxNoIntersect_RoutesToCenterAndStretch()
     {
-        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "packshot-front");
+        // Phenotype is irrelevant while bypassing; bbox present + no edge intersect → CenterAndStretch.
+        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null, hasBbox: true);
 
         ImageTransformer.TransformImage(lambda);
 
@@ -68,25 +75,17 @@ public class ImageTransformerTests
     }
 
     [Fact]
-    public void TransformImage_LifestylePhenotype_RoutesToCenterAndStretch()
+    public void TransformImage_PhenotypeDoesNotChangeRouting_WhileBypassed()
     {
-        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "lifestyle-context");
+        // Same geometry, different phenotypes → identical routing while the gate is on.
+        ImageRecord_LAMBDA closeup = MakeLambda("a.jpg", phenotype: "closeup-image",  hasBbox: true);
+        ImageRecord_LAMBDA generic = MakeLambda("b.jpg", phenotype: "packshot-front", hasBbox: true);
 
-        ImageTransformer.TransformImage(lambda);
+        ImageTransformer.TransformImage(closeup);
+        ImageTransformer.TransformImage(generic);
 
-        Assert.Equal(nameof(Tx_CenterAndStretch), lambda.TransformationResult?.TransformerType);
-    }
-
-    // ─── Gated status ────────────────────────────────────────────────────────
-
-    [Fact]
-    public void TransformImage_ProcessorUnavailable_StatusIsGated()
-    {
-        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "packshot-front");
-
-        ImageTransformer.TransformImage(lambda);
-
-        Assert.Equal(TransformationStatus.Gated, lambda.TransformationResult?.Status);
+        Assert.Equal(nameof(Tx_CenterAndStretch), closeup.TransformationResult?.TransformerType);
+        Assert.Equal(nameof(Tx_CenterAndStretch), generic.TransformationResult?.TransformerType);
     }
 
     [Fact]
@@ -100,7 +99,7 @@ public class ImageTransformerTests
         Assert.NotNull(lambda.TransformationResult);
     }
 
-    // ─── Input dimensions recorded ───────────────────────────────────────────
+    //  Input dimensions recorded 
 
     [Fact]
     public void TransformImage_InputDimensionsRecordedOnResult()
@@ -113,7 +112,7 @@ public class ImageTransformerTests
         Assert.Equal(1600, lambda.TransformationResult?.InputHeight);
     }
 
-    // ─── Service — transform disabled ────────────────────────────────────────
+    //  Service — transform disabled 
 
     [Fact]
     public async Task Service_TransformDisabled_AllNonKoImagesAreSkipped()
@@ -156,7 +155,7 @@ public class ImageTransformerTests
         Assert.Equal(0, result.OkTransformedCount);
     }
 
-    // ─── Service — transform enabled ──────────────────────────────────────────
+    //  Service — transform enabled 
 
     [Fact]
     public async Task Service_TransformEnabled_OkTransformedCountMatchesNonKoImages()
@@ -187,16 +186,18 @@ public class ImageTransformerTests
         Assert.Equal(0, result.OkTransformedCount);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     private static ImageRecord_LAMBDA MakeLambda(
         string filename,
         string? phenotype,
-        int width  = 1000,
-        int height = 1000,
-        bool isKo  = false)
+        int width      = 1000,
+        int height     = 1000,
+        bool isKo      = false,
+        bool hasBbox   = false,
+        bool intersects = false)
     {
-        return new ImageRecord_LAMBDA
+        ImageRecord_LAMBDA lambda = new()
         {
             InitialFullName   = filename,
             Width             = width,
@@ -205,6 +206,13 @@ public class ImageTransformerTests
             IsKo              = isKo,
             KoReasonCode      = isKo ? "TEST_KO" : null
         };
+
+        if (hasBbox)
+            lambda.Features.Set("salient-bbox", "0.1000,0.1000,0.9000,0.9000", 0.85, "test");
+        if (intersects)
+            lambda.Features.Set("intersects-top", "true", 1.0, "test");
+
+        return lambda;
     }
 
     private static ImageRecord_LAMBDA MakeLambda(

@@ -57,7 +57,7 @@ internal sealed class ImageMatcher
         return matcher.RunWaterfall(records, families);
     }
 
-    // ─── Waterfall ─────────────────────────────────────────────────────────────
+    //  Waterfall 
 
     private int RunWaterfall(
         List<ImageRecord_LAMBDA> allRecords,
@@ -92,7 +92,7 @@ internal sealed class ImageMatcher
         return koAdded;
     }
 
-    // ─── Bracket 1 ────────────────────────────────────────────────────────────
+    //  Bracket 1 
 
     /// <summary>
     /// Runs NumericMatcher single-token bracket. Returns images not yet matched.
@@ -117,7 +117,7 @@ internal sealed class ImageMatcher
         return stillUnmatched;
     }
 
-    // ─── Bracket 2 ────────────────────────────────────────────────────────────
+    //  Bracket 2 
 
     /// <summary>
     /// Runs NumericMatcher multi-token bracket. Returns images not yet matched.
@@ -142,7 +142,7 @@ internal sealed class ImageMatcher
         return stillUnmatched;
     }
 
-    // ─── Bracket 3 ────────────────────────────────────────────────────────────
+    //  Bracket 3 
 
     /// <summary>
     /// Runs StringMatcher exactly-1-FamilyID bracket. Returns images not yet matched.
@@ -166,7 +166,7 @@ internal sealed class ImageMatcher
         return stillUnmatched;
     }
 
-    // ─── Bracket 4: semantic combined ─────────────────────────────────────────
+    //  Bracket 4: semantic combined 
 
     /// <summary>
     /// Runs SemanticMatcher (CLIP + numeric + string) against FamilyIDs with 0 assigned images.
@@ -207,7 +207,7 @@ internal sealed class ImageMatcher
         return stillUnmatched;
     }
 
-    // ─── CLIP label enrichment ────────────────────────────────────────────────
+    //  CLIP label enrichment 
 
     /// <summary>
     /// Appends CLIP label evidence to the MatchEvidence of already-matched records.
@@ -243,7 +243,7 @@ internal sealed class ImageMatcher
         }
     }
 
-    // ─── Bracket 5 cleanup ────────────────────────────────────────────────────
+    //  Bracket 5 cleanup 
 
     /// <summary>
     /// KOs any image that was not matched by brackets 1–4.
@@ -272,7 +272,7 @@ internal sealed class ImageMatcher
         return unmatched.Count;
     }
 
-    // ─── Bracket 6: finalize ─────────────────────────────────────────────────
+    //  Bracket 6: finalize 
 
     /// <summary>
     /// Finalizes FamilyID clusters. Single-pass waterfall produces no structural ties; this step
@@ -285,7 +285,7 @@ internal sealed class ImageMatcher
         _ = allRecords;
     }
 
-    // ─── Config loading ───────────────────────────────────────────────────────
+    //  Config loading 
 
     private static string LoadConfigPath(string relativePath, string missingMessage)
     {

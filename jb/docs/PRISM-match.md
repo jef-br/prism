@@ -43,12 +43,14 @@ Only scores near 100% (threshold in `ImageMatcher.cs`) → FID candidacy.
 
 **Token combination rules:**
 - Tokens may be joined when filename order is preserved and joined token forms a valid FID candidate.
+
 - Current FIDs: 8 digits. Single exact 8-digit token → TCD 0 (strongest). Multiple tokens may combine → record token-count cost.
 
 **Exact matcher threshold:**
 - Uses TCD, not classical Levenshtein typo tolerance.
 - Single exact 8-digit token → TCD 0.
 - Fragments may form 8-digit candidate only when concatenation exactly equals candidate ID AND TCD ≤ `maxDistance` in MCFG.
+
 - Current `maxDistance: 1` — allows low-fragmentation exact-character combinations; does **not** allow one-character Levenshtein mismatch.
 - Reordered/incomplete/character-mismatched/above-threshold → rejected or retained as rejected evidence in ME.
 

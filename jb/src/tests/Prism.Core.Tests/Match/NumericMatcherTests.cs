@@ -22,7 +22,7 @@ public class NumericMatcherTests
     // Matches FamilyIdRule.ExcelField: the matcher resolves this field from family.FamilyID directly.
     private const string FamilyIdColumn = "familyID";
 
-    // ─── Bracket 1: happy path ─────────────────────────────────────────────────
+    //  Bracket 1: happy path 
 
     [Fact]
     public void Bracket1_SingleTokenExactMatchOneFamily_ReturnsEvidence()
@@ -39,7 +39,7 @@ public class NumericMatcherTests
         Assert.Equal("NumericMatcher.Bracket1", evidence.AcceptedMatcherName);
     }
 
-    // ─── Bracket 1: no match ──────────────────────────────────────────────────
+    //  Bracket 1: no match 
 
     [Fact]
     public void Bracket1_TokenDoesNotMatchAnyFamily_ReturnsNull()
@@ -53,7 +53,7 @@ public class NumericMatcherTests
         Assert.Null(evidence);
     }
 
-    // ─── Bracket 1: tie ───────────────────────────────────────────────────────
+    //  Bracket 1: tie 
 
     [Fact]
     public void Bracket1_TokenMatchesTwoFamilies_ReturnsNull()
@@ -88,7 +88,7 @@ public class NumericMatcherTests
         Assert.Null(evidence); // tie: both families produce digit "12345"
     }
 
-    // ─── Bracket 1: multi-token filename, one matches ─────────────────────────
+    //  Bracket 1: multi-token filename, one matches 
 
     [Fact]
     public void Bracket1_MultipleTokensOneMatchesTarget_ReturnsEvidence()
@@ -103,7 +103,7 @@ public class NumericMatcherTests
         Assert.Equal("12345", evidence!.FinalFamilyId);
     }
 
-    // ─── Bracket 2: happy path ─────────────────────────────────────────────────
+    //  Bracket 2: happy path 
 
     [Fact]
     public void Bracket2_TwoTokensConcatenateToTarget_ReturnsEvidence()
@@ -122,7 +122,7 @@ public class NumericMatcherTests
         Assert.Equal("NumericMatcher.Bracket2", evidence.AcceptedMatcherName);
     }
 
-    // ─── Bracket 2: single token only → skip ─────────────────────────────────
+    //  Bracket 2: single token only → skip 
 
     [Fact]
     public void Bracket2_SingleTokenInFilename_ReturnsNull()
@@ -137,7 +137,7 @@ public class NumericMatcherTests
         Assert.Null(evidence);
     }
 
-    // ─── Bracket 2: tie ───────────────────────────────────────────────────────
+    //  Bracket 2: tie 
 
     [Fact]
     public void Bracket2_ConcatenationMatchesTwoFamilies_ReturnsNull()
@@ -164,7 +164,7 @@ public class NumericMatcherTests
         Assert.Null(evidence);
     }
 
-    // ─── Bracket 2: no match ──────────────────────────────────────────────────
+    //  Bracket 2: no match 
 
     [Fact]
     public void Bracket2_NoConcatenationMatchesAnyFamily_ReturnsNull()
@@ -178,7 +178,7 @@ public class NumericMatcherTests
         Assert.Null(evidence);
     }
 
-    // ─── Helper ───────────────────────────────────────────────────────────────
+    //  Helper 
 
     private static ImageRecord_LAMBDA MakeLambda(string filename) =>
         new() { InitialFullName = filename };

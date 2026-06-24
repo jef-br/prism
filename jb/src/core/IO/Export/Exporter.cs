@@ -26,7 +26,7 @@ internal static class Exporter
             : BuildJson(request);
     }
 
-    // ─── Output record construction ───────────────────────────────────────────
+    //  Output record construction 
 
     /// <summary>
     /// Attaches an <see cref="ImageRecord_OUTPUT"/> to each non-KO lambda record.
@@ -62,7 +62,7 @@ internal static class Exporter
         }
     }
 
-    // ─── ZIP export ───────────────────────────────────────────────────────────
+    //  ZIP export 
 
     /// <summary>
     /// Builds a ZIP archive containing manifest.json, OK images, KO images, and the first Excel file.
@@ -108,7 +108,7 @@ internal static class Exporter
         return new ExportArtifacts { ZipBytes = ms.ToArray(), Manifest = manifest };
     }
 
-    // ─── JSON export ──────────────────────────────────────────────────────────
+    //  JSON export 
 
     /// <summary>
     /// Builds the manifest for JSON output. ZIP bytes remain null; the API serializes the result via PrismJsonResultEnvelope.
@@ -118,7 +118,7 @@ internal static class Exporter
         return new ExportArtifacts { ZipBytes = null, Manifest = BuildManifest(request) };
     }
 
-    // ─── Manifest builder ─────────────────────────────────────────────────────
+    //  Manifest builder 
 
     /// <summary>
     /// Builds the canonical <see cref="BatchManifest"/> from the export request.
@@ -169,7 +169,7 @@ internal static class Exporter
         };
     }
 
-    // ─── ZIP helpers ──────────────────────────────────────────────────────────
+    //  ZIP helpers 
 
     private static void AddTextEntry(ZipArchive zip, string entryName, string content)
     {

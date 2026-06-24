@@ -77,7 +77,7 @@ public sealed class PhenotypeRuleSet
         return [.. candidates];
     }
 
-    // ─── Condition evaluation ────────────────────────────────────────────────
+    //  Condition evaluation 
 
     private static bool AllConditionsMet(IReadOnlyList<FeatureCondition> conditions, ImageFeatureSnapshot features)
     {

@@ -20,7 +20,7 @@ public sealed class SubjectEdgeDetectorRealImageTests
         @"jb\Testing\SPACINI29\RAW IMAGES\23231096_35_A.jpg",
     ];
 
-    // ─── EXIF fast-path ──────────────────────────────────────────────────────
+    //  EXIF fast-path 
 
     [Fact]
     public void ExifFastPath_RealCameraJpeg_ExtractsThumbnail()
@@ -62,7 +62,7 @@ public sealed class SubjectEdgeDetectorRealImageTests
         }
     }
 
-    // ─── Result validity ─────────────────────────────────────────────────────
+    //  Result validity 
 
     [Fact]
     public void Detect_RealCameraJpeg_ReturnsValidResult()
@@ -76,7 +76,7 @@ public sealed class SubjectEdgeDetectorRealImageTests
         Assert.Equal(r.FullyInFrame, r.IntersectionCount == 0);
     }
 
-    // ─── Determinism on real images ───────────────────────────────────────────
+    //  Determinism on real images 
 
     [Fact]
     public void Detect_RealCameraJpeg_CalledTwice_SameResult()
@@ -90,7 +90,7 @@ public sealed class SubjectEdgeDetectorRealImageTests
         Assert.Equal(r1, r2);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     private static string? FindFixture(string repoRelativePath)
     {

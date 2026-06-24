@@ -16,7 +16,7 @@ public class ImageRecord_INPUT : ImageRecord_Base {
     /// <summary>Original byte length of the source file when known.</summary>
     public long? ByteLength { get; set; }
 
-    //─── Source file reference
+    // Source file reference
 
     /// <summary>
     /// Absolute path to a job-temp copy of the uploaded file when the API or caller has
@@ -40,7 +40,7 @@ public class ImageRecord_INPUT : ImageRecord_Base {
     /// <summary>Height of the normalized image in pixels. Set after normalization.</summary>
     public int NormalizedHeight { get; set; }
 
-    //─── Downstream matching tokens (populated downstream)
+    // Downstream matching tokens (populated downstream)
 
     /// <summary>String tokens extracted from the original filename.</summary>
     public string[] StringTokens { get; set; } = [];

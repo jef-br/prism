@@ -2,6 +2,7 @@
 
 ## Spec deviations
 
+-------
 - [ ] SD-13: JSON output `images` shape is a flat `ManifestImageRow` list — deviates from spec.
   - File: `jb/src/api/PrismApiModels.cs` — `PrismJsonImagesEnvelope.Ok` and `.Ko` are `IReadOnlyList<ManifestImageRow>`.
   - Spec says (`PRISM-api.md`): each item in `images.ok[]` and `images.ko[]` must be:
@@ -12,7 +13,8 @@
       "output": { /* ImageRecord_OUTPUT or null */ }
     }
     ```
-  - Current behavior: `ManifestImageRow` is a flat projection of the manifest. The per-image journey (`lambda`, `output`) is not serialized. Frontend visualisation of what happened to each image is not possible from the JSON result.
+  
+- Current behavior: `ManifestImageRow` is a flat projection of the manifest. The per-image journey (`lambda`, `output`) is not serialized. Frontend visualisation of what happened to each image is not possible from the JSON result.
 
   - Answer:
     The spec is authoritative and existing data already defines every part:

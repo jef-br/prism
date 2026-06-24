@@ -39,7 +39,7 @@ public static class ImageFeatureAnalyzer
         RecordUnknownFeatures(snapshot);
     }
 
-    // ─── Geometry ────────────────────────────────────────────────────────────
+    //  Geometry 
 
     private static void AnalyzeGeometry(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
     {
@@ -48,7 +48,7 @@ public static class ImageFeatureAnalyzer
             aspectRatio.ToString("F4", CultureInfo.InvariantCulture), 1.0, "geometry");
     }
 
-    // ─── Background ──────────────────────────────────────────────────────────
+    //  Background 
 
     private static void AnalyzeBackground(
         Image<Rgba32> image, ImageFeatureSnapshot snapshot,
@@ -88,7 +88,7 @@ public static class ImageFeatureAnalyzer
         snapshot.Set("background-type", bgType, 0.82, "imagesharp");
     }
 
-    // ─── Border intersections ─────────────────────────────────────────────────
+    //  Border intersections 
 
     private static void WriteEdgeIntersections(EdgeIntersectionResult r, ImageFeatureSnapshot snapshot)
     {
@@ -100,7 +100,7 @@ public static class ImageFeatureAnalyzer
         snapshot.Set("fully-in-frame",     r.FullyInFrame     ? "true" : "false", 0.85, "heuristic");
     }
 
-    // ─── Occlusion level (derived) ────────────────────────────────────────────
+    //  Occlusion level (derived) 
 
     private static void DeriveOcclusionLevel(ImageFeatureSnapshot snapshot)
     {
@@ -121,7 +121,7 @@ public static class ImageFeatureAnalyzer
         snapshot.Set("occlusion-level", level, 0.68, "heuristic");
     }
 
-    // ─── Skin tone ────────────────────────────────────────────────────────────
+    //  Skin tone 
 
     private static void AnalyzeSkinTone(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
     {
@@ -145,7 +145,7 @@ public static class ImageFeatureAnalyzer
             ratio.ToString("F4", CultureInfo.InvariantCulture), 0.75, "imagesharp");
     }
 
-    // ─── Stubs for features that need heavier models ──────────────────────────
+    //  Stubs for features that need heavier models 
 
     private static void RecordUnknownFeatures(ImageFeatureSnapshot snapshot)
     {
@@ -195,7 +195,7 @@ public static class ImageFeatureAnalyzer
             snapshot.Set(featureId, "UNKNOWN", 0.0, "heuristic");
     }
 
-    // ─── Pixel helpers ────────────────────────────────────────────────────────
+    //  Pixel helpers 
 
     private static bool HasTransparentPixels(Image<Rgba32> image)
     {

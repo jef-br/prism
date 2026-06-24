@@ -6,7 +6,7 @@ namespace Prism.Core;
 /// </summary>
 public sealed record MatchEvidence
 {
-    // ─── Identity ─────────────────────────────────────────────────────────────
+    //  Identity 
 
     /// <summary>Source image identifier (original filename stem).</summary>
     public string ImageId { get; init; } = string.Empty;
@@ -14,7 +14,7 @@ public sealed record MatchEvidence
     /// <summary>Original full filename of the image.</summary>
     public string SourceFilename { get; init; } = string.Empty;
 
-    // ─── Match outcome ────────────────────────────────────────────────────────
+    //  Match outcome 
 
     /// <summary>Accepted FamilyID when matching succeeded; null when the image is KO.</summary>
     public string? FinalFamilyId { get; init; }
@@ -28,7 +28,7 @@ public sealed record MatchEvidence
     /// <summary>Machine-readable reason code when IsKo is true (e.g. MATCH_NOT_FOUND, MATCH_TIE).</summary>
     public string? KoReason { get; init; }
 
-    // ─── Tie detection ────────────────────────────────────────────────────────
+    //  Tie detection 
 
     /// <summary>True when the image was a candidate for multiple FamilyIDs that could not be resolved.</summary>
     public bool TieDetected { get; init; }
@@ -36,17 +36,17 @@ public sealed record MatchEvidence
     /// <summary>All FamilyIDs that tied when TieDetected is true.</summary>
     public IReadOnlyList<string> TieFamilyIds { get; init; } = [];
 
-    // ─── Matcher attribution ──────────────────────────────────────────────────
+    //  Matcher attribution 
 
     /// <summary>Name of the matcher that produced the accepted match (e.g. NumericMatcher.Bracket1).</summary>
     public string? AcceptedMatcherName { get; init; }
 
-    // ─── Candidate evidence ───────────────────────────────────────────────────
+    //  Candidate evidence 
 
     /// <summary>Bounded list of top candidate FamilyIDs considered during matching.</summary>
     public IReadOnlyList<CandidateSummary> TopCandidates { get; init; } = [];
 
-    // ─── Token evidence ───────────────────────────────────────────────────────
+    //  Token evidence 
 
     /// <summary>Numeric token pairs that contributed evidence (filename token ↔ Excel family token).</summary>
     public IReadOnlyList<TokenEvidenceItem> NumericTokenEvidence { get; init; } = [];
@@ -57,12 +57,12 @@ public sealed record MatchEvidence
     /// <summary>CLIP classification label evidence matched against MatchingConfig label rules.</summary>
     public IReadOnlyList<LabelEvidenceItem> ClassificationLabelEvidence { get; init; } = [];
 
-    // ─── Image context ────────────────────────────────────────────────────────
+    //  Image context 
 
     /// <summary>Phenotype and key feature summary for this image (e.g. "phenotype=hero_front").</summary>
     public string? ImageNgpSummary { get; init; }
 
-    // ─── Human-readable output ────────────────────────────────────────────────
+    //  Human-readable output 
 
     /// <summary>Human-readable explanation of the matching decision. Contains no internal identifiers.</summary>
     public string SafeExplanation { get; init; } = string.Empty;

@@ -7,7 +7,7 @@ namespace PrismCoreTests.Match;
 /// </summary>
 public class StringMatcherTests
 {
-    // ─── Bracket 3: happy path ────────────────────────────────────────────────
+    //  Bracket 3: happy path 
 
     [Fact]
     public void TryMatch_FilenameTokenMatchesOneFamily_ReturnsEvidence()
@@ -25,7 +25,7 @@ public class StringMatcherTests
         Assert.NotEmpty(evidence.StringTokenEvidence);
     }
 
-    // ─── Bracket 3: no match ─────────────────────────────────────────────────
+    //  Bracket 3: no match 
 
     [Fact]
     public void TryMatch_FilenameTokenMatchesNoFamily_ReturnsNull()
@@ -39,7 +39,7 @@ public class StringMatcherTests
         Assert.Null(evidence);
     }
 
-    // ─── Bracket 3: tie (multi-FamilyID candidacy) ───────────────────────────
+    //  Bracket 3: tie (multi-FamilyID candidacy) 
 
     [Fact]
     public void TryMatch_FilenameTokenMatchesTwoFamilies_ReturnsNull()
@@ -54,7 +54,7 @@ public class StringMatcherTests
         Assert.Null(evidence); // tie: both families have evidence for "blue"
     }
 
-    // ─── Bracket 3: all-digit filename ───────────────────────────────────────
+    //  Bracket 3: all-digit filename 
 
     [Fact]
     public void TryMatch_FilenameHasOnlyDigits_ReturnsNull()
@@ -69,7 +69,7 @@ public class StringMatcherTests
         Assert.Null(evidence);
     }
 
-    // ─── Bracket 3: synonym resolution ───────────────────────────────────────
+    //  Bracket 3: synonym resolution 
 
     [Fact]
     public void TryMatch_SynonymInFilenameMatchesFamily_ReturnsEvidence()
@@ -94,7 +94,7 @@ public class StringMatcherTests
         Assert.Equal("StringMatcher.Bracket3", evidence.AcceptedMatcherName);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
 
     private static readonly TranslationConfig EmptyTranslation = new()
     {

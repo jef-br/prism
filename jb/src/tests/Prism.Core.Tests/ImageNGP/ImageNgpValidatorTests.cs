@@ -11,7 +11,7 @@ public class ImageNgpValidatorTests
     private static readonly string CoreConfigDirectory = ResolveCoreConfigDirectory();
     private static readonly string VocabularyPath = Path.Combine(CoreConfigDirectory, "ImageNGP.json");
 
-    // ─── Real config ───────────────────────────────────────────────────────────
+    //  Real config 
 
     [Fact]
     public void Validate_RealShippedConfig_DoesNotThrow()
@@ -21,7 +21,7 @@ public class ImageNgpValidatorTests
         ImageNgpValidator.Validate(CoreConfigDirectory);
     }
 
-    // ─── Vocabulary contract ─────────────────────────────────────────────────────
+    //  Vocabulary contract 
 
     [Fact]
     public void Vocabulary_KnownAndUnknownFeatures()
@@ -50,7 +50,7 @@ public class ImageNgpValidatorTests
         Assert.False(vocab.HasPhenotype("front-packshott"));
     }
 
-    // ─── Seeded failures ─────────────────────────────────────────────────────────
+    //  Seeded failures 
 
     [Fact]
     public void Validate_UnknownFeatureInImageRoles_Throws_NamingFeature()
@@ -100,7 +100,7 @@ public class ImageNgpValidatorTests
         Assert.Contains("ghost-front-typo", ex.Message);
     }
 
-    // ─── Helpers ───────────────────────────────────────────────────────────────
+    //  Helpers 
 
     /// <summary>
     /// A temporary core-config directory seeded with a minimal valid vocabulary and rule/mapping

@@ -30,7 +30,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable
         try { Directory.Delete(_tempDir, recursive: true); } catch { /* best-effort cleanup */ }
     }
 
-    // ─── Aspect ratio ─────────────────────────────────────────────────────────
+    //  Aspect ratio 
 
     [Fact]
     public void Analyze_WideImage_RecordsCorrectAspectRatio()
@@ -64,7 +64,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable
         Assert.Equal("0.6667", snap.GetValue("aspect-ratio"));
     }
 
-    // ─── Background detection ─────────────────────────────────────────────────
+    //  Background detection 
 
     [Fact]
     public void Analyze_SolidWhiteBackground_WhiteBackgroundTrue()
@@ -135,7 +135,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable
         Assert.Equal("false", snap.GetValue("clipping-path"));
     }
 
-    // ─── Border intersections + occlusion level ───────────────────────────────
+    //  Border intersections + occlusion level 
 
     // Pattern for intersection tests: solid white image with a contrasting dark
     // rectangle. The dark rectangle's position controls which borders are touched.
@@ -241,7 +241,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable
         Assert.Equal("true",    snap.GetValue("intersects-right"));
     }
 
-    // ─── Skin tone ────────────────────────────────────────────────────────────
+    //  Skin tone 
 
     [Fact]
     public void Analyze_AllWhiteImage_SkinToneAreaIsZero()
@@ -267,7 +267,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable
         Assert.True(area > 0.05, $"Expected skin-tone-area > 0.05, got {area}");
     }
 
-    // ─── Unknown features ─────────────────────────────────────────────────────
+    //  Unknown features 
 
     [Fact]
     public void Analyze_AllModelDependentFeatures_AreRecordedAsUnknown()
@@ -328,7 +328,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable
         }
     }
 
-    // ─── Helpers ───────────────────────────────────────────────────────────────
+    //  Helpers 
 
     private static readonly Rgba32 White255 = new(255, 255, 255, 255);
     private static readonly Rgba32 Dark     = new(20,  20,  20,  255);
