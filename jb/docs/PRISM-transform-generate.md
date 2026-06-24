@@ -11,15 +11,18 @@ Images transformed one by one, each based on image analysis enriched with match 
 
 ## Transform-Facing Classification Tags
 
-Available to transform decisions (from IRL):
-- Selected INGP phenotype (when available)
-- Type-of-shot IF, hero orientation IF (including `UNKNOWN`)
-- Human detection, head visibility, skin-tone, and related measured state
-- Border-intersection flags: `TOP`, `RIGHT`, `BOTTOM`, `LEFT`
-- Background labels (flat/solid evidence + background color)
-- Product/category, color, material, pose, and orientation labels
+Routing inputs read from `ImageRecord_LAMBDA.Features`:
 
-These are optional decision modifiers. Core geometry (salient object bounds + border intersections) is the primary transform input.
+| Feature | Role |
+|---|---|
+| `intersects-top/bottom/left/right` | Primary edge-intersect detection — drives Tx_CropSquare vs. Tx_DetailCropper routing |
+| `salient-bbox` | Object bounds — required for Tx_CenterAndStretch and Tx_DetailCropper; UNKNOWN routes to Tx_ProblemImageProcessor |
+| `low-contrast` | Triggers `Tx_LowContrastEnhancement` pre-step inside Tx_CenterAndStretch |
+| `shadow-present` | Triggers shadow-band shrink of `salient-bbox` bottom edge inside Tx_CenterAndStretch |
+
+Routing also reads `ImageRecord_LAMBDA.SelectedPhenotype` and `DetOrder` + `ProductTypeId` (see **Transform Routing Matrix** and **Det-Slot Exclusions** below).
+
+All other IFs (human detection, head visibility, orientation, background, color, material) are available as secondary decision modifiers but do not currently gate the primary routing decision.
 
 ---
 
@@ -55,7 +58,38 @@ Object very light (white, light gray, creme) + background also very light → us
 
 If salient object exits image frame at one or more edges → margin **cannot** be applied in that direction. Object "sticks" to intersecting edges. No repositioning in blocked direction(s).
 
+When `Tx_DetailCropper` is selected but detects during pixel processing that the crop cannot be repositioned (border intersection blocks manipulation), it **internally delegates to `Tx_CropSquare`** — the image receives a centered square crop without background extension, is not KO'd, and is not exported unchanged. `ImageTransformationResult.TransformerType` records `Tx_CropSquare`; `Warnings` records the reason for the fallback. This is an internal fallback, not a routing decision in `ImageTransformer.cs`.
+
 ---
+
+## Transform Routing Matrix
+
+`ImageTransformer.SelectTransformer()` evaluates in order (first match wins):
+
+1. `salient-bbox` is UNKNOWN **or** `SelectedPhenotype` is null (when phenotype bypass is off) → **`Tx_ProblemImageProcessor`**
+2. Any edge intersect is true (`intersects-top/bottom/left/right`):
+   - Phenotype is `"closeup-image"` or `"model-detail-closeup"` **and** det-slot is not in the exclusion range for this product type → **`Tx_DetailCropper`**
+   - Otherwise → **`Tx_CropSquare`** (fallback for intersecting images)
+3. No edge intersects → **`Tx_CenterAndStretch`**
+4. Default → **`Tx_CropSquare`**
+
+Notes:
+- `Tx_DetailCropper` may internally delegate to `Tx_CropSquare` when pixel-level border intersection blocks repositioning (see **Border Intersection Rule** above). This is not a routing decision.
+- `Tx_ProblemImageProcessor` never calls `Tx_CropSquare` — it applies a safe proportional resize only.
+- While `BypassPhenotypes = true` (temporary PoC gate in `ImageTransformer.cs`), rule 1 skips the phenotype-null check and rule 2 always falls through to `Tx_CropSquare` (not `Tx_DetailCropper`).
+
+## Det-Slot Exclusions for Tx_DetailCropper
+
+`Tx_DetailCropper` is excluded for images at certain det-slots, which fall back to `Tx_CropSquare`:
+
+| Product type | Excluded det-slots |
+|---|---|
+| Default (non-clothing) | 0, 1, 2 |
+| `clothing-*` (any product type starting with `clothing-`) | 0, 1 |
+
+- The `clothing-*` rule is prefix-based — no hard-coded list; read from `DetOrderRules.json`.
+- Det-slot is `lambda.DetOrder` (int, 0-based, from `ImageRecord_Base`).
+- Product type is stored on `ImageRecord_LAMBDA.ProductTypeId` (string?), written by `ImageOrderer` during the Order stage. See ticket T-1800.
 
 ## Repositioning and Margin Application
 
@@ -79,14 +113,24 @@ Extension ratio = filled canvas area / source image area.
 | 4 | > 250% | Solid white fill (#FFFFFF) |
 
 - Never use Gaussian blur as a fill method.
-- Apply seam feathering at the extension boundary after tiers 1 and 2. Tier 3 handles its own seam implicitly.
+- Apply seam feathering at the extension boundary after tiers 1 and 2. Tier 3 (inpainting) handles its own seam implicitly. No separate blur pass at any tier.
 - Implemented by `Tx_util_BgStretch.cs` (sub-step helper, not an `IImageTransformation` implementor).
+
+**Post-fill cleanup (center-and-stretch):** seam feathering and local smoothing applied at extension boundaries after tier 1 and 2 passes. Tier 3 inpainting handles its own seam implicitly. No blur pass at any tier.
 
 ---
 
+## Transform Failure & KO Policy
+
+**KO the image** (transform stage) when:
+- Decoded input is invalid (corrupt, unsupported encoding after format conversion).
+- Image shorter dimension < `Input.Images.MINIMUM_SIZE_IN_PIXELS` (570 px) AND the upscale required to reach `Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS` (800 px) would exceed `Output.Images.Resize.MAXIMUM_UpScale` (1.42×).
+
+All other failure modes — unknown features, low-confidence geometry, fill/stretch failures — are handled by `Tx_ProblemImageProcessor` (conservative proportional resize, export with warnings). No other transform failure triggers KO.
+
 ## UNKNOWN → Problem Processing
 
-When `ImageTransformer.cs` finds any transform-critical IF set to `UNKNOWN` → route to `Tx_ProblemImageProcessor.cs` for conservative processing. Do not use normal transform assumptions.
+When `ImageTransformer.cs` finds `salient-bbox` UNKNOWN, or `SelectedPhenotype` is null (while phenotype bypass is off), route to `Tx_ProblemImageProcessor.cs` for conservative processing. Do not use normal transform assumptions.
 
 ---
 

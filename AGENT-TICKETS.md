@@ -143,6 +143,21 @@ Called as a sub-step from `Tx_CenterAndStretch` and `Tx_DetailCropper`. Not an `
 
 ---
 
+### T-1800 · Add ProductTypeId to ImageRecord_LAMBDA
+**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+
+`ImageRecord_LAMBDA` is missing a `string? ProductTypeId` field. This field is required for `Tx_DetailCropper` det-slot exclusion routing in `ImageTransformer.cs` (see `PRISM-transform-generate.md` "Det-Slot Exclusions"). Without it, `IsDetailCropperDetSlotExcluded()` in `ImageTransformer.cs` always reads null and falls through to the default (non-clothing) exclusion rule, which is incorrect for clothing product families.
+
+**What to do:**
+1. Add `string? ProductTypeId` to `ImageRecord_LAMBDA.cs`.
+2. In `ImageOrderer.cs`, find where `ResolveProductType()` is called and write the resolved product type ID to `lambda.ProductTypeId`.
+3. Confirm the field flows through to `ImageTransformer.cs:IsDetailCropperDetSlotExcluded()`, which already reads `lambda.ProductTypeId`.
+4. `dotnet build jb/src/PRISM.sln` passes.
+
+**Files:** `jb/src/core/Models/ImageRecord_LAMBDA.cs`, `jb/src/core/Images/Order/ImageOrderer.cs`
+
+---
+
 ## Verification Rules
 
 - After project/solution setup: `dotnet build jb/src/PRISM.sln`, API/WPF run smoke, web `npm run typecheck` + `npm run build`.
