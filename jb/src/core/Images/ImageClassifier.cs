@@ -61,7 +61,7 @@ public sealed class ImageClassifier : IDisposable
         try
         {
             var opts = new SessionOptions();
-            if (OperatingSystem.IsWindows())
+            if (GpuProbe.HasHardwareDirectMLAdapter())
                 opts.AppendExecutionProvider_DML(0);
             session = new InferenceSession(modelPath, opts);
 

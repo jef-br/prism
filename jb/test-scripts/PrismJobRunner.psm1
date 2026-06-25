@@ -147,7 +147,11 @@ function Invoke-PrismFolderJob {
         [Parameter(Mandatory)][string]$Folder,
         [Parameter(Mandatory)][string]$BaseUrl,
         [Parameter(Mandatory)][string]$LogPath,
-        [int]$TimeoutMinutes = 30
+        [int]$TimeoutMinutes = 30,
+        [bool]$Transform          = $true,
+        [bool]$Generation         = $true,
+        [bool]$SkipClassification = $false,
+        [string]$Format           = 'zip'
     )
 
     $folderName = Split-Path -Path $Folder -Leaf
@@ -165,7 +169,7 @@ function Invoke-PrismFolderJob {
         Write-Host "[$folderName] Submitting $($files.Count) files ..."
 
         try {
-            $envelope = Submit-PrismJob -BaseUrl $BaseUrl -Token $folderName -Files $files -WorkDir $workDir -TimeoutMinutes $TimeoutMinutes
+            $envelope = Submit-PrismJob -BaseUrl $BaseUrl -Token $folderName -Files $files -WorkDir $workDir -TimeoutMinutes $TimeoutMinutes -Transform $Transform -Generation $Generation -SkipClassification $SkipClassification -Format $Format
         } catch {
             Write-Warning "[$folderName] Submission failed: $($_.Exception.Message)"
             Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId '-' -Total 0 -Ok 0 -DurationSeconds $stopwatch.Elapsed.TotalSeconds -Note "SUBMIT_ERROR: $($_.Exception.Message)"
@@ -228,7 +232,11 @@ function Submit-PrismJob {
         [Parameter(Mandatory)][string]$Token,
         [Parameter(Mandatory)][string[]]$Files,
         [Parameter(Mandatory)][string]$WorkDir,
-        [int]$TimeoutMinutes = 30
+        [int]$TimeoutMinutes      = 30,
+        [bool]$Transform          = $true,
+        [bool]$Generation         = $true,
+        [bool]$SkipClassification = $false,
+        [string]$Format           = 'zip'
     )
 
     $imageFiles = @($Files | Where-Object { $script:ImageExtensions -contains ([System.IO.Path]::GetExtension($_).ToLowerInvariant()) })
@@ -262,9 +270,10 @@ function Submit-PrismJob {
     $requestObject = [ordered]@{
         ClientRequestToken   = $Token
         rename               = $true
-        transform            = $true
-        generation           = $true
-        format               = 'zip'
+        transform            = $Transform
+        generation           = $Generation
+        skipClassification   = $SkipClassification
+        format               = $Format
         ReturnOriginalImages = $false
     }
     $requestJson = $requestObject | ConvertTo-Json -Compress

@@ -113,7 +113,8 @@ internal static class PrismProcessIngressReader
                 Transform = processRequest.Transform,
                 Generation = processRequest.Generation,
                 Format = processRequest.Format,
-                ReturnOriginalImages = processRequest.ReturnOriginalImages
+                ReturnOriginalImages = processRequest.ReturnOriginalImages,
+                SkipClassification = processRequest.SkipClassification
             }
         };
 
@@ -333,6 +334,7 @@ internal sealed record PrismProcessRequest
     public bool Generation { get; init; } = true;
     public string Format { get; init; } = "zip";
     public bool ReturnOriginalImages { get; init; }
+    public bool SkipClassification { get; init; }
     public IReadOnlyList<string> Input { get; init; } = [];
 }
 

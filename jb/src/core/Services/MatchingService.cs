@@ -46,7 +46,8 @@ public sealed class MatchingService : IMatchingService
         foreach (ImageRecord_INPUT image in okImages)
         {
             ImageRecord_LAMBDA lambda = BuildLambda(image, featureAnalysis, classification, ngp,
-                hashEntries, ref classifyKo, ref classifyDegraded, ref phenotypeAssigned);
+                hashEntries, ref classifyKo, ref classifyDegraded, ref phenotypeAssigned,
+                ingest.Parameters.SkipClassification);
             lambdaByImage[image] = lambda;
             lambdaRecords.Add(lambda);
         }
@@ -107,7 +108,8 @@ public sealed class MatchingService : IMatchingService
         List<(ImageRecord_INPUT Record, ulong Hash)> hashEntries,
         ref int classifyKo,
         ref int classifyDegraded,
-        ref int phenotypeAssigned)
+        ref int phenotypeAssigned,
+        bool skipClassification = false)
     {
         ImageRecord_LAMBDA lambda = new()
         {
@@ -156,7 +158,7 @@ public sealed class MatchingService : IMatchingService
 
                 // CLIP failure → degrade, never KO: tags are optional enrichment, and FamilyID matching keys
                 // off filename tokens, so the image must still flow to ImageNGP and the matching waterfall.
-                if (classification.IsReady)
+                if (classification.IsReady && !skipClassification)
                 {
                     try
                     {

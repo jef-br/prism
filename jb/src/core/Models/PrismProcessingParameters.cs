@@ -29,4 +29,10 @@ public sealed record PrismProcessingParameters
     /// Whether original image bytes should be returned outside the manifest.
     /// </summary>
     public bool ReturnOriginalImages { get; init; }
+
+    /// <summary>
+    /// When true, skips CLIP tag inference entirely. FeatureAnalysis still runs (required for ordering).
+    /// Use for matching-focused test runs where classification output is not needed.
+    /// </summary>
+    public bool SkipClassification { get; init; }
 }

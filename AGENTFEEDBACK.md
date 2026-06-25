@@ -6,7 +6,8 @@ Static reload memory. Not a ticket board. Accepted knowledge lives in `jb/docs/`
 
 - **ImageSharp**: locked at 3.1.12 (Apache 2.0). 4.0.0 rejected — commercial license.
 - **Queue**: V1 = single-server in-process bounded queue. RabbitMQ deferred until durable recovery or distributed workers are needed.
-- **CLIP model**: `sentence-transformers/clip-ViT-B-32`. SHA-256: see `jb/docs/PRISM-classify.md`.
+- **Classification model**: `sentence-transformers/clip-ViT-B-32`. SHA-256: see `jb/docs/PRISM-classify.md`.
+- **Upscale model** `Real-ESRGAN_x2plus.onnx` More Inspiration here: (just for me, not for claude: https://github.com/upscayl/custom-models)
 
 ## Config Locations
 

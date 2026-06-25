@@ -5,6 +5,7 @@
 
   <ItemGroup>
     <Compile Include="..\ImageClassifier.cs" />
+    <Compile Include="..\GpuProbe.cs" />
     <Compile Include="..\ClipTokenizer.cs" />
     <Compile Include="ClipPromptCatalog.cs" />
     <Compile Include="DedupGroup.cs" />
