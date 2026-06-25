@@ -168,7 +168,7 @@ Implement `jb/src/core/Images/Transform/processingtools/Tx_LowContrastEnhancemen
 
 ### T-2000 · Implement Tx_CenterAndStretch pixel flow
 **Status:** Blocked | **Profile:** P1-feature-worker | **Agent:** worker  
-**Blocked-by:** T-1700 (BgStretch — Done ✓), T-1900 (LowContrastEnhancement), open saliency/headcut/greedy jbtodo decisions in `jb/src/core/Images/Transform/jbtodo.md`
+**Blocked-by:** T-1900 (LowContrastEnhancement), T-2300 (saliency/headcut/greedy user decisions)
 
 Three-step pixel flow inside `Tx_CenterAndStretch.Transform()` — currently gated behind `ImageProcessorAvailable() = true` but pixel body is a `NotSupportedException`.
 

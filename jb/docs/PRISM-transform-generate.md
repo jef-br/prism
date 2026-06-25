@@ -19,6 +19,16 @@ Called by `ImageTransformer` before routing; `lambda.Features["salient-bbox"]` i
 
 ---
 
+## Tx_LowContrastEnhancement
+
+Pre-step called inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast"]` is true. Purpose: improve foreground/background separation before bounding-box use — not a visual quality pass for export.
+
+**Algorithm:** CLAHE (Contrast Limited Adaptive Histogram Equalization) via OpenCVSharp4.  
+**Scope:** applied to the full image, not the background region only — applying to a background-only region requires a reliable background mask which is unavailable at this stage, and full-image CLAHE is safer for bbox accuracy.  
+**Implementation:** `jb/src/core/Images/Transform/processingtools/Tx_LowContrastEnhancement.cs` (T-1900).
+
+---
+
 ## Transformation Overview
 
 Images transformed one by one, each based on image analysis enriched with match information. Salient object detection, bounding box calculation, and background identification feed the per-image transform decision. Useful tags from `ImageMatcher.cs` attenuate transformation parameters. Transform rules in `jb/src/core/Images/Transform`. Transformation parameters guided by per-image IFs and selected INGP phenotype.
