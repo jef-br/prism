@@ -340,10 +340,10 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `interior-shot` |
 | **Description** | Inside view of a product — interior of a bag, inside of a shoe, inside of a box or case. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = FRONT OR TOP`, `packaging-visible = false` |
+| **Required features** | `hero-is-human = FALSE`, `interior-detected = true` |
 | **Optional features** | `background-type = SOLIDCOLOR`, `occlusion-level = full-product` |
 | **easy_to_detect** | false |
-| **Rationale** | Interior shots require product-type-specific knowledge to identify as interior vs. exterior. No geometry-only signal is reliable. |
+| **Rationale** | Detected by `InteriorAnalyzer.cs` via Sobel-edge boundary analysis (enclosed region smoother than surrounding texture, bounded by strong edges). Product-type gating (wallet/bag/suitcase) applied at the Order stage. |
 
 ---
 

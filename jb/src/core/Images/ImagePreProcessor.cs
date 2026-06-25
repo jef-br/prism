@@ -77,17 +77,36 @@ public static class ImagePreProcessor {
     /// When detection fails or the path is unavailable, the feature is left unchanged.
     /// </summary>
     public static void Preprocess( ImageRecord_LAMBDA lambda, string? imagePath ) {
+        object normalizedImage = NormalizeImage(imagePath);
 
-        ApplyEXIF(imagePath);
+        // TODO: apply upscale decision when NormalizeImage returns real image data
+        normalizedImage = Upscale(normalizedImage);
 
-
+        // DetectSalientBoundingBox reads from the original path until NormalizeImage is real
         string? bbox = DetectSalientBoundingBox(imagePath);
-        if (bbox is not null)
-            lambda.Features.Set("salient-bbox", bbox, 0.85, "opencv-canny");
+        if (bbox is not null) lambda.Features.Set("salient-bbox", bbox, 0.85, "opencv-canny");
     }
 
-    private static void ApplyEXIF(string? imagePath) {
-        
+    private static object NormalizeImage(string? imagePath) {
+        object img = new object();
+
+        img = ConvertToFlatJpg(img);
+        img = ApplyEXIF(img);
+
+        return img;
+    }
+    private static object ApplyEXIF(object img) {
+        return img;
+    }
+    private static object ConvertToFlatJpg(object img) {
+        return img;
+    }
+    private static object Upscale(object img) {
+        //Apply upscale decision based on bbox largest dimension vs config thresholds:
+        // - < `Input.Images.MINIMUM_SIZE_IN_PIXELS` (570 px) → KO
+        // - ≥ `Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS` (800 px) → OK, no resize
+        // - Between 570 and 800 → Upscale; max allowed scale factor = `Output.Images.Resize.MAXIMUM_UpScale` (1.42)
+        return img;
     }
 
     private static string? DetectSalientBoundingBox(string? imagePath) {

@@ -243,6 +243,46 @@ public class PipelineIntegrationTests
     }
 
     // -------------------------------------------------------------------------
+    // SmallTest dataset tests
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Smoke test: pipeline completes and produces a non-empty manifest for the SmallTest fixture.
+    /// </summary>
+    [Fact]
+    public async Task SmallTest_EndToEnd_CompletesWithManifest()
+    {
+        string imagesPath = Path.Combine(TestFixturePath, "SmallTest", "images");
+        string excelPath  = Path.Combine(TestFixturePath, "SmallTest", "tiny-test.xlsx");
+
+        Assert.True(Directory.Exists(imagesPath), $"SmallTest images directory not found: {imagesPath}");
+        Assert.True(File.Exists(excelPath), $"SmallTest Excel not found: {excelPath}");
+
+        var result = await new PrismService().Process(BuildSmallTestJobRequest());
+
+        Assert.NotNull(result);
+        Assert.Equal("Completed", result.Status);
+        Assert.NotNull(result.Manifest);
+        Assert.True(result.Manifest.Summary.ImageCount > 0);
+    }
+
+    /// <summary>
+    /// Every input image must appear in OkImages or KoImages — no silent drops.
+    /// </summary>
+    [Fact]
+    public async Task SmallTest_NoImagesSilentlyDropped()
+    {
+        int inputCount = Directory.GetFiles(
+            Path.Combine(TestFixturePath, "SmallTest", "images"), "*.jpg",
+            SearchOption.TopDirectoryOnly).Length;
+
+        var result = await new PrismService().Process(BuildSmallTestJobRequest());
+
+        Assert.Equal("Completed", result.Status);
+        Assert.Equal(inputCount, result.OkImages.Count + result.KoImages.Count);
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
@@ -257,6 +297,31 @@ public class PipelineIntegrationTests
         string excelPath      = CopyExcelToTemp(Path.Combine(TestFixturePath, "SPACINI29", "SPACINI29-INPUTS.xlsx"));
 
         var imageRecords = Directory.GetFiles(tinyImagesPath, "*.jpg", SearchOption.TopDirectoryOnly)
+            .Select(f => new ImageRecord_INPUT { InitialFullName = Path.GetFileName(f), TempFilePath = f })
+            .ToList();
+
+        return new PrismJobRequest
+        {
+            JobID              = Guid.NewGuid(),
+            ImageRecords       = imageRecords,
+            ExcelRecords       = [new InputExcelFileRecord { SourceReference = excelPath, ByteLength = new FileInfo(excelPath).Length }],
+            ZipFileRecords     = [],
+            PrismProcessingParameters = parameters ?? new PrismProcessingParameters
+            {
+                Format               = "json",
+                Transform            = true,
+                Generation           = false,
+                ReturnOriginalImages = false
+            }
+        };
+    }
+
+    private static PrismJobRequest BuildSmallTestJobRequest(PrismProcessingParameters? parameters = null)
+    {
+        string imagesPath = Path.Combine(TestFixturePath, "SmallTest", "images");
+        string excelPath  = CopyExcelToTemp(Path.Combine(TestFixturePath, "SmallTest", "tiny-test.xlsx"));
+
+        var imageRecords = Directory.GetFiles(imagesPath, "*.jpg", SearchOption.TopDirectoryOnly)
             .Select(f => new ImageRecord_INPUT { InitialFullName = Path.GetFileName(f), TempFilePath = f })
             .ToList();
 
