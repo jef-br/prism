@@ -89,15 +89,15 @@ public sealed class ImageClassifier : IDisposable
     /// Tokens are returned in prompt order (not ranked) — the caller groups and softmaxes them per feature.
     /// Returns an empty array when <see cref="IsReady"/> is false.
     /// </summary>
-    /// <param name="imagePath">Absolute path to the normalized JPEG image.</param>
+    /// <param name="image">Pre-loaded normalized image (Rgba32). Not mutated by this method.</param>
     /// <param name="prompts">Text prompts to score against the image.</param>
-    public ClassificationToken[] ClassifyImage(string imagePath, string[] prompts)
+    public ClassificationToken[] ClassifyImage(Image<Rgba32> image, string[] prompts)
     {
         if (!IsReady || prompts.Length == 0)
             return [];
 
         // The graph is entangled: one Run must carry the image AND all prompts together.
-        DenseTensor<float> pixelValues = PreprocessImage(imagePath);
+        DenseTensor<float> pixelValues = PreprocessImage(image);
         (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = TokenizePrompts(prompts);
 
         var inputs = new List<NamedOnnxValue>
@@ -120,14 +120,15 @@ public sealed class ImageClassifier : IDisposable
         return tokens;
     }
 
-    //  Image encoding 
+    //  Image encoding
 
-    private static DenseTensor<float> PreprocessImage(string imagePath)
+    private static DenseTensor<float> PreprocessImage(Image<Rgba32> sourceImage)
     {
         // Input shape: [1, 3, H, W] — CHW layout, RGB channel order, normalized.
+        // Clone as Rgb24 to avoid mutating the shared image (resize changes pixel dimensions).
         var tensor = new DenseTensor<float>([1, 3, InputHeight, InputWidth]);
 
-        using Image<Rgb24> image = Image.Load<Rgb24>(imagePath);
+        using Image<Rgb24> image = sourceImage.CloneAs<Rgb24>();
 
         image.Mutate(ctx => ctx.Resize(new ResizeOptions
         {

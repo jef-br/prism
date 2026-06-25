@@ -23,14 +23,12 @@ public static class ImageFeatureAnalyzer
     private const float NearWhiteChannelMin             = 0.90f;
 
     /// <summary>
-    /// Analyzes the image at <paramref name="imagePath"/> and writes all detectable
+    /// Analyzes the pre-loaded <paramref name="image"/> and writes all detectable
     /// feature values into <paramref name="snapshot"/>.
     /// Features that cannot be determined are recorded as UNKNOWN.
     /// </summary>
-    public static void Analyze(string imagePath, ImageFeatureSnapshot snapshot)
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
     {
-        using Image<Rgba32> image = Image.Load<Rgba32>(imagePath);
-
         AnalyzeGeometry(image, snapshot);
         AnalyzeBackground(image, snapshot, out _, out _, out _);
         WriteEdgeIntersections(SubjectEdgeDetector.Detect(image), snapshot);

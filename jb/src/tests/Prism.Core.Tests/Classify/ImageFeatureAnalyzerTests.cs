@@ -381,7 +381,8 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable
     private static ImageFeatureSnapshot Analyze(string imagePath)
     {
         var snap = new ImageFeatureSnapshot();
-        ImageFeatureAnalyzer.Analyze(imagePath, snap);
+        using var image = Image.Load<Rgba32>(imagePath);
+        ImageFeatureAnalyzer.Analyze(image, snap);
         return snap;
     }
 }

@@ -28,11 +28,12 @@ public sealed class VisualHasher
     }
 
     /// <summary>
-    /// Computes the dHash for an image file.
+    /// Computes the dHash for a pre-loaded image. Converts to grayscale internally without mutating the source.
+    /// Returns 0 on error; callers should treat 0 as a sentinel meaning "unHashable / singleton."
     /// </summary>
-    public ulong ComputeHash(string imagePath)
+    public static ulong ComputeHash(Image<Rgba32> sourceImage)
     {
-        using Image<L8> image = Image.Load<L8>(imagePath);
+        using Image<L8> image = sourceImage.CloneAs<L8>();
         image.Mutate(ctx => ctx.Resize(new ResizeOptions
         {
             Size = new Size(HashWidth, HashHeight),
@@ -62,36 +63,13 @@ public sealed class VisualHasher
     public bool AreDuplicates(ulong hashA, ulong hashB) => HammingDistance(hashA, hashB) <= hammingThreshold;
 
     /// <summary>
-    /// Groups the given images by visual similarity.
+    /// Groups images by visual similarity using pre-computed perceptual hashes.
     /// Each group's <see cref="DedupGroup.Canonical"/> is the highest-resolution image;
     /// <see cref="DedupGroup.Duplicates"/> are the lower-resolution copies to suppress.
-    /// Images with no normalized path are excluded from deduplication and treated as singletons.
+    /// Entries with Hash == 0 are treated as singletons (unHashable or load error).
     /// </summary>
-    public IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<ImageRecord_INPUT> images)
+    public IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<(ImageRecord_INPUT Record, ulong Hash)> entries)
     {
-        var entries = new List<(ImageRecord_INPUT Record, ulong Hash, long PixelArea)>();
-
-        foreach (ImageRecord_INPUT record in images)
-        {
-            if (record.NormalizedJpgPath is null || !File.Exists(record.NormalizedJpgPath))
-            {
-                entries.Add((record, 0UL, 0L));
-                continue;
-            }
-
-            try
-            {
-                ulong hash = ComputeHash(record.NormalizedJpgPath);
-                long area = (long)record.NormalizedWidth * record.NormalizedHeight;
-                entries.Add((record, hash, area));
-            }
-            catch
-            {
-                // Hashing failure: treat as singleton with a unique zero hash.
-                entries.Add((record, 0UL, 0L));
-            }
-        }
-
         bool[] consumed = new bool[entries.Count];
         var groups = new List<DedupGroup>();
 

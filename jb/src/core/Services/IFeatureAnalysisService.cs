@@ -1,3 +1,6 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+
 namespace Prism.Core;
 
 /// <summary>
@@ -7,6 +10,6 @@ namespace Prism.Core;
 /// </summary>
 public interface IFeatureAnalysisService
 {
-    /// <summary>Measures features for the normalized JPEG and records them on <paramref name="target"/>.</summary>
-    void Analyze(string normalizedJpgPath, ImageFeatureSnapshot target);
+    /// <summary>Measures features for the pre-loaded image and records them on <paramref name="target"/>.</summary>
+    void Analyze(Image<Rgba32> image, ImageFeatureSnapshot target);
 }

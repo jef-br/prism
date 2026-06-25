@@ -1,3 +1,6 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+
 namespace Prism.Core;
 
 /// <summary>
@@ -10,9 +13,9 @@ public interface IClassificationService : IDisposable
     /// <summary>True when the CLIP session initialized and is ready to classify.</summary>
     bool IsReady { get; }
 
-    /// <summary>Classifies the image and writes influential/trivial tags plus CLIP-derived features onto the LAMBDA.</summary>
-    void ApplyClipTags(string normalizedJpgPath, ImageRecord_LAMBDA lambda, double influentialThreshold, double cutoffThreshold);
+    /// <summary>Classifies the pre-loaded image and writes influential/trivial tags plus CLIP-derived features onto the LAMBDA.</summary>
+    void ApplyClipTags(Image<Rgba32> image, ImageRecord_LAMBDA lambda, double influentialThreshold, double cutoffThreshold);
 
     /// <summary>Groups visually duplicate images by perceptual hash for post-classification suppression.</summary>
-    IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<ImageRecord_INPUT> images);
+    IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<(ImageRecord_INPUT Record, ulong Hash)> entries);
 }

@@ -1,3 +1,6 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+
 namespace Prism.Core;
 
 /// <summary>
@@ -35,9 +38,9 @@ public sealed class ClassificationService : IClassificationService
     public bool IsReady => classifier.IsReady;
 
     /// <inheritdoc/>
-    public void ApplyClipTags(string normalizedJpgPath, ImageRecord_LAMBDA lambda, double influentialThreshold, double cutoffThreshold)
+    public void ApplyClipTags(Image<Rgba32> image, ImageRecord_LAMBDA lambda, double influentialThreshold, double cutoffThreshold)
     {
-        ClassificationToken[] logitTokens = classifier.ClassifyImage(normalizedJpgPath, promptCatalog.BuildPrompts());
+        ClassificationToken[] logitTokens = classifier.ClassifyImage(image, promptCatalog.BuildPrompts());
         if (logitTokens.Length == 0) return;
 
         // Resolve each prompt to the (feature, value) it represents; drop unrecognised prompts.
@@ -109,8 +112,8 @@ public sealed class ClassificationService : IClassificationService
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<ImageRecord_INPUT> images)
-        => new VisualHasher(maxHammingDistance).FindDuplicates(images);
+    public IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<(ImageRecord_INPUT Record, ulong Hash)> entries)
+        => new VisualHasher(maxHammingDistance).FindDuplicates(entries);
 
     /// <inheritdoc/>
     public void Dispose()

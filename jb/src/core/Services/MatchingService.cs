@@ -1,3 +1,6 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+
 namespace Prism.Core;
 
 /// <summary>
@@ -22,7 +25,7 @@ public sealed class MatchingService : IMatchingService
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
     {
-        //  Classified: build one LAMBDA per normalized image (FeatureAnalysis + Classification + ImageNGP) 
+        //  Classified: build one LAMBDA per normalized image (FeatureAnalysis + Classification + ImageNGP)
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Classified, cancellationToken);
 
         List<ImageRecord_INPUT> okImages = ingest.NormalizedImages
@@ -35,6 +38,7 @@ public sealed class MatchingService : IMatchingService
 
         List<ImageRecord_LAMBDA> lambdaRecords = [];
         Dictionary<ImageRecord_INPUT, ImageRecord_LAMBDA> lambdaByImage = new();
+        var hashEntries = new List<(ImageRecord_INPUT Record, ulong Hash)>(okImages.Count);
         int classifyKo        = 0;
         int classifyDegraded  = 0;
         int phenotypeAssigned = 0;
@@ -42,24 +46,24 @@ public sealed class MatchingService : IMatchingService
         foreach (ImageRecord_INPUT image in okImages)
         {
             ImageRecord_LAMBDA lambda = BuildLambda(image, featureAnalysis, classification, ngp,
-                ref classifyKo, ref classifyDegraded, ref phenotypeAssigned);
+                hashEntries, ref classifyKo, ref classifyDegraded, ref phenotypeAssigned);
             lambdaByImage[image] = lambda;
             lambdaRecords.Add(lambda);
         }
 
         int duplicatesRemoved = configuration.ShouldDeduplicate
-            ? Deduplicate(okImages, lambdaByImage, classification)
+            ? Deduplicate(lambdaByImage, classification, hashEntries)
             : 0;
 
-        //  Matched: resolve a FamilyID for each image via the waterfall 
+        //  Matched: resolve a FamilyID for each image via the waterfall
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Matched, cancellationToken);
         int matchKo = ImageMatcher.Run(lambdaRecords, ingest.FamilyRecords);
 
-        //  Ordered: assign det slots within each family 
+        //  Ordered: assign det slots within each family
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Ordered, cancellationToken);
         ImageOrderer.Run(lambdaRecords, ingest.FamilyRecords);
 
-        //  Renamed: validate det-slot uniqueness, count renamed images 
+        //  Renamed: validate det-slot uniqueness, count renamed images
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Renamed, cancellationToken);
         (int okRenamed, int renameKo) = ImageRenamer.Run(lambdaRecords);
 
@@ -87,18 +91,20 @@ public sealed class MatchingService : IMatchingService
         return [$"CLIP classification unavailable for {classifyDegraded} image(s); matched on filename tokens only."];
     }
 
-    //  Per-image classification (fan-out FA + Classification, fan-in ImageNGP) 
+    //  Per-image classification (fan-out FA + Classification, fan-in ImageNGP)
 
     /// <summary>
-    /// Builds and classifies one LAMBDA. FeatureAnalysis is the core measurement — a failure there KOs the
-    /// image. CLIP tagging is optional enrichment — a failure there is caught and degrades the image to
-    /// "no tags" (it is still measured by FeatureAnalysis and still matches on filename tokens), never KO.
+    /// Builds and classifies one LAMBDA. Loads the normalized image once and shares it across
+    /// FeatureAnalysis, CLIP tagging, and perceptual-hash computation (one disk read for all three).
+    /// FeatureAnalysis is the core measurement — a failure there KOs the image.
+    /// CLIP tagging is optional enrichment — a failure there degrades the image to "no tags", never KO.
     /// </summary>
     private ImageRecord_LAMBDA BuildLambda(
         ImageRecord_INPUT source,
         IFeatureAnalysisService featureAnalysis,
         IClassificationService classification,
         IImageNgpService ngp,
+        List<(ImageRecord_INPUT Record, ulong Hash)> hashEntries,
         ref int classifyKo,
         ref int classifyDegraded,
         ref int phenotypeAssigned)
@@ -112,13 +118,14 @@ public sealed class MatchingService : IMatchingService
 
         if (source.NormalizedJpgPath is not null)
         {
-            // FeatureAnalysis failure → KO: the geometric/visual measurement feeds ImageNGP and ordering.
+            Image<Rgba32> image;
             try
             {
-                featureAnalysis.Analyze(source.NormalizedJpgPath, lambda.Features);
+                image = Image.Load<Rgba32>(source.NormalizedJpgPath);
             }
             catch (Exception ex)
             {
+                hashEntries.Add((source, 0UL));
                 lambda.IsKo          = true;
                 lambda.KoReasonCode  = "CLASSIFY_ERROR";
                 lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
@@ -126,21 +133,47 @@ public sealed class MatchingService : IMatchingService
                 return lambda;
             }
 
-            // CLIP failure → degrade, never KO: tags are optional enrichment, and FamilyID matching keys
-            // off filename tokens, so the image must still flow to ImageNGP and the matching waterfall.
-            if (classification.IsReady)
+            using (image)
             {
+                // Hash computed here — same load shared with feature analysis and CLIP below.
+                ulong hash = 0UL;
+                try { hash = VisualHasher.ComputeHash(image); } catch { }
+                hashEntries.Add((source, hash));
+
+                // FeatureAnalysis failure → KO: the geometric/visual measurement feeds ImageNGP and ordering.
                 try
                 {
-                    classification.ApplyClipTags(source.NormalizedJpgPath, lambda,
-                        configuration.ThresholdForInfluentialTags,
-                        configuration.ThresholdForDiscardingClassificationTags);
+                    featureAnalysis.Analyze(image, lambda.Features);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    classifyDegraded++;
+                    lambda.IsKo          = true;
+                    lambda.KoReasonCode  = "CLASSIFY_ERROR";
+                    lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
+                    classifyKo++;
+                    return lambda;
+                }
+
+                // CLIP failure → degrade, never KO: tags are optional enrichment, and FamilyID matching keys
+                // off filename tokens, so the image must still flow to ImageNGP and the matching waterfall.
+                if (classification.IsReady)
+                {
+                    try
+                    {
+                        classification.ApplyClipTags(image, lambda,
+                            configuration.ThresholdForInfluentialTags,
+                            configuration.ThresholdForDiscardingClassificationTags);
+                    }
+                    catch
+                    {
+                        classifyDegraded++;
+                    }
                 }
             }
+        }
+        else
+        {
+            hashEntries.Add((source, 0UL));
         }
 
         string[] candidates = ngp.EvaluateCandidates(lambda.Features);
@@ -153,19 +186,20 @@ public sealed class MatchingService : IMatchingService
         return lambda;
     }
 
-    //  Post-classification visual deduplication 
+    //  Post-classification visual deduplication
 
     /// <summary>
-    /// KOs visual duplicates after classification, exempting configured phenotypes (illustrations,
-    /// technical drawings, labels). Returns the number of duplicates suppressed.
+    /// KOs visual duplicates after classification using pre-computed perceptual hashes, exempting
+    /// configured phenotypes (illustrations, technical drawings, labels).
+    /// Returns the number of duplicates suppressed.
     /// </summary>
     private int Deduplicate(
-        IReadOnlyList<ImageRecord_INPUT> okImages,
         Dictionary<ImageRecord_INPUT, ImageRecord_LAMBDA> lambdaByImage,
-        IClassificationService classification)
+        IClassificationService classification,
+        IReadOnlyList<(ImageRecord_INPUT Record, ulong Hash)> hashEntries)
     {
         HashSet<string> exempt = new(configuration.DeduplicationExemptPhenotypes, StringComparer.OrdinalIgnoreCase);
-        IReadOnlyList<DedupGroup> groups = classification.FindDuplicates(okImages);
+        IReadOnlyList<DedupGroup> groups = classification.FindDuplicates(hashEntries);
         int removed = 0;
 
         foreach (DedupGroup group in groups)
@@ -196,7 +230,7 @@ public sealed class MatchingService : IMatchingService
         return removed;
     }
 
-    //  Helpers 
+    //  Helpers
 
     private static PhenotypeRuleSet LoadRuleSet()
     {
