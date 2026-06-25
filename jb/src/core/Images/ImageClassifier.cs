@@ -60,7 +60,10 @@ public sealed class ImageClassifier : IDisposable
 
         try
         {
-            session = new InferenceSession(modelPath);
+            var opts = new SessionOptions();
+            if (OperatingSystem.IsWindows())
+                opts.AppendExecutionProvider_DML(0);
+            session = new InferenceSession(modelPath, opts);
 
             IReadOnlyDictionary<string, NodeMetadata> inputMeta  = session.InputMetadata;
             IReadOnlyDictionary<string, NodeMetadata> outputMeta = session.OutputMetadata;

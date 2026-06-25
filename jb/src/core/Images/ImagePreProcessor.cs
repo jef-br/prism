@@ -1,6 +1,11 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 using OpenCvSharp;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using CvSize = OpenCvSharp.Size;
 
 namespace Prism.Core;
 
@@ -57,10 +62,8 @@ plt.show()
 ```*/
 
 /// <summary>
-/// Computes the salient-object bounding box for each image before transform routing.
-/// Direct C# port of the Python reference above using OpenCvSharp4.
-/// Writes "salient-bbox" as normalized [0–1] ratios (left,top,right,bottom) to the image's
-/// feature snapshot. Leaves the feature at UNKNOWN on any failure.
+/// Normalizes each image (EXIF orient → flat JPG → upscale decision) and detects its salient
+/// bounding box before transform routing.
 /// </summary>
 public static class ImagePreProcessor {
     private const int   MaxAnalysisSize  = 512;
@@ -70,53 +73,51 @@ public static class ImagePreProcessor {
     private const float SigmoidSlope     = 0.15f;
     private const float EdgeThreshold    = 0.2f;
     private const float MinBboxAreaRatio = 0.01f;
+    private const string DefaultBboxCoords = "0.0000,0.0000,0.0000,0.0000";
 
     /// <summary>
-    /// Computes the salient-object bounding box from the image at <paramref name="imagePath"/>
-    /// and writes it to <paramref name="lambda"/>.Features as "salient-bbox".
-    /// When detection fails or the path is unavailable, the feature is left unchanged.
+    /// Normalizes the image to a flat jpg replacing transparency with white.
+    /// Returns updated image bytes, bounding box coordinates, PrismConfiguration, and LambdaRecord.
+    /// Sets "salient-bbox" on <paramref name="lambda"/>.
+    /// Returns null and sets <see cref="ImageRecord_LAMBDA.IsKo"/> when the image fails the upscale thresholds.
     /// </summary>
-    public static void Preprocess( ImageRecord_LAMBDA lambda, string? imagePath ) {
-        object normalizedImage = NormalizeImage(imagePath);
+    public static byte[]? Preprocess( ImageRecord_LAMBDA lambda, string? imagePath, PrismConfiguration config ) {
+        
+        byte[]? flatJpg = NormalizeToFlatJpg(imagePath);
+        
+        if (flatJpg is null) return null;
 
-        // TODO: apply upscale decision when NormalizeImage returns real image data
-        normalizedImage = Upscale(normalizedImage);
+        (string coords, int origW, int origH) bbox = DetectSalientBoundingBox(flatJpg);
 
-        // DetectSalientBoundingBox reads from the original path until NormalizeImage is real
-        string? bbox = DetectSalientBoundingBox(imagePath);
-        if (bbox is not null) lambda.Features.Set("salient-bbox", bbox, 0.85, "opencv-canny");
+        lambda.Features.Set("salient-bbox", bbox.coords, 0.99, "clahe+canny+saliency");
+
+        return Upscale(flatJpg, bbox, config, lambda);
     }
 
-    private static object NormalizeImage(string? imagePath) {
-        object img = new object();
-
-        img = ConvertToFlatJpg(img);
-        img = ApplyEXIF(img);
-
-        return img;
-    }
-    private static object ApplyEXIF(object img) {
-        return img;
-    }
-    private static object ConvertToFlatJpg(object img) {
-        return img;
-    }
-    private static object Upscale(object img) {
-        //Apply upscale decision based on bbox largest dimension vs config thresholds:
-        // - < `Input.Images.MINIMUM_SIZE_IN_PIXELS` (570 px) → KO
-        // - ≥ `Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS` (800 px) → OK, no resize
-        // - Between 570 and 800 → Upscale; max allowed scale factor = `Output.Images.Resize.MAXIMUM_UpScale` (1.42)
-        return img;
-    }
-
-    private static string? DetectSalientBoundingBox(string? imagePath) {
-        if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
-            return null;
-
+    // Steps 1 + 2: EXIF orientation → flat single-layer JPG (no alpha, sRGB)
+    private static byte[]? NormalizeToFlatJpg( string? imagePath ) {
+        if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath)) return null;
         try {
-            using Mat gray8 = Cv2.ImRead(imagePath, ImreadModes.Grayscale);
-            if (gray8.Empty()) return null;
+            using Image<Rgba32> img = Image.Load<Rgba32>(imagePath);
+            img.Mutate(x => x.AutoOrient());
+            img.Mutate(x => x.BackgroundColor(Color.White));
+            return EncodeToJpg(img);
+        } catch { return null; }
+    }
 
+    private static byte[] EncodeToJpg( Image img ) {
+        using MemoryStream ms = new();
+        img.Save(ms, new JpegEncoder());
+        return ms.ToArray();
+    }
+
+    // Step 3: salient bounding box (runs before upscale — upscale decision uses bbox pixel dims)
+    private static (string coords, int origW, int origH) DetectSalientBoundingBox( byte[] imageBytes ) {
+        try {
+            using Mat gray8 = Cv2.ImDecode(imageBytes, ImreadModes.Grayscale);
+            if (gray8.Empty()) return (DefaultBboxCoords, 0, 0);
+
+            int origW = gray8.Cols, origH = gray8.Rows;
             using Mat img = ScaleDown(gray8);
             int w = img.Cols, h = img.Rows;
 
@@ -128,9 +129,9 @@ public static class ImagePreProcessor {
             using Mat localMean   = new Mat();
             using Mat graySquared = new Mat();
             using Mat localSqMean = new Mat();
-            Cv2.Blur(grayF, localMean, new Size(31, 31));
+            Cv2.Blur(grayF, localMean, new CvSize(31, 31));
             Cv2.Multiply(grayF, grayF, graySquared);
-            Cv2.Blur(graySquared, localSqMean, new Size(31, 31));
+            Cv2.Blur(graySquared, localSqMean, new CvSize(31, 31));
 
             // local_contrast = sqrt(max(sqmean - mean², 0)), normalize [0,1]
             using Mat mean2         = new Mat();
@@ -148,7 +149,7 @@ public static class ImagePreProcessor {
             edges8.ConvertTo(edgesF, MatType.CV_32F, 1.0 / 255.0);
 
             // edges_dilated = dilate(edges8, 7×7) / 255
-            using Mat kernel7x7     = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(7, 7));
+            using Mat kernel7x7     = Cv2.GetStructuringElement(MorphShapes.Rect, new CvSize(7, 7));
             using Mat edges8Dilated = new Mat();
             Cv2.Dilate(edges8, edges8Dilated, kernel7x7, iterations: 1);
             using Mat edgesDilatedF = new Mat();
@@ -165,19 +166,51 @@ public static class ImagePreProcessor {
             ApplySigmoid(spatial, mask, w, h);
             Cv2.Multiply(edgesF, mask, refined);
 
-            // binary = (refined > 0.2) → bounding rect of nonzero pixels
-            (int x1, int y1, int x2, int y2)? bbox = FindBbox(refined, w, h, EdgeThreshold);
-            if (bbox is null) return null;
+            // bounding rect of pixels > threshold; default to 0,0,0,0 when not found
+            float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+            (int bx1, int by1, int bx2, int by2)? found = FindBbox(refined, w, h, EdgeThreshold);
+            if (found is not null) {
+                float bboxArea = (float)(found.Value.bx2 - found.Value.bx1) * (found.Value.by2 - found.Value.by1);
+                if (bboxArea / (w * h) >= MinBboxAreaRatio) {
+                    x1 = (float)found.Value.bx1 / w;
+                    y1 = (float)found.Value.by1 / h;
+                    x2 = (float)found.Value.bx2 / w;
+                    y2 = (float)found.Value.by2 / h;
+                }
+            }
 
-            float bboxArea = (float)(bbox.Value.x2 - bbox.Value.x1) * (bbox.Value.y2 - bbox.Value.y1);
-            if (bboxArea / (w * h) < MinBboxAreaRatio) return null;
+            return (string.Format(CultureInfo.InvariantCulture, "{0:F4},{1:F4},{2:F4},{3:F4}", x1, y1, x2, y2), origW, origH);
+        } catch { return (DefaultBboxCoords, 0, 0); }
+    }
 
-            return string.Format(CultureInfo.InvariantCulture, "{0:F4},{1:F4},{2:F4},{3:F4}",
-                (float)bbox.Value.x1 / w,
-                (float)bbox.Value.y1 / h,
-                (float)bbox.Value.x2 / w,
-                (float)bbox.Value.y2 / h);
-        } catch { return null; }
+    // Step 4: upscale decision based on the salient bbox's largest pixel dimension
+    private static byte[]? Upscale( byte[] flatJpg, (string coords, int origW, int origH) bbox,
+                                     PrismConfiguration config, ImageRecord_LAMBDA lambda ) {
+        if (bbox.origW == 0) return flatJpg;
+
+        string[] parts = bbox.coords.Split(',');
+        float bboxPixelW = (float.Parse(parts[2], CultureInfo.InvariantCulture) - float.Parse(parts[0], CultureInfo.InvariantCulture)) * bbox.origW;
+        float bboxPixelH = (float.Parse(parts[3], CultureInfo.InvariantCulture) - float.Parse(parts[1], CultureInfo.InvariantCulture)) * bbox.origH;
+        float largest = Math.Max(bboxPixelW, bboxPixelH);
+
+        if (largest < config.MinInputSizeInPixels)
+            return Ko(lambda, "PREPROCESS_TOO_SMALL", $"Salient object {largest:F0}px < minimum {config.MinInputSizeInPixels}px.");
+
+        if (largest >= config.MinOutputWidth)
+            return flatJpg;
+
+        double scale = config.MinOutputWidth / (double)largest;
+        if (scale > config.MaxUpScaleFactor)
+            return Ko(lambda, "PREPROCESS_UPSCALE_EXCEEDED", $"Required scale {scale:F2}× exceeds maximum {config.MaxUpScaleFactor:F2}×.");
+
+        return ImageUpscaler.Upscale(flatJpg, scale);
+    }
+
+    private static byte[]? Ko( ImageRecord_LAMBDA lambda, string code, string message ) {
+        lambda.IsKo = true;
+        lambda.KoReasonCode = code;
+        lambda.KoSafeMessage = message;
+        return null;
     }
 
     //  Helpers for DetectSalientBoundingBox
@@ -188,9 +221,10 @@ public static class ImagePreProcessor {
         int nw = Math.Max(1, (int)(src.Cols * scale));
         int nh = Math.Max(1, (int)(src.Rows * scale));
         Mat dst = new Mat();
-        Cv2.Resize(src, dst, new Size(nw, nh), interpolation: InterpolationFlags.Area);
+        Cv2.Resize(src, dst, new CvSize(nw, nh), interpolation: InterpolationFlags.Area);
         return dst;
     }
+
     private static void ApplySigmoid( Mat src, Mat dst, int w, int h ) {
         int srcStride = (int)src.Step() / sizeof(float);
         int dstStride = (int)dst.Step() / sizeof(float);
@@ -204,6 +238,7 @@ public static class ImagePreProcessor {
             }
         Marshal.Copy(dstData, 0, dst.Data, dstData.Length);
     }
+
     private static (int x1, int y1, int x2, int y2)? FindBbox( Mat img, int w, int h, float threshold ) {
         int stride = (int)img.Step() / sizeof(float);
         float[] data = new float[h * stride];

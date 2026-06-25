@@ -11,6 +11,8 @@
     <Compile Remove="Images\ClipTokenizer.cs" />
     <Compile Remove="Images\Transform\**\*.cs" />
     <Compile Remove="Images\ImageTransformer.cs" />
+    <Compile Remove="Images\Upscale\**\*.cs" />
+    <Compile Remove="Images\ImageUpscaler.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,6 +33,7 @@
     <ProjectReference Include="Models\Prism.Core.Contracts.csproj" />
     <ProjectReference Include="Images\Classify\Prism.Core.Images.Classify.csproj" />
     <ProjectReference Include="Images\Transform\Prism.Core.Images.Transform.csproj" />
+    <ProjectReference Include="Images\Upscale\Prism.Core.Images.Upscale.csproj" />
   </ItemGroup>
 
   <ItemGroup>

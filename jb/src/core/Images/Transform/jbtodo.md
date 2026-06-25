@@ -1,10 +1,5 @@
 # Image Transform Todo
 
--------
-- [ ] HANDMADE BY ME: Temporarily GATE the phenotypes so we can get basic transformations online.
-  - Status: gate implemented as `ImageTransformer.BypassPhenotypes` (currently `true`). While on, transform routing ignores `SelectedPhenotype` and decides off geometry only (`salient-bbox` + edge intersects): bbox present + no intersect → `Tx_CenterAndStretch`; bbox + intersect → `Tx_CropSquare`; no bbox → `Tx_ProblemImageProcessor`. `Tx_DetailCropper` (phenotype-driven) is unreachable while bypassing. Flip the flag to `false` once phenotype assignment is validated; this todo stays open until then.
-
--------
 - [ ] Define detail crop saliency map behavior for eligible images: say how the most important object region influences square crop placement when no border intersection blocks repositioning.
   - Impact:
     - Project progress: Medium - Saliency improves detail crops but depends on object bounds and crop policy.
@@ -59,12 +54,12 @@
   - Steps in order:
     1. Apply EXIF orientation metadata (rotate/flip pixel data, strip EXIF tag).
     2. Convert to flat single-layer JPG (no alpha, no layers, sRGB).
-    3. Compute salient-object bounding box using the Canny + local-contrast approach shown in the Python reference in the same file — port to C# using EmguCV (OpenCV wrapper).
-    4. Apply upscale decision based on bbox largest dimension vs config thresholds:
+    3. Apply upscale decision based on bbox largest dimension vs config thresholds:
        - < `Input.Images.MINIMUM_SIZE_IN_PIXELS` (570 px) → KO
        - ≥ `Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS` (800 px) → OK, no resize
        - Between 570 and 800 → Upscale; max allowed scale factor = `Output.Images.Resize.MAXIMUM_UpScale` (1.42)
        - Required scale > 1.42 → KO
+    4. Send to existing bounding box function. (refactor bounding box function to use the image passed on) 
     5. Return intermediate image bytes and the populated `BoundingBox` to `ImageTransformer`.
   - Answer:
 

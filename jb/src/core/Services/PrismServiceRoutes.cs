@@ -19,6 +19,9 @@ public static class PrismServiceRoutes
     /// <summary>POST MatchingResult → TransformResult.</summary>
     public const string Transform = "/prism-service/transform";
 
+    /// <summary>POST UpscaleRequest → byte[] (upscaled JPEG).</summary>
+    public const string Upscale = "/prism-service/upscale";
+
     /// <summary>Root health endpoint for a host.</summary>
     public const string Health = "/health";
 }

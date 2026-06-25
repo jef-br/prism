@@ -1,10 +1,9 @@
 using Prism.Core;
 
-// PRISM service host — exposes the pipeline-visible services (Ingest, Matching, Generate, Transform) over
-// HTTP so they can be deployed and scaled independently. By default the host exposes all four services;
-// set PRISM_SERVICE=ingest|matching|generate|transform to run a single service as its own deployable host
-// (the GPU-heavy ones — matching/generate — are the reason to split). Every host shares the local job temp
-// folder, which is the artifact bus; there is no cloud storage.
+// PRISM service host — exposes the pipeline-visible services (Ingest, Matching, Generate, Transform, Upscale)
+// over HTTP so they can be deployed and scaled independently. By default the host exposes all services;
+// set PRISM_SERVICE=ingest|matching|generate|transform|upscale to run a single service as its own deployable
+// host. Every host shares the local job temp folder, which is the artifact bus; there is no cloud storage.
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +27,7 @@ IIngestService ingest         = new IngestService(configuration, modelBuilder);
 IMatchingService matching     = new MatchingService(configuration);
 IGenerateService generate     = new GenerateService();
 ITransformService transform   = new TransformService();
+IUpscaleService upscale       = new UpscaleService();
 
 WebApplication app = builder.Build();
 
@@ -61,6 +61,13 @@ if (Hosts("transform"))
     app.MapPost(PrismServiceRoutes.Transform, async (MatchingResult matched, CancellationToken ct) =>
         Results.Json(await transform.TransformAsync(matched, matched.Ingest.Parameters.Transform, null, ct)));
     app.MapGet(PrismServiceRoutes.Transform + "/health", () => Results.Json(new { status = "ok", service = "transform" }));
+}
+
+if (Hosts("upscale"))
+{
+    app.MapPost(PrismServiceRoutes.Upscale, async (UpscaleRequest request, CancellationToken ct) =>
+        Results.Json(await upscale.UpscaleAsync(request.ImageBytes, request.ScaleFactor, ct)));
+    app.MapGet(PrismServiceRoutes.Upscale + "/health", () => Results.Json(new { status = "ok", service = "upscale" }));
 }
 
 app.Run();
