@@ -5,16 +5,6 @@
   - Status: gate implemented as `ImageTransformer.BypassPhenotypes` (currently `true`). While on, transform routing ignores `SelectedPhenotype` and decides off geometry only (`salient-bbox` + edge intersects): bbox present + no intersect → `Tx_CenterAndStretch`; bbox + intersect → `Tx_CropSquare`; no bbox → `Tx_ProblemImageProcessor`. `Tx_DetailCropper` (phenotype-driven) is unreachable while bypassing. Flip the flag to `false` once phenotype assignment is validated; this todo stays open until then.
 
 
-## ONNX session scope
-
--------
-- [ ] ONNX `InferenceSession` is created per pipeline run, not application-scoped
-  - File: `jb/src/core/Pipeline/ShellStage_Classify.cs` `ShellStage_Classify.Run()` — `ImageClassifier` is instantiated inside `Run` with `using ImageClassifier classifier = new()` followed by `InitializeClassifier(classifier)`.
-  - Sessions are "application-scoped." Current code creates a fresh session per job and disposes it when the job ends.
-  - Trade-off: Per-job sessions are safe (no cross-job state) but add ONNX model load time per job (~100–500 ms). Application-scoped sessions would amortize load cost but require thread-safe session management across concurrent jobs.
-  - Decision needed: Accept per-job session lifecycle (current), or move to application-scoped singleton session with thread-safe access?
-  - Answer: Given the duration of a typical job is definitely above 1 minute: Pick the option that balances least-simultaneously-used-server-resources with speed-per-job considering that an onnx delay of maximum 5 seconds is acceptable.
-
 -------
 - [ ] Define final ImageNGP taxonomy and feature combinations: list all possible ImageNGPs and the ImageFeature values required to derive each phenotype.
   - Impact:

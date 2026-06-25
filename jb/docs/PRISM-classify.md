@@ -160,3 +160,9 @@ Runs in `Classified` stage after import normalization.
 - Highest-resolution → canonical; continues through pipeline.
 - Non-canonical duplicates: no separate OK output.
 - Reported with safe source provenance in manifest/workbench diagnostics.
+
+---
+
+## ONNX InferenceSession Scope
+
+Decision: per-job session lifecycle (current behavior). ONNX model load is ≤500 ms; jobs exceed 1 minute; application-scoped sessions add thread-safety complexity for negligible gain. ClassificationService.Create() instantiates a fresh session per job and disposes it when the job ends.
