@@ -193,6 +193,7 @@ public sealed class PrismConfiguration {
         AssertInRange(Weight_StringTokens, 0.0, 1.0, cfgPath, "Classification.Weights.StringToken_Weight");
         AssertInRange(Weight_ClassifyingTags, 0.0, 1.0, cfgPath, "Classification.Weights.Classification_Weight");
         AssertInRange(Weight_SemanticRelevance, 0.0, 1.0, cfgPath, "Classification.Weights.SemanticalRelevanceWeight");
+        AssertInRange(Weight_MatchingSignalsConverging, 0.0, 1.0, cfgPath, "Classification.Weights.CONVERGENCE_WEIGHT");
 
         AssertPositive(MinOutputWidth, cfgPath, "Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS.width");
         AssertPositive(MinOutputHeight, cfgPath, "Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS.height");

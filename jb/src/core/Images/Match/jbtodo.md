@@ -7,13 +7,6 @@
 
 
 
--------
-- [ ] `Weight_MatchingSignalsConverging` convergence bonus not yet consumed.
-  - Files: `jb/src/core/PrismConfiguration.cs`, `jb/src/core/Prism_Config.json` (value 0.25).
-  - Status: Range validation (`AssertInRange` in `Validate()`) is done. The weight is now validated on startup but still never read by any matcher or scorer.
-  - Intent: A score bonus applied when multiple matching signals agree — the "convergence" case where NumToken + String + Classification all point to the same FamilyID.
-  - Fix: Implement the convergence bonus in the matcher waterfall — decide where in the scoring pipeline the bonus applies and which signal combinations qualify as "converging".
-
 ## User decisions required
 
 -------

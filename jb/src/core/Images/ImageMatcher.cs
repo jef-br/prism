@@ -53,15 +53,22 @@ internal sealed class ImageMatcher
         TranslationConfig translationConfig = TranslationConfig.Load(translationConfigPath);
         ExcelConfig       excelConfig       = ExcelConfig.Load(excelConfigPath);
 
+        string? prismConfigPath = PrismConfigLocator.FindPrismConfigPath();
+        if (prismConfigPath is null)
+            throw new PrismConfigurationException("Prism_Config.json not found — cannot load convergence weight.");
+
+        PrismConfiguration prismConfig = PrismConfiguration.LoadPrismConfig(prismConfigPath);
+
         ImageMatcher matcher = new(matchingConfig, translationConfig, excelConfig.RecordPrimaryKey);
-        return matcher.RunWaterfall(records, families);
+        return matcher.RunWaterfall(records, families, prismConfig.Weight_MatchingSignalsConverging);
     }
 
     //  Waterfall 
 
     private int RunWaterfall(
         List<ImageRecord_LAMBDA> allRecords,
-        IReadOnlyList<FamilyIDRecord> families)
+        IReadOnlyList<FamilyIDRecord> families,
+        double convergenceWeight)
     {
         IReadOnlyList<MatchingRule> numericRules = matchingConfig.NumericRules;
         IReadOnlyList<MatchingRule> labelRules   = matchingConfig.LabelRules;
@@ -90,7 +97,7 @@ internal sealed class ImageMatcher
         int koAdded = KoUnmatched(unmatched);
 
         // Bracket 6: finalize clustering (single-pass waterfall means no structural ties)
-        FinalizeMatches(allRecords);
+        FinalizeMatches(allRecords, convergenceWeight);
 
         return koAdded;
     }
@@ -372,14 +379,36 @@ internal sealed class ImageMatcher
     //  Bracket 6: finalize 
 
     /// <summary>
-    /// Finalizes FamilyID clusters. Single-pass waterfall produces no structural ties; this step
-    /// is a hook for T-700 ordering to consume the clustered results.
+    /// Finalizes FamilyID clusters. Applies the convergence bonus to matched records whose
+    /// evidence spans at least two distinct signal types (NumericToken, StringToken, ClassificationLabel).
+    /// T-700 reads record.MatchEvidence.FinalFamilyId to build det-order clusters.
     /// </summary>
-    private static void FinalizeMatches(List<ImageRecord_LAMBDA> allRecords)
+    private static void FinalizeMatches(List<ImageRecord_LAMBDA> allRecords, double convergenceWeight)
     {
-        // No additional action required for T-600.
-        // T-700 reads record.MatchEvidence.FinalFamilyId to build det-order clusters.
-        _ = allRecords;
+        foreach (ImageRecord_LAMBDA record in allRecords)
+        {
+            if (record.IsKo || record.MatchEvidence is null)
+                continue;
+
+            if (!Converges(record.MatchEvidence))
+                continue;
+
+            record.MatchEvidence = record.MatchEvidence with
+            {
+                FinalScore      = Math.Min(1.0, record.MatchEvidence.FinalScore + convergenceWeight),
+                SafeExplanation = record.MatchEvidence.SafeExplanation + $" [convergence bonus +{convergenceWeight:F2}]"
+            };
+        }
+    }
+
+    /// <summary>Returns true when the evidence contains at least two distinct signal types.</summary>
+    private static bool Converges(MatchEvidence me)
+    {
+        int signalCount = 0;
+        if (me.NumericTokenEvidence.Count > 0) signalCount++;
+        if (me.StringTokenEvidence.Count > 0)  signalCount++;
+        if (me.ClassificationLabelEvidence.Count > 0) signalCount++;
+        return signalCount >= 2;
     }
 
     //  Config loading 
