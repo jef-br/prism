@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <Compile Remove="Images\Match\MatchEvidence.cs" />
+    <Compile Remove="Images\Match\MatcherContribution.cs" />
     <Compile Remove="Images\Match\MatchType.cs" />
     <Compile Remove="Images\Order\OrderEvidence.cs" />
   </ItemGroup>

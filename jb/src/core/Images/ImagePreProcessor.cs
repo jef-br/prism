@@ -77,12 +77,26 @@ public static class ImagePreProcessor {
     /// When detection fails or the path is unavailable, the feature is left unchanged.
     /// </summary>
     public static void Preprocess( ImageRecord_LAMBDA lambda, string? imagePath ) {
+
+        ApplyEXIF(imagePath);
+
+
+        string? bbox = DetectSalientBoundingBox(imagePath);
+        if (bbox is not null)
+            lambda.Features.Set("salient-bbox", bbox, 0.85, "opencv-canny");
+    }
+
+    private static void ApplyEXIF(string? imagePath) {
+        
+    }
+
+    private static string? DetectSalientBoundingBox(string? imagePath) {
         if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
-            return;
+            return null;
 
         try {
             using Mat gray8 = Cv2.ImRead(imagePath, ImreadModes.Grayscale);
-            if (gray8.Empty()) return;
+            if (gray8.Empty()) return null;
 
             using Mat img = ScaleDown(gray8);
             int w = img.Cols, h = img.Rows;
@@ -134,23 +148,20 @@ public static class ImagePreProcessor {
 
             // binary = (refined > 0.2) → bounding rect of nonzero pixels
             (int x1, int y1, int x2, int y2)? bbox = FindBbox(refined, w, h, EdgeThreshold);
-            if (bbox is null) return;
+            if (bbox is null) return null;
 
             float bboxArea = (float)(bbox.Value.x2 - bbox.Value.x1) * (bbox.Value.y2 - bbox.Value.y1);
-            if (bboxArea / (w * h) < MinBboxAreaRatio) return;
+            if (bboxArea / (w * h) < MinBboxAreaRatio) return null;
 
-            string value = string.Format(CultureInfo.InvariantCulture, "{0:F4},{1:F4},{2:F4},{3:F4}",
+            return string.Format(CultureInfo.InvariantCulture, "{0:F4},{1:F4},{2:F4},{3:F4}",
                 (float)bbox.Value.x1 / w,
                 (float)bbox.Value.y1 / h,
                 (float)bbox.Value.x2 / w,
                 (float)bbox.Value.y2 / h);
-
-            lambda.Features.Set("salient-bbox", value, 0.85, "opencv-canny");
-        } catch { /* Leave salient-bbox at UNKNOWN on any failure. */ }
+        } catch { return null; }
     }
 
-    //  Helpers 
-
+    //  Helpers for DetectSalientBoundingBox
     private static Mat ScaleDown( Mat src ) {
         int maxDim = Math.Max(src.Cols, src.Rows);
         if (maxDim <= MaxAnalysisSize) return src.Clone();
@@ -161,7 +172,6 @@ public static class ImagePreProcessor {
         Cv2.Resize(src, dst, new Size(nw, nh), interpolation: InterpolationFlags.Area);
         return dst;
     }
-
     private static void ApplySigmoid( Mat src, Mat dst, int w, int h ) {
         int srcStride = (int)src.Step() / sizeof(float);
         int dstStride = (int)dst.Step() / sizeof(float);
@@ -175,7 +185,6 @@ public static class ImagePreProcessor {
             }
         Marshal.Copy(dstData, 0, dst.Data, dstData.Length);
     }
-
     private static (int x1, int y1, int x2, int y2)? FindBbox( Mat img, int w, int h, float threshold ) {
         int stride = (int)img.Step() / sizeof(float);
         float[] data = new float[h * stride];

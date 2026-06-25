@@ -149,11 +149,11 @@ public class PipelineIntegrationTests
 
         Assert.All(result.OkImages, row =>
         {
-            Assert.False(string.IsNullOrWhiteSpace(row.FinalFileName));
-            Assert.Matches(@"_det\d+\.\w+$", row.FinalFileName!);
+            Assert.False(string.IsNullOrWhiteSpace(row.Output?.FinalFileName));
+            Assert.Matches(@"_det\d+\.\w+$", row.Output!.FinalFileName!);
         });
 
-        var finalNames = result.OkImages.Select(r => r.FinalFileName).ToList();
+        var finalNames = result.OkImages.Select(r => r.Output?.FinalFileName).ToList();
         Assert.Equal(finalNames.Count, finalNames.Distinct().Count());
     }
 
@@ -194,7 +194,7 @@ public class PipelineIntegrationTests
 
         foreach (var group in byStem)
         {
-            var families = group.Select(r => r.FamilyId).Distinct().ToList();
+            var families = group.Select(r => r.Output?.Family).Distinct().ToList();
             Assert.Single(families);
             Assert.False(string.IsNullOrWhiteSpace(families[0]));
         }
@@ -234,7 +234,7 @@ public class PipelineIntegrationTests
         Assert.Equal("Completed", result.Status);
         Assert.NotEmpty(result.OkImages);
 
-        int withFamily = result.OkImages.Count(r => !string.IsNullOrWhiteSpace(r.FamilyId));
+        int withFamily = result.OkImages.Count(r => !string.IsNullOrWhiteSpace(r.Output?.Family));
         Assert.True(withFamily > 0,
             $"Expected OK images associated to a FamilyID; got {withFamily} with a FamilyID of {result.OkImages.Count} OK and {result.KoImages.Count} KO.");
 

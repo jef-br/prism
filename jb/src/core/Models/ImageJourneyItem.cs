@@ -9,4 +9,7 @@ public sealed record ImageJourneyItem
     public string SourceReference { get; init; } = string.Empty;
     public ImageLambdaJourney Lambda { get; init; } = new();
     public ImageRecord_OUTPUT? Output { get; init; }
+
+    /// <summary>Machine-readable KO reason code when this image is in the KO bucket; null for OK items.</summary>
+    public string? KoReasonCode { get; init; }
 }

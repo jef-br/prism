@@ -192,7 +192,8 @@ internal static class Exporter
         {
             SourceReference = lambda.InitialFullName,
             Lambda          = new ImageLambdaJourney { Stages = BuildSteps(lambda) },
-            Output          = lambda.IsKo ? null : lambda.OutputRecord
+            Output          = lambda.IsKo ? null : lambda.OutputRecord,
+            KoReasonCode    = lambda.IsKo ? lambda.KoReasonCode : null
         };
     }
 
