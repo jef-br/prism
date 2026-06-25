@@ -1,11 +1,16 @@
+using System.Numerics;
 using System.Text.RegularExpressions;
 
 namespace Prism.Core;
 
 /// <summary>
 /// Matches images to FamilyIDs using numeric token extraction and TCD scoring.
-/// Bracket 1 (single-token, TCD = 0): one filename digit sequence exactly equals a family numeric value.
-/// Bracket 2 (multi-token, TCD ≤ maxDistance): consecutive digit sequences concatenate to a family numeric value.
+/// Bracket 1 (single-token or monotoken, TCD = 0): one filename digit sequence, or all digits of
+///     the filename concatenated into a single monotoken, exactly equals a family numeric value.
+/// Bracket 2 (multi-token, TCD ≤ maxDistance): consecutive digit sequences (in filename order)
+///     concatenate to a family numeric value.
+/// Bracket 2-Permuted (any subset, TCD ≤ maxDistancePermuted): any token subset in any order
+///     concatenates to a family numeric value; used as a fallback when the in-order pass finds nothing.
 /// </summary>
 internal sealed class NumericMatcher
 {
@@ -30,7 +35,8 @@ internal sealed class NumericMatcher
     //  Bracket 1
 
     /// <summary>
-    /// Attempts Bracket 1 matching: a single numeric token in the filename exactly equals a family numeric value.
+    /// Attempts Bracket 1 matching: a single numeric token in the filename, or the monotoken (all digits
+    /// of the filename stem concatenated), exactly equals a family numeric value.
     /// </summary>
     /// <returns>Accepted MatchEvidence when exactly one FamilyID matches; null otherwise.</returns>
     internal MatchEvidence? TryMatchBracket1(
@@ -50,21 +56,27 @@ internal sealed class NumericMatcher
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
-        string filename      = record.InitialFullName ?? string.Empty;
-        string[]   tokens    = GetNumericTokensFromFilename(filename);
-        string     sourceFilename = filename;
-        string     imageId   = Path.GetFileNameWithoutExtension(filename);
+        string   filename      = record.InitialFullName ?? string.Empty;
+        string   stem          = Path.GetFileNameWithoutExtension(filename);
+        string[] tokens        = GetNumericTokensFromFilename(filename);
+        string   fileDigits    = string.Concat(stem.Where(char.IsDigit));
+
+        // Candidate set: individual digit-run tokens + the full monotoken (all digits of stem).
+        // Distinct avoids re-testing when the stem is already a single unbroken digit run.
+        string[] candidates = fileDigits.Length > 0 && !tokens.Contains(fileDigits)
+            ? [..tokens, fileDigits]
+            : tokens;
 
         List<CandidateSummary> allMatches = [];
 
-        foreach (string token in tokens)
+        foreach (string candidate in candidates)
         {
             foreach (FamilyIDRecord family in families)
             {
                 foreach (MatchingRule rule in numericRules)
                 {
                     string? target = GetFamilyDigitsForField(family, rule.ExcelField);
-                    if (target is null || token != target)
+                    if (target is null || candidate != target)
                         continue;
 
                     allMatches.Add(new CandidateSummary(family.FamilyID, 1.0, "NumericMatcher.Bracket1"));
@@ -81,11 +93,13 @@ internal sealed class NumericMatcher
         if (uniqueMatches.Count != 1)
             return (null, uniqueMatches); // 0 = no match; 2+ = tie (caller records ties)
 
-        CandidateSummary winner = uniqueMatches[0];
+        CandidateSummary winner      = uniqueMatches[0];
+        string           matchedToken = FindMatchingToken(candidates, winner.FamilyId, families, numericRules);
+
         MatchEvidence evidence = new MatchEvidence
         {
-            ImageId              = imageId,
-            SourceFilename       = sourceFilename,
+            ImageId              = stem,
+            SourceFilename       = filename,
             FinalFamilyId        = winner.FamilyId,
             FinalScore           = 1.0,
             IsKo                 = false,
@@ -94,14 +108,14 @@ internal sealed class NumericMatcher
             NumericTokenEvidence =
             [
                 new TokenEvidenceItem(
-                    FindMatchingToken(tokens, winner.FamilyId, families, numericRules),
+                    matchedToken,
                     GetFamilyDigitsForField(FindFamily(families, winner.FamilyId)!, numericRules[0].ExcelField) ?? winner.FamilyId,
                     FindMatchedRule(winner.FamilyId, families, numericRules)?.ExcelField ?? string.Empty,
                     winner.FamilyId,
                     1.0)
             ],
-            ImageNgpSummary  = BuildNgpSummary(record),
-            SafeExplanation  = $"Bracket1: single numeric token exactly matched family {winner.FamilyId}."
+            ImageNgpSummary = BuildNgpSummary(record),
+            SafeExplanation = $"Bracket1: token '{matchedToken}' exactly matched family {winner.FamilyId}."
         };
         return (evidence, []);
     }
@@ -110,7 +124,8 @@ internal sealed class NumericMatcher
 
     /// <summary>
     /// Attempts Bracket 2 matching: consecutive numeric tokens concatenated (in filename order) match a family
-    /// numeric value with TCD ≤ maxDistance.
+    /// numeric value with TCD ≤ maxDistance. Falls back to a permuted pass (any token subset, any order,
+    /// TCD ≤ MaxDistancePermuted) when the in-order pass finds nothing.
     /// </summary>
     /// <returns>Accepted MatchEvidence for the best match when exactly one FamilyID qualifies; null otherwise.</returns>
     internal MatchEvidence? TryMatchBracket2(
@@ -130,10 +145,9 @@ internal sealed class NumericMatcher
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
-        string   filename       = record.InitialFullName ?? string.Empty;
-        string[] tokens         = GetNumericTokensFromFilename(filename);
-        string   sourceFilename = filename;
-        string   imageId        = Path.GetFileNameWithoutExtension(filename);
+        string   filename  = record.InitialFullName ?? string.Empty;
+        string   stem      = Path.GetFileNameWithoutExtension(filename);
+        string[] tokens    = GetNumericTokensFromFilename(filename);
 
         if (tokens.Length < 2)
             return (null, []);
@@ -142,6 +156,7 @@ internal sealed class NumericMatcher
         Dictionary<string, (double Tcd, string[] Subset, string PropertyName)> bestPerFamily =
             new(StringComparer.OrdinalIgnoreCase);
 
+        // In-order pass: consecutive subsets in filename order, TCD ≤ MaxDistance
         for (int start = 0; start < tokens.Length; start++)
         {
             for (int length = 2; length <= tokens.Length - start; length++)
@@ -168,28 +183,72 @@ internal sealed class NumericMatcher
             }
         }
 
+        // Permuted fallback: all token subsets (consecutive or not), any order via TCD permutations,
+        // TCD ≤ MaxDistancePermuted. Only runs when in-order pass found nothing.
+        bool fromPermuted = false;
+        if (bestPerFamily.Count == 0 && numericRules.Any(r => r.MaxDistancePermuted > 0))
+        {
+            fromPermuted = true;
+            int fullMask = 1 << tokens.Length;
+            for (int mask = 0; mask < fullMask; mask++)
+            {
+                if (BitOperations.PopCount((uint)mask) < 2)
+                    continue;
+
+                string[] subset = Enumerable.Range(0, tokens.Length)
+                    .Where(i => (mask >> i & 1) != 0)
+                    .Select(i => tokens[i])
+                    .ToArray();
+
+                foreach (FamilyIDRecord family in families)
+                {
+                    foreach (MatchingRule rule in numericRules)
+                    {
+                        if (rule.MaxDistancePermuted <= 0)
+                            continue;
+
+                        string? target = GetFamilyDigitsForField(family, rule.ExcelField);
+                        if (target is null)
+                            continue;
+
+                        double tcd = TokenizedConcatenationDistance.Compute(subset, target);
+                        if (double.IsPositiveInfinity(tcd) || tcd > rule.MaxDistancePermuted)
+                            continue;
+
+                        if (!bestPerFamily.TryGetValue(family.FamilyID, out var existing) || tcd < existing.Tcd)
+                            bestPerFamily[family.FamilyID] = (tcd, subset, rule.ExcelField);
+                    }
+                }
+            }
+        }
+
         if (bestPerFamily.Count == 0)
             return (null, []);
+
+        string matcherName = fromPermuted ? "NumericMatcher.Bracket2-Permuted" : "NumericMatcher.Bracket2";
 
         // Build CandidateSummary list for tie reporting
         List<CandidateSummary> tiedCandidates = bestPerFamily
             .Select(kv => new CandidateSummary(
                 kv.Key,
                 TokenizedConcatenationDistance.ConvertDistanceToConfidence(kv.Value.Tcd) / 100.0,
-                "NumericMatcher.Bracket2"))
+                matcherName))
             .ToList();
 
         if (bestPerFamily.Count > 1)
             return (null, tiedCandidates); // tie — caller records rejected candidates
 
         KeyValuePair<string, (double Tcd, string[] Subset, string PropertyName)> match = bestPerFamily.First();
-        string matcherName = "NumericMatcher.Bracket2";
-        double confidence  = TokenizedConcatenationDistance.ConvertDistanceToConfidence(match.Value.Tcd) / 100.0;
+        double confidence = TokenizedConcatenationDistance.ConvertDistanceToConfidence(match.Value.Tcd) / 100.0;
+
+        string safeExplanation = fromPermuted
+            ? $"Bracket2-Permuted: tokens [{string.Join(", ", match.Value.Subset)}] (permuted) matched family {match.Key} (TCD={match.Value.Tcd:F3})."
+            : $"Bracket2: tokens [{string.Join(", ", match.Value.Subset)}] concatenated to match family {match.Key} (TCD={match.Value.Tcd:F3}).";
 
         MatchEvidence evidence = new MatchEvidence
         {
-            ImageId              = imageId,
-            SourceFilename       = sourceFilename,
+            ImageId              = stem,
+            SourceFilename       = filename,
             FinalFamilyId        = match.Key,
             FinalScore           = confidence,
             IsKo                 = false,
@@ -204,13 +263,13 @@ internal sealed class NumericMatcher
                     match.Key,
                     confidence)
             ],
-            ImageNgpSummary  = BuildNgpSummary(record),
-            SafeExplanation  = $"Bracket2: tokens [{string.Join(", ", match.Value.Subset)}] concatenated to match family {match.Key} (TCD={match.Value.Tcd:F3})."
+            ImageNgpSummary = BuildNgpSummary(record),
+            SafeExplanation = safeExplanation
         };
         return (evidence, []);
     }
 
-    //  Bracket 4 support 
+    //  Bracket 4 support
 
     /// <summary>
     /// Reduces the candidate pool for Bracket 4 semantic matching by eliminating families
@@ -243,7 +302,7 @@ internal sealed class NumericMatcher
         return remaining;
     }
 
-    //  Helpers 
+    //  Helpers
 
     /// <summary>
     /// Extracts all digit sequences from the filename stem, preserving left-to-right order.
@@ -296,7 +355,7 @@ internal sealed class NumericMatcher
         families.FirstOrDefault(f => f.FamilyID.Equals(familyId, StringComparison.OrdinalIgnoreCase));
 
     private string FindMatchingToken(
-        string[] filenameTokens,
+        string[] candidates,
         string familyId,
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
@@ -304,12 +363,12 @@ internal sealed class NumericMatcher
         FamilyIDRecord? family = FindFamily(families, familyId);
         if (family is null) return string.Empty;
 
-        foreach (string token in filenameTokens)
+        foreach (string candidate in candidates)
         {
             foreach (MatchingRule rule in numericRules)
             {
                 string? target = GetFamilyDigitsForField(family, rule.ExcelField);
-                if (target == token) return token;
+                if (target == candidate) return candidate;
             }
         }
 

@@ -8,6 +8,7 @@
       "strategy": "NumericalMatcher",
       "weight": 1,
       "maxDistance": 1.478,
+      "maxDistancePermuted": 4.5,
       "candidates": "3"
     },
     {
@@ -16,6 +17,7 @@
       "strategy": "NumericalMatcher",
       "weight": 1,
       "maxDistance": 1.478,
+      "maxDistancePermuted": 4.5,
       "candidates": "3"
     },
     {
@@ -24,6 +26,7 @@
       "strategy": "NumericalMatcher",
       "weight": 1,
       "maxDistance": 1.478,
+      "maxDistancePermuted": 4.5,
       "candidates": "3"
     },
     {
@@ -32,6 +35,7 @@
       "strategy": "NumericalMatcher",
       "weight": 1,
       "maxDistance": 1.478,
+      "maxDistancePermuted": 4.5,
       "candidates": "3"
     },
     {

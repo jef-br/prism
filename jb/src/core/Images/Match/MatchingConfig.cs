@@ -72,9 +72,15 @@ public sealed record MatchingRule
     public double Weight { get; init; } = 1.0;
 
     /// <summary>
-    /// Maximum allowable TCD (Tokenized Concatenation Distance) for numeric bracket 2.
+    /// Maximum allowable TCD (Tokenized Concatenation Distance) for Bracket 2 in-order matching.
     /// </summary>
     public double MaxDistance { get; init; } = 1.0;
+
+    /// <summary>
+    /// Maximum TCD for Bracket 2 permuted (any token subset, any order) matching.
+    /// When 0 (default), permuted matching is disabled for this rule.
+    /// </summary>
+    public double MaxDistancePermuted { get; init; } = 0.0;
 
     /// <summary>Maximum number of candidates retained per image.</summary>
     public string Candidates { get; init; } = "3";

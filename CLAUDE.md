@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 On the first prompt of every session, read these files before doing anything else:
 1. `AGENT-TICKETS.md` — best record of current project/solution work
 2. `jb/docs/PRISM-index.md` — source of truth; maps tasks to documentation files
+3. `AGENTFEEDBACK.md` — static reload memory: project constraints, config locations, behavioral gotchas. Not a ticket board.
 
 ## Commands
 
