@@ -11,9 +11,5 @@ Refine the web workbench layout:
 
 -----
 
-
-Getting this error in the http server when doing a test on any folder:
-```cmd
-2026-06-25 21:20:44.5942636 [W:onnxruntime:, session_state.cc:1327 onnxruntime::VerifyEachNodeIsAssignedToAnEp] Some nodes were not assigned to the preferred execution providers which may or may not have an negative impact on performance. e.g. ORT explicitly assigns shape related ops to CPU to improve perf.
-2026-06-25 21:20:44.6063421 [W:onnxruntime:, session_state.cc:1329 onnxruntime::VerifyEachNodeIsAssignedToAnEp] Rerunning with verbose output on a non-minimal build will show node assignments.
-```
+Optimize the pipelining architecture so that Import and Match are fused togther to remove double image I/O.
+Keep in mind that we want to try and keep the matchingservice open to the public as well.
