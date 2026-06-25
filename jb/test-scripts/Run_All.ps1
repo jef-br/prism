@@ -2,7 +2,7 @@ param([string]$BaseUrl = "http://localhost:5000", [int]$TimeoutMinutes = 30)
 $ErrorActionPreference = "Stop"
 Import-Module "$PSScriptRoot/PrismJobRunner.psm1" -Force
 $repoRoot = (Resolve-Path "$PSScriptRoot/../..").Path
-$logPath = "$PSScriptRoot/testlogs.txt"
+$logPath = "$repoRoot/matching-testlogs.txt"
 
 # Smallest-first so a config break surfaces before the multi-minute large batches.
 $folders = @(

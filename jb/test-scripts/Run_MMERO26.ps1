@@ -3,4 +3,4 @@ $ErrorActionPreference = "Stop"
 Import-Module "$PSScriptRoot/PrismJobRunner.psm1" -Force
 $repoRoot = (Resolve-Path "$PSScriptRoot/../..").Path
 Ensure-PrismApi -BaseUrl $BaseUrl -RepoRoot $repoRoot
-Invoke-PrismFolderJob -Folder "$repoRoot/jb/Testing/MMERO26" -BaseUrl $BaseUrl -LogPath "$PSScriptRoot/testlogs.txt" -TimeoutMinutes $TimeoutMinutes
+Invoke-PrismFolderJob -Folder "$repoRoot/jb/Testing/MMERO26" -BaseUrl $BaseUrl -LogPath "$repoRoot/matching-testlogs.txt" -TimeoutMinutes $TimeoutMinutes

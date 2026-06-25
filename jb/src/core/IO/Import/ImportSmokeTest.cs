@@ -14,7 +14,7 @@ public static class ImportSmokeTest
     /// </summary>
     /// <param name="imageFolder">
     /// Absolute path to a folder containing image files.
-    /// Example: <c>jb/Testing/SPACINI29/TINY/</c>
+    /// Example: <c>jb/testing/SmallTest/</c>
     /// </param>
     /// <param name="excelFilePath">
     /// Absolute path to an Excel workbook.
