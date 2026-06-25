@@ -47,14 +47,14 @@ public sealed record PrismJobResult
     public byte[]? ZipBytes { get; init; }
 
     /// <summary>
-    /// OK image rows for JSON envelope consumption (<c>images.ok[]</c>).
-    /// Sourced from <see cref="BatchManifest.ImageRows"/> filtered to Status == "Ok".
+    /// Per-image journey items for JSON envelope consumption (<c>images.ok[]</c>).
+    /// Built by <see cref="Exporter"/> from the fully-enriched LAMBDA records.
     /// </summary>
-    public IReadOnlyList<ManifestImageRow> OkImages { get; init; } = [];
+    public IReadOnlyList<ImageJourneyItem> OkImages { get; init; } = [];
 
     /// <summary>
-    /// KO image rows for JSON envelope consumption (<c>images.ko[]</c>).
-    /// Sourced from <see cref="BatchManifest.ImageRows"/> filtered to Status == "Ko".
+    /// Per-image journey items for JSON envelope consumption (<c>images.ko[]</c>).
+    /// Built by <see cref="Exporter"/> from the fully-enriched LAMBDA records.
     /// </summary>
-    public IReadOnlyList<ManifestImageRow> KoImages { get; init; } = [];
+    public IReadOnlyList<ImageJourneyItem> KoImages { get; init; } = [];
 }

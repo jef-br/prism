@@ -62,7 +62,7 @@ internal static class Exporter
         }
     }
 
-    //  ZIP export 
+    //  ZIP export
 
     /// <summary>
     /// Builds a ZIP archive containing manifest.json, OK images, KO images, and the first Excel file.
@@ -70,6 +70,7 @@ internal static class Exporter
     private static ExportArtifacts BuildZip(ExportRequest request)
     {
         BatchManifest manifest = BuildManifest(request);
+        IReadOnlyList<ImageJourneyItem> journeyItems = BuildJourneyItems(request);
         MemoryStream ms = new();
 
         using (ZipArchive zip = new(ms, ZipArchiveMode.Create, leaveOpen: true))
@@ -105,17 +106,17 @@ internal static class Exporter
                 AddBytesEntry(zip, Path.GetFileName(request.FirstExcelTempPath), File.ReadAllBytes(request.FirstExcelTempPath));
         }
 
-        return new ExportArtifacts { ZipBytes = ms.ToArray(), Manifest = manifest };
+        return new ExportArtifacts { Manifest = manifest, ZipBytes = ms.ToArray(), JourneyItems = journeyItems };
     }
 
-    //  JSON export 
+    //  JSON export
 
     /// <summary>
     /// Builds the manifest for JSON output. ZIP bytes remain null; the API serializes the result via PrismJsonResultEnvelope.
     /// </summary>
     private static ExportArtifacts BuildJson(ExportRequest request)
     {
-        return new ExportArtifacts { ZipBytes = null, Manifest = BuildManifest(request) };
+        return new ExportArtifacts { Manifest = BuildManifest(request), ZipBytes = null, JourneyItems = BuildJourneyItems(request) };
     }
 
     //  Manifest builder 
@@ -169,7 +170,80 @@ internal static class Exporter
         };
     }
 
-    //  ZIP helpers 
+    //  Journey items builder
+
+    /// <summary>
+    /// Projects all LAMBDA records into the bounded per-image journey items for the JSON result envelope.
+    /// </summary>
+    private static IReadOnlyList<ImageJourneyItem> BuildJourneyItems(ExportRequest request)
+    {
+        return request.LambdaRecords
+            .Select(ToImageJourneyItem)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Projects one <see cref="ImageRecord_LAMBDA"/> into an <see cref="ImageJourneyItem"/>.
+    /// Stages are emitted in pipeline order; each carries its name, status, and optional safe message.
+    /// </summary>
+    private static ImageJourneyItem ToImageJourneyItem(ImageRecord_LAMBDA lambda)
+    {
+        return new ImageJourneyItem
+        {
+            SourceReference = lambda.InitialFullName,
+            Lambda          = new ImageLambdaJourney { Stages = BuildSteps(lambda) },
+            Output          = lambda.IsKo ? null : lambda.OutputRecord
+        };
+    }
+
+    private static IReadOnlyList<ImageStageStep> BuildSteps(ImageRecord_LAMBDA lambda)
+    {
+        return
+        [
+            BuildImportStep(),
+            BuildClassifyStep(),
+            BuildMatchStep(lambda),
+            BuildTransformStep(lambda)
+        ];
+    }
+
+    private static ImageStageStep BuildImportStep()
+    {
+        return new ImageStageStep { StageName = PipelineStageNames.Imported, Status = "Ok" };
+    }
+
+    private static ImageStageStep BuildClassifyStep()
+    {
+        return new ImageStageStep { StageName = PipelineStageNames.Classified, Status = "Ok" };
+    }
+
+    private static ImageStageStep BuildMatchStep(ImageRecord_LAMBDA lambda)
+    {
+        bool koAtMatch = lambda.IsKo && lambda.KoReasonCode?.StartsWith("MATCH", StringComparison.Ordinal) == true;
+        string status  = lambda.MatchEvidence is null ? "Skipped" : (koAtMatch ? "Ko" : "Ok");
+
+        return new ImageStageStep
+        {
+            StageName   = PipelineStageNames.Matched,
+            Status      = status,
+            SafeMessage = koAtMatch ? lambda.KoSafeMessage : null
+        };
+    }
+
+    private static ImageStageStep BuildTransformStep(ImageRecord_LAMBDA lambda)
+    {
+        string status      = lambda.TransformationResult?.Status.ToString() ?? (lambda.IsKo ? "Skipped" : "Ok");
+        bool koAtTransform = status == "Ko";
+
+        return new ImageStageStep
+        {
+            StageName   = PipelineStageNames.Transformed,
+            Status      = status,
+            SafeMessage = koAtTransform ? lambda.KoSafeMessage : null
+        };
+    }
+
+    //  ZIP helpers
 
     private static void AddTextEntry(ZipArchive zip, string entryName, string content)
     {

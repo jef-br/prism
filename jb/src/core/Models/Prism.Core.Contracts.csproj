@@ -5,6 +5,9 @@
 
   <ItemGroup>
     <Compile Include="GenerationRouteState.cs" />
+    <Compile Include="ImageJourneyItem.cs" />
+    <Compile Include="ImageLambdaJourney.cs" />
+    <Compile Include="ImageStageStep.cs" />
     <Compile Include="ImageRecord_Base.cs" />
     <Compile Include="ImageRecord_GENERATED.cs" />
     <Compile Include="ImageRecord_INPUT.cs" />

@@ -222,7 +222,6 @@ public sealed class PrismService
     private static PrismJobResult BuildSuccessResult(PrismJobRequest request, ExportArtifacts manifestAndZip)
     {
         BatchManifest manifest = manifestAndZip.Manifest;
-        IReadOnlyList<ManifestImageRow> rows = manifest.ImageRows;
 
         return new PrismJobResult
         {
@@ -234,8 +233,8 @@ public sealed class PrismService
             Warnings           = manifest.Warnings,
             Manifest           = manifest,
             ZipBytes           = manifestAndZip.ZipBytes,
-            OkImages           = rows.Where(r => r.Status == "Ok").ToList(),
-            KoImages           = rows.Where(r => r.Status == "Ko").ToList()
+            OkImages           = manifestAndZip.JourneyItems.Where(j => j.Output is not null).ToList(),
+            KoImages           = manifestAndZip.JourneyItems.Where(j => j.Output is null).ToList()
         };
     }
 

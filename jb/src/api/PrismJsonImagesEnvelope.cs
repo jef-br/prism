@@ -6,6 +6,6 @@ namespace Prism.Api;
 /// </summary>
 internal sealed record PrismJsonImagesEnvelope
 {
-    public IReadOnlyList<ManifestImageRow> Ok { get; init; } = [];
-    public IReadOnlyList<ManifestImageRow> Ko { get; init; } = [];
+    public IReadOnlyList<ImageJourneyItem> Ok { get; init; } = [];
+    public IReadOnlyList<ImageJourneyItem> Ko { get; init; } = [];
 }

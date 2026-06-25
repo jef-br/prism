@@ -12,4 +12,7 @@ public sealed record ExportArtifacts
 
     /// <summary>ZIP archive bytes when output format is "zip"; null for JSON output.</summary>
     public byte[]? ZipBytes { get; init; }
+
+    /// <summary>Per-image journey items for the JSON result envelope images.ok[]/images.ko[] fields.</summary>
+    public IReadOnlyList<ImageJourneyItem> JourneyItems { get; init; } = [];
 }

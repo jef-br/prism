@@ -171,3 +171,9 @@ Returns: accepted media types, max file size, max request size, max image count,
 ## URL Validation (Pre-Pipeline)
 
 See full rules and HCFG shape in `PRISM-io-import.md`.
+
+---
+
+## Decision Log
+
+**SD-13 (resolved):** `images.ok[]/ko[]` now use `ImageJourneyItem { sourceReference, lambda (bounded stage journey), output }` instead of the flat `ManifestImageRow` projection. Implemented via `ToImageJourneyItem()` in `Exporter.cs`; journey items are carried through `ExportArtifacts.JourneyItems` to `PrismJobResult.OkImages`/`KoImages` and surfaced in `PrismJsonImagesEnvelope`.
