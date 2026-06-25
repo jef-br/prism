@@ -36,20 +36,34 @@ public sealed class MatchingService : IMatchingService
         IFeatureAnalysisService featureAnalysis  = new FeatureAnalysisService();
         using IClassificationService classification = ClassificationService.Create(configuration);
 
-        List<ImageRecord_LAMBDA> lambdaRecords = [];
-        Dictionary<ImageRecord_INPUT, ImageRecord_LAMBDA> lambdaByImage = new();
-        var hashEntries = new List<(ImageRecord_INPUT Record, ulong Hash)>(okImages.Count);
+        // Pre-allocate a fixed results array — each thread writes to its own index, no synchronisation needed.
+        var results = new (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, ulong Hash)[okImages.Count];
         int classifyKo        = 0;
         int classifyDegraded  = 0;
         int phenotypeAssigned = 0;
 
-        foreach (ImageRecord_INPUT image in okImages)
+        Parallel.For(0, okImages.Count,
+            new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8) },
+            i =>
+            {
+                var (lambda, hash, wasKo, wasDegraded, wasPhenotype) = BuildLambda(
+                    okImages[i], featureAnalysis, classification, ngp, ingest.Parameters.SkipClassification);
+                results[i] = (lambda, okImages[i], hash);
+                if (wasKo)        Interlocked.Increment(ref classifyKo);
+                if (wasDegraded)  Interlocked.Increment(ref classifyDegraded);
+                if (wasPhenotype) Interlocked.Increment(ref phenotypeAssigned);
+            });
+
+        // Aggregate into ordered collections (single-threaded; preserves input order for deterministic matching).
+        List<ImageRecord_LAMBDA> lambdaRecords = new(okImages.Count);
+        Dictionary<ImageRecord_INPUT, ImageRecord_LAMBDA> lambdaByImage = new(okImages.Count);
+        var hashEntries = new List<(ImageRecord_INPUT Record, ulong Hash)>(okImages.Count);
+
+        foreach (var (lambda, source, hash) in results)
         {
-            ImageRecord_LAMBDA lambda = BuildLambda(image, featureAnalysis, classification, ngp,
-                hashEntries, ref classifyKo, ref classifyDegraded, ref phenotypeAssigned,
-                ingest.Parameters.SkipClassification);
-            lambdaByImage[image] = lambda;
             lambdaRecords.Add(lambda);
+            lambdaByImage[source] = lambda;
+            hashEntries.Add((source, hash));
         }
 
         int duplicatesRemoved = configuration.ShouldDeduplicate
@@ -99,16 +113,14 @@ public sealed class MatchingService : IMatchingService
     /// FeatureAnalysis, CLIP tagging, and perceptual-hash computation (one disk read for all three).
     /// FeatureAnalysis is the core measurement — a failure there KOs the image.
     /// CLIP tagging is optional enrichment — a failure there degrades the image to "no tags", never KO.
+    /// Returns the lambda plus per-image counters so the caller can aggregate with Interlocked — no shared
+    /// mutable state, safe to call from Parallel.For.
     /// </summary>
-    private ImageRecord_LAMBDA BuildLambda(
+    private (ImageRecord_LAMBDA Lambda, ulong Hash, bool WasKo, bool WasDegraded, bool WasPhenotypeAssigned) BuildLambda(
         ImageRecord_INPUT source,
         IFeatureAnalysisService featureAnalysis,
         IClassificationService classification,
         IImageNgpService ngp,
-        List<(ImageRecord_INPUT Record, ulong Hash)> hashEntries,
-        ref int classifyKo,
-        ref int classifyDegraded,
-        ref int phenotypeAssigned,
         bool skipClassification = false)
     {
         ImageRecord_LAMBDA lambda = new()
@@ -118,74 +130,69 @@ public sealed class MatchingService : IMatchingService
             Height = source.NormalizedHeight > 0 ? source.NormalizedHeight : source.Height
         };
 
-        if (source.NormalizedJpgPath is not null)
+        if (source.NormalizedJpgPath is null)
+            return (lambda, 0UL, false, false, false);
+
+        Image<Rgba32> image;
+        try
         {
-            Image<Rgba32> image;
+            image = Image.Load<Rgba32>(source.NormalizedJpgPath);
+        }
+        catch (Exception ex)
+        {
+            lambda.IsKo          = true;
+            lambda.KoReasonCode  = "CLASSIFY_ERROR";
+            lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
+            return (lambda, 0UL, true, false, false);
+        }
+
+        bool wasDegraded = false;
+
+        using (image)
+        {
+            // Hash computed here — same load shared with feature analysis and CLIP below.
+            ulong hash = 0UL;
+            try { hash = VisualHasher.ComputeHash(image); } catch { }
+
+            // FeatureAnalysis failure → KO: the geometric/visual measurement feeds ImageNGP and ordering.
             try
             {
-                image = Image.Load<Rgba32>(source.NormalizedJpgPath);
+                featureAnalysis.Analyze(image, lambda.Features);
             }
             catch (Exception ex)
             {
-                hashEntries.Add((source, 0UL));
                 lambda.IsKo          = true;
                 lambda.KoReasonCode  = "CLASSIFY_ERROR";
                 lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
-                classifyKo++;
-                return lambda;
+                return (lambda, hash, true, false, false);
             }
 
-            using (image)
+            // CLIP failure → degrade, never KO: tags are optional enrichment, and FamilyID matching keys
+            // off filename tokens, so the image must still flow to ImageNGP and the matching waterfall.
+            // InferenceSession.Run is not safe for concurrent calls in the versions/providers used here.
+            if (classification.IsReady && !skipClassification)
             {
-                // Hash computed here — same load shared with feature analysis and CLIP below.
-                ulong hash = 0UL;
-                try { hash = VisualHasher.ComputeHash(image); } catch { }
-                hashEntries.Add((source, hash));
-
-                // FeatureAnalysis failure → KO: the geometric/visual measurement feeds ImageNGP and ordering.
                 try
                 {
-                    featureAnalysis.Analyze(image, lambda.Features);
-                }
-                catch (Exception ex)
-                {
-                    lambda.IsKo          = true;
-                    lambda.KoReasonCode  = "CLASSIFY_ERROR";
-                    lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
-                    classifyKo++;
-                    return lambda;
-                }
-
-                // CLIP failure → degrade, never KO: tags are optional enrichment, and FamilyID matching keys
-                // off filename tokens, so the image must still flow to ImageNGP and the matching waterfall.
-                if (classification.IsReady && !skipClassification)
-                {
-                    try
+                    lock (classification)
                     {
                         classification.ApplyClipTags(image, lambda,
                             configuration.ThresholdForInfluentialTags,
                             configuration.ThresholdForDiscardingClassificationTags);
                     }
-                    catch
-                    {
-                        classifyDegraded++;
-                    }
+                }
+                catch
+                {
+                    wasDegraded = true;
                 }
             }
+
+            string[] candidates = ngp.EvaluateCandidates(lambda.Features);
+            lambda.CandidatePhenotypes = candidates;
+            lambda.SelectedPhenotype   = candidates.Length > 0 ? candidates[0] : null;
+
+            return (lambda, hash, false, wasDegraded, lambda.SelectedPhenotype is not null);
         }
-        else
-        {
-            hashEntries.Add((source, 0UL));
-        }
-
-        string[] candidates = ngp.EvaluateCandidates(lambda.Features);
-        lambda.CandidatePhenotypes = candidates;
-        lambda.SelectedPhenotype   = candidates.Length > 0 ? candidates[0] : null;
-
-        if (lambda.SelectedPhenotype is not null)
-            phenotypeAssigned++;
-
-        return lambda;
     }
 
     //  Post-classification visual deduplication
