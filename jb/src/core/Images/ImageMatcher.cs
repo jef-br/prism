@@ -75,7 +75,7 @@ internal sealed class ImageMatcher
         unmatched = RunBracket2(unmatched, families, numericRules);
 
         // Bracket 3: string tokens, exactly-1-FamilyID
-        unmatched = RunBracket3(unmatched, families);
+        unmatched = RunBracket3(unmatched, allRecords, families);
 
         // Bracket 4: semantic combined (CLIP + numeric + string) for 0-image families
         unmatched = RunBracket4(unmatched, allRecords, families, numericRules, labelRules);
@@ -146,9 +146,13 @@ internal sealed class ImageMatcher
 
     /// <summary>
     /// Runs StringMatcher exactly-1-FamilyID bracket. Returns images not yet matched.
+    /// Rejects an otherwise-valid string match when the target FamilyID already has a
+    /// non-KO record with the same SelectedPhenotype (PRISM-match.md: no duplicate image type
+    /// per family from Bracket 3).
     /// </summary>
     private List<ImageRecord_LAMBDA> RunBracket3(
         List<ImageRecord_LAMBDA> candidates,
+        List<ImageRecord_LAMBDA> allRecords,
         IReadOnlyList<FamilyIDRecord> families)
     {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
@@ -157,6 +161,10 @@ internal sealed class ImageMatcher
         {
             MatchEvidence? evidence = stringMatcher.TryMatch(record, families);
 
+            if (evidence is not null && HasDuplicatePhenotypeInFamily(
+                    evidence.FinalFamilyId, record.SelectedPhenotype, record, allRecords))
+                evidence = null;
+
             if (evidence is not null)
                 record.MatchEvidence = evidence;
             else
@@ -164,6 +172,27 @@ internal sealed class ImageMatcher
         }
 
         return stillUnmatched;
+    }
+
+    /// <summary>
+    /// Returns true when <paramref name="familyId"/> already has a non-KO matched record (other
+    /// than <paramref name="self"/>) with the same non-null <paramref name="phenotype"/>.
+    /// </summary>
+    private static bool HasDuplicatePhenotypeInFamily(
+        string? familyId,
+        string? phenotype,
+        ImageRecord_LAMBDA self,
+        List<ImageRecord_LAMBDA> allRecords)
+    {
+        if (familyId is null || phenotype is null)
+            return false;
+
+        return allRecords.Any(r =>
+            !ReferenceEquals(r, self)
+            && !r.IsKo
+            && r.MatchEvidence?.FinalFamilyId is not null
+            && string.Equals(r.MatchEvidence.FinalFamilyId, familyId, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(r.SelectedPhenotype, phenotype, StringComparison.OrdinalIgnoreCase));
     }
 
     //  Bracket 4: semantic combined 

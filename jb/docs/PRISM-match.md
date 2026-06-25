@@ -135,3 +135,11 @@ See `PRISM-models.md` for full field list. Summary:
 - Numeric token, string token, classification-label evidence
 - Relevant INGP summary; matcher names, scores, confidences, weights
 - Optional diagnostic snapshot refs for heavy/verbose evidence
+
+---
+
+## Ticket Close-Out Notes
+
+**Ticket 3 — Bracket 3 duplicate-phenotype guard:** Bracket 3 duplicate-phenotype guard is implemented in `ImageMatcher.RunBracket3` via `HasDuplicatePhenotypeInFamily`. Rejects a string match when the target FamilyID already has a non-KO matched record with the same non-null SelectedPhenotype.
+
+**Ticket 4 — Pre-normalization token text:** Pre-normalization token text is preserved via `FilenameToken(string Original, string Normalized)` struct in StringMatcher. Evidence records carry `imageToken.Original` (the raw filename text before diacritics/case normalization) alongside the matched family token.
