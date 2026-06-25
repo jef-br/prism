@@ -43,6 +43,7 @@ public sealed class PrismConfiguration {
     public double Weight_MatchingSignalsConverging { get; private set; }
 
     // --- Pixel & Scaling limits
+    public int MinInputSizeInPixels { get; private set; }
     public int MinOutputWidth { get; private set; }
     public int MinOutputHeight { get; private set; }
     public int MaxOutputWidth { get; private set; }
@@ -140,6 +141,7 @@ public sealed class PrismConfiguration {
             Weight_SemanticRelevance = RequireDouble(root, cfgPath, "Classification", "Weights", "SemanticalRelevanceWeight"),
             Weight_MatchingSignalsConverging = RequireDouble(root, cfgPath, "Classification", "Weights", "CONVERGENCE_WEIGHT"),
 
+            MinInputSizeInPixels = RequireInt32(root, cfgPath, "Input", "Images", "MINIMUM_SIZE_IN_PIXELS", "width"),
             MinOutputWidth = RequireInt32(root, cfgPath, "Output", "Images", "Processed", "MINIMUM_SIZE_IN_PIXELS", "width"),
             MinOutputHeight = RequireInt32(root, cfgPath, "Output", "Images", "Processed", "MINIMUM_SIZE_IN_PIXELS", "height"),
             MaxOutputWidth = RequireInt32(root, cfgPath, "Output", "Images", "Processed", "MAXIMUM_SIZE_IN_PIXELS", "width"),
@@ -195,6 +197,7 @@ public sealed class PrismConfiguration {
         AssertInRange(Weight_SemanticRelevance, 0.0, 1.0, cfgPath, "Classification.Weights.SemanticalRelevanceWeight");
         AssertInRange(Weight_MatchingSignalsConverging, 0.0, 1.0, cfgPath, "Classification.Weights.CONVERGENCE_WEIGHT");
 
+        AssertPositive(MinInputSizeInPixels, cfgPath, "Input.Images.MINIMUM_SIZE_IN_PIXELS");
         AssertPositive(MinOutputWidth, cfgPath, "Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS.width");
         AssertPositive(MinOutputHeight, cfgPath, "Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS.height");
         AssertPositive(MaxOutputWidth, cfgPath, "Output.Images.Processed.MAXIMUM_SIZE_IN_PIXELS.width");

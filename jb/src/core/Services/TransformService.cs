@@ -33,15 +33,32 @@ public sealed class TransformService : ITransformService
             return new TransformResult { Matched = matched, OkTransformedCount = 0 };
         }
 
-        Dictionary<string, string?> pathByName = matched.Ingest.NormalizedImages
-            .ToDictionary(r => r.InitialFullName, r => r.NormalizedJpgPath, StringComparer.OrdinalIgnoreCase);
+        string? prismConfigPath = PrismConfigLocator.FindPrismConfigPath();
+        if (prismConfigPath is null)
+            throw new PrismConfigurationException("Prism_Config.json not found — cannot run preprocessor.");
+
+        PrismConfiguration prismConfig = PrismConfiguration.LoadPrismConfig(prismConfigPath);
+
+        Dictionary<string, ImageRecord_INPUT> inputByName = matched.Ingest.NormalizedImages
+            .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
 
         int okTransformed = 0;
         foreach (ImageRecord_LAMBDA lambda in matched.LambdaRecords)
         {
             if (lambda.IsKo) continue;
-            pathByName.TryGetValue(lambda.InitialFullName, out string? imgPath);
-            ImagePreProcessor.Preprocess(lambda, imgPath);
+
+            inputByName.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input);
+            byte[]? preprocessed = ImagePreProcessor.Preprocess(lambda, input?.NormalizedJpgPath, prismConfig);
+
+            if (lambda.IsKo) continue;
+
+            if (preprocessed is not null && input is not null)
+            {
+                string preprocessedPath = Path.Combine(Path.GetTempPath(), $"PRISM-PRE-{Guid.NewGuid():N}.jpg");
+                File.WriteAllBytes(preprocessedPath, preprocessed);
+                input.NormalizedJpgPath = preprocessedPath;
+            }
+
             ImageTransformer.TransformImage(lambda);
             okTransformed++;
         }

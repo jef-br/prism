@@ -219,6 +219,10 @@ public class PipelineIntegrationTests
         Assert.Equal("Completed", result.Status);
         Assert.NotNull(result.ZipBytes);
         Assert.True(result.ZipBytes!.Length > 0);
+
+        string desktopPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "PRISM-tiny-test.zip");
+        File.WriteAllBytes(desktopPath, result.ZipBytes!);
     }
 
     /// <summary>
