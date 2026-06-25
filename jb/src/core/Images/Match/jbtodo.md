@@ -8,16 +8,6 @@
 
 
 -------
-- [ ] MatchEvidence is missing three fields required by PRISM-models.md.
-  - File: `jb/src/core/Images/Match/MatchEvidence.cs`.
-  - Spec says: PRISM-models.md defines three fields that must appear on every MatchEvidence record: (1) `ThresholdStatus` — whether `FinalScore` exceeded the configured match threshold; (2) `RejectedNearTieEvidence` — bounded list of near-tie candidates from Brackets 1–2 that were passed over; (3) per-matcher weights and confidence scores for each matcher that contributed evidence, not just `AcceptedMatcherName`.
-  
-- Current behavior: `ThresholdStatus` is absent. `RejectedNearTieEvidence` is absent. The only matcher attribution stored is `AcceptedMatcherName` (a single string).
-  - Why it deviates: The three fields were identified as required after the initial MatchEvidence record was designed and populated. No ticket was created to add them.
-
-  - Fix: Add the three fields to `MatchEvidence`. Populate `ThresholdStatus` in the waterfall after the score is computed. Populate `RejectedNearTieEvidence` at the pass-through points in `RunBracket1` and `RunBracket2`. Add a `MatcherWeights` collection to replace the single-string `AcceptedMatcherName`.
-
--------
 - [ ] `Weight_MatchingSignalsConverging` convergence bonus not yet consumed.
   - Files: `jb/src/core/PrismConfiguration.cs`, `jb/src/core/Prism_Config.json` (value 0.25).
   - Status: Range validation (`AssertInRange` in `Validate()`) is done. The weight is now validated on startup but still never read by any matcher or scorer.

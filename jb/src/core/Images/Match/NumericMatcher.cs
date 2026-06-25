@@ -27,13 +27,25 @@ internal sealed class NumericMatcher
         this.familyIdColumnName = familyIdColumnName;
     }
 
-    //  Bracket 1 
+    //  Bracket 1
 
     /// <summary>
     /// Attempts Bracket 1 matching: a single numeric token in the filename exactly equals a family numeric value.
     /// </summary>
     /// <returns>Accepted MatchEvidence when exactly one FamilyID matches; null otherwise.</returns>
     internal MatchEvidence? TryMatchBracket1(
+        ImageRecord_LAMBDA record,
+        IReadOnlyList<FamilyIDRecord> families,
+        IReadOnlyList<MatchingRule> numericRules) =>
+        TryMatchBracket1WithTies(record, families, numericRules).Evidence;
+
+    /// <summary>
+    /// Attempts Bracket 1 matching, returning both the evidence and any tied candidates for rejection tracking.
+    /// </summary>
+    /// <returns>
+    /// Evidence when exactly one FamilyID matches (null on tie or no match); all unique candidates when a tie occurs.
+    /// </returns>
+    internal (MatchEvidence? Evidence, List<CandidateSummary> TiedCandidates) TryMatchBracket1WithTies(
         ImageRecord_LAMBDA record,
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
@@ -66,17 +78,11 @@ internal sealed class NumericMatcher
             .Select(g => g.First())
             .ToList();
 
-        if (uniqueMatches.Count == 0)
-            return null;
-
-        if (uniqueMatches.Count > 1)
-        {
-            // Tie within Bracket 1 — pass through to Bracket 2/3
-            return null;
-        }
+        if (uniqueMatches.Count != 1)
+            return (null, uniqueMatches); // 0 = no match; 2+ = tie (caller records ties)
 
         CandidateSummary winner = uniqueMatches[0];
-        return new MatchEvidence
+        MatchEvidence evidence = new MatchEvidence
         {
             ImageId              = imageId,
             SourceFilename       = sourceFilename,
@@ -97,9 +103,10 @@ internal sealed class NumericMatcher
             ImageNgpSummary  = BuildNgpSummary(record),
             SafeExplanation  = $"Bracket1: single numeric token exactly matched family {winner.FamilyId}."
         };
+        return (evidence, []);
     }
 
-    //  Bracket 2 
+    //  Bracket 2
 
     /// <summary>
     /// Attempts Bracket 2 matching: consecutive numeric tokens concatenated (in filename order) match a family
@@ -109,15 +116,27 @@ internal sealed class NumericMatcher
     internal MatchEvidence? TryMatchBracket2(
         ImageRecord_LAMBDA record,
         IReadOnlyList<FamilyIDRecord> families,
+        IReadOnlyList<MatchingRule> numericRules) =>
+        TryMatchBracket2WithTies(record, families, numericRules).Evidence;
+
+    /// <summary>
+    /// Attempts Bracket 2 matching, returning both the evidence and any tied candidates for rejection tracking.
+    /// </summary>
+    /// <returns>
+    /// Evidence when exactly one FamilyID qualifies (null on tie or no match); all tied candidates when a tie occurs.
+    /// </returns>
+    internal (MatchEvidence? Evidence, List<CandidateSummary> TiedCandidates) TryMatchBracket2WithTies(
+        ImageRecord_LAMBDA record,
+        IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
-        string   filename      = record.InitialFullName ?? string.Empty;
-        string[] tokens        = GetNumericTokensFromFilename(filename);
+        string   filename       = record.InitialFullName ?? string.Empty;
+        string[] tokens         = GetNumericTokensFromFilename(filename);
         string   sourceFilename = filename;
-        string   imageId       = Path.GetFileNameWithoutExtension(filename);
+        string   imageId        = Path.GetFileNameWithoutExtension(filename);
 
         if (tokens.Length < 2)
-            return null;
+            return (null, []);
 
         // Collect best TCD per FamilyID
         Dictionary<string, (double Tcd, string[] Subset, string PropertyName)> bestPerFamily =
@@ -150,19 +169,24 @@ internal sealed class NumericMatcher
         }
 
         if (bestPerFamily.Count == 0)
-            return null;
+            return (null, []);
+
+        // Build CandidateSummary list for tie reporting
+        List<CandidateSummary> tiedCandidates = bestPerFamily
+            .Select(kv => new CandidateSummary(
+                kv.Key,
+                TokenizedConcatenationDistance.ConvertDistanceToConfidence(kv.Value.Tcd) / 100.0,
+                "NumericMatcher.Bracket2"))
+            .ToList();
 
         if (bestPerFamily.Count > 1)
-        {
-            // Tie — pass through to Bracket 3
-            return null;
-        }
+            return (null, tiedCandidates); // tie — caller records rejected candidates
 
         KeyValuePair<string, (double Tcd, string[] Subset, string PropertyName)> match = bestPerFamily.First();
         string matcherName = "NumericMatcher.Bracket2";
         double confidence  = TokenizedConcatenationDistance.ConvertDistanceToConfidence(match.Value.Tcd) / 100.0;
 
-        return new MatchEvidence
+        MatchEvidence evidence = new MatchEvidence
         {
             ImageId              = imageId,
             SourceFilename       = sourceFilename,
@@ -183,6 +207,7 @@ internal sealed class NumericMatcher
             ImageNgpSummary  = BuildNgpSummary(record),
             SafeExplanation  = $"Bracket2: tokens [{string.Join(", ", match.Value.Subset)}] concatenated to match family {match.Key} (TCD={match.Value.Tcd:F3})."
         };
+        return (evidence, []);
     }
 
     //  Bracket 4 support 

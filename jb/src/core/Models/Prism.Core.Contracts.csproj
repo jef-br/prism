@@ -28,6 +28,7 @@
     <Compile Include="..\Images\Classify\ImageFeatureValue.cs" Link="ImageFeatureValue.cs" />
     <Compile Include="..\Images\Classify\ImageFeatureSnapshot.cs" Link="ImageFeatureSnapshot.cs" />
     <Compile Include="..\Images\Match\MatchEvidence.cs" Link="MatchEvidence.cs" />
+    <Compile Include="..\Images\Match\MatcherContribution.cs" Link="MatcherContribution.cs" />
     <Compile Include="..\Images\Order\OrderEvidence.cs" Link="OrderEvidence.cs" />
 <Compile Include="..\Images\Transform\BackgroundType.cs" Link="BackgroundType.cs" />
     <Compile Include="..\Images\Transform\BoundingBox.cs" Link="BoundingBox.cs" />

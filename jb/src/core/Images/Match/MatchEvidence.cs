@@ -36,12 +36,23 @@ public sealed record MatchEvidence
     /// <summary>All FamilyIDs that tied when TieDetected is true.</summary>
     public IReadOnlyList<string> TieFamilyIds { get; init; } = [];
 
-    //  Matcher attribution 
+    //  Threshold
+
+    /// <summary>True when FinalScore meets or exceeds the configured match threshold.</summary>
+    public bool ThresholdStatus { get; init; }
+
+    //  Matcher attribution
 
     /// <summary>Name of the matcher that produced the accepted match (e.g. NumericMatcher.Bracket1).</summary>
     public string? AcceptedMatcherName { get; init; }
 
-    //  Candidate evidence 
+    /// <summary>Per-matcher contributions that produced this match, keyed by matcher name.</summary>
+    public IReadOnlyList<MatcherContribution> MatcherWeights { get; init; } = [];
+
+    //  Candidate evidence
+
+    /// <summary>Near-tie candidates from Brackets 1–2 that were passed over when a tie occurred.</summary>
+    public IReadOnlyList<CandidateSummary> RejectedNearTieEvidence { get; init; } = [];
 
     /// <summary>Bounded list of top candidate FamilyIDs considered during matching.</summary>
     public IReadOnlyList<CandidateSummary> TopCandidates { get; init; } = [];

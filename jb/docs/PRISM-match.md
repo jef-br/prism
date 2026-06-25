@@ -140,6 +140,8 @@ See `PRISM-models.md` for full field list. Summary:
 
 ## Ticket Close-Out Notes
 
+**Ticket 2 — MatchEvidence missing fields:** MatchEvidence now has `ThresholdStatus` (bool — true when FinalScore meets or exceeds `matchingConfig.SemanticThreshold`), `RejectedNearTieEvidence` (near-tie candidates passed over in Brackets 1–2), and `MatcherWeights` (per-matcher contributions as `IReadOnlyList<MatcherContribution>`). `AcceptedMatcherName` retained. `RejectedNearTieEvidence` is collected in `RunWaterfall` via a `Dictionary<string, List<CandidateSummary>> rejectedNearTies` keyed by `InitialFullName`, populated by `NumericMatcher.TryMatchBracket1WithTies` and `TryMatchBracket2WithTies` when a tie occurs, and attached to the evidence at the point of match acceptance in Brackets 1–4.
+
 **Ticket 3 — Bracket 3 duplicate-phenotype guard:** Bracket 3 duplicate-phenotype guard is implemented in `ImageMatcher.RunBracket3` via `HasDuplicatePhenotypeInFamily`. Rejects a string match when the target FamilyID already has a non-KO matched record with the same non-null SelectedPhenotype.
 
 **Ticket 4 — Pre-normalization token text:** Pre-normalization token text is preserved via `FilenameToken(string Original, string Normalized)` struct in StringMatcher. Evidence records carry `imageToken.Original` (the raw filename text before diacritics/case normalization) alongside the matched family token.
