@@ -5,6 +5,9 @@ namespace Prism.Core;
 public static class ImageUpscaler {
     private static readonly bool GpuAvailable = GpuProbe.HasHardwareDirectMLAdapter();
 
+    /// <summary>True when a hardware DirectML adapter was detected at startup.</summary>
+    public static bool IsGpuAvailable => GpuAvailable;
+
     public static byte[] Upscale( byte[] imageBytes, double scaleFactor ) =>
         GpuAvailable
             ? Upscaler_g_p_u.Upscale(imageBytes, scaleFactor)

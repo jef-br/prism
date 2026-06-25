@@ -54,7 +54,7 @@ Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, 
 ## Tickets
 
 ### T-1300 · Implement Fetch_HTTPS_DirectFile.cs
-**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
 
 Implement `IFetchStrategy` in `jb/src/core/IO/Fetchers/Fetch_HTTPS_DirectFile.cs` to download a file from a direct HTTPS URL.
 
@@ -153,7 +153,7 @@ Called as a sub-step from `Tx_CenterAndStretch` and `Tx_DetailCropper`. Not an `
 ---
 
 ### T-1900 · Implement Tx_LowContrastEnhancement
-**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
 
 Implement `jb/src/core/Images/Transform/processingtools/Tx_LowContrastEnhancement.cs` (currently empty). Called as a pre-step inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast"]` is true. Purpose: improve foreground/background separation to sharpen subsequent bounding-box accuracy — not a visual quality pass for export.
 
@@ -246,7 +246,7 @@ Decision must be recorded in Match `jbtodo.md` before any implementation work st
 ---
 
 ### T-2500 · Implement GPU upscaler (Real-ESRGAN via DirectML)
-**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
 
 `Upscaler_g_p_u.RunRealEsrgan` throws `NotImplementedException`. `GpuProbe.HasHardwareDirectMLAdapter()` already gates the code path correctly.
 
