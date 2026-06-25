@@ -29,6 +29,19 @@ Pre-step called inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast
 
 ---
 
+## GPU Upscaling (Real-ESRGAN)
+
+**Decision (T-2500, closed):** `Upscaler_g_p_u.RunRealEsrgan` implemented. Uses `Microsoft.ML.OnnxRuntime.DirectML` (already in NuGet).
+
+- Model: `Real-ESRGAN_x2plus.onnx` — fixed ×2 super-resolution. Located at `jb/src/core/Images/Upscale/ONNX/Real-ESRGAN_x2plus.onnx`.
+- Session init: `Upscaler_g_p_u.Initialize(modelPath)` called from `UpscaleService.Create()` when `ImageUpscaler.IsGpuAvailable` is true. CPU Lanczos4 fallback active when no DirectML adapter is detected.
+- Tensor pipeline: JPEG → BGR uint8 → NCHW float32 [0,1] → `_session.Run(["input"])` → NCHW float32 [0,1] × 2 → clamp → BGR uint8 → JPEG. Tensor names: `input` / `output`.
+- Top-up: remaining scale after ×2 SR applied via Lanczos4 resize.
+- Config: model asset resolved via `PrismConfigLocator.FindModelAsset("Images/Upscale/ONNX/Real-ESRGAN_x2plus.onnx")`. Throws `PrismConfigurationException` when DirectML is available but model is missing.
+- Access boundary: `GpuProbe` is internal to `Prism.Core.Images.Upscale`. External callers (e.g. `UpscaleService` in `Prism.Core`) use `ImageUpscaler.IsGpuAvailable` rather than calling `GpuProbe` directly.
+
+---
+
 ## Transformation Overview
 
 Images transformed one by one, each based on image analysis enriched with match information. Salient object detection, bounding box calculation, and background identification feed the per-image transform decision. Useful tags from `ImageMatcher.cs` attenuate transformation parameters. Transform rules in `jb/src/core/Images/Transform`. Transformation parameters guided by per-image IFs and selected INGP phenotype.
