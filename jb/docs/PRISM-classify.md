@@ -166,3 +166,7 @@ Runs in `Classified` stage after import normalization.
 ## ONNX InferenceSession Scope
 
 Decision: per-job session lifecycle (current behavior). ONNX model load is ≤500 ms; jobs exceed 1 minute; application-scoped sessions add thread-safety complexity for negligible gain. ClassificationService.Create() instantiates a fresh session per job and disposes it when the job ends.
+
+## interior-shot Detection
+
+interior-shot is now reachable via the `interior-detected` ImageFeature, set by `InteriorAnalyzer.cs`. The analyzer detects enclosed regions that are smoother than their surrounding texture and bounded by strong edges. Product-type gating (wallet/bag/suitcase only) is applied at the Order stage (T-1800).

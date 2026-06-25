@@ -36,6 +36,7 @@ public static class ImageFeatureAnalyzer
         WriteEdgeIntersections(SubjectEdgeDetector.Detect(image), snapshot);
         DeriveOcclusionLevel(snapshot);
         AnalyzeSkinTone(image, snapshot);
+        AnalyzeInterior(image, snapshot);
         RecordUnknownFeatures(snapshot);
     }
 
@@ -145,7 +146,15 @@ public static class ImageFeatureAnalyzer
             ratio.ToString("F4", CultureInfo.InvariantCulture), 0.75, "imagesharp");
     }
 
-    //  Stubs for features that need heavier models 
+    //  Interior detection
+
+    private static void AnalyzeInterior(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
+    {
+        bool detected = InteriorAnalyzer.Analyze(image);
+        snapshot.Set("interior-detected", detected ? "true" : "false", 1.0, "geometry");
+    }
+
+    //  Stubs for features that need heavier models
 
     private static void RecordUnknownFeatures(ImageFeatureSnapshot snapshot)
     {

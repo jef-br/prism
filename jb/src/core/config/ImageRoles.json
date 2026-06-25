@@ -290,11 +290,7 @@
       "id": "interior-shot",
       "required": [
         { "feature": "hero-is-human", "equals": "FALSE" },
-        { "feature": "intersection-count", "min": 3 },
-        { "anyOf": [
-            { "feature": "hero-orientation", "equals": "FRONT" },
-            { "feature": "hero-orientation", "equals": "TOP" }
-        ]}
+        { "feature": "interior-detected", "equals": "true" }
       ]
     },
 
