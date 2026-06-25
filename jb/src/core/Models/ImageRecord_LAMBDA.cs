@@ -88,6 +88,13 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
     // -------------------------------------------------------------------------
 
     /// <summary>
+    /// Preprocessed and transformed image bytes, held in memory from the Transform stage
+    /// until the Export stage writes them once. Null when the image was KO'd or transform
+    /// is disabled (Exporter falls back to NormalizedJpgPath in those cases).
+    /// </summary>
+    public byte[]? ProcessedBytes { get; set; }
+
+    /// <summary>
     /// Outcome of the transform routing and pixel processing for this image.
     /// Null until the Transformed stage evaluates this record.
     /// </summary>

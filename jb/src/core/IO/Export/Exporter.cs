@@ -45,6 +45,9 @@ internal static class Exporter
 
             string? path = input.NormalizedJpgPath;
 
+            long byteLength = lambda.ProcessedBytes?.LongLength
+                ?? (path is not null && File.Exists(path) ? new FileInfo(path).Length : 0);
+
             lambda.OutputRecord = new ImageRecord_OUTPUT
             {
                 InitialFullName = lambda.InitialFullName,
@@ -56,7 +59,7 @@ internal static class Exporter
                 Extension       = ".jpg",
                 MimeType        = "image/jpeg",
                 ArtifactPath    = path,
-                ByteLength      = path is not null && File.Exists(path) ? new FileInfo(path).Length : 0,
+                ByteLength      = byteLength,
                 ExportStatus    = "Ok"
             };
         }
@@ -84,10 +87,15 @@ internal static class Exporter
             {
                 if (lambda.IsKo) continue;
 
-                string? artifactPath = lambda.OutputRecord?.ArtifactPath;
-                if (artifactPath is null || !File.Exists(artifactPath)) continue;
+                byte[]? imageBytes = lambda.ProcessedBytes;
+                if (imageBytes is null)
+                {
+                    string? artifactPath = lambda.OutputRecord?.ArtifactPath;
+                    if (artifactPath is null || !File.Exists(artifactPath)) continue;
+                    imageBytes = File.ReadAllBytes(artifactPath);
+                }
 
-                AddBytesEntry(zip, $"OK/{lambda.NewName}", File.ReadAllBytes(artifactPath));
+                AddBytesEntry(zip, $"OK/{lambda.NewName}", imageBytes);
             }
 
             foreach (ImageRecord_LAMBDA lambda in request.LambdaRecords)

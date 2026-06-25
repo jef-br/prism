@@ -52,12 +52,7 @@ public sealed class TransformService : ITransformService
 
             if (lambda.IsKo) continue;
 
-            if (preprocessed is not null && input is not null)
-            {
-                string preprocessedPath = Path.Combine(Path.GetTempPath(), $"PRISM-PRE-{Guid.NewGuid():N}.jpg");
-                File.WriteAllBytes(preprocessedPath, preprocessed);
-                input.NormalizedJpgPath = preprocessedPath;
-            }
+            lambda.ProcessedBytes = preprocessed;
 
             ImageTransformer.TransformImage(lambda);
             okTransformed++;
