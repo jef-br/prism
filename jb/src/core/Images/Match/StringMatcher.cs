@@ -35,7 +35,7 @@ internal sealed class StringMatcher
         string sourceFilename = filename;
         string imageId       = Path.GetFileNameWithoutExtension(filename);
 
-        IReadOnlyList<string> imageTokens = ExtractImageTokens(filename);
+        IReadOnlyList<FilenameToken> imageTokens = ExtractImageTokens(filename);
         if (imageTokens.Count == 0)
             return null;
 
@@ -74,7 +74,7 @@ internal sealed class StringMatcher
     //  Evidence building 
 
     private List<TokenEvidenceItem> BuildStringEvidence(
-        IReadOnlyList<string> imageTokens,
+        IReadOnlyList<FilenameToken> imageTokens,
         FamilyIDRecord family)
     {
         List<TokenEvidenceItem> evidence = [];
@@ -93,16 +93,16 @@ internal sealed class StringMatcher
 
             IReadOnlyList<string> familyTokens = PrepareExcelTokens(property.Value, property.Key, classification);
 
-            foreach (string imageToken in imageTokens)
+            foreach (FilenameToken imageToken in imageTokens)
             {
                 string? matchedFamilyToken = familyTokens.FirstOrDefault(
-                    ft => translationConfig.AreMatchingTokens(imageToken, ft));
+                    ft => translationConfig.AreMatchingTokens(imageToken.Normalized, ft));
 
                 if (matchedFamilyToken is not null)
                 {
-                    bool isExact = matchedFamilyToken.Equals(imageToken, StringComparison.OrdinalIgnoreCase);
+                    bool isExact = matchedFamilyToken.Equals(imageToken.Normalized, StringComparison.OrdinalIgnoreCase);
                     evidence.Add(new TokenEvidenceItem(
-                        imageToken,
+                        imageToken.Original,
                         matchedFamilyToken,
                         property.Key,
                         family.FamilyID,
@@ -144,7 +144,7 @@ internal sealed class StringMatcher
     internal IReadOnlyList<(FamilyIDRecord Family, int MatchCount, List<TokenEvidenceItem> Evidence)>
         ScoreCandidatesByStringTokens(string filename, IReadOnlyList<FamilyIDRecord> candidates)
     {
-        IReadOnlyList<string> imageTokens = ExtractImageTokens(filename);
+        IReadOnlyList<FilenameToken> imageTokens = ExtractImageTokens(filename);
         if (imageTokens.Count == 0)
             return [];
 
@@ -160,21 +160,24 @@ internal sealed class StringMatcher
         return [..results.OrderByDescending(r => r.MatchCount)];
     }
 
-    //  Token extraction 
+    //  Token extraction
+
+    // Pairs the original (pre-normalization) text with the normalized form used for comparison.
+    private readonly record struct FilenameToken(string Original, string Normalized);
 
     /// <summary>
-    /// Extracts and normalizes string tokens from a filename.
-    /// Applies lowercase, diacritic stripping, separator splitting, and stop-word removal.
+    /// Extracts string tokens from a filename, preserving both the original text and the
+    /// normalized form (lowercase, diacritics stripped) used for comparison.
     /// Excludes pure-digit tokens (those belong to NumericMatcher).
     /// </summary>
-    private IReadOnlyList<string> ExtractImageTokens(string filename)
+    private IReadOnlyList<FilenameToken> ExtractImageTokens(string filename)
     {
         string stem = Path.GetFileNameWithoutExtension(filename);
-        string normalized = NormalizeDiacritics(stem.ToLowerInvariant());
 
-        return TokenSplitPattern.Split(normalized)
-            .Where(t => t.Length >= 2 && !IsAllDigits(t))
-            .Where(t => !translationConfig.IsStopWord(t))
+        return TokenSplitPattern.Split(stem)
+            .Select(t => new FilenameToken(t, NormalizeDiacritics(t.ToLowerInvariant())))
+            .Where(t => t.Normalized.Length >= 2 && !IsAllDigits(t.Normalized))
+            .Where(t => !translationConfig.IsStopWord(t.Normalized))
             .ToList();
     }
 

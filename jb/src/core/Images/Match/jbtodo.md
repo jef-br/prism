@@ -18,32 +18,11 @@
   - Fix: Add the three fields to `MatchEvidence`. Populate `ThresholdStatus` in the waterfall after the score is computed. Populate `RejectedNearTieEvidence` at the pass-through points in `RunBracket1` and `RunBracket2`. Add a `MatcherWeights` collection to replace the single-string `AcceptedMatcherName`.
 
 -------
-- [ ] StringMatcher Bracket 3 missing "no duplicate image type in same FamilyID" guard.
-  - File: `jb/src/core/Images/Match/StringMatcher.cs` lines 41–50.
-  - Spec says: PRISM-match.md specifies Bracket 3 accepts an assignment only when (a) the image matches exactly one FamilyID AND (b) that FamilyID does not already have a non-KO candidate image of the same image type (SelectedPhenotype).
-  
-- Current behavior: Condition (a) is implemented (`candidates.Count != 1` → null). Condition (b) is not implemented. A string-bracket match is accepted even when the target FamilyID already has an image of the same phenotype, which can produce duplicate image-type assignments in the same family.
-  - Why it deviates: Condition (b) was not identified until after T-600 was completed.
-
-  - Fix: Before accepting a Bracket 3 match, check `context.LambdaRecords` for any non-KO record already assigned to the same FamilyID with the same `SelectedPhenotype`. Requires passing the current lambda list into `StringMatcher.TryMatch` or performing the check in `ImageMatcher.RunBracket3` before committing the assignment.
-
--------
-- [ ] Original pre-normalization token text not preserved in StringTokenEvidence.
-  - File: `jb/src/core/Images/Match/StringMatcher.cs` lines 100–108.
-  - Spec says: PRISM-match.md requires the original (pre-normalization) filename token text to be preserved in evidence records for diagnostics and workbench display.
-  
-- Current behavior: `TokenEvidenceItem.FilenameToken` stores the normalized form of the filename token (lowercase, diacritics stripped). The original text is not retained.
-  - Why it deviates: `ExtractImageTokens` normalizes tokens before returning them, and the normalized form is what gets stored in evidence. The original text is discarded after normalization.
-
-  - Fix: Pass both the original and normalized token through `ExtractImageTokens` (return tuples or a wrapper type), and store the original text in `TokenEvidenceItem.FilenameToken` while using the normalized form for comparison only.
-
-
--------
-- [ ] `Weight_MatchingSignalsConverging` is parsed from config but never consumed, and never range-validated.
-  - Files: `jb/src/core/PrismConfiguration.cs` (property line 41, parsed line 139, `Validate()` lines 190–193), `jb/src/core/Prism_Config.json` (value 0.25).
-  - Intent: A score bonus applied when multiple matching signals agree — the "convergence" case where NumToken + String + Classification all point to the same FamilyID. Config and property exist but no matcher or scorer reads it yet.
-
-  - Fix: (1) Add `AssertInRange(Weight_MatchingSignalsConverging, 0.0, 1.0, cfgPath, "Classification.Weights.CONVERGENCE_WEIGHT")` after the four existing weight checks in `Validate()`. (2) Implement the convergence bonus in the matcher waterfall — decide where in the scoring pipeline the bonus applies and which signal combinations qualify as "converging".
+- [ ] `Weight_MatchingSignalsConverging` convergence bonus not yet consumed.
+  - Files: `jb/src/core/PrismConfiguration.cs`, `jb/src/core/Prism_Config.json` (value 0.25).
+  - Status: Range validation (`AssertInRange` in `Validate()`) is done. The weight is now validated on startup but still never read by any matcher or scorer.
+  - Intent: A score bonus applied when multiple matching signals agree — the "convergence" case where NumToken + String + Classification all point to the same FamilyID.
+  - Fix: Implement the convergence bonus in the matcher waterfall — decide where in the scoring pipeline the bonus applies and which signal combinations qualify as "converging".
 
 ## User decisions required
 
