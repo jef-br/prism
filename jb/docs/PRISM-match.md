@@ -25,7 +25,7 @@ Single pass. Matched images removed from consideration after each bracket.
 **Bracket 5 cleanup:** KO remaining unmatched images. Not renamed; kept in manifest with original filename.
 **Bracket 6 finalize:** Finalize image→FID assignments; cluster into FID groups → move to DO.
 
-**Tie-breaking:** Image remains candidate for multiple FIDs → KO unless it can sit at the exact same `_det` position in every matching FID.
+**Tie-breaking:** Image remains candidate for multiple FIDs after all brackets → KO with reason `MATCHES_MULTIPLE_FAMILYIDS`. No det-position comparison is performed. V1 decision — behavior will be revised in a future milestone.
 
 ---
 
@@ -147,3 +147,5 @@ See `PRISM-models.md` for full field list. Summary:
 **Ticket 4 — Pre-normalization token text:** Pre-normalization token text is preserved via `FilenameToken(string Original, string Normalized)` struct in StringMatcher. Evidence records carry `imageToken.Original` (the raw filename text before diacritics/case normalization) alongside the matched family token.
 
 **Ticket 5 — Weight_MatchingSignalsConverging convergence bonus:** Implemented in `ImageMatcher.FinalizeMatches` (Bracket 6). A record converges when its `MatchEvidence` has at least 2 of: `NumericTokenEvidence.Count > 0`, `StringTokenEvidence.Count > 0`, `ClassificationLabelEvidence.Count > 0`. When converging, `FinalScore = Math.Min(1.0, FinalScore + Weight_MatchingSignalsConverging)` (0.25) and `SafeExplanation` notes the bonus. `PrismConfiguration.Weight_MatchingSignalsConverging` is loaded in `ImageMatcher.Run` and passed through `RunWaterfall` to `FinalizeMatches`.
+
+**T-2400 — Cross-bracket tie resolution:** A cross-bracket candidacy accumulator is added to `ImageMatcher.RunWaterfall`. As each bracket runs, every FamilyID an image was a candidate for (even if it didn't win) is accumulated. After Bracket 5 cleanup, any image that was a candidate for 2 or more FamilyIDs and is still unmatched is KO'd with reason `MATCHES_MULTIPLE_FAMILYIDS`. No det-position comparison is performed. V1 decision — behavior will be revised in a future milestone once more match signal is available. Implementation: accumulator in `RunWaterfall`; new KO reason string `MATCHES_MULTIPLE_FAMILYIDS` in `KoUnmatched`.

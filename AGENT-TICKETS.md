@@ -229,19 +229,18 @@ Each answer unlocks T-2100 (DetailCropper) and T-2200 (HeadCutter).
 
 ---
 
-### T-2400 · Resolve Match cross-bracket tie behavior
-**Status:** Blocked | **Profile:** P0-orchestrator  
-**Blocked-by:** User product decision required.
+### T-2400 · Implement cross-bracket tie accumulator
+**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
 
-Current implementation silently passes tied FamilyID candidates forward bracket-by-bracket with no cross-bracket accumulator. Spec says: KO unless the image can sit at the exact same det-slot in every tied FamilyID.
+Decision recorded (T-2400 close-out note in `PRISM-match.md`): add a cross-bracket candidacy accumulator to `ImageMatcher.RunWaterfall`. Any image that was a candidate for 2+ FamilyIDs across brackets and exits Bracket 5 unmatched is KO'd with reason `MATCHES_MULTIPLE_FAMILYIDS`. No det-position comparison.
 
-Options:
-- **(a) Spec-compliant:** implement candidacy accumulator + `MATCH_TIE` KO reason.
-- **(b) V1 accepted deviation:** document pass-through as known limitation; KO reason stays `MATCH_NOT_FOUND`.
+**Acceptance:**
+- `RunWaterfall` accumulates all FamilyID candidates for each image across Brackets 1–4.
+- `KoUnmatched` applies reason `MATCHES_MULTIPLE_FAMILYIDS` when the accumulated set has 2+ entries.
+- Existing `MATCH_NOT_FOUND` reason applies only when the accumulated set is empty (genuine no-match).
+- `dotnet build jb/src/PRISM.sln` passes.
 
-Decision must be recorded in Match `jbtodo.md` before any implementation work starts.
-
-**Files:** `jb/src/core/Images/Match/jbtodo.md` (decision), then `ImageMatcher.cs` (implementation, if (a))
+**Files:** `jb/src/core/Images/Match/ImageMatcher.cs`
 
 ---
 
