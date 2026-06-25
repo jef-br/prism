@@ -116,7 +116,7 @@ Public shared links (`dropbox.com/s/...?dl=0`) can be normalized (`?dl=1`) and d
 ---
 
 ### T-1700 · Implement Tx_util_BgStretch
-**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
 
 Implement the tiered background fill utility in `jb/src/core/Images/Transform/Tx_util_BgStretch.cs`.
 Called as a sub-step from `Tx_CenterAndStretch` and `Tx_DetailCropper`. Not an `IImageTransformation` implementor.
@@ -144,17 +144,137 @@ Called as a sub-step from `Tx_CenterAndStretch` and `Tx_DetailCropper`. Not an `
 ---
 
 ### T-1800 · Add ProductTypeId to ImageRecord_LAMBDA
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
+
+**Resolution:** Field existed in `ImageRecord_LAMBDA.cs` (line 67) and `ImageTransformer.cs` already read it. Only the write was missing. Fixed: added `lambda.ProductTypeId = productTypeId;` in `ImageOrderer.ProcessFamily` write-back loop (line ~93). `ResolveProductType()` reads from `FamilyIDRecord.CanonicalProperties.Values` (Excel IEM dynamic columns) and normalizes to kebab-case against `DetOrderRules.json` — no CLIP involvement; CLIP confidence enforcement is a separate future enhancement.
+
+**Files:** `jb/src/core/Images/ImageOrderer.cs`
+
+---
+
+### T-1900 · Implement Tx_LowContrastEnhancement
 **Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
 
-`ImageRecord_LAMBDA` is missing a `string? ProductTypeId` field. This field is required for `Tx_DetailCropper` det-slot exclusion routing in `ImageTransformer.cs` (see `PRISM-transform-generate.md` "Det-Slot Exclusions"). Without it, `IsDetailCropperDetSlotExcluded()` in `ImageTransformer.cs` always reads null and falls through to the default (non-clothing) exclusion rule, which is incorrect for clothing product families.
+Implement `jb/src/core/Images/Transform/processingtools/Tx_LowContrastEnhancement.cs` (currently empty). Called as a pre-step inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast"]` is true. Purpose: improve foreground/background separation to sharpen subsequent bounding-box accuracy — not a visual quality pass for export.
 
 **What to do:**
-1. Add `string? ProductTypeId` to `ImageRecord_LAMBDA.cs`.
-2. In `ImageOrderer.cs`, find where `ResolveProductType()` is called and write the resolved product type ID to `lambda.ProductTypeId`.
-3. Confirm the field flows through to `ImageTransformer.cs:IsDetailCropperDetSlotExcluded()`, which already reads `lambda.ProductTypeId`.
-4. `dotnet build jb/src/PRISM.sln` passes.
+1. Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) via OpenCVSharp4 to the full image (not background-region only — safer for bbox accuracy).
+2. Signature: `Process(byte[] arr, int stride, float upscale_factor)` matching the webservice dual-interface contract; also callable as a sub-step accepting/returning JPEG `byte[]`.
+3. `dotnet build jb/src/PRISM.sln` passes.
 
-**Files:** `jb/src/core/Models/ImageRecord_LAMBDA.cs`, `jb/src/core/Images/Order/ImageOrderer.cs`
+**Files:** `jb/src/core/Images/Transform/processingtools/Tx_LowContrastEnhancement.cs`
+
+---
+
+### T-2000 · Implement Tx_CenterAndStretch pixel flow
+**Status:** Blocked | **Profile:** P1-feature-worker | **Agent:** worker  
+**Blocked-by:** T-1700 (BgStretch — Done ✓), T-1900 (LowContrastEnhancement), open saliency/headcut/greedy jbtodo decisions in `jb/src/core/Images/Transform/jbtodo.md`
+
+Three-step pixel flow inside `Tx_CenterAndStretch.Transform()` — currently gated behind `ImageProcessorAvailable() = true` but pixel body is a `NotSupportedException`.
+
+**When unblocked, what to do:**
+1. Pre-steps: if `low-contrast` feature true → call `Tx_LowContrastEnhancement`; if `shadow-present` → shrink `salient-bbox` bottom edge above shadow band.
+2. Tight crop: shrink source canvas to adjusted `salient-bbox`.
+3. Center: place cropped object on target square canvas with `Transformation.Positioning.Margin` (4.2%) on all sides.
+4. Fill: call `Tx_util_BgStretch.Stretch()` on the uncovered canvas edges.
+5. Populate `ImageTransformationResult` fully (crop rect, fill method, warnings).
+6. `dotnet build jb/src/PRISM.sln` passes.
+
+**Files:** `jb/src/core/Images/Transform/Tx_CenterAndStretch.cs`
+
+---
+
+### T-2100 · Implement Tx_DetailCropper pixel flow
+**Status:** Blocked | **Profile:** P1-feature-worker | **Agent:** worker  
+**Blocked-by:** T-2300 (saliency/headcut/greedy user decisions), T-2200 (HeadCutter spec), T-2000 (for pattern reference)
+
+Pixel body for `Tx_DetailCropper.Transform()` — currently gated and throws.
+
+**When unblocked, what to do:**
+1. Read `salient-bbox` from `InputImage.Features`.
+2. Detect border intersection (intersects-top/bottom/left/right features).
+3. Non-intersecting: apply greedy crop centered on saliency region; apply headcut when `head-visible` and `hero-is-human` meet configured thresholds.
+4. Border-intersecting: anchor crop to touched edges; record no-reposition decision.
+5. Apply `Tx_util_BgStretch` when crop extends beyond original bounds.
+6. Populate full `ImageTransformationResult`.
+7. Internal fallback to `Tx_CropSquare` when border intersection blocks pixel-level repositioning.
+8. `dotnet build jb/src/PRISM.sln` passes.
+
+**Files:** `jb/src/core/Images/Transform/Tx_DetailCropper.cs`
+
+---
+
+### T-2200 · Spec and implement Tx_util_HeadCutter
+**Status:** Blocked | **Profile:** P1-feature-worker | **Agent:** worker  
+**Blocked-by:** Product decisions (landmark model, family-aware threshold, cut line style, Y-coordinate return format) must be recorded in Transform `jbtodo.md` before any code is written.
+
+Utility class for cutting a human head at the nose-to-lips boundary. Two modes: family-aware (shared cut line from clear-face images in the group) and per-image fallback.
+
+**Files:** `jb/src/core/Images/Transform/processingtools/Tx_util_HeadCutter.cs`
+
+---
+
+### T-2300 · User decisions: detail crop saliency, headcut, greedy crop
+**Status:** Blocked | **Profile:** P0-orchestrator  
+**Blocked-by:** User product decision required — answers must be recorded in Transform `jbtodo.md` before T-2100 or T-2200 can proceed.
+
+Three open questions in Transform `jbtodo.md` with blank `Answer:` fields:
+1. Saliency map behavior: how the dominant saliency region influences square crop placement when no border intersection blocks repositioning.
+2. Headcut thresholds: which `head-visible`/`hero-is-human` confidence levels enable headcut; how top crop placement shifts for eligible non-intersecting images.
+3. Greedy crop behavior: minimum content retention and padding rules for non-headcut non-intersecting images.
+
+Each answer unlocks T-2100 (DetailCropper) and T-2200 (HeadCutter).
+
+**Files:** `jb/src/core/Images/Transform/jbtodo.md` (answers to be recorded there)
+
+---
+
+### T-2400 · Resolve Match cross-bracket tie behavior
+**Status:** Blocked | **Profile:** P0-orchestrator  
+**Blocked-by:** User product decision required.
+
+Current implementation silently passes tied FamilyID candidates forward bracket-by-bracket with no cross-bracket accumulator. Spec says: KO unless the image can sit at the exact same det-slot in every tied FamilyID.
+
+Options:
+- **(a) Spec-compliant:** implement candidacy accumulator + `MATCH_TIE` KO reason.
+- **(b) V1 accepted deviation:** document pass-through as known limitation; KO reason stays `MATCH_NOT_FOUND`.
+
+Decision must be recorded in Match `jbtodo.md` before any implementation work starts.
+
+**Files:** `jb/src/core/Images/Match/jbtodo.md` (decision), then `ImageMatcher.cs` (implementation, if (a))
+
+---
+
+### T-2500 · Implement GPU upscaler (Real-ESRGAN via DirectML)
+**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+
+`Upscaler_g_p_u.RunRealEsrgan` throws `NotImplementedException`. `GpuProbe.HasHardwareDirectMLAdapter()` already gates the code path correctly.
+
+**What to do:**
+1. Add `Microsoft.ML.OnnxRuntime.DirectML` NuGet to `jb/src/core/Images/Upscale/Prism.Core.Images.Upscale.csproj`.
+2. Initialize `InferenceSession` once with `AppendExecutionProvider_DML(adapterIndex: 0)` pointing to the model path from config.
+3. Implement `RunRealEsrgan`: decode input JPEG → BGR float32 NCHW [1,3,H,W] → `_session.Run` → output [1,3,H×2,W×2] → clamp [0,1] → BGR uint8 → JPEG bytes.
+4. Model path: add `Upscale.ModelPath` key to `Prism_Config.json` pointing to `real-esrgan-x2plus.onnx`.
+5. `dotnet build jb/src/PRISM.sln` passes; `ImageUpscaler.Upscale(bytes, 1.3)` on a DX12-capable machine returns a larger image without throwing.
+
+**Files:** `jb/src/core/Images/Upscale/Upscaler_g_p_u.cs`, `jb/src/core/Images/Upscale/Prism.Core.Images.Upscale.csproj`
+
+---
+
+### T-2600 · M5 Classify groundwork
+**Status:** Blocked | **Profile:** P0-orchestrator  
+**Blocked-by:** M5 milestone gate — all Classify `jbtodo.md` decisions must be answered first.
+
+Tracks the five open items in `jb/src/core/Images/Classify/jbtodo.md`:
+1. Gate phenotypes (bypass flag — stays open until phenotypes validated).
+2. Confirm ImageNGP taxonomy: `ImageNGP.json` ↔ `imagePhenotypes.md` ↔ `ImageRoles.json` agree on 26 phenotypes and their IF combinations.
+3. Resolve `illustration-technical-drawing` scope (option (b) = null/no-phenotype recommended).
+4. Replace `RecordUnknownFeatures()` stub with real CLIP measurements (after taxonomy + prompts are settled).
+5. Phenotype production validation: labeled set, confusion matrix, <5% misassignment rate across 26 phenotypes.
+
+M5 gate condition: all Classify decisions answered; ONNX session migrated to singleton.
+
+**Files:** `jb/src/core/Images/Classify/jbtodo.md`, `jb/src/core/Images/Classify/ImageFeatureAnalyzer.cs`
 
 ---
 

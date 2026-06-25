@@ -1,6 +1,24 @@
 # PRISM — Transformation & Generation
 *Abbreviations: `GLOSSARY.md`*
 
+## ImagePreProcessor
+
+`jb/src/core/Images/ImagePreProcessor.cs` — static class, single entry point `Preprocess(lambda, imagePath, config)`.
+
+Steps in order:
+1. **EXIF orient + flatten**: ImageSharp `AutoOrient()` + `BackgroundColor(White)` → encoded to flat JPEG (no alpha, sRGB).
+2. **Salient bounding box**: OpenCVSharp Canny + local-contrast sigmoid mask, computed at ≤512 px analysis resolution. Result written to `lambda.Features["salient-bbox"]` as `"x1,y1,x2,y2"` (normalized 0–1 floats, invariant culture). Confidence fixed at 0.99.
+3. **Upscale decision** (based on bbox pixel dimensions, not whole-image dimensions):
+   - bbox largest dimension `< MinInputSizeInPixels` (570 px) → KO `PREPROCESS_TOO_SMALL`
+   - `≥ MinOutputWidth` (800 px) → pass flat JPEG through unchanged
+   - Between 570–800 → `ImageUpscaler.Upscale(bytes, scale)` (GPU if DirectML adapter present, else CPU Lanczos4 capped ×1.42)
+   - Required scale `> MaxUpScaleFactor` (1.42) → KO `PREPROCESS_UPSCALE_EXCEEDED`
+4. Returns upscaled flat-JPEG bytes or null on KO. Sets `lambda.IsKo`, `lambda.KoReasonCode`, `lambda.KoSafeMessage` on KO.
+
+Called by `ImageTransformer` before routing; `lambda.Features["salient-bbox"]` is available to all Tx_ classes.
+
+---
+
 ## Transformation Overview
 
 Images transformed one by one, each based on image analysis enriched with match information. Salient object detection, bounding box calculation, and background identification feed the per-image transform decision. Useful tags from `ImageMatcher.cs` attenuate transformation parameters. Transform rules in `jb/src/core/Images/Transform`. Transformation parameters guided by per-image IFs and selected INGP phenotype.

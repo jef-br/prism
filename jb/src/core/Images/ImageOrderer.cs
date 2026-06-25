@@ -90,8 +90,9 @@ internal static class ImageOrderer
         foreach ((int imageIndex, AssignmentRecord record) in assignments)
         {
             ImageRecord_LAMBDA lambda = images[imageIndex];
-            lambda.Family   = familyId;
-            lambda.DetOrder = record.DetSlot;
+            lambda.Family        = familyId;
+            lambda.DetOrder      = record.DetSlot;
+            lambda.ProductTypeId = productTypeId;
             lambda.OrderEvidence = new OrderEvidence
             {
                 AssignedDetSlot     = record.DetSlot,
