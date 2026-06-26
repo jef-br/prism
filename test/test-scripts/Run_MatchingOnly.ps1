@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 Import-Module "$PSScriptRoot/PrismJobRunner.psm1" -Force
 $repoRoot = (Resolve-Path "$PSScriptRoot/../..").Path
 Ensure-PrismApi -BaseUrl $BaseUrl -RepoRoot $repoRoot
-$logPath = "$PSScriptRoot/matching-testlogs.txt"
+$logPath = "$repoRoot/matching-testlogs.txt"
 
 Get-ChildItem "$repoRoot/jb/testing" -Directory | Sort-Object Name | ForEach-Object {
     Invoke-PrismFolderJob `
