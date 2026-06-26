@@ -36,7 +36,12 @@ approval)` and cites the exact source. No checkboxes ticked, no new data, no cou
 
 1. **Approve the 4 proposed answers above.** All are reconciliation of *existing* specs into
    empty answer fields — highest confidence, ready to move to implementation on your OK:
-   - **ONNX singleton** is the M5 gate item; approving it unblocks closing M5 and advancing to M6.
+   - **ONNX singleton** is the M5 gate item. Verified against code on 26/06/26: it is **NOT
+     yet implemented** — the session is still created per matching run at `MatchingService.cs:34`
+     (`using IClassificationService … = ClassificationService.Create(...)`, which builds
+     `new ImageClassifier()` and disposes per job). The todo's old `ShellStage_Classify` pointer
+     is stale, but the per-job lifecycle is real, so the M5 gate is still open. Approving the
+     proposed answer + doing the hoist closes it.
    - **`Tx_util_BgStretch`** is ticket **T-1700** (Status: Ready) — answer + ticket now agree;
      it can be picked up by a P1 worker immediately.
    - **`ImagePreProcessor` + `Tx_CenterAndStretch` flow** are the next implementation steps for
