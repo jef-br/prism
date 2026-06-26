@@ -69,17 +69,13 @@ Implement `IFetchStrategy` in `jb/src/core/IO/Fetchers/Fetch_HTTPS_DirectFile.cs
 ---
 
 ### T-1400 · Implement Fetch_DropBox.cs
-**Status:** Blocked | **Profile:** P1-feature-worker | **Agent:** worker  
-**Blocked-by:** Product decision — public-only vs. OAuth-authenticated scope. Not required for V1.
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
 
-Public shared links (`dropbox.com/s/...?dl=0`) can be normalized (`?dl=1`) and delegated to `Fetch_HTTPS_DirectFile`. Private links require OAuth2 + Dropbox API v2.
+**Decision (2026-06):** Public-only scope. Private OAuth links deferred to a future ticket.
 
-**Acceptance (when unblocked):**
-- Scope decision documented.
-- Public link normalization implemented; delegates to `Fetch_HTTPS_DirectFile`.
-- `dotnet build jb/src/PRISM.sln` passes.
+Public shared links (`dropbox.com/s/...?dl=0`) are normalized to `?dl=1` and delegated to `Fetch_HTTPS_DirectFile`. `dl.dropboxusercontent.com` URLs pass through unchanged (already direct downloads). OAuth-authenticated private links are out of scope for V1.
 
-**Files:** `jb/src/core/IO/Fetchers/Fetch_DropBox.cs`
+**Files:** `jb/src/core/IO/Import/Fetchers/Fetch_DropBox.cs`
 
 ---
 
@@ -230,17 +226,11 @@ Each answer unlocks T-2100 (DetailCropper) and T-2200 (HeadCutter).
 ---
 
 ### T-2400 · Implement cross-bracket tie accumulator
-**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
 
-Decision recorded (T-2400 close-out note in `PRISM-match.md`): add a cross-bracket candidacy accumulator to `ImageMatcher.RunWaterfall`. Any image that was a candidate for 2+ FamilyIDs across brackets and exits Bracket 5 unmatched is KO'd with reason `MATCHES_MULTIPLE_FAMILYIDS`. No det-position comparison.
+`RunWaterfall` now maintains a `crossBracketCandidates` dictionary (per-image `HashSet<string>` of FamilyIDs). Brackets 1 and 2 populate it from `tiedCandidates` when count > 1; Bracket 3 adds rejected candidates discarded by the duplicate-phenotype guard. `KoUnmatched` branches on count ≥ 2 to emit `MATCHES_MULTIPLE_FAMILYIDS` vs `MATCH_NOT_FOUND`. Two `AccumulateCandidates` overloads (list and single-string) consolidate accumulator writes. Bracket 4 (SemanticMatcher) does not expose candidates on ties — V1 accepted per spec.
 
-**Acceptance:**
-- `RunWaterfall` accumulates all FamilyID candidates for each image across Brackets 1–4.
-- `KoUnmatched` applies reason `MATCHES_MULTIPLE_FAMILYIDS` when the accumulated set has 2+ entries.
-- Existing `MATCH_NOT_FOUND` reason applies only when the accumulated set is empty (genuine no-match).
-- `dotnet build jb/src/PRISM.sln` passes.
-
-**Files:** `jb/src/core/Images/Match/ImageMatcher.cs`
+**Files:** `jb/src/core/Images/ImageMatcher.cs`
 
 ---
 
@@ -274,6 +264,30 @@ Tracks the five open items in `jb/src/core/Images/Classify/jbtodo.md`:
 M5 gate condition: all Classify decisions answered; ONNX session migrated to singleton.
 
 **Files:** `jb/src/core/Images/Classify/jbtodo.md`, `jb/src/core/Images/Classify/ImageFeatureAnalyzer.cs`
+
+---
+
+### T-2700 · Wire fetcher strategies into API ingress
+**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+
+`Fetch_DropBox` and `Fetch_HTTPS_DirectFile` implement `IFetchStrategy` but are never called from the API. `AddRemoteInputRecords` in `PrismProcessIngressReader.cs` routes URLs by file extension only and produces bare `ImageRecord_INPUT` records with no `TempFilePath`, which the Importer then KOs as "file not found."
+
+**What to do:**
+1. Create `FetchDispatcher` in `jb/src/core/IO/Import/Fetchers/` — holds an ordered list of `IFetchStrategy`, exposes `bool CanHandle(string url)` and `Task<FetchedInputRecord> FetchAsync(...)`. `FetchedInputRecord` carries the temp file path and the content type resolved from the HTTP `Content-Type` response header (not the URL extension).
+2. Register `Fetch_DropBox` and `Fetch_HTTPS_DirectFile` in the dispatcher (Dropbox first, HTTPS second). `Fetch_DropBox.CanHandle` already wins for Dropbox hosts before `Fetch_HTTPS_DirectFile` would match.
+3. In `PrismProcessIngressReader.AddRemoteInputRecords`: make the method `async`, call `FetchDispatcher.CanHandle(url)` first; if true, call `FetchAsync`, spill to the job temp dir, and route the result to `images`, `excelFiles`, or `zipFiles` based on the resolved content type — not the URL extension.
+4. Dropbox folder share links (`/scl/fo/…?dl=1`) are served as ZIP by Dropbox — the content-type will be `application/zip` and the record routes to `zipFiles`. The ZIP importer unpacks the contents in the normal Import stage.
+
+**Test URL** (TinyTest dataset, Dropbox folder, `dl=0` → `dl=1` triggers download):
+`https://www.dropbox.com/scl/fo/lxjw1t2e12oyni2bbicdj/ALQbP67UxizZS7sOFuSBurk?rlkey=fm62aaeipylnfnridd67s9i2x&st=rc57bdef&e=1&dl=0`
+
+**Acceptance:**
+- Submitting the test URL via `processRequest.Input` produces a completed PRISM job (same outcome as uploading TinyTest directly).
+- A non-Dropbox HTTPS direct-file URL (`.jpg`) is fetched and routed as an image.
+- An unsupported URL (no matching strategy) is KO'd with a clear reason code, not silently dropped.
+- `dotnet build jb/src/PRISM.sln` passes.
+
+**Files:** `jb/src/core/IO/Import/Fetchers/FetchDispatcher.cs` (new); `jb/src/api/PrismProcessIngressReader.cs` (make `AddRemoteInputRecords` async, add dispatch call)
 
 ---
 

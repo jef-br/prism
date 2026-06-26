@@ -64,7 +64,7 @@ internal static class PrismProcessIngressReader
             .Sum(f => f.Length);
 
         MediaTypeSets mediaTypes = BuildMediaTypeSets(configuration);
-        AddRemoteInputRecords(processRequest.Input, mediaTypes, images, excelFiles, zipFiles);
+        await AddRemoteInputRecordsAsync(processRequest.Input, mediaTypes, configuration.FetchDispatcher, jobTempDir, images, excelFiles, zipFiles, httpRequest.HttpContext.RequestAborted);
         await AddUploadedInputRecords(form.Files, configuration, mediaTypes, jobTempDir, images, excelFiles, zipFiles, fieldErrors);
 
         if (configuration.MaximumRequestBytes > 0 && totalSubmittedBytes > configuration.MaximumRequestBytes)
@@ -177,32 +177,46 @@ internal static class PrismProcessIngressReader
             new HashSet<string>(configuration.ZipMediaTypes, StringComparer.OrdinalIgnoreCase));
     }
 
-    private static void AddRemoteInputRecords(
+    private static async Task AddRemoteInputRecordsAsync(
         IReadOnlyList<string> remoteInputs,
         MediaTypeSets mediaTypes,
+        FetchDispatcher dispatcher,
+        string jobTempFolder,
         List<ImageRecord_INPUT> images,
         List<InputExcelFileRecord> excelFiles,
-        List<InputZipFileRecord> zipFiles)
+        List<InputZipFileRecord> zipFiles,
+        CancellationToken ct)
     {
-        foreach (string remoteInput in remoteInputs.Where(input => !string.IsNullOrWhiteSpace(input)))
+        foreach (string input in remoteInputs.Where(i => !string.IsNullOrWhiteSpace(i)))
         {
-            string extension = Path.GetExtension(remoteInput);
+            if (dispatcher.CanHandle(input))
+            {
+                ImageRecord_INPUT fetched = await dispatcher.FetchAsync(input, jobTempFolder, input, ct);
+                string ext = Path.GetExtension(fetched.InitialFullName ?? string.Empty);
+                if (mediaTypes.Images.Contains(ext))
+                    images.Add(fetched);
+                else if (mediaTypes.Excel.Contains(ext))
+                    excelFiles.Add(new InputExcelFileRecord {
+                        SourceReference = fetched.InitialFullName ?? input,
+                        TempFilePath    = fetched.TempFilePath,
+                        ByteLength      = fetched.ByteLength });
+                else if (mediaTypes.Zip.Contains(ext))
+                    zipFiles.Add(new InputZipFileRecord {
+                        SourceReference = fetched.InitialFullName ?? input,
+                        TempFilePath    = fetched.TempFilePath,
+                        ByteLength      = fetched.ByteLength });
+                // else: extension unrecognised after fetch — silently dropped
+                continue;
+            }
+
+            // Fallback: no matching strategy — route by URL extension (existing behaviour)
+            string extension = Path.GetExtension(input);
             if (mediaTypes.Images.Contains(extension))
-            {
-                images.Add(new ImageRecord_INPUT { InitialFullName = remoteInput });
-                continue;
-            }
-
-            if (mediaTypes.Excel.Contains(extension))
-            {
-                excelFiles.Add(new InputExcelFileRecord { SourceReference = remoteInput });
-                continue;
-            }
-
-            if (mediaTypes.Zip.Contains(extension))
-            {
-                zipFiles.Add(new InputZipFileRecord { SourceReference = remoteInput });
-            }
+                images.Add(new ImageRecord_INPUT { InitialFullName = input });
+            else if (mediaTypes.Excel.Contains(extension))
+                excelFiles.Add(new InputExcelFileRecord { SourceReference = input });
+            else if (mediaTypes.Zip.Contains(extension))
+                zipFiles.Add(new InputZipFileRecord { SourceReference = input });
         }
     }
 

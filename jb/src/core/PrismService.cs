@@ -9,6 +9,7 @@ namespace Prism.Core;
 public sealed class PrismService
 {
     private readonly PrismConfiguration configuration;
+    private readonly ModelBuilder modelBuilder;
     private readonly Pipeline pipeline;
 
     // -------------------------------------------------------------------------
@@ -21,7 +22,7 @@ public sealed class PrismService
     /// </summary>
     public PrismService()
     {
-        (configuration, ModelBuilder modelBuilder) = Initialize();
+        (configuration, modelBuilder) = Initialize();
         pipeline = new Pipeline(configuration, modelBuilder);
     }
 
@@ -34,7 +35,8 @@ public sealed class PrismService
     public PrismService(PrismConfiguration configuration, ModelBuilder modelBuilder)
     {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        pipeline = new Pipeline(this.configuration, modelBuilder ?? throw new ArgumentNullException(nameof(modelBuilder)));
+        this.modelBuilder  = modelBuilder  ?? throw new ArgumentNullException(nameof(modelBuilder));
+        pipeline = new Pipeline(this.configuration, this.modelBuilder);
     }
 
     // -------------------------------------------------------------------------
@@ -73,6 +75,67 @@ public sealed class PrismService
         {
             return BuildFailedResult(request, exception);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Match-only routes — Import + Match + Order, no Transform or Export.
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Runs the full import → classify → match → order pipeline and returns only the filename mapping.
+    /// Writes one normalized JPEG per image to the local job temp folder (same as <see cref="Process"/>);
+    /// no Transform or Export artifacts are produced.
+    /// </summary>
+    public async Task<MatchOnlyResult> MatchOnlyAsync(
+        PrismJobRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateRequest(request);
+        IngestResult ingest   = await Import(request, null, cancellationToken);
+        MatchingResult matched = await Match(ingest, null, cancellationToken);
+        return BuildMatchOnlyResult(matched.LambdaRecords);
+    }
+
+    /// <summary>
+    /// Lite match: builds LAMBDA records from filenames only (no image decode, no disk writes for images),
+    /// parses Excel to get FamilyRecords, then runs ImageMatcher + ImageOrderer.
+    /// Bracket 4 (CLIP semantic) is skipped because no Tags are present. Det order falls back to
+    /// source-index within each family.
+    /// </summary>
+    public MatchOnlyResult MatchLite(
+        IReadOnlyList<ImageRecord_INPUT> imageInputs,
+        IReadOnlyList<InputExcelFileRecord> excelInputs)
+    {
+        IEnumerable<string> excelPaths = excelInputs
+            .Where(e => e.TempFilePath is not null)
+            .Select(e => e.TempFilePath!);
+
+        ExcelModelBuildResult built = modelBuilder.BuildFromExcelFiles(excelPaths);
+
+        List<ImageRecord_LAMBDA> lambdas = imageInputs
+            .Select(r => new ImageRecord_LAMBDA { InitialFullName = r.InitialFullName })
+            .ToList();
+
+        ImageMatcher.Run(lambdas, built.FamilyRecords);
+        ImageOrderer.Run(lambdas, built.FamilyRecords);
+
+        return BuildMatchOnlyResult(lambdas);
+    }
+
+    /// <summary>Projects a LAMBDA collection into the client-facing filename mapping.</summary>
+    private static MatchOnlyResult BuildMatchOnlyResult(IReadOnlyList<ImageRecord_LAMBDA> lambdas)
+    {
+        var map = new Dictionary<string, string?>(lambdas.Count);
+        int matched = 0, unmatched = 0;
+
+        foreach (ImageRecord_LAMBDA lambda in lambdas)
+        {
+            bool isMatched = !lambda.IsKo && !string.IsNullOrEmpty(lambda.Family);
+            map[lambda.InitialFullName] = isMatched ? lambda.NewName : null;
+            if (isMatched) matched++; else unmatched++;
+        }
+
+        return new MatchOnlyResult { FileNameMap = map, Matched = matched, Unmatched = unmatched };
     }
 
     // -------------------------------------------------------------------------

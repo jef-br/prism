@@ -7,9 +7,6 @@ Refine the web workbench layout:
 - No real feedback during the import & export stage. Hard to know whether a job is blocked or not.
 
 
-
-
-
 -----
 
 Optimize the pipelining architecture so that Import and Match are fused togther to remove double image I/O.

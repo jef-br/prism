@@ -29,6 +29,7 @@ internal sealed record PrismApiConfiguration {
     public IReadOnlyList<string> ExcelMediaTypes { get; init; } = [];
     public IReadOnlyList<string> ZipMediaTypes { get; init; } = [];
     public IReadOnlyList<string> AcceptedMediaTypes => [.. ImageMediaTypes, .. ExcelMediaTypes, .. ZipMediaTypes];
+    public FetchDispatcher FetchDispatcher { get; init; } = null!;
 
     /// <summary>
     /// Loads API configuration from Prism_Config.json via the core loader.
@@ -70,6 +71,7 @@ internal sealed record PrismApiConfiguration {
             ImageMediaTypes = core.AcceptedImageExtensions,
             ExcelMediaTypes = core.AcceptedExcelExtensions,
             ZipMediaTypes = core.AcceptedZipExtensions,
+            FetchDispatcher = FetchDispatcher.Create(),
             Limits = new PrismSafeLimitResponse {
                 MaximumRequestBytes = core.MaximumRequestBytes,
                 MinimumImageCount = core.MinimumImageCountPerJob,

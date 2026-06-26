@@ -373,7 +373,7 @@ public class PipelineIntegrationTests
             current = current.Parent;
         }
 
-        var fallback = @"c:\Users\JefB\Documents\JBGITROOT\prism\jb\Testing";
+        var fallback = @"c:\Users\JefB\Documents\JBGITROOT\prism\test\datasets";
         if (Directory.Exists(fallback))
             return fallback;
 

@@ -5,6 +5,8 @@ internal sealed class Fetch_WeTransfer : IFetchStrategy
 {
     private static readonly string[] _hostPatterns = ["wetransfer.com", "we.tl"];
 
+    public static IFetchStrategy Create(string configDirectory) => new Fetch_WeTransfer();
+
     public bool CanHandle(string url) =>
         _hostPatterns.Any(h => url.Contains(h, StringComparison.OrdinalIgnoreCase));
 

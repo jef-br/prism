@@ -17,23 +17,37 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
 
     private readonly HostRules_Config _rules;
     private readonly HttpClient _http;
+    private readonly bool _isFetcherOwned;
 
     /// <summary>
     /// Creates an instance backed by the given host rules and a shared <see cref="HttpClient"/>.
     /// The <paramref name="http"/> client must have no automatic redirect handler —
     /// redirect behaviour is controlled by HostRules.
+    /// When <paramref name="isFetcherOwned"/> is true, the instance uses
+    /// <c>allowFetcherOwnedRedirects</c> from HostRules to permit redirects issued by a
+    /// specialist fetcher (e.g. Fetch_DropBox) even when generic redirects are disabled.
     /// </summary>
-    internal Fetch_HTTPS_DirectFile(HostRules_Config rules, HttpClient http)
+    internal Fetch_HTTPS_DirectFile(HostRules_Config rules, HttpClient http, bool isFetcherOwned = false)
     {
-        _rules = rules;
-        _http  = http;
+        _rules          = rules;
+        _http           = http;
+        _isFetcherOwned = isFetcherOwned;
     }
 
     /// <summary>
-    /// Loads HostRules.json from <paramref name="configDirectory"/> and creates an instance
-    /// with a redirect-aware <see cref="HttpClient"/> configured from the loaded rules.
+    /// Loads HostRules.json from <paramref name="configDirectory"/> and creates a standard instance.
     /// </summary>
-    internal static Fetch_HTTPS_DirectFile Create(string configDirectory)
+    public static IFetchStrategy Create(string configDirectory) =>
+        CreateInstance(configDirectory, isFetcherOwned: false);
+
+    /// <summary>
+    /// Creates an instance where <c>allowFetcherOwnedRedirects</c> from HostRules governs redirect
+    /// following. Used by specialist fetchers (Fetch_DropBox, etc.) that delegate downloads here.
+    /// </summary>
+    internal static Fetch_HTTPS_DirectFile CreateForDelegate(string configDirectory) =>
+        CreateInstance(configDirectory, isFetcherOwned: true);
+
+    private static Fetch_HTTPS_DirectFile CreateInstance(string configDirectory, bool isFetcherOwned)
     {
         HostRules_Config rules = HostRules_Config.Load(configDirectory);
 
@@ -46,7 +60,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
         http.Timeout = Timeout.InfiniteTimeSpan; // CancellationToken drives timeout instead.
         http.DefaultRequestHeaders.UserAgent.ParseAdd("PRISM-Fetcher/1.0");
 
-        return new Fetch_HTTPS_DirectFile(rules, http);
+        return new Fetch_HTTPS_DirectFile(rules, http, isFetcherOwned);
     }
 
     /// <summary>
@@ -138,9 +152,11 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
                     return uri;
                 }
 
-                if (!_rules.AllowGenericDirectFileRedirects) {
+                bool redirectAllowed = _rules.AllowGenericDirectFileRedirects
+                    || (_isFetcherOwned && _rules.AllowFetcherOwnedRedirects);
+                if (!redirectAllowed) {
                     throw new InvalidOperationException(
-                        "The server issued a redirect, but HostRules.json prohibits generic direct-file redirects.");
+                        "The server issued a redirect, but HostRules.json prohibits this type of redirect.");
                 }
 
                 Uri? location = resp.Headers.Location;

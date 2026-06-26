@@ -17,6 +17,7 @@
     <Compile Include="ImageRecord_OUTPUT.cs" />
     <Compile Include="PrismJobRequest.cs" />
     <Compile Include="PrismJobResult.cs" />
+    <Compile Include="MatchOnlyResult.cs" />
     <Compile Include="PrismProcessingParameters.cs" />
     <Compile Include="..\Excel\FamilyIDRecord.cs" Link="FamilyIDRecord.cs" />
     <Compile Include="..\IO\BatchManifest.cs" Link="BatchManifest.cs" />

@@ -108,6 +108,27 @@ app.MapPost("/PRISM/process", async (HttpContext context, PrismApiConfiguration 
     return Results.Accepted(acceptedEnvelope.ResultUrl, acceptedEnvelope);
 });
 
+app.MapPost("/PRISM/match/lite", async (HttpContext context, PrismApiConfiguration configuration, PrismService prismService) =>
+{
+    PrismMatchLiteIngressResult liteResult = await PrismMatchLiteIngressReader.Read(context.Request, configuration);
+    if (liteResult.Error is not null)
+        return Results.Json(liteResult.Error, statusCode: StatusCodes.Status400BadRequest);
+
+    MatchOnlyResult result = prismService.MatchLite(liteResult.Images!, liteResult.ExcelFiles!);
+    liteResult.CleanUp();
+    return Results.Ok(result.FileNameMap);
+});
+
+app.MapPost("/PRISM/match", async (HttpContext context, PrismApiConfiguration configuration, PrismService prismService) =>
+{
+    PrismProcessIngressResult ingressResult = await PrismProcessIngressReader.Read(context.Request, configuration);
+    if (ingressResult.Error is not null)
+        return Results.Json(ingressResult.Error, statusCode: StatusCodes.Status400BadRequest);
+
+    MatchOnlyResult result = await prismService.MatchOnlyAsync(ingressResult.Request!, context.RequestAborted);
+    return Results.Ok(result.FileNameMap);
+});
+
 app.MapGet("/PRISM/jobs/{jobID:guid}/progress", async (Guid jobID, HttpContext context, PrismJobCoordinator coordinator) =>
 {
     PrismProgressSubscription? subscription = coordinator.Subscribe(jobID);
