@@ -37,7 +37,7 @@ public sealed class MatchingService : IMatchingService
         using IClassificationService classification = ClassificationService.Create(configuration);
 
         // Pre-allocate a fixed results array — each thread writes to its own index, no synchronisation needed.
-        var results = new (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, ulong Hash)[okImages.Count];
+        var results = new (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, UInt128 Hash)[okImages.Count];
         int classifyKo        = 0;
         int classifyDegraded  = 0;
         int phenotypeAssigned = 0;
@@ -57,7 +57,7 @@ public sealed class MatchingService : IMatchingService
         // Aggregate into ordered collections (single-threaded; preserves input order for deterministic matching).
         List<ImageRecord_LAMBDA> lambdaRecords = new(okImages.Count);
         Dictionary<ImageRecord_INPUT, ImageRecord_LAMBDA> lambdaByImage = new(okImages.Count);
-        var hashEntries = new List<(ImageRecord_INPUT Record, ulong Hash)>(okImages.Count);
+        var hashEntries = new List<(ImageRecord_INPUT Record, UInt128 Hash)>(okImages.Count);
 
         foreach (var (lambda, source, hash) in results)
         {
@@ -116,7 +116,7 @@ public sealed class MatchingService : IMatchingService
     /// Returns the lambda plus per-image counters so the caller can aggregate with Interlocked — no shared
     /// mutable state, safe to call from Parallel.For.
     /// </summary>
-    private (ImageRecord_LAMBDA Lambda, ulong Hash, bool WasKo, bool WasDegraded, bool WasPhenotypeAssigned) BuildLambda(
+    private (ImageRecord_LAMBDA Lambda, UInt128 Hash, bool WasKo, bool WasDegraded, bool WasPhenotypeAssigned) BuildLambda(
         ImageRecord_INPUT source,
         IFeatureAnalysisService featureAnalysis,
         IClassificationService classification,
@@ -131,7 +131,7 @@ public sealed class MatchingService : IMatchingService
         };
 
         if (source.NormalizedJpgPath is null)
-            return (lambda, 0UL, false, false, false);
+            return (lambda, UInt128.Zero, false, false, false);
 
         Image<Rgba32> image;
         try
@@ -143,7 +143,7 @@ public sealed class MatchingService : IMatchingService
             lambda.IsKo          = true;
             lambda.KoReasonCode  = "CLASSIFY_ERROR";
             lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
-            return (lambda, 0UL, true, false, false);
+            return (lambda, UInt128.Zero, true, false, false);
         }
 
         bool wasDegraded = false;
@@ -151,7 +151,7 @@ public sealed class MatchingService : IMatchingService
         using (image)
         {
             // Hash computed here — same load shared with feature analysis and CLIP below.
-            ulong hash = 0UL;
+            UInt128 hash = UInt128.Zero;
             try { hash = VisualHasher.ComputeHash(image); } catch { }
 
             // FeatureAnalysis failure → KO: the geometric/visual measurement feeds ImageNGP and ordering.
@@ -205,7 +205,7 @@ public sealed class MatchingService : IMatchingService
     private int Deduplicate(
         Dictionary<ImageRecord_INPUT, ImageRecord_LAMBDA> lambdaByImage,
         IClassificationService classification,
-        IReadOnlyList<(ImageRecord_INPUT Record, ulong Hash)> hashEntries)
+        IReadOnlyList<(ImageRecord_INPUT Record, UInt128 Hash)> hashEntries)
     {
         HashSet<string> exempt = new(configuration.DeduplicationExemptPhenotypes, StringComparer.OrdinalIgnoreCase);
         IReadOnlyList<DedupGroup> groups = classification.FindDuplicates(hashEntries);

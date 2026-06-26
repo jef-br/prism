@@ -17,5 +17,5 @@ public interface IClassificationService : IDisposable
     void ApplyClipTags(Image<Rgba32> image, ImageRecord_LAMBDA lambda, double influentialThreshold, double cutoffThreshold);
 
     /// <summary>Groups visually duplicate images by perceptual hash for post-classification suppression.</summary>
-    IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<(ImageRecord_INPUT Record, ulong Hash)> entries);
+    IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<(ImageRecord_INPUT Record, UInt128 Hash)> entries);
 }

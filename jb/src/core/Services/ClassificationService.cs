@@ -112,7 +112,7 @@ public sealed class ClassificationService : IClassificationService
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<(ImageRecord_INPUT Record, ulong Hash)> entries)
+    public IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<(ImageRecord_INPUT Record, UInt128 Hash)> entries)
         => new VisualHasher(maxHammingDistance).FindDuplicates(entries);
 
     /// <inheritdoc/>

@@ -268,12 +268,13 @@ public sealed class PrismService
             throw new ArgumentException("PrismProcessingParameters is required.", nameof(request));
         }
 
-        if (request.ImageRecords.Count == 0)
+        // ZIP files are extracted by the Import stage — allow ZIP-only requests through here.
+        if (request.ImageRecords.Count == 0 && request.ZipFileRecords.Count == 0)
         {
             throw new ArgumentException("At least one accepted image record is required.", nameof(request));
         }
 
-        if (request.ExcelRecords.Count == 0)
+        if (request.ExcelRecords.Count == 0 && request.ZipFileRecords.Count == 0)
         {
             throw new ArgumentException("At least one accepted Excel record is required.", nameof(request));
         }

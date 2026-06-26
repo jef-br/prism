@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text.Json;
 
 namespace Prism.Api;
@@ -89,14 +90,17 @@ internal static class PrismProcessIngressReader
                 fieldErrors));
         }
 
-        if (images.Count < configuration.MinimumImageCount || excelFiles.Count < configuration.MinimumExcelCount)
+        (int zipImages, int zipExcel) = PeekZipContents(zipFiles, mediaTypes);
+        int effectiveImages = images.Count + zipImages;
+        int effectiveExcel  = excelFiles.Count + zipExcel;
+        if (effectiveImages < configuration.MinimumImageCount || effectiveExcel < configuration.MinimumExcelCount)
         {
             CleanUpJobTempDir(jobTempDir);
             return PrismProcessIngressResult.FromError(CreateError(
                 httpRequest,
                 "INCOMPLETE_PAYLOAD",
                 "At least one accepted image representation and one accepted .xlsx Excel file are required.",
-                [$"acceptedImages={images.Count}", $"acceptedExcelFiles={excelFiles.Count}"],
+                [$"acceptedImages={effectiveImages}", $"acceptedExcelFiles={effectiveExcel}"],
                 ["request.Input:INCOMPLETE_PAYLOAD"]));
         }
 
@@ -283,6 +287,27 @@ internal static class PrismProcessIngressReader
         await file.CopyToAsync(dest);
 
         return tempPath;
+    }
+
+    private static (int images, int excel) PeekZipContents(List<InputZipFileRecord> zipFiles, MediaTypeSets mediaTypes)
+    {
+        int images = 0;
+        int excel  = 0;
+        foreach (InputZipFileRecord zr in zipFiles)
+        {
+            if (zr.TempFilePath is null || !File.Exists(zr.TempFilePath))
+                continue;
+            try {
+                using ZipArchive archive = ZipFile.OpenRead(zr.TempFilePath);
+                foreach (ZipArchiveEntry entry in archive.Entries)
+                {
+                    string ext = Path.GetExtension(entry.FullName);
+                    if (mediaTypes.Images.Contains(ext)) images++;
+                    else if (mediaTypes.Excel.Contains(ext)) excel++;
+                }
+            } catch { /* corrupt / encrypted ZIP — let Import stage report the error */ }
+        }
+        return (images, excel);
     }
 
     private static void CleanUpJobTempDir(string jobTempDir)
