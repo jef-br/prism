@@ -11,6 +11,7 @@ public interface ITransformService
     Task<TransformResult> TransformAsync(
         MatchingResult matched,
         bool transformEnabled,
+        bool headcut,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken);
 }

@@ -52,7 +52,6 @@ public sealed class PrismConfiguration {
     public double MaxDownScaleFactor { get; private set; }
     public int MinGeneratedImgWidth { get; private set; }
     public int MinGeneratedImgWidthHeight { get; private set; }
-    public bool ShouldCenterProducts { get; private set; }
     public double WhiteSpaceMargin { get; private set; }
 
     // --- Pipeline / job settings 
@@ -152,7 +151,6 @@ public sealed class PrismConfiguration {
             MinGeneratedImgWidth = RequireInt32(root, cfgPath, "Generation", "InputImages", "MINIMUM_SIZE_IN_PIXELS", "width"),
             MinGeneratedImgWidthHeight = RequireInt32(root, cfgPath, "Generation", "InputImages", "MINIMUM_SIZE_IN_PIXELS", "height"),
 
-            ShouldCenterProducts = RequireBool(root, cfgPath, "Transformation", "Positioning", "Center"),
             WhiteSpaceMargin = RequireDouble(root, cfgPath, "Transformation", "Positioning", "Margin"),
 
             JobRetries = RequireInt32(root, cfgPath, "Pipeline", "JobRetries"),

@@ -62,8 +62,9 @@ plt.show()
 ```*/
 
 /// <summary>
-/// Normalizes each image (EXIF orient → flat JPG → upscale decision) and detects its salient
-/// bounding box before transform routing.
+/// Normalizes each image (EXIF orient → flat JPG → upscale decision), detects its salient
+/// bounding box, and runs image analyzers before transform routing.
+/// Returns preprocessed JPEG bytes and a BGR Mat for downstream transform use.
 /// </summary>
 public static class ImagePreProcessor {
     private const int   MaxAnalysisSize  = 512;
@@ -76,22 +77,45 @@ public static class ImagePreProcessor {
     private const string DefaultBboxCoords = "0.0000,0.0000,0.0000,0.0000"; // internal sentinel only
 
     /// <summary>
-    /// Normalizes the image to a flat jpg replacing transparency with white.
-    /// Returns updated image bytes, bounding box coordinates, PrismConfiguration, and LambdaRecord.
-    /// Sets <see cref="ImageRecord_LAMBDA.BoundingBox"/> on <paramref name="lambda"/>.
-    /// Returns null and sets <see cref="ImageRecord_LAMBDA.IsKo"/> when the image fails the upscale thresholds.
+    /// Normalizes the image, detects the salient bounding box, and runs analyzers.
+    /// Returns preprocessed JPEG bytes and a BGR Mat (caller owns the Mat and must dispose it).
+    /// Sets <see cref="ImageRecord_LAMBDA.BoundingBox"/> and feature values on <paramref name="lambda"/>.
+    /// Returns (null, null) and sets <see cref="ImageRecord_LAMBDA.IsKo"/> when the image fails thresholds.
     /// </summary>
-    public static byte[]? Preprocess( ImageRecord_LAMBDA lambda, string? imagePath, PrismConfiguration config ) {
-
+    public static (byte[]? bytes, Mat? colorMat) Preprocess(
+        ImageRecord_LAMBDA lambda, string? imagePath, PrismConfiguration config)
+    {
         byte[]? flatJpg = NormalizeToFlatJpg(imagePath);
+        if (flatJpg is null) return (null, null);
 
-        if (flatJpg is null) return null;
+        // Decode to BGR Mat once — reused for bbox detection, analyzers, and downstream transforms.
+        Mat colorMat = Cv2.ImDecode(flatJpg, ImreadModes.Color);
+        if (colorMat.Empty()) { colorMat.Dispose(); return (null, null); }
 
-        (string coords, int origW, int origH) bbox = DetectSalientBoundingBox(flatJpg);
+        (string coords, int origW, int origH) bbox = DetectSalientBoundingBox(colorMat);
 
         lambda.BoundingBox = ParseSalientBox(bbox.coords, bbox.origW, bbox.origH);
 
-        return Upscale(flatJpg, bbox, config, lambda);
+        byte[]? processedBytes = Upscale(flatJpg, bbox, config, lambda);
+        if (lambda.IsKo) { colorMat.Dispose(); return (null, null); }
+
+        // Run analyzers on the bbox region (always set at this point).
+        if (lambda.BoundingBox.HasValue)
+            RunAnalyzers(lambda, colorMat, lambda.BoundingBox.Value, config);
+
+        return (processedBytes, colorMat);
+    }
+
+    /// <summary>
+    /// Detects the salient bounding box from pre-decoded BGR Mat and parses it into pixel coordinates.
+    /// Exposed internal for use by stateless webservice paths that decode their own Mat.
+    /// </summary>
+    internal static BoundingBox? DetectAndParseSalientBox(byte[] imageBytes)
+    {
+        using Mat colorMat = Cv2.ImDecode(imageBytes, ImreadModes.Color);
+        if (colorMat.Empty()) return null;
+        (string coords, int origW, int origH) bbox = DetectSalientBoundingBox(colorMat);
+        return ParseSalientBox(bbox.coords, bbox.origW, bbox.origH);
     }
 
     // Steps 1 + 2: EXIF orientation → flat single-layer JPG (no alpha, sRGB)
@@ -111,13 +135,15 @@ public static class ImagePreProcessor {
         return ms.ToArray();
     }
 
-    // Step 3: salient bounding box (runs before upscale — upscale decision uses bbox pixel dims)
-    private static (string coords, int origW, int origH) DetectSalientBoundingBox( byte[] imageBytes ) {
+    // Step 3: salient bounding box detection from BGR Mat
+    private static (string coords, int origW, int origH) DetectSalientBoundingBox( Mat colorMat ) {
         try {
-            using Mat gray8 = Cv2.ImDecode(imageBytes, ImreadModes.Grayscale);
-            if (gray8.Empty()) return (DefaultBboxCoords, 0, 0);
+            int origW = colorMat.Cols, origH = colorMat.Rows;
+            if (origW == 0 || origH == 0) return (DefaultBboxCoords, 0, 0);
 
-            int origW = gray8.Cols, origH = gray8.Rows;
+            using Mat gray8 = new Mat();
+            Cv2.CvtColor(colorMat, gray8, ColorConversionCodes.BGR2GRAY);
+
             using Mat img = ScaleDown(gray8);
             int w = img.Cols, h = img.Rows;
 
@@ -206,6 +232,23 @@ public static class ImagePreProcessor {
         return ImageUpscaler.Upscale(flatJpg, scale);
     }
 
+    // Step 5: run image analyzers and set features on the lambda
+    private static void RunAnalyzers(
+        ImageRecord_LAMBDA lambda, Mat colorMat, BoundingBox bbox, PrismConfiguration config)
+    {
+        try {
+            string analyzerCfgPath = Path.Combine(
+                Path.GetDirectoryName(PrismConfigLocator.FindPrismConfigPath() ?? string.Empty) ?? string.Empty,
+                "Images", "Analyzers", "cfg_ImageAnalyzer.json");
+
+            ImageAnalyzerConfig analyzerCfg = ImageAnalyzerConfig.Load(analyzerCfgPath);
+            bool hasHuman = Analyzer_HasHuman.Analyze(colorMat, bbox, analyzerCfg);
+            lambda.Features.Set("has-human", hasHuman ? "true" : "false", 1.0, "Analyzer_HasHuman");
+        } catch {
+            lambda.Features.Set("has-human", "false", 0.0, "Analyzer_HasHuman");
+        }
+    }
+
     private static byte[]? Ko( ImageRecord_LAMBDA lambda, string code, string message ) {
         lambda.IsKo = true;
         lambda.KoReasonCode = code;
@@ -213,7 +256,7 @@ public static class ImagePreProcessor {
         return null;
     }
 
-    private static BoundingBox? ParseSalientBox( string coords, int origW, int origH ) {
+    internal static BoundingBox? ParseSalientBox( string coords, int origW, int origH ) {
         if (origW == 0 || origH == 0) return null;
         string[] p = coords.Split(',');
         float x1 = float.Parse(p[0], CultureInfo.InvariantCulture);

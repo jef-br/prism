@@ -22,6 +22,7 @@ public sealed class HttpTransformService : ITransformService
     public async Task<TransformResult> TransformAsync(
         MatchingResult matched,
         bool transformEnabled,
+        bool headcut,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
     {

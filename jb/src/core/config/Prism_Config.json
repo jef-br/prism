@@ -124,9 +124,7 @@
     },
     "Transformation": {
         "Positioning": {
-            "Center": true,
-            "Margin": 0.042,
-            "BothAxis": true
+            "Margin": 0.042
         },
         "Cropping": {
             "Coverage": 0.8,

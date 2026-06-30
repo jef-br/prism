@@ -59,7 +59,7 @@ if (Hosts("generate"))
 if (Hosts("transform"))
 {
     app.MapPost(PrismServiceRoutes.Transform, async (MatchingResult matched, CancellationToken ct) =>
-        Results.Json(await transform.TransformAsync(matched, matched.Ingest.Parameters.Transform, null, ct)));
+        Results.Json(await transform.TransformAsync(matched, matched.Ingest.Parameters.Transform, matched.Ingest.Parameters.Headcut, null, ct)));
     app.MapGet(PrismServiceRoutes.Transform + "/health", () => Results.Json(new { status = "ok", service = "transform" }));
 }
 

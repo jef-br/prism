@@ -174,7 +174,12 @@ public sealed class PrismService : IDisposable
         MatchingResult matchedWithGenerations,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => pipeline.TransformAsync(matchedWithGenerations, matchedWithGenerations.Ingest.Parameters.Transform, progress, cancellationToken);
+        => pipeline.TransformAsync(
+            matchedWithGenerations,
+            matchedWithGenerations.Ingest.Parameters.Transform,
+            matchedWithGenerations.Ingest.Parameters.Headcut,
+            progress,
+            cancellationToken);
 
     /// <summary>Exports the fully-enriched LAMBDAs and generated images into the manifest and optional ZIP.</summary>
     private Task<ExportArtifacts> Export(

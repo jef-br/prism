@@ -35,4 +35,10 @@ public sealed record PrismProcessingParameters
     /// Use for matching-focused test runs where classification output is not needed.
     /// </summary>
     public bool SkipClassification { get; init; }
+
+    /// <summary>
+    /// When true, Tx_CenterAndStretch removes detected human heads at the nose-to-lips boundary
+    /// before centering. Has no effect when no face is detected.
+    /// </summary>
+    public bool Headcut { get; init; }
 }

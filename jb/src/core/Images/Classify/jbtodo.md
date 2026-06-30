@@ -49,7 +49,7 @@
   - Sets: `salient-bbox` (string — format TBD, e.g. "x,y,w,h" in pixels), `product-coverage-ratio` (float), `image-occupancy` (float), `crop-tightness` (float), `product-aspect-ratio` (float), `vertical-centering` (float), `horizontal-centering` (float)
   - All six derived features are computed from the bbox + image dimensions in one pass.
   - Method: object saliency detection. Options: (a) CPU-only contrast isolation (foreground vs. near-uniform background region — similar approach to `AnalyzeBackground` which already detects SOLIDCOLOR backgrounds), (b) lightweight ONNX object detection model. Option (a) first.
-  - Answer:
+  - Answer: This is currently done in `ImagePreProcessor.cs`. You can extract that part of its code into `Analyzer_SalientBbox.cs` and have `ImagePreProcessor.cs` use it.
 
 -------
 - [ ] Implement Analyzer_BackgroundColor.cs — measure `background-color`, `dominant-colors`, `product-color`

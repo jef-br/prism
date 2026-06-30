@@ -1,3 +1,5 @@
+using OpenCvSharp;
+
 namespace Prism.Core;
 
 /// <summary>
@@ -11,6 +13,7 @@ public sealed class TransformService : ITransformService
     public async Task<TransformResult> TransformAsync(
         MatchingResult matched,
         bool transformEnabled,
+        bool headcut,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
     {
@@ -38,6 +41,7 @@ public sealed class TransformService : ITransformService
             throw new PrismConfigurationException("Prism_Config.json not found — cannot run preprocessor.");
 
         PrismConfiguration prismConfig = PrismConfiguration.LoadPrismConfig(prismConfigPath);
+        double margin = prismConfig.WhiteSpaceMargin;
 
         Dictionary<string, ImageRecord_INPUT> inputByName = matched.Ingest.NormalizedImages
             .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
@@ -48,13 +52,17 @@ public sealed class TransformService : ITransformService
             if (lambda.IsKo) continue;
 
             inputByName.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input);
-            byte[]? preprocessed = ImagePreProcessor.Preprocess(lambda, input?.NormalizedJpgPath, prismConfig);
+            (byte[]? preprocessed, Mat? colorMat) = ImagePreProcessor.Preprocess(lambda, input?.NormalizedJpgPath, prismConfig);
 
-            if (lambda.IsKo) continue;
+            if (lambda.IsKo) { colorMat?.Dispose(); continue; }
 
             lambda.ProcessedBytes = preprocessed;
 
-            ImageTransformer.TransformImage(lambda);
+            using (colorMat)
+            {
+                ImageTransformer.TransformImage(lambda, colorMat, margin, headcut);
+            }
+
             okTransformed++;
         }
 

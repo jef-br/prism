@@ -94,9 +94,10 @@ internal sealed class Pipeline : IDisposable
     internal Task<TransformResult> TransformAsync(
         MatchingResult matched,
         bool transformEnabled,
+        bool headcut,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => transformService.TransformAsync(matched, transformEnabled, progress, cancellationToken);
+        => transformService.TransformAsync(matched, transformEnabled, headcut, progress, cancellationToken);
 
     /// <summary>
     /// Exported stage: assemble the canonical manifest (and ZIP when requested) from the final LAMBDA

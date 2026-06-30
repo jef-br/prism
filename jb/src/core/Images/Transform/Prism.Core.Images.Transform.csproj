@@ -11,6 +11,7 @@
     <Compile Include="Tx_DetailCropper.cs" />
     <Compile Include="Tx_ProblemImageProcessor.cs" />
     <Compile Include="Tx_util_BgStretch.cs" />
+    <Compile Include="Tx_util_HeadCutter.cs" />
     <Compile Include="processingtools\Tx_LowContrastEnhancement.cs" />
   </ItemGroup>
 

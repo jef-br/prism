@@ -1,3 +1,5 @@
+using OpenCvSharp;
+
 namespace Prism.Core;
 
 /// <summary>
@@ -33,15 +35,17 @@ public static class ImageTransformer
     /// Selects and applies the transform strategy for <paramref name="lambda"/>, records the
     /// outcome in <see cref="ImageRecord_LAMBDA.TransformationResult"/>, and returns the record.
     /// </summary>
-    public static ImageRecord_LAMBDA TransformImage(ImageRecord_LAMBDA lambda)
+    public static ImageRecord_LAMBDA TransformImage(
+        ImageRecord_LAMBDA lambda, Mat? colorMat, double margin, bool headcut)
     {
-        IImageTransformation transformer = SelectTransformer(lambda);
+        IImageTransformation transformer = SelectTransformer(lambda, colorMat, margin, headcut);
         return transformer.Transform(lambda);
     }
 
-    //  Strategy selection 
+    //  Strategy selection
 
-    private static IImageTransformation SelectTransformer(ImageRecord_LAMBDA lambda)
+    private static IImageTransformation SelectTransformer(
+        ImageRecord_LAMBDA lambda, Mat? colorMat, double margin, bool headcut)
     {
         // Step 1 — prerequisites missing: route to conservative processor.
         // The phenotype-null guard is suppressed while phenotypes are bypassed.
@@ -67,7 +71,7 @@ public static class ImageTransformer
         }
 
         // Step 3 — object fully in frame: center on canvas and fill.
-        return new Tx_CenterAndStretch();
+        return new Tx_CenterAndStretch(margin, headcut, colorMat);
     }
 
     /// <summary>
