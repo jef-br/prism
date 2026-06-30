@@ -1,16 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
 
 namespace Prism.Core;
 
 /// <summary>
 /// Extracts processable PRISM members from zip archives.
 /// </summary>
-public static class ZipHandler
-{
+public static class ZipHandler {
     private const string UnknownArchiveName = "archive.zip";
 
     /// <summary>
@@ -20,11 +15,7 @@ public static class ZipHandler
     /// <param name="extractionRootPath">Job temp folder where healthy members are extracted.</param>
     /// <param name="policy">Extraction limits; defaults to PRISM config defaults when omitted.</param>
     /// <returns>Healthy extracted members plus manifest-facing KO records.</returns>
-    public static ZipExtractionResult ExtractProcessableMembers(
-        string zipFilePath,
-        string extractionRootPath,
-        ZipExtractionPolicy? policy = null)
-    {
+    public static ZipExtractionResult ExtractProcessableMembers( string zipFilePath, string extractionRootPath, ZipExtractionPolicy? policy = null ) {
         ZipExtractionPolicy activePolicy = policy ?? ZipExtractionPolicy.CreateDefault();
         List<ZipExtractedMember> extractedMembers = [];
         List<ZipMemberKoRecord> koRecords = [];
@@ -63,11 +54,9 @@ public static class ZipHandler
         ZipExtractionPolicy policy,
         int zipDepth,
         List<ZipExtractedMember> extractedMembers,
-        List<ZipMemberKoRecord> koRecords)
-    {
+        List<ZipMemberKoRecord> koRecords ) {
         FileInfo zipFileInfo = new(zipFilePath);
-        if (zipFileInfo.Length > policy.MaxZipArchiveBytes)
-        {
+        if (zipFileInfo.Length > policy.MaxZipArchiveBytes) {
             koRecords.Add(CreateOversizedKoRecord(
                 archiveDisplayPath,
                 memberPath: null,
@@ -78,21 +67,16 @@ public static class ZipHandler
         }
 
         IReadOnlyDictionary<string, bool> encryptedEntriesByName;
-        try
-        {
+        try {
             encryptedEntriesByName = ZipCentralDirectoryReader.ReadEncryptionFlagsByEntryName(zipFilePath);
-        }
-        catch (InvalidDataException)
-        {
+        } catch (InvalidDataException) {
             koRecords.Add(CreateCorruptKoRecord(
                 archiveDisplayPath,
                 memberPath: null,
                 originalFileName: Path.GetFileName(zipFilePath),
                 safeMessage: "The zip archive could not be read."));
             return;
-        }
-        catch (EndOfStreamException)
-        {
+        } catch (EndOfStreamException) {
             koRecords.Add(CreateCorruptKoRecord(
                 archiveDisplayPath,
                 memberPath: null,
@@ -101,8 +85,7 @@ public static class ZipHandler
             return;
         }
 
-        try
-        {
+        try {
             using ZipArchive archive = ZipFile.OpenRead(zipFilePath);
             ProcessArchiveEntries(
                 archive,
@@ -113,25 +96,19 @@ public static class ZipHandler
                 encryptedEntriesByName,
                 extractedMembers,
                 koRecords);
-        }
-        catch (InvalidDataException)
-        {
+        } catch (InvalidDataException) {
             koRecords.Add(CreateCorruptKoRecord(
                 archiveDisplayPath,
                 memberPath: null,
                 originalFileName: Path.GetFileName(zipFilePath),
                 safeMessage: "The zip archive could not be opened."));
-        }
-        catch (IOException)
-        {
+        } catch (IOException) {
             koRecords.Add(CreateCorruptKoRecord(
                 archiveDisplayPath,
                 memberPath: null,
                 originalFileName: Path.GetFileName(zipFilePath),
                 safeMessage: "The zip archive could not be opened safely."));
-        }
-        catch (UnauthorizedAccessException)
-        {
+        } catch (UnauthorizedAccessException) {
             koRecords.Add(CreateCorruptKoRecord(
                 archiveDisplayPath,
                 memberPath: null,
@@ -159,16 +136,13 @@ public static class ZipHandler
         int zipDepth,
         IReadOnlyDictionary<string, bool> encryptedEntriesByName,
         List<ZipExtractedMember> extractedMembers,
-        List<ZipMemberKoRecord> koRecords)
-    {
+        List<ZipMemberKoRecord> koRecords ) {
         int entryIndex = 0;
 
-        foreach (ZipArchiveEntry entry in archive.Entries)
-        {
+        foreach (ZipArchiveEntry entry in archive.Entries) {
             entryIndex++;
 
-            if (IsDirectoryEntry(entry))
-            {
+            if (IsDirectoryEntry(entry)) {
                 continue;
             }
 
@@ -206,16 +180,13 @@ public static class ZipHandler
         int zipDepth,
         IReadOnlyDictionary<string, bool> encryptedEntriesByName,
         List<ZipExtractedMember> extractedMembers,
-        List<ZipMemberKoRecord> koRecords)
-    {
+        List<ZipMemberKoRecord> koRecords ) {
         string memberPath = entry.FullName;
         string originalFileName = Path.GetFileName(memberPath);
         bool hasProcessableFileName = ZipMemberTriage.HasProcessableFileName(memberPath);
 
-        if (IsEncryptedEntry(memberPath, encryptedEntriesByName))
-        {
-            if (hasProcessableFileName)
-            {
+        if (IsEncryptedEntry(memberPath, encryptedEntriesByName)) {
+            if (hasProcessableFileName) {
                 koRecords.Add(CreatePasswordProtectedKoRecord(
                     archiveDisplayPath,
                     memberPath,
@@ -227,12 +198,9 @@ public static class ZipHandler
         }
 
         byte[] headerBytes;
-        try
-        {
+        try {
             headerBytes = ReadHeaderBytes(entry, policy.HeaderProbeBytes);
-        }
-        catch (InvalidDataException)
-        {
+        } catch (InvalidDataException) {
             AddCorruptKoRecordForProcessableEntry(
                 hasProcessableFileName,
                 koRecords,
@@ -241,9 +209,7 @@ public static class ZipHandler
                 originalFileName,
                 "The zip member could not be read.");
             return;
-        }
-        catch (NotSupportedException)
-        {
+        } catch (NotSupportedException) {
             AddPasswordProtectedKoRecordForProcessableEntry(
                 hasProcessableFileName,
                 koRecords,
@@ -252,9 +218,7 @@ public static class ZipHandler
                 originalFileName,
                 entry.Length);
             return;
-        }
-        catch (IOException)
-        {
+        } catch (IOException) {
             AddCorruptKoRecordForProcessableEntry(
                 hasProcessableFileName,
                 koRecords,
@@ -269,10 +233,8 @@ public static class ZipHandler
             memberPath,
             headerBytes);
 
-        if (mediaKind == ZipMemberMediaKind.Ignored)
-        {
-            if (hasProcessableFileName)
-            {
+        if (mediaKind == ZipMemberMediaKind.Ignored) {
+            if (hasProcessableFileName) {
                 koRecords.Add(CreateMalformedKoRecord(
                     archiveDisplayPath,
                     memberPath,
@@ -285,8 +247,7 @@ public static class ZipHandler
         }
 
         long byteLimit = GetExpandedByteLimit(mediaKind, policy);
-        if (entry.Length > byteLimit)
-        {
+        if (entry.Length > byteLimit) {
             koRecords.Add(CreateOversizedKoRecord(
                 archiveDisplayPath,
                 memberPath,
@@ -301,8 +262,7 @@ public static class ZipHandler
             archiveDisplayPath,
             entryIndex,
             memberPath,
-            out string extractedFilePath))
-        {
+            out string extractedFilePath)) {
             koRecords.Add(CreateMalformedKoRecord(
                 archiveDisplayPath,
                 memberPath,
@@ -319,18 +279,15 @@ public static class ZipHandler
             out ZipMemberKoRecord? extractionKoRecord,
             archiveDisplayPath,
             memberPath,
-            originalFileName))
-        {
-            if (extractionKoRecord is not null)
-            {
+            originalFileName)) {
+            if (extractionKoRecord is not null) {
                 koRecords.Add(extractionKoRecord);
             }
 
             return;
         }
 
-        if (mediaKind == ZipMemberMediaKind.NestedZip)
-        {
+        if (mediaKind == ZipMemberMediaKind.NestedZip) {
             ProcessNestedZipEntry(
                 extractedFilePath,
                 archiveDisplayPath,
@@ -372,10 +329,8 @@ public static class ZipHandler
         ZipExtractionPolicy policy,
         int zipDepth,
         List<ZipExtractedMember> extractedMembers,
-        List<ZipMemberKoRecord> koRecords)
-    {
-        if (zipDepth >= policy.MaxNestedZipDepth)
-        {
+        List<ZipMemberKoRecord> koRecords ) {
+        if (zipDepth >= policy.MaxNestedZipDepth) {
             koRecords.Add(CreateMalformedKoRecord(
                 archiveDisplayPath,
                 memberPath,
@@ -402,21 +357,18 @@ public static class ZipHandler
     /// <param name="entry">Archive entry to read.</param>
     /// <param name="headerProbeBytes">Maximum number of bytes to read.</param>
     /// <returns>The bytes read from the entry stream.</returns>
-    private static byte[] ReadHeaderBytes(ZipArchiveEntry entry, int headerProbeBytes)
-    {
+    private static byte[] ReadHeaderBytes( ZipArchiveEntry entry, int headerProbeBytes ) {
         using Stream entryStream = entry.Open();
         byte[] buffer = new byte[headerProbeBytes];
         int totalReadBytes = 0;
 
-        while (totalReadBytes < buffer.Length)
-        {
+        while (totalReadBytes < buffer.Length) {
             int readBytes = entryStream.Read(
                 buffer,
                 totalReadBytes,
                 buffer.Length - totalReadBytes);
 
-            if (readBytes == 0)
-            {
+            if (readBytes == 0) {
                 break;
             }
 
@@ -446,20 +398,16 @@ public static class ZipHandler
         out ZipMemberKoRecord? koRecord,
         string archiveDisplayPath,
         string memberPath,
-        string originalFileName)
-    {
+        string originalFileName ) {
         koRecord = null;
         Directory.CreateDirectory(Path.GetDirectoryName(extractedFilePath)!);
 
-        try
-        {
+        try {
             using Stream entryStream = entry.Open();
             using FileStream outputStream = File.Create(extractedFilePath);
             CopyEntryStreamWithLimit(entryStream, outputStream, byteLimit);
             return true;
-        }
-        catch (InvalidDataException)
-        {
+        } catch (InvalidDataException) {
             koRecord = CreateCorruptKoRecord(
                 archiveDisplayPath,
                 memberPath,
@@ -467,9 +415,7 @@ public static class ZipHandler
                 "The zip member could not be extracted.");
             DeletePartialExtraction(extractedFilePath);
             return false;
-        }
-        catch (NotSupportedException)
-        {
+        } catch (NotSupportedException) {
             koRecord = CreatePasswordProtectedKoRecord(
                 archiveDisplayPath,
                 memberPath,
@@ -477,9 +423,7 @@ public static class ZipHandler
                 entry.Length);
             DeletePartialExtraction(extractedFilePath);
             return false;
-        }
-        catch (ZipMemberOversizedException oversizedException)
-        {
+        } catch (ZipMemberOversizedException oversizedException) {
             koRecord = CreateOversizedKoRecord(
                 archiveDisplayPath,
                 memberPath,
@@ -488,9 +432,7 @@ public static class ZipHandler
                 byteLimit);
             DeletePartialExtraction(extractedFilePath);
             return false;
-        }
-        catch (IOException)
-        {
+        } catch (IOException) {
             koRecord = CreateCorruptKoRecord(
                 archiveDisplayPath,
                 memberPath,
@@ -498,9 +440,7 @@ public static class ZipHandler
                 "The zip member could not be written safely.");
             DeletePartialExtraction(extractedFilePath);
             return false;
-        }
-        catch (UnauthorizedAccessException)
-        {
+        } catch (UnauthorizedAccessException) {
             koRecord = CreateMalformedKoRecord(
                 archiveDisplayPath,
                 memberPath,
@@ -521,22 +461,18 @@ public static class ZipHandler
     private static void CopyEntryStreamWithLimit(
         Stream inputStream,
         Stream outputStream,
-        long byteLimit)
-    {
+        long byteLimit ) {
         byte[] buffer = new byte[81920];
         long totalReadBytes = 0;
 
-        while (true)
-        {
+        while (true) {
             int readBytes = inputStream.Read(buffer, 0, buffer.Length);
-            if (readBytes == 0)
-            {
+            if (readBytes == 0) {
                 return;
             }
 
             totalReadBytes += readBytes;
-            if (totalReadBytes > byteLimit)
-            {
+            if (totalReadBytes > byteLimit) {
                 throw new ZipMemberOversizedException(totalReadBytes);
             }
 
@@ -558,12 +494,10 @@ public static class ZipHandler
         string archiveDisplayPath,
         int entryIndex,
         string memberPath,
-        out string extractedFilePath)
-    {
+        out string extractedFilePath ) {
         extractedFilePath = string.Empty;
 
-        if (!TryGetSafePathSegments(memberPath, out IReadOnlyList<string> safeMemberSegments))
-        {
+        if (!TryGetSafePathSegments(memberPath, out IReadOnlyList<string> safeMemberSegments)) {
             return false;
         }
 
@@ -577,8 +511,7 @@ public static class ZipHandler
         string candidatePath = Path.GetFullPath(Path.Combine(extractionBasePath, memberRelativePath));
         string rootFullPath = Path.GetFullPath(extractionRootPath);
 
-        if (!IsPathInsideRoot(candidatePath, rootFullPath))
-        {
+        if (!IsPathInsideRoot(candidatePath, rootFullPath)) {
             return false;
         }
 
@@ -594,13 +527,11 @@ public static class ZipHandler
     /// <returns>True when every segment is safe.</returns>
     private static bool TryGetSafePathSegments(
         string memberPath,
-        out IReadOnlyList<string> safeSegments)
-    {
+        out IReadOnlyList<string> safeSegments ) {
         safeSegments = [];
 
         if (string.IsNullOrWhiteSpace(memberPath)
-            || Path.IsPathFullyQualified(memberPath))
-        {
+            || Path.IsPathFullyQualified(memberPath)) {
             return false;
         }
 
@@ -609,21 +540,17 @@ public static class ZipHandler
             ['/', '\\'],
             StringSplitOptions.RemoveEmptyEntries);
 
-        if (rawSegments.Length == 0)
-        {
+        if (rawSegments.Length == 0) {
             return false;
         }
 
         List<string> validatedSegments = [];
-        foreach (string rawSegment in rawSegments)
-        {
-            if (rawSegment == "." || rawSegment == "..")
-            {
+        foreach (string rawSegment in rawSegments) {
+            if (rawSegment == "." || rawSegment == "..") {
                 return false;
             }
 
-            if (rawSegment.IndexOfAny(invalidFileNameChars) >= 0)
-            {
+            if (rawSegment.IndexOfAny(invalidFileNameChars) >= 0) {
                 return false;
             }
 
@@ -639,11 +566,9 @@ public static class ZipHandler
     /// </summary>
     /// <param name="archiveDisplayPath">Safe archive path or display name.</param>
     /// <returns>A safe folder name.</returns>
-    private static string BuildSafeArchiveFolderName(string archiveDisplayPath)
-    {
+    private static string BuildSafeArchiveFolderName( string archiveDisplayPath ) {
         string archiveFileName = Path.GetFileNameWithoutExtension(archiveDisplayPath);
-        if (string.IsNullOrWhiteSpace(archiveFileName))
-        {
+        if (string.IsNullOrWhiteSpace(archiveFileName)) {
             archiveFileName = UnknownArchiveName;
         }
 
@@ -661,8 +586,7 @@ public static class ZipHandler
     /// <param name="candidatePath">Candidate extracted file path.</param>
     /// <param name="rootFullPath">Full extraction root path.</param>
     /// <returns>True when the candidate path stays inside the root.</returns>
-    private static bool IsPathInsideRoot(string candidatePath, string rootFullPath)
-    {
+    private static bool IsPathInsideRoot( string candidatePath, string rootFullPath ) {
         string normalizedRoot = rootFullPath.TrimEnd(
             Path.DirectorySeparatorChar,
             Path.AltDirectorySeparatorChar)
@@ -676,8 +600,7 @@ public static class ZipHandler
     /// </summary>
     /// <param name="entry">Archive entry to inspect.</param>
     /// <returns>True when the entry is a directory marker.</returns>
-    private static bool IsDirectoryEntry(ZipArchiveEntry entry)
-    {
+    private static bool IsDirectoryEntry( ZipArchiveEntry entry ) {
         return string.IsNullOrEmpty(entry.Name)
             || entry.FullName.EndsWith("/", StringComparison.Ordinal)
             || entry.FullName.EndsWith("\\", StringComparison.Ordinal);
@@ -691,8 +614,7 @@ public static class ZipHandler
     /// <returns>True when the entry is encrypted.</returns>
     private static bool IsEncryptedEntry(
         string memberPath,
-        IReadOnlyDictionary<string, bool> encryptedEntriesByName)
-    {
+        IReadOnlyDictionary<string, bool> encryptedEntriesByName ) {
         return encryptedEntriesByName.TryGetValue(memberPath, out bool isEncrypted)
             && isEncrypted;
     }
@@ -705,10 +627,8 @@ public static class ZipHandler
     /// <returns>The maximum expanded bytes for this member kind.</returns>
     private static long GetExpandedByteLimit(
         ZipMemberMediaKind mediaKind,
-        ZipExtractionPolicy policy)
-    {
-        return mediaKind switch
-        {
+        ZipExtractionPolicy policy ) {
+        return mediaKind switch {
             ZipMemberMediaKind.Image => policy.MaxImageMemberBytes,
             ZipMemberMediaKind.Excel => policy.MaxExcelMemberBytes,
             ZipMemberMediaKind.NestedZip => policy.MaxZipArchiveBytes,
@@ -724,8 +644,7 @@ public static class ZipHandler
     /// <returns>A display path using archive/member notation.</returns>
     private static string BuildNestedArchiveDisplayPath(
         string archiveDisplayPath,
-        string memberPath)
-    {
+        string memberPath ) {
         return $"{archiveDisplayPath}!{memberPath}";
     }
 
@@ -744,10 +663,8 @@ public static class ZipHandler
         string archiveDisplayPath,
         string memberPath,
         string originalFileName,
-        string safeMessage)
-    {
-        if (!hasProcessableFileName)
-        {
+        string safeMessage ) {
+        if (!hasProcessableFileName) {
             return;
         }
 
@@ -773,10 +690,8 @@ public static class ZipHandler
         string archiveDisplayPath,
         string memberPath,
         string originalFileName,
-        long expandedByteLength)
-    {
-        if (!hasProcessableFileName)
-        {
+        long expandedByteLength ) {
+        if (!hasProcessableFileName) {
             return;
         }
 
@@ -799,8 +714,7 @@ public static class ZipHandler
         string archiveDisplayPath,
         string? memberPath,
         string? originalFileName,
-        string safeMessage)
-    {
+        string safeMessage ) {
         return new ZipMemberKoRecord(
             archiveDisplayPath,
             memberPath,
@@ -826,8 +740,7 @@ public static class ZipHandler
         string archiveDisplayPath,
         string memberPath,
         string originalFileName,
-        long expandedByteLength)
-    {
+        long expandedByteLength ) {
         return new ZipMemberKoRecord(
             archiveDisplayPath,
             memberPath,
@@ -855,8 +768,7 @@ public static class ZipHandler
         string? memberPath,
         string? originalFileName,
         long expandedByteLength,
-        long limitByteLength)
-    {
+        long limitByteLength ) {
         return new ZipMemberKoRecord(
             archiveDisplayPath,
             memberPath,
@@ -884,8 +796,7 @@ public static class ZipHandler
         string memberPath,
         string originalFileName,
         long expandedByteLength,
-        string safeMessage)
-    {
+        string safeMessage ) {
         return new ZipMemberKoRecord(
             archiveDisplayPath,
             memberPath,
@@ -907,15 +818,12 @@ public static class ZipHandler
     /// <returns>Safe detail key/value pairs.</returns>
     private static IReadOnlyDictionary<string, string> BuildSafeDetails(
         string archiveDisplayPath,
-        string? memberPath)
-    {
-        Dictionary<string, string> safeDetails = new()
-        {
+        string? memberPath ) {
+        Dictionary<string, string> safeDetails = new() {
             ["archive"] = archiveDisplayPath
         };
 
-        if (!string.IsNullOrWhiteSpace(memberPath))
-        {
+        if (!string.IsNullOrWhiteSpace(memberPath)) {
             safeDetails["member"] = memberPath;
         }
 
@@ -926,10 +834,8 @@ public static class ZipHandler
     /// Deletes a partially extracted file after member failure.
     /// </summary>
     /// <param name="extractedFilePath">Partial extracted file path.</param>
-    private static void DeletePartialExtraction(string extractedFilePath)
-    {
-        if (File.Exists(extractedFilePath))
-        {
+    private static void DeletePartialExtraction( string extractedFilePath ) {
+        if (File.Exists(extractedFilePath)) {
             File.Delete(extractedFilePath);
         }
     }
@@ -938,15 +844,12 @@ public static class ZipHandler
     /// Validates the input zip path before extraction starts.
     /// </summary>
     /// <param name="zipFilePath">Path to validate.</param>
-    private static void ValidateZipFilePath(string zipFilePath)
-    {
-        if (string.IsNullOrWhiteSpace(zipFilePath))
-        {
+    private static void ValidateZipFilePath( string zipFilePath ) {
+        if (string.IsNullOrWhiteSpace(zipFilePath)) {
             throw new ArgumentException("Zip file path is required.", nameof(zipFilePath));
         }
 
-        if (!File.Exists(zipFilePath))
-        {
+        if (!File.Exists(zipFilePath)) {
             throw new FileNotFoundException("Zip file was not found.", zipFilePath);
         }
     }
@@ -955,10 +858,8 @@ public static class ZipHandler
     /// Validates the extraction root path before extraction starts.
     /// </summary>
     /// <param name="extractionRootPath">Extraction root path to validate.</param>
-    private static void ValidateExtractionRootPath(string extractionRootPath)
-    {
-        if (string.IsNullOrWhiteSpace(extractionRootPath))
-        {
+    private static void ValidateExtractionRootPath( string extractionRootPath ) {
+        if (string.IsNullOrWhiteSpace(extractionRootPath)) {
             throw new ArgumentException(
                 "Extraction root path is required.",
                 nameof(extractionRootPath));
@@ -968,15 +869,13 @@ public static class ZipHandler
     /// <summary>
     /// Signals that a zip member expanded past the configured byte limit while streaming.
     /// </summary>
-    private sealed class ZipMemberOversizedException : Exception
-    {
+    private sealed class ZipMemberOversizedException : Exception {
         /// <summary>
         /// Initializes a new oversized-member exception.
         /// </summary>
         /// <param name="observedByteLength">Observed expanded bytes before extraction stopped.</param>
-        public ZipMemberOversizedException(long observedByteLength)
-            : base("Zip member expanded beyond the configured byte limit.")
-        {
+        public ZipMemberOversizedException( long observedByteLength )
+            : base("Zip member expanded beyond the configured byte limit.") {
             ObservedByteLength = observedByteLength;
         }
 

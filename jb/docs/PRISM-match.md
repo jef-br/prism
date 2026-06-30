@@ -116,14 +116,14 @@ Weights support/weaken candidate confidence but do **not** override exact numeri
 - Exact normalized token matching first.
 - Configured multilingual synonyms count as evidence for known product words (colors, materials, PTs).
 - Code + mapping files: `jb/src/core/Images/Match/Translate/`.
-- Synonym dictionary: `jb/src/core/Images/Match/Translate/TranslationConfig.json`.
+- Synonym dictionary: `jb/src/core/Images/Match/Translate/TranslationDictionary.json`.
 - No automatic language detection or translation.
 
 ---
 
 ## Stop Words
 
-Configured in `TranslationConfig.json`. General: `the`, `and`, `of`, `de`, `la`, `les`, etc. Domain: `product`, `image`, `style`, `size`, `color`, `collection`, etc. Ignored by matching; retained in diagnostic evidence. `IRL.Tags.Trivial` excluded from mixed-column matching separately.
+Configured in `TranslationDictionary.json`. General: `the`, `and`, `of`, `de`, `la`, `les`, etc. Domain: `product`, `image`, `style`, `size`, `color`, `collection`, etc. Ignored by matching; retained in diagnostic evidence. `IRL.Tags.Trivial` excluded from mixed-column matching separately.
 
 ---
 

@@ -182,4 +182,4 @@ These are tracked in `jb/src/core/Images/Match/jbtodo.md`.
 | File | What it controls |
 |---|---|
 | `jb/src/core/Images/Match/MatchingConfig.json` | Which Excel columns to match against; TCD `maxDistance`; label evidence weights |
-| `jb/src/core/Images/Match/Translate/TranslationConfig.json` | Synonyms (e.g. `bleu` = `blue`); stop words to ignore |
+| `jb/src/core/Images/Match/Translate/TranslationDictionary.json` | Synonyms (e.g. `bleu` = `blue`); stop words to ignore |

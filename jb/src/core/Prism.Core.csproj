@@ -41,7 +41,7 @@
     <Content Include="config\ExcelConfig.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\HostRules.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\MatchingConfig.json" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="config\TranslationConfig.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="config\TranslationDictionary.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\DetOrderKeywordStems.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\DetOrderRules.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Images\Classify\ONNX\clip-vit-b32-uint8\merges.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Images\Classify\ONNX\clip-vit-b32-uint8\merges.txt')" />

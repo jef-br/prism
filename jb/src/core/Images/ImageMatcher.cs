@@ -39,8 +39,8 @@ internal sealed class ImageMatcher {
             "MatchingConfig.json not found in the config directory next to Prism_Config.json.");
 
         string translationConfigPath = LoadConfigPath(
-            "TranslationConfig.json",
-            "TranslationConfig.json not found in the config directory next to Prism_Config.json.");
+            "TranslationDictionary.json",
+            "TranslationDictionary.json not found in the config directory next to Prism_Config.json.");
 
         string excelConfigPath = LoadConfigPath(
             "ExcelConfig.json",

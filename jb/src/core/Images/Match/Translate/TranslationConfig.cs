@@ -7,7 +7,7 @@ using System.Text.Json;
 namespace Prism.Core;
 
 /// <summary>
-/// Loads configured matching synonyms and stop words from TranslationConfig.json.
+/// Loads configured matching synonyms and stop words from TranslationDictionary.json.
 /// </summary>
 public sealed record TranslationConfig
 {
@@ -24,7 +24,7 @@ public sealed record TranslationConfig
     /// <summary>
     /// Loads translation configuration from a JSON file.
     /// </summary>
-    /// <param name="configPath">Path to TranslationConfig.json.</param>
+    /// <param name="configPath">Path to TranslationDictionary.json.</param>
     /// <returns>The parsed translation configuration.</returns>
     public static TranslationConfig Load(string configPath)
     {

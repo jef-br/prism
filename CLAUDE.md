@@ -94,7 +94,7 @@ Every parameter lives in a JSON config file placed next to the code that uses it
 | `ClipPrompts.json` | `jb/src/core/Images/Classify/` |
 | `DetOrderRules.json` | `jb/src/core/Images/Order/` |
 | `HostRules.json` | `jb/src/core/IO/cfg/` |
-| `TranslationConfig.json` | `jb/src/core/Images/Match/Translate/` |
+| `TranslationDictionary.json` | `jb/src/core/Images/Match/Translate/` |
 
 On API startup, `PrismApiConfiguration.Load()` validates all config and model assets. Missing config or model files **fail fast and loud** — never silently.
 

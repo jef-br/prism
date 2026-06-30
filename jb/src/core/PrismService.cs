@@ -225,7 +225,7 @@ public sealed class PrismService : IDisposable
             "ExcelConfig.json",
             "HostRules.json",
             "MatchingConfig.json",
-            "TranslationConfig.json",
+            "TranslationDictionary.json",
             "DetOrderRules.json",
             "DetOrderKeywordStems.json"
         ];

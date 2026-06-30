@@ -20,7 +20,7 @@ Static reload memory. Not a ticket board. Accepted knowledge lives in `jb/docs/`
 | `ClipPrompts.json` | `jb/src/core/Images/Classify/` |
 | `DetOrderRules.json` | `jb/src/core/Images/Order/` |
 | `HostRules.json` | `jb/src/core/IO/cfg/` |
-| `TranslationConfig.json` | `jb/src/core/Images/Match/Translate/` |
+| `TranslationDictionary.json` | `jb/src/core/Images/Match/Translate/` |
 
 ## Behavioral Memory
 
