@@ -1,76 +1,85 @@
 # Daily Brief
 
 Scope of this pass: review all `jbtodo.md` files, `AGENT-TICKETS.md`, `jb/docs/`, and
-`AGENTFEEDBACK.md`; improve open-todo answers **using only existing documented data**; do
-not finalize/close anything without approval; do not invent data, change course, or touch
+`AGENTFEEDBACK.md`; improve open-todo answers **using only existing documented data**; do not
+finalize/close anything without approval; do not invent data, change course, or edit
 `AGENT-TICKETS.md`, `jb/docs/`, or `AGENTFEEDBACK.md`.
 
 ## State since last brief
 
-Commit `0c509ec` landed: **Tx_CropSquare + Tx_ProblemImageProcessor implemented**, and
-**Match #1 (numeric scoring)** plus the Transform "define output" answers closed out. The
-previous brief's "finishable now" list is therefore largely consumed — this brief reflects
-what is actually left.
+Commit `21c8791` ("onnx to singleton, matching testing, Tx_* implementations") has landed since
+the previous brief. Verified against the working tree:
+
+- **ONNX session is now app-scoped (singleton).** `MatchingService` builds `_sharedClassifier`
+  once and initializes the CLIP ONNX session "for the app lifetime"
+  (`jb/src/core/Services/MatchingService.cs:16,27,33`); each job's `ClassificationService` wraps
+  the shared classifier and no longer disposes it. The previous brief's "ONNX singleton NOT yet
+  implemented" finding is now **resolved** — the M5 gate's `✅ (done 2026-06-29)` in
+  `AGENT-TICKETS.md` is accurate.
+- **Transform pixel work, current code state:** `Tx_CropSquare`, `Tx_ProblemImageProcessor`, and
+  `Tx_util_BgStretch` are implemented; `Tx_CenterAndStretch` and `Tx_DetailCropper` still throw
+  `NotSupportedException` from `Process()` (gated) — matching tickets **T-2000 / T-2100 (Blocked)**.
+  `Tx_util_HeadCutter.cs` exists but is an **empty placeholder** (no content), consistent with
+  **T-2200** being unstarted.
 
 ## Files reviewed
 
-- 5 `jbtodo.md`: `api/`, `Images/{Transform,Match,Generate,Classify}/`. (No `IO/` or `Order/`
-  `jbtodo.md` exist on disk — the `AGENTFEEDBACK.md` Open-Work table lists folders whose local
-  todo files were already removed; nothing actionable there this pass.)
-- `jb/docs/` (all PRISM-* docs + `ImageNGP/` + `meta/`), `AGENT-TICKETS.md`, `AGENTFEEDBACK.md`.
+- 5 `jbtodo.md`: repo-root (`web workbench` + `pipeline fusion`), `jb/src/` (Excel parsing),
+  `Images/{Classify,Generate,Transform}/`.
+- `jb/docs/` (PRISM-index + PRISM-* + `ImageNGP/`), `AGENT-TICKETS.md`, `AGENTFEEDBACK.md`.
 
-## What changed this pass (proposals only — nothing finalized)
+## What changed this pass
 
-Four previously-**empty** `Answer:` fields were filled by **transcribing/cross-referencing
-existing accepted specs** into the todo. Each is prefixed `Answer (proposed … pending
-approval)` and cites the exact source. No checkboxes ticked, no new data, no course change.
+**No `jbtodo.md` answers were filled this pass.** Every currently-open `Answer:` field is one of:
 
-| Todo | File | Basis (existing data) |
-|---|---|---|
-| ONNX `InferenceSession` scope | `Classify/jbtodo.md` | `PRISM-classify.md` "ONNX Ownership" ("Sessions application-scoped") + M5 gate wording in `AGENTFEEDBACK.md` → application-scoped singleton |
-| Implement `Tx_util_BgStretch` (tiered fill) | `Transform/jbtodo.md` | `PRISM-transform-generate.md` "Fill Method — Tiered by Extension Ratio" + ticket T-1700 |
-| `Tx_CenterAndStretch` three-step flow | `Transform/jbtodo.md` | todo body + `PRISM-transform-generate.md` "Repositioning/Background Extension"; cross-ref to already-answered cleanup + BgStretch |
-| `ImagePreProcessor` 5-step flow | `Transform/jbtodo.md` | todo body + `PRISM-classify.md` "Border Intersection Detection"; config limits already named in body |
+1. A **user product decision** reserved by ticket **T-2300 / T-2200** (Transform: saliency-region
+   crop placement, headcut confidence thresholds, greedy-crop minimum content retention; HeadCutter:
+   landmark model, family threshold, cut-line style, return format). `jb/docs/PRISM-transform-generate.md`
+   documents general margin / border-intersection / fill-tier policy but contains **no** accepted
+   headcut-threshold or content-retention values — so filling these would mean guessing reserved
+   policy. Left untouched per the team rule "unresolved product decisions stay in `jbtodo.md` — do
+   not guess policy."
+2. An **implementation-task spec** (the `Classify/jbtodo.md` `Analyzer_*` items). The method is
+   already described inline; no additional accepted-doc data resolves them further. These are gated
+   by milestones **M6–M11** and tracked under **T-2600 (Blocked)**.
+
+So there was nothing to improve strictly from existing data without inventing or deciding.
 
 ## Proposed next steps (your call)
 
-1. **Approve the 4 proposed answers above.** All are reconciliation of *existing* specs into
-   empty answer fields — highest confidence, ready to move to implementation on your OK:
-   - **ONNX singleton** is the M5 gate item. Verified against code on 26/06/26: it is **NOT
-     yet implemented** — the session is still created per matching run at `MatchingService.cs:34`
-     (`using IClassificationService … = ClassificationService.Create(...)`, which builds
-     `new ImageClassifier()` and disposes per job). The todo's old `ShellStage_Classify` pointer
-     is stale, but the per-job lifecycle is real, so the M5 gate is still open. Approving the
-     proposed answer + doing the hoist closes it.
-   - **`Tx_util_BgStretch`** is ticket **T-1700** (Status: Ready) — answer + ticket now agree;
-     it can be picked up by a P1 worker immediately.
-   - **`ImagePreProcessor` + `Tx_CenterAndStretch` flow** are the next implementation steps for
-     the Transform stage now that CropSquare/ProblemImageProcessor exist.
+1. **One doc-sync inconsistency to confirm.** `AGENTFEEDBACK.md` still reads *"ONNX singleton …
+   Not yet implemented; tracked in T-2600,"* but the code now implements it (above) and `AGENT-TICKETS.md`
+   already marks the M5 gate done. On your OK I'll update that one `AGENTFEEDBACK.md` line to "implemented"
+   (it's the only stale claim I found). *Not edited this pass — `AGENTFEEDBACK.md` is off-limits without
+   approval.*
 
-2. **Match stage — mechanical fixes already fully specified (need your go, not more data):**
-   - MatchEvidence missing 3 fields; StringMatcher Bracket-3 duplicate-phenotype guard;
-     original pre-normalization token text; `Weight_MatchingSignalsConverging` AssertInRange +
-     bonus placement. Each has a concrete `Fix:` in `Match/jbtodo.md`.
+2. **Unblock the Transform stage (T-2000 / T-2100 / T-2200).** These are the critical path and are all
+   blocked on the **three T-2300 product decisions** + the **HeadCutter spec**. The `jbtodo.md` entries
+   already carry "Industry standard" + "Recommended solution" drafts for each — they need a yes/no/adjust
+   from you, not more research. Answering T-2300 unblocks `Tx_CenterAndStretch` and `Tx_DetailCropper`
+   pixel flows immediately (`Tx_util_BgStretch` fill is already available).
 
-3. **Decisions that need *you*, not data (left untouched):**
-   - Match **cross-bracket tie resolution** — scope call: spec-compliant accumulator (a) vs.
-     accept V1 limitation (b).
-   - Classify **`illustration-technical-drawing`** scope — recommend null-assignment (b) until a
-     positive "schematic" CLIP prompt exists.
-   - Classify **ONNX taxonomy reconciliation** — confirm `ImageNGP.json` ↔ `imagePhenotypes.md`
-     ↔ `ImageRoles.json` agree on the 26 phenotypes.
+3. **M5 Classify groundwork (T-2600).** With the singleton done, the remaining gate items are: confirm
+   `ImageNGP.json` ↔ `imagePhenotypes.md` ↔ `ImageRoles.json` agree on the 26 phenotypes, then start the
+   `Analyzer_*` stubs in milestone order — **M6** (`Analyzer_HasHuman` → `Analyzer_HasFace`) is the first
+   real-signal step and a prerequisite for most downstream analyzers. Replacing `RecordUnknownFeatures()`
+   with real CLIP/CPU measurements is the dependency that gates phenotype production validation.
 
-4. **Still genuinely blocked (need new data/design — not touched):**
-   - Transform: detail-crop **saliency map**, **headcut thresholds**, **greedy crop**,
-     **`Tx_LowContrastEnhancement`** scope, **`Tx_util_HeadCutter`** landmark-model choice — all
-     have open design questions requiring decisions, not transcription.
-   - Generate: real generation backend (ComfyUI + Flux.1-schnell recommended; needs a server).
-   - Classify: **`RecordUnknownFeatures()`** (blocked on taxonomy) and **phenotype production
-     validation** (needs a labeled image set).
+4. **Two root-level `jbtodo.md` items are unticketed** — consider whether they should become tickets:
+   - **Web workbench UX refresh** (less beige, dark mode, compact match/transform review, import/export
+     progress feedback, keep upscaling implicit). Self-contained, parallelizable with backend work.
+   - **Pipeline architecture: fuse Import + Match** to remove double image I/O, while keeping the matching
+     service publicly exposable. This is an architecture change (P4) and would interact with the
+     `MatchingService` shared-classifier work above — worth a design note before any code.
 
-## Note on push target
+5. **Excel parsing refinement (`jb/src/jbtodo.md`)** remains the largest spec'd-but-unstarted backend
+   item (AUTOMAT2/HEROAUT3 header-detection failures: ES/FR/DE/NL header translation, sample-based
+   FamilyID column confirmation, refco auto-generation). The user's handwritten plan invites a
+   logical-consistency review **before implementing** — recommend that review be its own scoped pass when
+   this is picked up, rather than editing the plan in place now.
 
-This session is assigned development branch `claude/hopeful-dirac-4b7mm7`, while `CLAUDE.md`
-says daily-brief commits go directly to `main`. These conflict. I committed the `jbtodo.md`
-improvements **and** this brief to the assigned branch and did **not** push to `main`. Tell me
-if you want the brief cherry-picked to `main` per the usual convention.
+## Nothing finalized
+
+No checkboxes ticked, no answers closed, no data invented, no course change. Awaiting your decisions on
+items 1–2 to unblock the Transform critical path.
+</content>
