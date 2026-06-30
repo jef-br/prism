@@ -43,7 +43,7 @@ Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, 
 
 | Milestone | Feature area | Gate condition |
 |---|---|---|
-| M5 Classification Groundwork | ImageNGP taxonomy + rule correctness | All Classify `jbtodo.md` decisions answered; ONNX session migrated to singleton |
+| M5 Classification Groundwork | ImageNGP taxonomy + rule correctness | All Classify `jbtodo.md` decisions answered; ONNX session migrated to singleton ✅ (done 2026-06-29) |
 | M6 Human & Model Detection | `hero-is-human`, `contains-mannequin`, `has-human`, `head-visible`, `face-visible` | On-model and ghost phenotypes (`front-on-model-*`, `ghost-front/back/side`) fire correctly on labeled images |
 | M7 Orientation & Pose | `hero-orientation`, `pose-type`, `camera-angle`, `top-view` | Packshot orientation-split phenotypes (`front-packshot`, `back-packshot`, `side-packshot`) fire from real signal |
 | M8 Product & Packaging | `packaging-visible`, `product-type-label`, `multiple-products` | packshot phenotypes fire from CLIP; `packaging-visible` no longer always UNKNOWN |
@@ -53,114 +53,6 @@ Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, 
 
 ## Tickets
 
-### T-1300 · Implement Fetch_HTTPS_DirectFile.cs
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
-
-Implement `IFetchStrategy` in `jb/src/core/IO/Fetchers/Fetch_HTTPS_DirectFile.cs` to download a file from a direct HTTPS URL.
-
-**Acceptance:**
-- Validates URL against `HostRules.json`: allowed schemes, blocked hosts, redirect count limit, timeout.
-- Streams download to `%TEMP%/prism/{jobID}/`.
-- Returns `ImageRecord_INPUT`.
-- `dotnet build jb/src/PRISM.sln` passes.
-
-**Files:** `jb/src/core/IO/Fetchers/Fetch_HTTPS_DirectFile.cs`
-
----
-
-### T-1400 · Implement Fetch_DropBox.cs
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
-
-**Decision (2026-06):** Public-only scope. Private OAuth links deferred to a future ticket.
-
-Public shared links (`dropbox.com/s/...?dl=0`) are normalized to `?dl=1` and delegated to `Fetch_HTTPS_DirectFile`. `dl.dropboxusercontent.com` URLs pass through unchanged (already direct downloads). OAuth-authenticated private links are out of scope for V1.
-
-**Files:** `jb/src/core/IO/Import/Fetchers/Fetch_DropBox.cs`
-
----
-
-### T-1500 · Split StageShells.cs into per-stage files
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
-
-`jb/src/core/Pipeline/StageShells.cs` contains 8 `internal static class` declarations (~430 lines). Rule: one type per file, filename matches type name. Naming convention: `ShellStage_Xyz.cs` (not `XyzStageShell.cs`).
-
-**Acceptance:**
-- `StageShells.cs` deleted.
-- Eight new files in `jb/src/core/Pipeline/`, each with one renamed class:
-  - `ShellStage_Import.cs` (was `ImportStageShell`)
-  - `ShellStage_Classify.cs` (was `ClassifyStageShell`)
-  - `ShellStage_Match.cs` (was `MatchStageShell`)
-  - `ShellStage_Order.cs` (was `OrderStageShell`)
-  - `ShellStage_Rename.cs` (was `RenameStageShell`)
-  - `ShellStage_Generate.cs` (was `GenerateStageShell`)
-  - `ShellStage_Transform.cs` (was `TransformStageShell`)
-  - `ShellStage_Export.cs` (was `ExportStageShell`)
-- `Prism.cs` call sites updated to use new class names.
-- `dotnet build jb/src/PRISM.sln` passes.
-
-**Files:** `jb/src/core/Pipeline/StageShells.cs` (delete); `ShellStage_Import.cs` through `ShellStage_Export.cs` (new); `Prism.cs` (call site renames)
-
----
-
-### T-1600 · SD-8: ImageRecord_OUTPUT Width/Height/Checksum
-**Status:** Done | **Profile:** P0-orchestrator
-
-**Resolution — not a bug.** `ImageRecord_OUTPUT` inherits from `ImageRecord_Base` which already declares `Width`, `Height`, and `Checksum`. All `ImageRecord*` types carry these fields via inheritance. No fix required.
-
-**Files:** `jb/src/core/Models/ImageRecord_Base.cs` (no changes)
-
----
-
-### T-1700 · Implement Tx_util_BgStretch
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
-
-Implement the tiered background fill utility in `jb/src/core/Images/Transform/Tx_util_BgStretch.cs`.
-Called as a sub-step from `Tx_CenterAndStretch` and `Tx_DetailCropper`. Not an `IImageTransformation` implementor.
-
-**Tiers (extension ratio = filled canvas area / source image area):**
-- ≤ 125%: basic edge extension (mirror or clamp border pixels outward)
-- ≤ 142%: content-aware edge extension (patch-based or frequency-aware border propagation)
-- > 142%: OpenCV inpainting — INPAINT_TELEA preferred, INPAINT_NS as alternative
-- > 250%: solid white fill (#FFFFFF)
-
-**Rules:**
-- Never use Gaussian blur as a fill method.
-- Apply seam feathering at extension boundary after tiers 1 and 2.
-- Tier 3 inpainting handles its own seam implicitly.
-- Expose `Process(byte[] arr, int stride, float upscale_factor)` per the dual-interface contract.
-
-**Acceptance:**
-- All four tiers select the correct method for the given extension ratio.
-- Seam feathering applied after tiers 1 and 2; not after tiers 3 or 4.
-- `Process()` signature matches dual-interface contract.
-- `dotnet build jb/src/PRISM.sln` passes.
-
-**Files:** `jb/src/core/Images/Transform/Tx_util_BgStretch.cs`
-
----
-
-### T-1800 · Add ProductTypeId to ImageRecord_LAMBDA
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
-
-**Resolution:** Field existed in `ImageRecord_LAMBDA.cs` (line 67) and `ImageTransformer.cs` already read it. Only the write was missing. Fixed: added `lambda.ProductTypeId = productTypeId;` in `ImageOrderer.ProcessFamily` write-back loop (line ~93). `ResolveProductType()` reads from `FamilyIDRecord.CanonicalProperties.Values` (Excel IEM dynamic columns) and normalizes to kebab-case against `DetOrderRules.json` — no CLIP involvement; CLIP confidence enforcement is a separate future enhancement.
-
-**Files:** `jb/src/core/Images/ImageOrderer.cs`
-
----
-
-### T-1900 · Implement Tx_LowContrastEnhancement
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
-
-Implement `jb/src/core/Images/Transform/processingtools/Tx_LowContrastEnhancement.cs` (currently empty). Called as a pre-step inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast"]` is true. Purpose: improve foreground/background separation to sharpen subsequent bounding-box accuracy — not a visual quality pass for export.
-
-**What to do:**
-1. Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) via OpenCVSharp4 to the full image (not background-region only — safer for bbox accuracy).
-2. Signature: `Process(byte[] arr, int stride, float upscale_factor)` matching the webservice dual-interface contract; also callable as a sub-step accepting/returning JPEG `byte[]`.
-3. `dotnet build jb/src/PRISM.sln` passes.
-
-**Files:** `jb/src/core/Images/Transform/processingtools/Tx_LowContrastEnhancement.cs`
-
----
 
 ### T-2000 · Implement Tx_CenterAndStretch pixel flow
 **Status:** Blocked | **Profile:** P1-feature-worker | **Agent:** worker  
@@ -225,30 +117,6 @@ Each answer unlocks T-2100 (DetailCropper) and T-2200 (HeadCutter).
 
 ---
 
-### T-2400 · Implement cross-bracket tie accumulator
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
-
-`RunWaterfall` now maintains a `crossBracketCandidates` dictionary (per-image `HashSet<string>` of FamilyIDs). Brackets 1 and 2 populate it from `tiedCandidates` when count > 1; Bracket 3 adds rejected candidates discarded by the duplicate-phenotype guard. `KoUnmatched` branches on count ≥ 2 to emit `MATCHES_MULTIPLE_FAMILYIDS` vs `MATCH_NOT_FOUND`. Two `AccumulateCandidates` overloads (list and single-string) consolidate accumulator writes. Bracket 4 (SemanticMatcher) does not expose candidates on ties — V1 accepted per spec.
-
-**Files:** `jb/src/core/Images/ImageMatcher.cs`
-
----
-
-### T-2500 · Implement GPU upscaler (Real-ESRGAN via DirectML)
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
-
-`Upscaler_g_p_u.RunRealEsrgan` throws `NotImplementedException`. `GpuProbe.HasHardwareDirectMLAdapter()` already gates the code path correctly.
-
-**What to do:**
-1. Add `Microsoft.ML.OnnxRuntime.DirectML` NuGet to `jb/src/core/Images/Upscale/Prism.Core.Images.Upscale.csproj`.
-2. Initialize `InferenceSession` once with `AppendExecutionProvider_DML(adapterIndex: 0)` pointing to the model path from config.
-3. Implement `RunRealEsrgan`: decode input JPEG → BGR float32 NCHW [1,3,H,W] → `_session.Run` → output [1,3,H×2,W×2] → clamp [0,1] → BGR uint8 → JPEG bytes.
-4. Model path: add `Upscale.ModelPath` key to `Prism_Config.json` pointing to `real-esrgan-x2plus.onnx`.
-5. `dotnet build jb/src/PRISM.sln` passes; `ImageUpscaler.Upscale(bytes, 1.3)` on a DX12-capable machine returns a larger image without throwing.
-
-**Files:** `jb/src/core/Images/Upscale/Upscaler_g_p_u.cs`, `jb/src/core/Images/Upscale/Prism.Core.Images.Upscale.csproj`
-
----
 
 ### T-2600 · M5 Classify groundwork
 **Status:** Blocked | **Profile:** P0-orchestrator  
@@ -267,29 +135,6 @@ M5 gate condition: all Classify decisions answered; ONNX session migrated to sin
 
 ---
 
-### T-2700 · Wire fetcher strategies into API ingress
-**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
-
-`Fetch_DropBox` and `Fetch_HTTPS_DirectFile` implement `IFetchStrategy` but are never called from the API. `AddRemoteInputRecords` in `PrismProcessIngressReader.cs` routes URLs by file extension only and produces bare `ImageRecord_INPUT` records with no `TempFilePath`, which the Importer then KOs as "file not found."
-
-**What to do:**
-1. Create `FetchDispatcher` in `jb/src/core/IO/Import/Fetchers/` — holds an ordered list of `IFetchStrategy`, exposes `bool CanHandle(string url)` and `Task<FetchedInputRecord> FetchAsync(...)`. `FetchedInputRecord` carries the temp file path and the content type resolved from the HTTP `Content-Type` response header (not the URL extension).
-2. Register `Fetch_DropBox` and `Fetch_HTTPS_DirectFile` in the dispatcher (Dropbox first, HTTPS second). `Fetch_DropBox.CanHandle` already wins for Dropbox hosts before `Fetch_HTTPS_DirectFile` would match.
-3. In `PrismProcessIngressReader.AddRemoteInputRecords`: make the method `async`, call `FetchDispatcher.CanHandle(url)` first; if true, call `FetchAsync`, spill to the job temp dir, and route the result to `images`, `excelFiles`, or `zipFiles` based on the resolved content type — not the URL extension.
-4. Dropbox folder share links (`/scl/fo/…?dl=1`) are served as ZIP by Dropbox — the content-type will be `application/zip` and the record routes to `zipFiles`. The ZIP importer unpacks the contents in the normal Import stage.
-
-**Test URL** (TinyTest dataset, Dropbox folder, `dl=0` → `dl=1` triggers download):
-`https://www.dropbox.com/scl/fo/lxjw1t2e12oyni2bbicdj/ALQbP67UxizZS7sOFuSBurk?rlkey=fm62aaeipylnfnridd67s9i2x&st=rc57bdef&e=1&dl=0`
-
-**Acceptance:**
-- Submitting the test URL via `processRequest.Input` produces a completed PRISM job (same outcome as uploading TinyTest directly).
-- A non-Dropbox HTTPS direct-file URL (`.jpg`) is fetched and routed as an image.
-- An unsupported URL (no matching strategy) is KO'd with a clear reason code, not silently dropped.
-- `dotnet build jb/src/PRISM.sln` passes.
-
-**Files:** `jb/src/core/IO/Import/Fetchers/FetchDispatcher.cs` (new); `jb/src/api/PrismProcessIngressReader.cs` (make `AddRemoteInputRecords` async, add dispatch call)
-
----
 
 ## Verification Rules
 

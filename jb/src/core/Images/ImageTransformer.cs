@@ -7,7 +7,7 @@ namespace Prism.Core;
 /// </summary>
 /// <remarks>
 /// Routing order (evaluated top-to-bottom, first match wins):
-/// 1. <c>salient-bbox</c> UNKNOWN or <see cref="ImageRecord_LAMBDA.SelectedPhenotype"/> null
+/// 1. <see cref="ImageRecord_LAMBDA.BoundingBox"/> null or <see cref="ImageRecord_LAMBDA.SelectedPhenotype"/> null
 ///    → <see cref="Tx_ProblemImageProcessor"/> (conservative resize, no crop or fill).
 /// 2. Any edge intersects (<c>intersects-top/bottom/left/right</c> = "true"):
 ///    a. Phenotype is <c>"closeup-image"</c> or <c>"model-detail-closeup"</c>
@@ -19,7 +19,7 @@ namespace Prism.Core;
 /// While <see cref="BypassPhenotypes"/> is on (temporary PoC gate), phenotype drops out of the
 /// decision: the phenotype-null half of guard 1 is skipped, and intersecting images route to
 /// <see cref="Tx_CropSquare"/> instead of <see cref="Tx_DetailCropper"/> (which is phenotype-driven).
-/// Routing then depends only on <c>salient-bbox</c> and edge intersects.
+/// Routing then depends only on <see cref="ImageRecord_LAMBDA.BoundingBox"/> and edge intersects.
 /// </remarks>
 public static class ImageTransformer
 {
@@ -45,7 +45,7 @@ public static class ImageTransformer
     {
         // Step 1 — prerequisites missing: route to conservative processor.
         // The phenotype-null guard is suppressed while phenotypes are bypassed.
-        if (lambda.Features.GetValue("salient-bbox") == "UNKNOWN" || (!BypassPhenotypes && lambda.SelectedPhenotype is null))
+        if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null))
             return new Tx_ProblemImageProcessor();
 
         bool hasEdgeIntersect = lambda.Features.GetValue("intersects-top")    == "true"

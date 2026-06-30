@@ -165,8 +165,28 @@ Runs in `Classified` stage after import normalization.
 
 ## ONNX InferenceSession Scope
 
-Decision: per-job session lifecycle (current behavior). ONNX model load is ≤500 ms; jobs exceed 1 minute; application-scoped sessions add thread-safety complexity for negligible gain. ClassificationService.Create() instantiates a fresh session per job and disposes it when the job ends.
+`InferenceSession` is **application-scoped singleton** held by `MatchingService`. The 146 MB model loads once at startup (in the `MatchingService` constructor) and is reused across all jobs for the lifetime of the API process. `ClassificationService` is still created per-job but borrows the shared `ImageClassifier` — it does not own or dispose it.
+
+`MatchingService` owns a `_clipLock` object; all `InferenceSession.Run()` calls are serialized through it (required for DML execution provider which is not thread-safe for concurrent calls).
 
 ## interior-shot Detection
 
 interior-shot is now reachable via the `interior-detected` ImageFeature, set by `InteriorAnalyzer.cs`. The analyzer detects enclosed regions that are smoother than their surrounding texture and bounded by strong edges. Product-type gating (wallet/bag/suitcase only) is applied at the Order stage (T-1800).
+
+## illustration-technical-drawing Detection
+
+`illustration-technical-drawing` is no longer a catch-all. It requires a positive signal from `Analyzer_IsIllustration.cs` via the `is-illustration` feature (in addition to `hero-is-human = FALSE`).
+
+`Analyzer_IsIllustration` applies three-signal topological analysis — all three must pass:
+
+| Signal | What is measured | Threshold |
+|---|---|---|
+| HF Edge Density | Fraction of pixels where Sobel gradient ≥ 60/255 | ≥ 12% (`MinEdgeDensity`) |
+| Background Flatness | Fraction of border-strip pixels (5% depth each side) where all RGB channels ≥ 230/255 | ≥ 80% (`BackgroundFlatnessMin`) |
+| Color Cluster Count | Count of quantized RGB buckets (8 bins/channel = 512 total) with > 1% population | ≤ 4 (`MaxColorClusters`) |
+
+The first signal catches the high line frequency typical of technical drawings. The second targets the near-white flat backgrounds illustrations are always printed on. The third distinguishes drawings (1–2 colors: black + white) from actual colored illustrations (few color clusters) vs. product photos (many clusters).
+
+Transparent pixels count as white for the background signal. Every-other-pixel sampling used in the color signal for performance.
+
+File: `jb/src/core/Images/Classify/Analyzers/Analyzer_IsIllustration.cs`

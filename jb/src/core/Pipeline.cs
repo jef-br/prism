@@ -7,7 +7,7 @@ namespace Prism.Core;
 /// is no shared mutable context. The services emit the eight stage progress events in immutable order:
 /// Imported → Classified → Matched → Ordered → Renamed → Generated → Transformed → Exported.
 /// </summary>
-internal sealed class Pipeline
+internal sealed class Pipeline : IDisposable
 {
     private readonly IArtifactStore artifactStore;
     private readonly IIngestService ingestService;
@@ -43,6 +43,9 @@ internal sealed class Pipeline
         generateService   = services.Generate;
         transformService  = services.Transform;
     }
+
+    /// <summary>Disposes services that own native resources (e.g. the CLIP ONNX session in MatchingService).</summary>
+    public void Dispose() { if (matchingService is IDisposable d) d.Dispose(); }
 
     // -------------------------------------------------------------------------
     // Stage name constants — single source of truth for the immutable stage order.

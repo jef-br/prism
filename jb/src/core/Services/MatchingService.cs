@@ -10,13 +10,23 @@ namespace Prism.Core;
 /// Matched, Ordered, and Renamed stage events in order and persists each LAMBDA document to the artifact
 /// store so downstream services can read a stage's output without a shared mutable context.
 /// </summary>
-public sealed class MatchingService : IMatchingService
+public sealed class MatchingService : IMatchingService, IDisposable
 {
     private readonly PrismConfiguration configuration;
+    private readonly ImageClassifier _sharedClassifier;
+    private readonly ClipPromptCatalog _sharedPromptCatalog;
+    private readonly object _clipLock = new();
+    private bool _disposed;
 
-    /// <summary>Creates the service with the validated PRISM configuration (thresholds, dedup policy).</summary>
+    /// <summary>Creates the service with the validated PRISM configuration (thresholds, dedup policy).
+    /// Initializes the shared CLIP ONNX session once for the app lifetime.</summary>
     public MatchingService(PrismConfiguration configuration)
-        => this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+    {
+        this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _sharedPromptCatalog = ClassificationService.LoadPromptCatalog();
+        _sharedClassifier    = new ImageClassifier();
+        ClassificationService.InitializeClassifier(_sharedClassifier);
+    }
 
     /// <inheritdoc/>
     public async Task<MatchingResult> MatchAsync(
@@ -34,7 +44,8 @@ public sealed class MatchingService : IMatchingService
 
         IImageNgpService ngp                     = new ImageNgpService(LoadRuleSet());
         IFeatureAnalysisService featureAnalysis  = new FeatureAnalysisService();
-        using IClassificationService classification = ClassificationService.Create(configuration);
+        using IClassificationService classification =
+            new ClassificationService(_sharedClassifier, _sharedPromptCatalog, configuration.MaxHammingDistance);
 
         // Pre-allocate a fixed results array — each thread writes to its own index, no synchronisation needed.
         var results = new (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, UInt128 Hash)[okImages.Count];
@@ -169,12 +180,13 @@ public sealed class MatchingService : IMatchingService
 
             // CLIP failure → degrade, never KO: tags are optional enrichment, and FamilyID matching keys
             // off filename tokens, so the image must still flow to ImageNGP and the matching waterfall.
-            // InferenceSession.Run is not safe for concurrent calls in the versions/providers used here.
+            // _clipLock serializes inference across all images (intra-job) and all concurrent jobs — required
+            // because the DML execution provider does not support concurrent InferenceSession.Run calls.
             if (classification.IsReady && !skipClassification)
             {
                 try
                 {
-                    lock (classification)
+                    lock (_clipLock)
                     {
                         classification.ApplyClipTags(image, lambda,
                             configuration.ThresholdForInfluentialTags,
@@ -238,6 +250,9 @@ public sealed class MatchingService : IMatchingService
 
         return removed;
     }
+
+    /// <inheritdoc/>
+    public void Dispose() { if (_disposed) return; _disposed = true; _sharedClassifier.Dispose(); }
 
     //  Helpers
 

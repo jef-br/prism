@@ -35,6 +35,7 @@ public static class ImageFeatureAnalyzer
         DeriveOcclusionLevel(snapshot);
         AnalyzeSkinTone(image, snapshot);
         AnalyzeInterior(image, snapshot);
+        AnalyzeIllustration(image, snapshot);
         RecordUnknownFeatures(snapshot);
     }
 
@@ -148,8 +149,16 @@ public static class ImageFeatureAnalyzer
 
     private static void AnalyzeInterior(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
     {
-        bool detected = InteriorAnalyzer.Analyze(image);
+        bool detected = Analyzer_Interior.Analyze(image);
         snapshot.Set("interior-detected", detected ? "true" : "false", 1.0, "geometry");
+    }
+
+    //  Illustration / technical drawing detection
+
+    private static void AnalyzeIllustration(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
+    {
+        bool detected = Analyzer_IsIllustration.Analyze(image);
+        snapshot.Set("is-illustration", detected ? "true" : "false", 1.0, "topology");
     }
 
     //  Stubs for features that need heavier models
@@ -181,7 +190,6 @@ public static class ImageFeatureAnalyzer
         SetUnknownIfNotSet(snapshot, "reflection-present");
         SetUnknownIfNotSet(snapshot, "lighting");
         SetUnknownIfNotSet(snapshot, "camera-angle");
-        SetUnknownIfNotSet(snapshot, "salient-bbox");
         SetUnknownIfNotSet(snapshot, "product-coverage-ratio");
         SetUnknownIfNotSet(snapshot, "image-occupancy");
         SetUnknownIfNotSet(snapshot, "crop-tightness");

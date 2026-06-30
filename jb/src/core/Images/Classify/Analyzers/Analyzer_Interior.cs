@@ -10,7 +10,7 @@ namespace Prism.Core;
 /// Sets the <c>interior-detected</c> ImageFeature consumed by the <c>interior-shot</c> phenotype rule.
 /// Product-type gating (wallet/bag/suitcase only) is applied at the Order stage (T-1800).
 /// </summary>
-internal static class InteriorAnalyzer
+internal static class Analyzer_Interior
 {
     // Minimum fraction of image area an interior region must cover
     private const float MinAreaFraction = 0.04f;

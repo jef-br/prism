@@ -6,7 +6,7 @@ namespace Prism.Core;
 /// Initialize sets up validated resources; Process expresses the job lifecycle;
 /// helpers below each method do their named step.
 /// </summary>
-public sealed class PrismService
+public sealed class PrismService : IDisposable
 {
     private readonly PrismConfiguration configuration;
     private readonly ModelBuilder modelBuilder;
@@ -38,6 +38,9 @@ public sealed class PrismService
         this.modelBuilder  = modelBuilder  ?? throw new ArgumentNullException(nameof(modelBuilder));
         pipeline = new Pipeline(this.configuration, this.modelBuilder);
     }
+
+    /// <summary>Disposes the pipeline and its owned resources (CLIP ONNX session).</summary>
+    public void Dispose() => pipeline.Dispose();
 
     // -------------------------------------------------------------------------
     // Entry point — Process

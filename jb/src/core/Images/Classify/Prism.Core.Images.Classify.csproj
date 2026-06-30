@@ -10,7 +10,8 @@
     <Compile Include="ClipPromptCatalog.cs" />
     <Compile Include="DedupGroup.cs" />
     <Compile Include="FeatureCondition.cs" />
-    <Compile Include="Analyzers\InteriorAnalyzer.cs" />
+    <Compile Include="Analyzers\Analyzer_Interior.cs" />
+    <Compile Include="Analyzers\Analyzer_IsIllustration.cs" />
     <Compile Include="ImageFeatureAnalyzer.cs" />
     <Compile Include="ImageRolesConfig.cs" />
     <Compile Include="PhenotypeRule.cs" />

@@ -4,34 +4,21 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Prism.Core;
 
 /// <summary>
-/// In-process Classification implementation. Holds the CLIP session and prompt catalogue for one job and
-/// performs both ONNX tagging and perceptual-hash duplicate grouping. Internal to Matching; disposed when
-/// matching completes. Owns <c>ClipPrompts.json</c> and the ONNX model assets.
+/// Per-job Classification wrapper. Borrows the shared <see cref="ImageClassifier"/> and prompt catalogue
+/// from <see cref="MatchingService"/> (which owns both for the app lifetime) and performs ONNX tagging and
+/// perceptual-hash duplicate grouping. <see cref="Dispose"/> is a no-op — the classifier is not owned here.
 /// </summary>
 public sealed class ClassificationService : IClassificationService
 {
     private readonly ImageClassifier classifier;
     private readonly ClipPromptCatalog promptCatalog;
     private readonly int maxHammingDistance;
-    private bool disposed;
 
-    private ClassificationService(ImageClassifier classifier, ClipPromptCatalog promptCatalog, int maxHammingDistance)
+    internal ClassificationService(ImageClassifier classifier, ClipPromptCatalog promptCatalog, int maxHammingDistance)
     {
         this.classifier         = classifier;
         this.promptCatalog      = promptCatalog;
         this.maxHammingDistance = maxHammingDistance;
-    }
-
-    /// <summary>
-    /// Loads ClipPrompts.json, initializes a CLIP session from the ONNX assets, and captures the
-    /// configured perceptual-hash distance. Fails fast and loud when any asset is missing.
-    /// </summary>
-    public static ClassificationService Create(PrismConfiguration configuration)
-    {
-        ClipPromptCatalog promptCatalog = LoadPromptCatalog();
-        ImageClassifier classifier = new();
-        InitializeClassifier(classifier);
-        return new ClassificationService(classifier, promptCatalog, configuration.MaxHammingDistance);
     }
 
     /// <inheritdoc/>
@@ -116,16 +103,11 @@ public sealed class ClassificationService : IClassificationService
         => new VisualHasher(maxHammingDistance).FindDuplicates(entries);
 
     /// <inheritdoc/>
-    public void Dispose()
-    {
-        if (disposed) return;
-        classifier.Dispose();
-        disposed = true;
-    }
+    public void Dispose() { }
 
     //  Config / asset loading 
 
-    private static ClipPromptCatalog LoadPromptCatalog()
+    internal static ClipPromptCatalog LoadPromptCatalog()
     {
         string? clipPromptsPath = PrismConfigLocator.FindFolderLocalConfig("ClipPrompts.json");
         if (clipPromptsPath is null)
@@ -135,7 +117,7 @@ public sealed class ClassificationService : IClassificationService
         return ClipPromptCatalog.Load(clipPromptsPath);
     }
 
-    private static void InitializeClassifier(ImageClassifier classifier)
+    internal static void InitializeClassifier(ImageClassifier classifier)
     {
         string pathRoot = "Images/Classify/ONNX/clip-vit-b32-uint8";
 

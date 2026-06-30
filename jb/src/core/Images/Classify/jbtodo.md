@@ -1,58 +1,130 @@
 # Image Classification Todo
 
 -------
-- [ ] HANDMADE BY ME: Temporarily GATE the phenotypes so we can get basic transformations online.
-  - Status: gate implemented as `ImageTransformer.BypassPhenotypes` (currently `true`). While on, transform routing ignores `SelectedPhenotype` and decides off geometry only (`salient-bbox` + edge intersects): bbox present + no intersect → `Tx_CenterAndStretch`; bbox + intersect → `Tx_CropSquare`; no bbox → `Tx_ProblemImageProcessor`. `Tx_DetailCropper` (phenotype-driven) is unreachable while bypassing. Flip the flag to `false` once phenotype assignment is validated; this todo stays open until then.
-
-
--------
 - [ ] Define final ImageNGP taxonomy and feature combinations: list all possible ImageNGPs and the ImageFeature values required to derive each phenotype.
-  - Impact:
-    - Project progress: High - ImageFeatures and ImageNGPs control matching evidence, transform behavior, DetOrder assignment, and output quality rules.
-    - Effect on other TODOs: Blocks - It gates ordering rules, `ImageNGP.cs` fields, `ImageRecord_LAMBDA.cs` fields, transform-facing phenotype use, and unknown-state handling for derived phenotypes.
-  - Industry standard:
-    Vision pipelines keep measured attributes separate from derived image phenotypes, then document the feature combinations that produce each phenotype so downstream stages can make deterministic decisions.
-  - Recommended solution:
-    Use the accepted `jb/docs/PRISM-classify.md` decision as the baseline: ImageFeatures are measured attributes with source/confidence/unknown state, and `ImageNGP` is a phenotype derived from combinations of ImageFeatures rather than a single `TypeOfShot` list. Complete this todo by listing the concrete ImageNGP values and their required feature combinations.
-
-  - Answer (proposed pointer from existing data — PRISM-classify.md "Taxonomy & Prompt Configuration"; PRISM-index.md File Map; pending approval):
-    The enumerated taxonomy already exists as accepted artifacts — this todo is reconciliation/transcription, not net-new design:
-      - Canonical machine source: `jb/src/core/ImageNGP/ImageNGP.json` — every IF id with datatype/allowed values, plus the 26-phenotype catalogue (the runtime authority; `ImageNgpValidator` fails fast on any drift).
-      - IF→phenotype feature combinations: `jb/src/core/ImageNGP/ImageRoles.json` (first-match rules).
-      - Human-readable definitions: `jb/docs/ImageNGP/imagePhenotypes.md` (26 phenotypes) and `jb/docs/ImageNGP/PRODUCTTYPES.md`; IF catalog in `jb/docs/ImageNGP/ImageFeatures.md` (40 IFs).
-    Recommended close-out: confirm `ImageNGP.json` ↔ `imagePhenotypes.md` ↔ `ImageRoles.json` agree on the 26 phenotypes and their required IF combinations, then record that reconciled list here. (No new phenotypes should be invented in this step.) NOTE: the `illustration-technical-drawing` scope todos below must be settled as part of confirming the feature combinations.
-
--------
-- [ ] Resolve whether `illustration-technical-drawing` should remain a broad catch-all or require additional conditions.
-  - Impact:
-    - Project progress: Medium — once CLIP provides `hero-is-human = FALSE` for real images, every non-human image that does not match any earlier rule (including plain products with unusual or ambiguous features) will be silently assigned `illustration-technical-drawing`. This is almost certainly wrong for most of those images.
-    - Effect on other TODOs: Affects DetOrder slot assignment (the phenotype is documented to always receive the last configured det slot) and transform routing. Misclassification here directly degrades ordering quality.
-  - Industry standard:
-    Catch-all rules in phenotype taxonomies are either placed at the very bottom and clearly scoped (e.g. "all remaining lifestyle images → lifestyle-context") or gated by a positive signal (e.g. a CLIP prompt confidence for "graphic/schematic rendering"). A rule that means "graphic/schematic" but fires for any non-human image is an unscoped catch-all masquerading as a specific phenotype.
-  - Recommended solution:
-    Either (a) add CLIP-based conditions to tighten the rule (e.g. require a classification token above threshold for "technical drawing", "vector illustration", or "schematic"), or (b) replace the current rule with a null assignment so unrecognized non-human images get no phenotype and are handled by deterministic fallback in the Ordered stage. Option (b) is safer until the CLIP-based signal is proven reliable.
-  - Answer (proposed recommendation, decision still yours — grounded in PRISM-classify.md "UNKNOWN States" (below-threshold → UNKNOWN, never default) and current impl where most IFs are UNKNOWN/no CLIP prompt writes a "schematic" token; pending approval):
-    Existing data favours option (b) for now: there is currently no CLIP prompt or analyzer that writes a positive "technical drawing / vector illustration / schematic" signal, so an unscoped catch-all firing on any non-human image would systematically misclassify plain products once `hero-is-human = FALSE` becomes available. Replacing it with a null/no-phenotype assignment keeps unrecognized non-human images in the deterministic Ordered-stage fallback (consistent with the docs' rule that absent evidence stays UNKNOWN rather than defaulting). Option (a) becomes the preferred long-term fix only after a dedicated CLIP prompt for "schematic/technical drawing" is added and proven on the validation set — which is new data, so it is out of scope for this pass. Final pick is your call.
-
--------
-- [ ] Code stub: `RecordUnknownFeatures()` in `ImageFeatureAnalyzer.cs` marks 35+ features as UNKNOWN.
-  - File: `jb/src/core/Images/Classify/ImageFeatureAnalyzer.cs` lines 195–235.
-  - Block: These features require a CLIP-backed classifier or specialized detectors that are not yet wired in. The open todos above (ImageNGP taxonomy definition and `illustration-technical-drawing` scope) must be resolved first — they determine which features need CLIP prompts and which need separate detectors.
-
-  - Fix: After taxonomy and role todos are answered, replace each `SetUnknownIfNotSet` call with a real measurement call to the appropriate analyzer (CLIP classifier for semantic features like `hero-is-human`, `hero-orientation`, `product-type-label`; specialized detectors for `salient-bbox`, `dominant-colors`, `pose-type`, etc.). Features with no planned analyzer keep `SetUnknownIfNotSet` until a detector is available.
-  - Answer:
+  - Answer: FROZEN: Taxonomy is captured in canonical files (ImageNGP.json, ImageRoles.json, imagePhenotypes.md, ImageFeatures.md). No reconciliation action needed at this time.
 
 -------
 - [ ] Phenotype production validation: define the protocol and acceptance criteria required before phenotype assignment can be trusted in production.
-  - Issue: The 26 phenotypes in `imagePhenotypes.md` were defined from spec and taxonomy documentation without real-image testing. Production-quality assignment requires validation against a representative labeled image set. Currently most features are UNKNOWN (see RecordUnknownFeatures stub), so phenotype assignment is unreliable for any image where CLIP evidence is needed.
-  - What is needed for production readiness:
-    1. A labeled validation set — minimum ~100 images per major phenotype category across the product types in `DetOrderRules.json` (packshots, ghost images, on-model, lifestyle, technical drawings).
-    2. All four Tx class stubs must be implemented so that transform routing can be validated end-to-end, not just assignment.
-    3. The `RecordUnknownFeatures()` stub must be replaced with real measurements so phenotype rules fire from actual signals.
-    4. `illustration-technical-drawing` scope resolved.
-    5. A confusion matrix showing predicted vs. expected phenotype per image, with per-class precision and recall.
-    6. CLIP confidence thresholds tuned per feature (not uniform) to minimize misassignment on the validation set.
-    7. Edge-case pass: ghost images, extreme orientations, lifestyle images, and illustrations all assign a correct or null phenotype — no silent misassignment to a wrong category.
-  - Acceptance criteria: < 5% misassignment rate on the labeled validation set across all 26 phenotypes, with no systematic error pattern on any single phenotype category.
+  - Issue: The 26 phenotypes in `imagePhenotypes.md` were defined from spec and taxonomy documentation without real-image testing. Production-quality assignment requires validation against a representative labeled image set. Currently most features are UNKNOWN (see per-feature Analyzer todos below), so phenotype assignment is unreliable for any image where CLIP evidence is needed.
+  - What is needed: Once real analyzers cover enough features, collect ~200 labeled product images per major phenotype category, run the pipeline, compare output to ground truth, and measure accuracy. Acceptance: <5% misassignment rate across all 26 phenotypes with no systematic error on any single category.
+  - Answer: FROZEN: Premature. Revisit after per-feature Analyzer stubs are substantially resolved and BypassPhenotypes flip is planned.
 
-  - Fix: Schedule a validation sprint after RecordUnknownFeatures() is resolved. Build or curate the labeled image set, run the pipeline, measure assignment accuracy, and tune thresholds iteratively.
+-------
+- [ ] Implement Analyzer_HasHuman.cs — measure `has-human`, `human-count`, `hero-is-human`
+  - Sets: `has-human` (boolean), `human-count` (integer), `hero-is-human` (enum: TRUE/FALSE/UNKNOWN)
+  - `hero-is-human` is composite: TRUE when `has-human = true` AND `human-count = 1` (sole human is the primary subject).
+  - Method: person/body detector — CLIP prompt or dedicated pose model. CLIP already active in `ImageClassifier.cs`; try prompts first.
+  - Signature convention: `Analyzer_HasHuman.Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot)`
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_HasFace.cs — measure `has-head`, `head-visible`, `has-face`, `face-visible`, `body-visible`
+  - Sets: `has-head` (boolean), `head-visible` (enum: FULL/PARTIAL/NONE/UNKNOWN), `has-face` (boolean), `face-visible` (boolean), `body-visible` (enum: full/three-quarter/half/bust/none/unknown)
+  - Method: HAAR cascade + human anatomical proportions + skin-tone color detection (lips are always darker than surrounding skin and red-ish). Detection area for head limited to top half of image; body extent inferred from skeleton proportions vs. image size. See PRISM-classify.md sections "Human Detection" and "Head Visibility Detection".
+  - Prerequisite: `Analyzer_HasHuman.cs` must set `has-human = true` before this analyzer fires.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_HeroOrientation.cs — measure `hero-orientation`
+  - Sets: `hero-orientation` (enum: FRONT/DIAGONAL/SIDEON/BACK/TOP/BOTTOM/UNKNOWN)
+  - Method: CLIP-based — add prompts to `ClipPrompts.json` for orientation labels. Correlate with existing `front-view`, `side-view`, `rear-view`, `top-view` flags already computed.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_PoseType.cs — measure `pose-type`, `contains-mannequin`
+  - Sets: `pose-type` (enum: standing/sitting/crouching/lying/unknown), `contains-mannequin` (boolean)
+  - Method: pose estimation model (skeleton keypoints) or CLIP prompt for gross pose categories. Mannequin: heuristic from skin-tone absence + human-like geometry (CLIP or HAAR).
+  - Prerequisite: `Analyzer_HasHuman.cs` for human presence gating.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_ProductTypeLabel.cs — measure `product-type-label`, `packaging-visible`, `multiple-products`
+  - Sets: `product-type-label` (string), `packaging-visible` (boolean), `multiple-products` (boolean)
+  - Method: CLIP-based classification using prompts from `ClipPrompts.json`. `multiple-products` can also use object detection count.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_SalientBbox.cs — measure `salient-bbox` and all derived spatial features
+  - Sets: `salient-bbox` (string — format TBD, e.g. "x,y,w,h" in pixels), `product-coverage-ratio` (float), `image-occupancy` (float), `crop-tightness` (float), `product-aspect-ratio` (float), `vertical-centering` (float), `horizontal-centering` (float)
+  - All six derived features are computed from the bbox + image dimensions in one pass.
+  - Method: object saliency detection. Options: (a) CPU-only contrast isolation (foreground vs. near-uniform background region — similar approach to `AnalyzeBackground` which already detects SOLIDCOLOR backgrounds), (b) lightweight ONNX object detection model. Option (a) first.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_BackgroundColor.cs — measure `background-color`, `dominant-colors`, `product-color`
+  - Sets: `background-color` (string hex or name), `dominant-colors` (string — comma-separated hex), `product-color` (string)
+  - Method: topology + histogram.
+    - Background detection: identify the continuous near-monotone region touching all four image edges that encloses a higher-contrast subject region. Use `AnalyzeBackground()` corner sampling as a starting point; extend to flood-fill for non-corner-adjacent backgrounds.
+    - Dominant colors: build color histogram over entire image (excluding background), quantize to major clusters, output top N colors as hex.
+    - Product color: dominant non-background color cluster.
+  - Easy case already partially solved: `AnalyzeBackground()` in `ImageFeatureAnalyzer.cs` already detects near-white background via corner sampling.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_TopView.cs — measure `top-view`, `camera-angle`
+  - Sets: `top-view` (boolean), `camera-angle` (enum: eye-level/low-angle/high-angle/overhead/unknown)
+  - Note: `top-view` is already used in `flatlay-front` and `flatlay-styled` phenotype rules.
+  - Method: CLIP prompts for camera angle labels. `top-view = true` when `camera-angle = overhead`.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_Indoor.cs — measure `indoor`, `outdoor`
+  - Sets: `indoor` (boolean), `outdoor` (boolean)
+  - Method: CLIP-based or derived from `background-type` (REALLIFE background + color histogram indicating natural/built environment).
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_SymmetryScore.cs — measure `symmetry-score`
+  - Sets: `symmetry-score` (float, 0–1)
+  - Method: CPU-only. Mirror the image horizontally, compute per-pixel grayscale difference, normalize by image area. High score = symmetric product (packshot candidate).
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_LogoPresent.cs — measure `logo-present`
+  - Sets: `logo-present` (boolean)
+  - Method: CLIP prompt ("product with visible brand logo / text on label") or text-region detection. Can share infrastructure with Analyzer_TextPresent.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_TextPresent.cs — measure `text-present`
+  - Sets: `text-present` (boolean)
+  - Method: topology — detect high-density clusters of thin, high-contrast vertical/horizontal strokes in a regular grid (text character geometry). CLIP fallback.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_ShadowPresent.cs — measure `shadow-present`
+  - Sets: `shadow-present` (boolean)
+  - Method: topology — look for a near-elliptical or elongated dark gradient region at the base of the subject on a light background. Darker than background by threshold, smoothly fading outward.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_ReflectionPresent.cs — measure `reflection-present`
+  - Sets: `reflection-present` (boolean)
+  - Method: topology — detect a vertically symmetric dim or mirrored region below the subject's bottom edge on a reflective surface. Mirror the bottom N pixels and compare to the subject's bottom region.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_MaterialTextureVisible.cs — measure `material-texture-visible`
+  - Sets: `material-texture-visible` (boolean)
+  - Method: CLIP-based ("visible fabric texture", "leather grain", "wood grain") or local variance analysis in product region (high local variance at medium frequency = visible texture).
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_Lighting.cs — measure `lighting`, `lighting-detail`
+  - Sets: `lighting` (enum: EASY/HARD/UNKNOWN), `lighting-detail` (enum: flat/directional/high-key/low-key/mixed/unknown)
+  - Method: histogram-based. EASY = narrow luminance range (flat/high-key studio). HARD = bimodal (bright highlight + deep shadow). CLIP secondary signal.
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_OverlapCount.cs — measure `overlap-count`
+  - Sets: `overlap-count` (integer)
+  - Method: detect distinct foreground object blobs — count of visible separable product silhouettes. Requires salient-bbox to be set first (use as seed region; count disconnected high-contrast sub-regions).
+  - Prerequisite: `Analyzer_SalientBbox.cs`
+  - Answer:
+
+-------
+- [ ] Implement Analyzer_ScaleReferencePresent.cs — measure `scale-reference-present`
+  - Sets: `scale-reference-present` (boolean)
+  - Method: CLIP prompt ("product photographed next to a hand / coin / ruler for scale"). Low priority.
+  - Answer:

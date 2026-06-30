@@ -19,3 +19,4 @@
     5. On timeout or error: set `Status = Ko`, record the failure reason, do not KO the whole job.
 
   - Fix: After selecting a backend, implement `ComfyUiClient`, wire it into `ImageGenerator.Run`, replace `GenerationBackendAvailable() => false` with the health check, and add integration tests using a local ComfyUI instance.
+  - Answer: FROZEN: Out of scope while Classify is active. Revisit after phenotypes are stable.

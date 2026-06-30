@@ -40,6 +40,7 @@
     { "id": "intersection-count",       "datatype": "integer" },
     { "id": "fully-in-frame",           "datatype": "boolean", "values": ["true", "false"] },
     { "id": "interior-detected",        "datatype": "boolean", "values": ["true", "false"] },
+    { "id": "is-illustration",          "datatype": "boolean", "values": ["true", "false"] },
 
     { "id": "type-of-shot",             "datatype": "enum",    "values": ["PACKSHOT", "ONMODEL", "GHOST", "FLAT", "DETAIL", "LIFESTYLE", "STILLIFE", "UNKNOWN"] },
     { "id": "occlusion-level",          "datatype": "enum",    "values": ["full-product", "mostly-visible", "partially-occluded", "closeup", "unknown"] },

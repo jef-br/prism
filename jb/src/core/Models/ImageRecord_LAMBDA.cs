@@ -16,6 +16,12 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
     // -------------------------------------------------------------------------
 
     /// <summary>
+    /// Salient object bounding box in pixel coordinates, detected during preprocessing.
+    /// Null when detection failed or produced an area below the minimum threshold.
+    /// </summary>
+    public BoundingBox? BoundingBox { get; set; }
+
+    /// <summary>
     /// All measured ImageFeatures for this image.
     /// Set by <c>ImageFeatureAnalyzer</c> and the CLIP classifier.
     /// </summary>

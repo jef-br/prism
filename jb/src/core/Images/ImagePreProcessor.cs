@@ -73,23 +73,23 @@ public static class ImagePreProcessor {
     private const float SigmoidSlope     = 0.15f;
     private const float EdgeThreshold    = 0.2f;
     private const float MinBboxAreaRatio = 0.01f;
-    private const string DefaultBboxCoords = "0.0000,0.0000,0.0000,0.0000";
+    private const string DefaultBboxCoords = "0.0000,0.0000,0.0000,0.0000"; // internal sentinel only
 
     /// <summary>
     /// Normalizes the image to a flat jpg replacing transparency with white.
     /// Returns updated image bytes, bounding box coordinates, PrismConfiguration, and LambdaRecord.
-    /// Sets "salient-bbox" on <paramref name="lambda"/>.
+    /// Sets <see cref="ImageRecord_LAMBDA.BoundingBox"/> on <paramref name="lambda"/>.
     /// Returns null and sets <see cref="ImageRecord_LAMBDA.IsKo"/> when the image fails the upscale thresholds.
     /// </summary>
     public static byte[]? Preprocess( ImageRecord_LAMBDA lambda, string? imagePath, PrismConfiguration config ) {
-        
+
         byte[]? flatJpg = NormalizeToFlatJpg(imagePath);
-        
+
         if (flatJpg is null) return null;
 
         (string coords, int origW, int origH) bbox = DetectSalientBoundingBox(flatJpg);
 
-        lambda.Features.Set("salient-bbox", bbox.coords, 0.99, "clahe+canny+saliency");
+        lambda.BoundingBox = ParseSalientBox(bbox.coords, bbox.origW, bbox.origH);
 
         return Upscale(flatJpg, bbox, config, lambda);
     }
@@ -211,6 +211,22 @@ public static class ImagePreProcessor {
         lambda.KoReasonCode = code;
         lambda.KoSafeMessage = message;
         return null;
+    }
+
+    private static BoundingBox? ParseSalientBox( string coords, int origW, int origH ) {
+        if (origW == 0 || origH == 0) return null;
+        string[] p = coords.Split(',');
+        float x1 = float.Parse(p[0], CultureInfo.InvariantCulture);
+        float y1 = float.Parse(p[1], CultureInfo.InvariantCulture);
+        float x2 = float.Parse(p[2], CultureInfo.InvariantCulture);
+        float y2 = float.Parse(p[3], CultureInfo.InvariantCulture);
+        if (x2 <= x1 || y2 <= y1) return null;
+        int bx = (int)(x1 * origW);
+        int by = (int)(y1 * origH);
+        int bw = (int)((x2 - x1) * origW);
+        int bh = (int)((y2 - y1) * origH);
+        return new BoundingBox { X = bx, Y = by, Width = bw, Height = bh,
+                                 Left = bx, Top = by, Right = bx + bw, Bottom = by + bh };
     }
 
     //  Helpers for DetectSalientBoundingBox

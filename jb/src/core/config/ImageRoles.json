@@ -297,7 +297,8 @@
     {
       "id": "illustration-technical-drawing",
       "required": [
-        { "feature": "hero-is-human", "equals": "FALSE" }
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "is-illustration", "equals": "true" }
       ]
     },
 

@@ -208,7 +208,8 @@ public class ImageTransformerTests
         };
 
         if (hasBbox)
-            lambda.Features.Set("salient-bbox", "0.1000,0.1000,0.9000,0.9000", 0.85, "test");
+            lambda.BoundingBox = new BoundingBox { X = 100, Y = 100, Width = 800, Height = 800,
+                                                   Left = 100, Top = 100, Right = 900, Bottom = 900 };
         if (intersects)
             lambda.Features.Set("intersects-top", "true", 1.0, "test");
 

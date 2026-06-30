@@ -40,7 +40,10 @@ public class Tx_ProblemImageProcessor : IImageTransformation
             return InputImage;
         }
 
-        string[] unknownFeatures = CollectUnknownCriticalFeatures(InputImage.Features);
+        string[] featureUnknowns = CollectUnknownCriticalFeatures(InputImage.Features);
+        string[] unknownFeatures = InputImage.BoundingBox is null
+            ? ["salient-bbox", .. featureUnknowns]
+            : featureUnknowns;
 
         // Compute expected output dimensions for the metadata record.
         // Actual pixel resize is performed by Process() when the image bytes are available.
@@ -147,7 +150,6 @@ public class Tx_ProblemImageProcessor : IImageTransformation
     private static string[] CollectUnknownCriticalFeatures(ImageFeatureSnapshot features)
     {
         string[] critical = [
-            "salient-bbox",
             "intersects-top", "intersects-bottom", "intersects-left", "intersects-right",
             "low-contrast", "shadow-present"
         ];

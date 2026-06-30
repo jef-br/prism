@@ -283,7 +283,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable
             "packaging-visible", "multiple-products", "overlap-count",
             "scale-reference-present", "logo-present", "material-texture-visible",
             "text-present", "top-view", "shadow-present", "reflection-present",
-            "lighting", "camera-angle", "salient-bbox", "product-coverage-ratio",
+            "lighting", "camera-angle", "product-coverage-ratio",
             "image-occupancy", "crop-tightness", "dominant-colors", "product-color",
             "background-color", "indoor", "outdoor", "symmetry-score",
             "product-aspect-ratio", "vertical-centering", "horizontal-centering"
