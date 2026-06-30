@@ -44,6 +44,7 @@ var images = Directory.GetFiles(folder, "*", SearchOption.AllDirectories)
 
 var excels = Directory.GetFiles(folder, "*", SearchOption.TopDirectoryOnly)
     .Where(f => excelExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+    .Where(f => !Path.GetFileName(f).StartsWith("~$")) // skip Excel owner-lock temp files (workbook open)
     .OrderBy(f => f)
     .ToList();
 

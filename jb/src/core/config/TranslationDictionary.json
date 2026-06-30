@@ -6,7 +6,7 @@
     },
     {
       "id": "ean",
-      "terms": [ "ean", "barcode", "gtin", "codebar", "codebarre", "codebarres", "eancode" ]
+      "terms": [ "ean", "eans", "barcode", "gtin", "codebar", "codebarre", "codebarres", "eancode" ]
     },
     {
       "id": "refco",
@@ -74,7 +74,7 @@
     },
     {
       "id": "sku",
-      "terms": [ "sku", "codigo", "codice", "articlenumber", "artikelnummer", "lot", "pack" ]
+      "terms": [ "sku", "code", "codigo", "codice", "articlenumber", "artikelnummer", "lot", "pack" ]
     }
   ],
   "synonymGroups": [

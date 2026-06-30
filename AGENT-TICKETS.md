@@ -55,26 +55,18 @@ Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, 
 
 
 ### T-2000 · Implement Tx_CenterAndStretch pixel flow
-**Status:** Blocked | **Profile:** P1-feature-worker | **Agent:** worker  
-**Blocked-by:** T-2300 (saliency/headcut/greedy user decisions) — T-1900 Done
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker  
 
-Three-step pixel flow inside `Tx_CenterAndStretch.Transform()` — currently gated behind `ImageProcessorAvailable() = true` but pixel body is a `NotSupportedException`.
-
-**When unblocked, what to do:**
-1. Pre-steps: if `low-contrast` feature true → call `Tx_LowContrastEnhancement`; if `shadow-present` → shrink `salient-bbox` bottom edge above shadow band.
-2. Tight crop: shrink source canvas to adjusted `salient-bbox`.
-3. Center: place cropped object on target square canvas with `Transformation.Positioning.Margin` (4.2%) on all sides.
-4. Fill: call `Tx_util_BgStretch.Stretch()` on the uncovered canvas edges.
-5. Populate `ImageTransformationResult` fully (crop rect, fill method, warnings).
-6. `dotnet build jb/src/PRISM.sln` passes.
+Full `Transform()` + `Process()` pixel flow implemented and build clean (0 errors, 0 warnings).
+Canvas math: `longestSide = max(bbox.W, bbox.H)`, `marginPx = round(longestSide * 0.042)`, square canvas = `longestSide + 2*marginPx`. Headcut via `Tx_util_HeadCutter` when requested. Background fill via `Tx_util_BgStretch.Stretch()`. Committed to `transformation` branch.
 
 **Files:** `jb/src/core/Images/Transform/Tx_CenterAndStretch.cs`
 
 ---
 
 ### T-2100 · Implement Tx_DetailCropper pixel flow
-**Status:** Blocked | **Profile:** P1-feature-worker | **Agent:** worker  
-**Blocked-by:** T-2300 (saliency/headcut/greedy user decisions), T-2200 (HeadCutter spec), T-2000 (for pattern reference)
+**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker  
+**Unblocked-by:** T-2300 Done, T-2200 Done, T-2000 Done
 
 Pixel body for `Tx_DetailCropper.Transform()` — currently gated and throws.
 
@@ -93,27 +85,23 @@ Pixel body for `Tx_DetailCropper.Transform()` — currently gated and throws.
 ---
 
 ### T-2200 · Spec and implement Tx_util_HeadCutter
-**Status:** Blocked | **Profile:** P1-feature-worker | **Agent:** worker  
-**Blocked-by:** Product decisions (landmark model, family-aware threshold, cut line style, Y-coordinate return format) must be recorded in Transform `jbtodo.md` before any code is written.
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker  
 
-Utility class for cutting a human head at the nose-to-lips boundary. Two modes: family-aware (shared cut line from clear-face images in the group) and per-image fallback.
+Algorithm B (full-image Haar face search, centroid Y < 50%, pick face furthest from top, cutY = face.Y + 0.75×face.Height) implemented. Algorithm A (anatomy-ratio guided search when `has-human=true`) is deferred — deepdive jbtodo recorded in `jb/src/core/Images/Transform/jbtodo.md`.
 
-**Files:** `jb/src/core/Images/Transform/processingtools/Tx_util_HeadCutter.cs`
+**Files:** `jb/src/core/Images/Transform/Tx_util_HeadCutter.cs`
 
 ---
 
 ### T-2300 · User decisions: detail crop saliency, headcut, greedy crop
-**Status:** Blocked | **Profile:** P0-orchestrator  
-**Blocked-by:** User product decision required — answers must be recorded in Transform `jbtodo.md` before T-2100 or T-2200 can proceed.
+**Status:** Done | **Profile:** P0-orchestrator  
 
-Three open questions in Transform `jbtodo.md` with blank `Answer:` fields:
-1. Saliency map behavior: how the dominant saliency region influences square crop placement when no border intersection blocks repositioning.
-2. Headcut thresholds: which `head-visible`/`hero-is-human` confidence levels enable headcut; how top crop placement shifts for eligible non-intersecting images.
-3. Greedy crop behavior: minimum content retention and padding rules for non-headcut non-intersecting images.
+All three product decisions answered and recorded in `jb/src/core/Images/Transform/jbtodo.md`:
+1. Saliency: BoundingBox from ImagePreProcessor is the sole anchor — no further computation in Transform.
+2. Headcut: controlled by a `Headcut` bool threaded through the pipeline; human presence from `has-human` feature.
+3. Greedy crop: bbox center aligns to canvas center; background filled by Tx_util_BgStretch.
 
-Each answer unlocks T-2100 (DetailCropper) and T-2200 (HeadCutter).
-
-**Files:** `jb/src/core/Images/Transform/jbtodo.md` (answers to be recorded there)
+**Files:** `jb/src/core/Images/Transform/jbtodo.md`
 
 ---
 
@@ -132,6 +120,52 @@ Tracks the five open items in `jb/src/core/Images/Classify/jbtodo.md`:
 M5 gate condition: all Classify decisions answered; ONNX session migrated to singleton.
 
 **Files:** `jb/src/core/Images/Classify/jbtodo.md`, `jb/src/core/Images/Classify/ImageFeatureAnalyzer.cs`
+
+---
+
+
+### T-3000 · Parallelize image import normalization
+**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+
+**Problem:** `Importer.ProcessDirectImageRecords` and the zip-member loop in `ProcessZipRecords` normalize images in a sequential `foreach`. Each image is decoded (`Image.Load`), composited (`AutoOrient` + flatten-to-white), then re-encoded to JPEG q92 and written — all on one thread. On large batches this pins ~1 core (observed 9–17% total CPU on a multi-core box; ~20 min for MMERO26's 4048 images) while the rest of the CPU and the SSD sit idle. The per-image work is independent and embarrassingly parallel.
+
+**What to do:**
+1. Replace the sequential image loops (direct image records + zip image members) with `Parallel.ForEach`. Cap `MaxDegreeOfParallelism` to `Environment.ProcessorCount` so only N images are decoded in flight at once (bounds peak memory).
+2. Make result accumulation thread-safe: `normalizedImages`, `imageKoRecords`, `zipKoRecords` are `List<T>` mutated inside the loop. Use a concurrent collection or per-partition lists merged afterward; preserve existing OK/KO semantics (batch continues on a per-image failure).
+3. Fix the normalized-filename index race: `BuildNormalizedFileName` uses `normalizedImages.Count` as the uniqueness index, which races under parallelism. Pre-assign a stable index by input position (deterministic filenames) or use an `Interlocked` counter; filenames must stay unique/collision-free.
+4. Leave Excel/IEM build (`BuildFamilyRecords` → `ModelBuilder`) sequential — it is not the bottleneck and `ModelBuilder` is not thread-safe.
+
+**Acceptance:**
+- `dotnet build jb/src/PRISM.sln` clean (0 warnings).
+- Import wall-time on a large set (e.g. MMERO26, 4048 imgs) drops materially; CPU rises from ~1 core toward N cores during import.
+- Identical OK/KO counts and the same set of normalized outputs as the sequential version (order-independent); no filename collisions.
+- Existing tests green.
+
+**Files:** `jb/src/core/IO/Import/Importer.cs`
+
+**Follow-up (deferred, needs a decision):** fast-path already-conforming JPEGs to skip decode+re-encode — open design question recorded in `jb/src/core/IO/Import/jbtodo.md`.
+
+---
+
+
+### T-3100 · Bracket 4 (SemanticMatcher) perf: skip without CLIP tags; index its string scoring
+**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+
+**Problem:** `ImageMatcher.RunBracket4` calls `SemanticMatcher.TryMatch` for every still-unmatched image against all unassigned families. `SemanticMatcher` copies the whole unassigned-family list per image (`[..unassignedFamilies]`) and scores via `StringMatcher.ScoreCandidatesByStringTokens` — the **un-indexed** O(families×tokens) scan (the bracket-3 inverted index does **not** cover this path). After brackets 1–3 leave most images unmatched and most families unassigned, this is O(images × families × tokens) on a single thread. Worse, under **skip-classification there are no CLIP tags**, so bracket 4's CLIP hard filters have nothing to act on — it produces ~no matches yet still scans every family for every unmatched image. Pure wasted compute.
+
+**Evidence:** MMERO26 (4048 images) killed at ~40 min with **1 of 20 cores pegged, 0 MB/s disk I/O, 397 MB RAM** — the signature of single-threaded compute, not import. Bracket 3 (now indexed) is fine; bracket 4 is the residual hot path. Smaller sets (INPUTMA27 569 imgs, INPUTMA23 921 imgs) completed only because images×families is far smaller.
+
+**What to do:**
+1. **Skip bracket 4 when the batch carries no CLIP classification signal** (skip-classification, or no record has Tags/phenotype, or `labelRules` empty). Gate it in `RunWaterfall`/`RunBracket4`. Correctness-neutral — bracket 4 is the CLIP-semantic bracket and yields nothing without tags. This matches the intent already documented for `MatchLite` ([PrismService.cs:104-106](jb/src/core/PrismService.cs#L104-L106)).
+2. **For the with-classification path**, replace `SemanticMatcher`'s per-family string scan with the same inverted token index used by `StringMatcher` (bracket 3), or pre-filter candidates via the index before scoring. Eliminate the per-image `[..unassignedFamilies]` full copy.
+3. Preserve bracket 4 semantics (exactly-one survivor + `SemanticThreshold`).
+
+**Acceptance:**
+- Skip-classification MMERO26 completes in minutes (not pinned single-core for tens of minutes); bracket 4 makes 0 assignments under skip-classification (match rate unchanged vs. a bracket-4-disabled baseline).
+- With-classification match outcomes unchanged; no O(images×families) per-image scan (verify via a families-count scaling check or timing).
+- `dotnet build jb/src/PRISM.sln` clean; existing matcher tests green; add a test asserting bracket 4 is skipped when no tags are present.
+
+**Files:** `jb/src/core/Images/ImageMatcher.cs`, `jb/src/core/Images/Match/SemanticMatcher.cs`, `jb/src/core/Images/Match/StringMatcher.cs`
 
 ---
 

@@ -12,12 +12,14 @@ internal sealed class ImageMatcher {
     private readonly StringMatcher stringMatcher;
     private readonly ClipLabelEnricher clipLabelEnricher;
     private readonly SemanticMatcher semanticMatcher;
+    private readonly FilenameToCellMatcher filenameToCellMatcher;
 
     private ImageMatcher( MatchingConfig matchingConfig, TranslationConfig translationConfig, string familyIdColumnName ) {
         this.matchingConfig = matchingConfig;
         numericMatcher = new NumericMatcher(familyIdColumnName);
         stringMatcher = new StringMatcher(translationConfig);
         clipLabelEnricher = new ClipLabelEnricher();
+        filenameToCellMatcher = new FilenameToCellMatcher();
         semanticMatcher = new SemanticMatcher(
             numericMatcher,
             stringMatcher,
@@ -89,13 +91,16 @@ internal sealed class ImageMatcher {
         // Bracket 4: semantic combined (CLIP + numeric + string) for 0-image families
         unmatched = RunBracket4(unmatched, allRecords, families, numericRules, labelRules, rejectedNearTies);
 
+        // Bracket 5: image filename named verbatim in an Excel cell (exact, unique)
+        unmatched = RunBracket5FilenameToCell(unmatched, families, rejectedNearTies);
+
         // Add CLIP label evidence to already-matched records (no new assignments)
         AddClipLabelEvidence(allRecords, families, labelRules);
 
-        // Bracket 5 cleanup: KO any image still without a FamilyID assignment
+        // Bracket 6 cleanup: KO any image still without a FamilyID assignment
         int koAdded = KoUnmatched(unmatched, crossBracketCandidates);
 
-        // Bracket 6: finalize clustering (single-pass waterfall means no structural ties)
+        // Bracket 7: finalize clustering (single-pass waterfall means no structural ties)
         FinalizeMatches(allRecords, convergenceWeight);
 
         return koAdded;
@@ -298,7 +303,39 @@ internal sealed class ImageMatcher {
         return stillUnmatched;
     }
 
-    //  CLIP label enrichment 
+    //  Bracket 5: filename present in an Excel cell
+
+    /// <summary>
+    /// Runs FilenameToCellMatcher: assigns an image to the unique FamilyID whose Excel row names
+    /// that exact image file in any cell. Matches against all families (a family may already hold
+    /// other images). Returns images still unmatched after this bracket.
+    /// </summary>
+    private List<ImageRecord_LAMBDA> RunBracket5FilenameToCell(
+        List<ImageRecord_LAMBDA> candidates,
+        IReadOnlyList<FamilyIDRecord> families,
+        Dictionary<string, List<CandidateSummary>> rejectedNearTies ) {
+        List<ImageRecord_LAMBDA> stillUnmatched = [];
+
+        foreach (ImageRecord_LAMBDA record in candidates) {
+            string key = record.InitialFullName ?? string.Empty;
+            MatchEvidence? evidence = filenameToCellMatcher.TryMatch(record, families);
+
+            if (evidence is not null) {
+                record.MatchEvidence = evidence with {
+                    ThresholdStatus = evidence.FinalScore >= matchingConfig.SemanticThreshold,
+                    RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
+                    MatcherWeights = [new MatcherContribution("FilenameToCellMatcher", 1.0, evidence.FinalScore)]
+                };
+            }
+            else {
+                stillUnmatched.Add(record);
+            }
+        }
+
+        return stillUnmatched;
+    }
+
+    //  CLIP label enrichment
 
     /// <summary>
     /// Appends CLIP label evidence to the MatchEvidence of already-matched records.

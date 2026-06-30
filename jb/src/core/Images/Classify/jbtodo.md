@@ -59,7 +59,9 @@
     - Dominant colors: build color histogram over entire image (excluding background), quantize to major clusters, output top N colors as hex.
     - Product color: dominant non-background color cluster.
   - Easy case already partially solved: `AnalyzeBackground()` in `ImageFeatureAnalyzer.cs` already detects near-white background via corner sampling.
-  - Answer:
+  - Answer: `ImageFeatureAnalyzer.cs` implements ´Analyzer_BackgroundColor.cs´ to analyze the backgroundcolor.
+    - Move the current background analysis code to `Analyzer_BackgroundColor.cs`
+    - `Analyzer_BackgroundColor.cs` should sample more than just the four image edges: sample at 0%, 
 
 -------
 - [ ] Implement Analyzer_TopView.cs — measure `top-view`, `camera-angle`

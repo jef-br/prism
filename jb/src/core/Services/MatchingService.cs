@@ -42,6 +42,12 @@ public sealed class MatchingService : IMatchingService, IDisposable
             .Where(r => r.ImportStatus == ImportStatus.Ok && r.NormalizedJpgPath is not null)
             .ToList();
 
+        // Fail-fast: max-effort FamilyID detection already ran during Import. With zero parsed
+        // families, matching is impossible, so KO every image immediately instead of decoding and
+        // feature-analysing the whole batch only to reject all of it.
+        if (ingest.FamilyRecords.Count == 0)
+            return await BuildNoFamiliesResult(ingest, store, okImages, progress, cancellationToken);
+
         IImageNgpService ngp                     = new ImageNgpService(LoadRuleSet());
         IFeatureAnalysisService featureAnalysis  = new FeatureAnalysisService();
         using IClassificationService classification =
@@ -104,6 +110,49 @@ public sealed class MatchingService : IMatchingService, IDisposable
             DuplicatesRemoved      = duplicatesRemoved,
             PhenotypeAssignedCount = phenotypeAssigned,
             Warnings               = BuildWarnings(classifyDegraded)
+        };
+    }
+
+    /// <summary>
+    /// Short-circuit result when Excel parsing produced no FamilyID records: every OK image is KO'd
+    /// with NO_FAMILIES and no feature analysis runs, so the job completes near-instantly.
+    /// </summary>
+    private async Task<MatchingResult> BuildNoFamiliesResult(
+        IngestResult ingest,
+        IArtifactStore store,
+        IReadOnlyList<ImageRecord_INPUT> okImages,
+        Func<PipelineProgressEvent, Task>? progress,
+        CancellationToken cancellationToken)
+    {
+        List<ImageRecord_LAMBDA> lambdas = new(okImages.Count);
+        foreach (ImageRecord_INPUT source in okImages)
+        {
+            lambdas.Add(new ImageRecord_LAMBDA
+            {
+                InitialFullName = source.InitialFullName,
+                Width  = source.NormalizedWidth  > 0 ? source.NormalizedWidth  : source.Width,
+                Height = source.NormalizedHeight > 0 ? source.NormalizedHeight : source.Height,
+                IsKo          = true,
+                KoReasonCode  = "NO_FAMILIES",
+                KoSafeMessage = "No FamilyID records were parsed from the Excel input."
+            });
+        }
+
+        await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Matched, cancellationToken);
+        await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Ordered, cancellationToken);
+        await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Renamed, cancellationToken);
+
+        PersistLambdaDocuments(store, ingest.JobID, lambdas);
+
+        return new MatchingResult
+        {
+            Ingest                 = ingest,
+            LambdaRecords          = lambdas,
+            OkRenamedCount         = 0,
+            KoRecordCount          = lambdas.Count,
+            DuplicatesRemoved      = 0,
+            PhenotypeAssignedCount = 0,
+            Warnings               = [$"No FamilyID records were parsed from the Excel input; all {okImages.Count} image(s) were rejected."]
         };
     }
 

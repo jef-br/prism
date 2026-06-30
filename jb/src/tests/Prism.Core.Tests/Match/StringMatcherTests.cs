@@ -94,7 +94,41 @@ public class StringMatcherTests
         Assert.Equal("StringMatcher.Bracket3", evidence.AcceptedMatcherName);
     }
 
-    //  Helpers 
+    //  Bracket 3: strict-winner tie resolution
+
+    [Fact]
+    public void TryMatch_DistinctiveTokenBreaksCommonTokenTie_ReturnsStrictWinner()
+    {
+        // Both families share the common token "ivory"; only FAM_A also matches the distinctive "alba".
+        // Strict-winner picks FAM_A (2 distinct matches) over FAM_B (1) instead of rejecting as a tie.
+        FamilyIDRecord famA = new("FAM_A");
+        famA.MergeProperty(new ExcelPropertyValue("name", ["alba"], []), ExcelColumnClassification.Categorical);
+        famA.MergeProperty(new ExcelPropertyValue("color", ["ivory"], []), ExcelColumnClassification.Categorical);
+        FamilyIDRecord famB = FamilyWithProperty("FAM_B", "color", "ivory", ExcelColumnClassification.Categorical);
+
+        StringMatcher matcher = new(EmptyTranslation);
+        ImageRecord_LAMBDA record = MakeLambda("alba_ivory_B.jpg");
+
+        MatchEvidence? evidence = matcher.TryMatch(record, [famA, famB]);
+
+        Assert.NotNull(evidence);
+        Assert.Equal("FAM_A", evidence!.FinalFamilyId);
+    }
+
+    [Fact]
+    public void TryMatch_EqualTopTokenCounts_ReturnsNull()
+    {
+        // Both families match only the common token "ivory" equally → no strict winner → null.
+        FamilyIDRecord famA = FamilyWithProperty("FAM_A", "color", "ivory", ExcelColumnClassification.Categorical);
+        FamilyIDRecord famB = FamilyWithProperty("FAM_B", "color", "ivory", ExcelColumnClassification.Categorical);
+
+        StringMatcher matcher = new(EmptyTranslation);
+        ImageRecord_LAMBDA record = MakeLambda("ivory-dress.jpg");
+
+        Assert.Null(matcher.TryMatch(record, [famA, famB]));
+    }
+
+    //  Helpers
 
     private static readonly TranslationConfig EmptyTranslation = new()
     {

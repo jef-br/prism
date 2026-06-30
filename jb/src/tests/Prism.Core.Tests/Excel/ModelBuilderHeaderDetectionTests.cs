@@ -62,6 +62,24 @@ public class ModelBuilderHeaderDetectionTests
         Assert.Contains(families, f => f.FamilyID == "88888888");
     }
 
+    [Fact]
+    public void WideHeaderMostlyExoticColumns_QualifiesViaFamilyIdPresence()
+    {
+        // MMERO26-style: a clear FamilyID column but most siblings are Dutch/concatenated and unrecognized,
+        // pushing the matched ratio below the gate. The FamilyID-presence override must still detect the row.
+        ModelBuilder builder = BuildBuilder();
+        ExcelWorkbook workbook = Workbook("mmero",
+            ["ean", "Family id", "ID", "Collectie", "Subcollection", "Code", "Naam", "CompositionFull", "Color", "Model_f", "TitleFr", "DescriptionNl"],
+            ["5401209028218", "92836766", "530096", "25W", "Winter", "167", "BL09", "65% katoen", "blauw", "BLOUSE", "Chemise", "Hemd"],
+            ["5401209028219", "92836767", "530097", "25W", "Winter", "168", "BL10", "100% wol", "rood", "BLOUSE", "Chemise", "Hemd"]);
+
+        ExcelModelBuildResult result = builder.BuildFromWorkbooks([workbook]);
+        var families = result.Model.ToFamilyRecords();
+
+        Assert.DoesNotContain(result.Diagnostics, d => d.ReasonCode == "excel.header_not_found");
+        Assert.Contains(families, f => f.FamilyID == "92836766");
+    }
+
     //  PK by cell pattern (foreign / unrecognized header name)
 
     [Fact]

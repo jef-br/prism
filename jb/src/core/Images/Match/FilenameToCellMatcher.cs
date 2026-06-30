@@ -1,0 +1,123 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+namespace Prism.Core;
+
+/// <summary>
+/// Last-resort bracket: matches an image to the unique FamilyID whose Excel row names that exact
+/// image file in any cell. Many catalogue exports list the image filename directly (e.g.
+/// "Chemin de l'image" = "/medias (3)/92836758_det815.jpg", or "Product image #1" =
+/// "WB113068-BEIGE32_(1).jpg"), so when the token-based brackets cannot resolve an image this
+/// direct link still can. Accepts only an exact, unique filename↔cell match.
+/// </summary>
+internal sealed class FilenameToCellMatcher
+{
+    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp", ".gif"
+    };
+
+    // filename key (basename-with-extension and stem, lowercased) → FamilyIDs whose cells name it.
+    private Dictionary<string, HashSet<string>>? indexByFilenameKey;
+    private IReadOnlyList<FamilyIDRecord>? indexedFamilies;
+
+    /// <summary>
+    /// Attempts to match by locating the image's own filename inside any Excel cell of exactly one family.
+    /// </summary>
+    /// <returns>Accepted MatchEvidence when exactly one family names the file; null otherwise.</returns>
+    internal MatchEvidence? TryMatch(ImageRecord_LAMBDA record, IReadOnlyList<FamilyIDRecord> families)
+    {
+        Dictionary<string, HashSet<string>> index = GetOrBuildIndex(families);
+
+        string sourceFilename = record.InitialFullName ?? string.Empty;
+        string basenameKey = Basename(sourceFilename).Trim().ToLowerInvariant();
+        if (basenameKey.Length == 0)
+            return null;
+
+        string stemKey = StripExtension(basenameKey);
+
+        HashSet<string>? matchedFamilies =
+            index.TryGetValue(basenameKey, out HashSet<string>? byBasename) ? byBasename
+            : index.TryGetValue(stemKey, out HashSet<string>? byStem) ? byStem
+            : null;
+
+        if (matchedFamilies is null || matchedFamilies.Count != 1)
+            return null; // zero → no match; two+ → ambiguous, leave for KO
+
+        string familyId = matchedFamilies.First();
+        string imageId  = Path.GetFileNameWithoutExtension(sourceFilename);
+        string matcherName = "FilenameToCellMatcher";
+
+        return new MatchEvidence
+        {
+            ImageId             = imageId,
+            SourceFilename      = sourceFilename,
+            FinalFamilyId       = familyId,
+            FinalScore          = 1.0,
+            IsKo                = false,
+            AcceptedMatcherName = matcherName,
+            TopCandidates       = [new CandidateSummary(familyId, 1.0, matcherName)],
+            ImageNgpSummary     = record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}",
+            SafeExplanation     = $"FilenameToCell: image filename '{Basename(sourceFilename).Trim()}' is named in an Excel cell of family {familyId}."
+        };
+    }
+
+    /// <summary>
+    /// Builds (once per family set) an index from filename key → FamilyIDs by scanning every original
+    /// cell value of every family and keeping only cells whose basename carries an image extension.
+    /// </summary>
+    private Dictionary<string, HashSet<string>> GetOrBuildIndex(IReadOnlyList<FamilyIDRecord> families)
+    {
+        if (indexByFilenameKey is not null && ReferenceEquals(indexedFamilies, families))
+            return indexByFilenameKey;
+
+        Dictionary<string, HashSet<string>> index = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (FamilyIDRecord family in families)
+        {
+            foreach (KeyValuePair<string, IReadOnlyList<string>> property in family.OriginalSourceCellValues)
+            {
+                foreach (string cellValue in property.Value)
+                {
+                    if (string.IsNullOrWhiteSpace(cellValue))
+                        continue;
+
+                    string basename = Basename(cellValue).Trim().ToLowerInvariant();
+                    if (basename.Length == 0 || !ImageExtensions.Contains(Path.GetExtension(basename)))
+                        continue;
+
+                    AddKey(index, basename, family.FamilyID);
+
+                    string stem = StripExtension(basename);
+                    if (stem.Length > 0)
+                        AddKey(index, stem, family.FamilyID);
+                }
+            }
+        }
+
+        indexByFilenameKey = index;
+        indexedFamilies = families;
+        return index;
+    }
+
+    private static void AddKey(Dictionary<string, HashSet<string>> index, string key, string familyId)
+    {
+        if (!index.TryGetValue(key, out HashSet<string>? set))
+            index[key] = set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        set.Add(familyId);
+    }
+
+    /// <summary>Returns the last path segment, splitting on both '/' and '\' (handles paths and URLs).</summary>
+    private static string Basename(string value)
+    {
+        int separator = value.LastIndexOfAny(['/', '\\']);
+        return separator >= 0 ? value[(separator + 1)..] : value;
+    }
+
+    private static string StripExtension(string basename)
+    {
+        int dot = basename.LastIndexOf('.');
+        return dot > 0 ? basename[..dot] : basename;
+    }
+}

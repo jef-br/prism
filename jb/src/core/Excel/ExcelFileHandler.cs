@@ -61,7 +61,10 @@ public sealed class ExcelFileHandler
 
     private static ExcelWorkbook LoadOpenXmlWorkbook(string filePath)
     {
-        using ZipArchive archive = ZipFile.OpenRead(filePath);
+        // FileShare.ReadWrite so we can read a workbook the user still has open in Excel
+        // (ZipFile.OpenRead uses FileShare.Read, which Excel's lock denies).
+        using FileStream workbookStream = new(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using ZipArchive archive = new(workbookStream, ZipArchiveMode.Read);
         ZipArchiveEntry workbookEntry = archive.GetEntry("xl/workbook.xml")
             ?? throw new InvalidOperationException($"Workbook '{filePath}' does not contain xl/workbook.xml.");
         ZipArchiveEntry relationshipsEntry = archive.GetEntry("xl/_rels/workbook.xml.rels")

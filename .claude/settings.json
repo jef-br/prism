@@ -3,7 +3,10 @@
     "allow": [
       "Bash(git add daily-brief.md)",
       "Bash(git commit*daily-brief*)",
-      "Bash(git push origin main)" 
+      "Bash(git push origin main)",
+      "Bash(curl -s http://localhost:5000/PRISM/health*)",
+      "Bash(curl -s http://localhost:5000/PRISM/jobs/*)",
+      "Bash(curl -s \"http://localhost:5000/PRISM/jobs/*)"
     ]
   }
 }

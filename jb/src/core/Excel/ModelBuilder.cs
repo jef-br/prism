@@ -231,6 +231,7 @@ public sealed class ModelBuilder
         Dictionary<int, HeaderCell> headers = [];
         List<double> matchedConfidences = [];
         int candidateCellCount = 0;
+        bool hasFamilyIdHeader = false;
 
         for (int columnIndex = firstColumn; columnIndex <= lastColumn; columnIndex++)
         {
@@ -248,6 +249,11 @@ public sealed class ModelBuilder
                 matchedConfidences.Add(cellConfidence);
             }
 
+            if (!hasFamilyIdHeader && HeaderResolvesToFamilyId(rawHeader))
+            {
+                hasFamilyIdHeader = true;
+            }
+
             headers[columnIndex] = new HeaderCell(columnIndex, rawHeader, ResolveColumnCanonicalName(rawHeader, columnIndex));
         }
 
@@ -258,7 +264,14 @@ public sealed class ModelBuilder
 
         double matchedColumnRatio = matchedConfidences.Count / (double)candidateCellCount;
 
-        if (matchedColumnRatio < config.HeaderDetection.MinimumMatchedColumnRatio)
+        // A row with a recognizable FamilyID column plus at least one more known column is a header,
+        // even when most sibling columns are language-specific or concatenated (low overall ratio) —
+        // the FamilyID column is the single strongest header signal. Best-row ranking by matched count
+        // still guards against sparse false positives.
+        bool qualifiesByRatio = matchedColumnRatio >= config.HeaderDetection.MinimumMatchedColumnRatio;
+        bool qualifiesByFamilyId = hasFamilyIdHeader && matchedConfidences.Count >= 2;
+
+        if (!qualifiesByRatio && !qualifiesByFamilyId)
         {
             return null;
         }
