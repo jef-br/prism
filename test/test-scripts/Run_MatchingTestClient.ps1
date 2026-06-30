@@ -30,7 +30,7 @@ foreach ($dir in $folders) {
 
     # Parse "Summary: X/Y OK (Z%)  [Ns]" from client output
     $summaryLine = $output | Where-Object { $_ -match "^Summary:" } | Select-Object -Last 1
-    if ($summaryLine -match "Summary:\s*(\d+)/(\d+)\s*OK\s*\(([0-9.]+)%\)\s*\[([0-9.]+)s\]") {
+    if ($summaryLine -match "Summary:\s*(\d+)/(\d+)\s*OK\s*\(([0-9.,]+)%\)\s*\[([0-9.,]+)s\]") {
         $ok      = $Matches[1]
         $total   = $Matches[2]
         $pct     = $Matches[3]

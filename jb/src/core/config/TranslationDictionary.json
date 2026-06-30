@@ -1,24 +1,152 @@
 {
+  "headerGroups": [
+    {
+      "id": "familyid",
+      "terms": [ "familyid", "family", "famille", "familleid", "famid", "fam", "veepee", "familycode" ]
+    },
+    {
+      "id": "ean",
+      "terms": [ "ean", "barcode", "gtin", "codebar", "codebarre", "codebarres", "eancode" ]
+    },
+    {
+      "id": "refco",
+      "terms": [ "refco", "reference", "referencia", "referenz", "referentie", "referenza", "refnr", "refnumber" ]
+    },
+    {
+      "id": "model",
+      "terms": [ "modelo", "model", "modele", "modell", "modello", "modelnr" ]
+    },
+    {
+      "id": "color",
+      "terms": [ "color", "colour", "couleur", "kleur", "farbe", "colore", "kolor", "coloris" ]
+    },
+    {
+      "id": "material",
+      "terms": [ "material", "materials", "materiales", "materiaal", "matiere", "materiale", "composition", "composicion", "composizione", "zusammensetzung", "samenstelling", "fabric", "stoff", "tejido", "tissu" ]
+    },
+    {
+      "id": "description",
+      "terms": [ "description", "descripcion", "descrizione", "beschreibung", "omschrijving", "designation", "designacion", "designazione", "bezeichnung", "descriptif" ]
+    },
+    {
+      "id": "producttype",
+      "terms": [ "type", "typ", "tipo", "soort", "producttype", "typeproduct", "articletype" ]
+    },
+    {
+      "id": "category",
+      "terms": [ "category", "categoria", "categorie", "kategorie", "seccion", "section", "rubrique" ]
+    },
+    {
+      "id": "brand",
+      "terms": [ "brand", "marque", "marca", "marke", "merk", "marchio" ]
+    },
+    {
+      "id": "gender",
+      "terms": [ "gender", "genre", "genero", "geschlecht", "sexo", "geslacht" ]
+    },
+    {
+      "id": "season",
+      "terms": [ "season", "saison", "temporada", "stagione", "seizoen" ]
+    },
+    {
+      "id": "size",
+      "terms": [ "size", "talla", "taille", "taglia", "grosse", "groesse", "maat", "dimension", "dimensiones", "dimensions", "dimensioni", "formato", "format" ]
+    },
+    {
+      "id": "weight",
+      "terms": [ "weight", "poids", "peso", "gewicht", "gewichts" ]
+    },
+    {
+      "id": "style",
+      "terms": [ "style", "estilo", "stijl", "stil", "stile" ]
+    },
+    {
+      "id": "washinginstructions",
+      "terms": [ "washing", "care", "cuidados", "entretien", "pflege", "lavado", "wasvoorschrift", "conseils", "manutenzione", "lavaggio", "careinstructions", "washinginstructions" ]
+    },
+    {
+      "id": "ngp",
+      "terms": [ "ngp" ]
+    },
+    {
+      "id": "label",
+      "terms": [ "label", "etiqueta", "etiquette", "etichetta", "etikett" ]
+    },
+    {
+      "id": "sku",
+      "terms": [ "sku", "codigo", "codice", "articlenumber", "artikelnummer", "lot", "pack" ]
+    }
+  ],
   "synonymGroups": [
     {
       "id": "color-blue",
       "domain": "color",
-      "terms": [ "blue", "bleu", "blauw", "azul" ]
+      "terms": [ "blue", "bleu", "blauw", "azul", "blau", "blu" ]
     },
     {
       "id": "color-red",
       "domain": "color",
-      "terms": [ "red", "rouge", "rood", "rojo" ]
+      "terms": [ "red", "rouge", "rood", "rojo", "rot", "rosso" ]
+    },
+    {
+      "id": "color-black",
+      "domain": "color",
+      "terms": [ "black", "noir", "zwart", "negro", "schwarz", "nero" ]
+    },
+    {
+      "id": "color-white",
+      "domain": "color",
+      "terms": [ "white", "blanc", "wit", "blanco", "weiss", "bianco" ]
+    },
+    {
+      "id": "color-green",
+      "domain": "color",
+      "terms": [ "green", "vert", "groen", "verde", "gruen" ]
+    },
+    {
+      "id": "color-grey",
+      "domain": "color",
+      "terms": [ "grey", "gray", "gris", "grijs", "grau", "grigio" ]
     },
     {
       "id": "material-cotton",
       "domain": "material",
-      "terms": [ "cotton", "coton", "katoen", "algodon" ]
+      "terms": [ "cotton", "coton", "katoen", "algodon", "baumwolle", "cotone" ]
+    },
+    {
+      "id": "material-leather",
+      "domain": "material",
+      "terms": [ "leather", "cuir", "leer", "cuero", "leder", "pelle" ]
+    },
+    {
+      "id": "material-wool",
+      "domain": "material",
+      "terms": [ "wool", "laine", "wol", "lana", "wolle" ]
+    },
+    {
+      "id": "material-polyester",
+      "domain": "material",
+      "terms": [ "polyester", "poliester", "polyester" ]
     },
     {
       "id": "product-shirt",
       "domain": "productType",
-      "terms": [ "shirt", "tshirt", "t-shirt", "tee", "chemise" ]
+      "terms": [ "shirt", "tshirt", "t-shirt", "tee", "chemise", "camisa", "camiseta" ]
+    },
+    {
+      "id": "product-dress",
+      "domain": "productType",
+      "terms": [ "dress", "robe", "jurk", "vestido", "kleid", "abito" ]
+    },
+    {
+      "id": "product-bag",
+      "domain": "productType",
+      "terms": [ "bag", "sac", "tas", "bolso", "tasche", "borsa" ]
+    },
+    {
+      "id": "product-jacket",
+      "domain": "productType",
+      "terms": [ "jacket", "veste", "jas", "chaqueta", "jacke", "giacca" ]
     }
   ],
   "stopWords": {

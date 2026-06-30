@@ -3,7 +3,7 @@
 
 ## Config
 
-PK rules from `RecordPrimaryKey` and `FamilyIDProperties` in XCFG. Canonical header source: `HeaderRowIndicators`.
+PK rules from `RecordPrimaryKey` and `FamilyIDProperties` in XCFG. `HeaderRowIndicators` lists **canonical English header keys** (e.g. `familyid`, `ean`, `color`); each key is expanded to its multilingual term set via the `headerGroups` section of `TranslationDictionary.json` (the same dictionary that feeds value matching, kept in a separate `headerGroups` array so header vocabulary never contaminates value synonyms). Supported header languages: DE, EN, ES, FR, IT, NL.
 
 ---
 
@@ -12,16 +12,19 @@ PK rules from `RecordPrimaryKey` and `FamilyIDProperties` in XCFG. Canonical hea
 - PK must match configured numeric requirement.
 - PK must be **exactly 8 digits** (current config).
 - Each data row belongs to exactly one FID. Duplicate FIDs cannot exist in IEM.
-- Header cell with edit distance 0 to `RecordPrimaryKey` → that cell is the PK column.
+- FamilyID column resolved by **header-name OR cell-pattern** (whichever fires):
+  - **Header name:** any token of the column header resolves to the `familyid` header group. Single candidate → chosen; multiple → disambiguated by cell-pattern, else leftmost.
+  - **Cell pattern (fallback for unrecognized-language headers):** the one column where **every non-empty cell is a valid 8-digit FamilyID and all those values are unique within the column**.
+  - Header-name carries sheets that repeat a FID across rows; cell-pattern carries sheets whose header text is in an unrecognized language. A column identified by name but holding non-compliant values (e.g. refco `1234567890-01`) is still selected, then its rows KO as `excel.invalid_primary_key`.
 
 ---
 
 ## Header Row Detection
 
-- Candidate header row: ≥ **50%** of columns must match configured indicators.
-- Edit distance > **12%** of cell length → not a match.
-- Edit distance 1 → **75% confidence**; distance 2 → **50% confidence**.
-- Exact match (distance 0): use TCD (`jb/src/core/Excel/TCD FOR EXCEL COLUMN HEADER.cs`). TCD uses Levenshtein + Kendall Tau for token count and reordering → 100% confidence.
+- Header cells are matched **token-by-token**, not as whole strings: each cell is diacritics-folded (so `código`→`codigo`), tokenized, general stop-words (`de`, `la`, `of`…) dropped, then each remaining token is tested against the active indicator set. Domain stop-words (`color`, `style`, `size`…) are **not** dropped here — they are meaningful column headers.
+- A token matches when it is an active indicator literally, or resolves through a `headerGroups` entry to an active canonical id; edit distance 1 (token length ≥ 4) gives typo tolerance at `EditDistanceOneConfidence`.
+- Candidate header row: ≥ **`MinimumMatchedColumnRatio`** (currently 40%) of non-empty cells must match.
+- Among qualifying rows the winner is the one with the **most matched columns** (ties broken by average confidence). This rejects sparse single-cell title rows that would otherwise score a perfect ratio.
 
 ---
 
@@ -35,6 +38,7 @@ PK rules from `RecordPrimaryKey` and `FamilyIDProperties` in XCFG. Canonical hea
 
 ## Duplicate Column Handling
 
+- Recognized single-concept columns are canonicalized to their English header id (e.g. `Descripción`/`DESCRIPCION` → `description`, `COMPOSICIÓN` → `material`), so cross-language duplicates collapse. Canonicalization is conservative — only unambiguous headers in a safe-merge set are renamed; mixed-concept headers (e.g. `Reference-colour`) keep their raw name to avoid wrong merges.
 - Identical headers → duplicate candidates.
 - Content must be identical for direct duplicate.
 - Headers differ but > **20% of cells** appear in both → merge and deduplicate.

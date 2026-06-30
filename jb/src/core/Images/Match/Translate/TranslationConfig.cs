@@ -17,6 +17,12 @@ public sealed record TranslationConfig
     public IReadOnlyList<SynonymGroup> SynonymGroups { get; init; } = [];
 
     /// <summary>
+    /// Multilingual header-term groups used by Excel header/PK detection. Kept separate from
+    /// <see cref="SynonymGroups"/> so header vocabulary never contaminates value matching.
+    /// </summary>
+    public IReadOnlyList<HeaderGroup> HeaderGroups { get; init; } = [];
+
+    /// <summary>
     /// Words ignored during string matching.
     /// </summary>
     public StopWordConfig StopWords { get; init; } = new();
@@ -63,6 +69,25 @@ public sealed record TranslationConfig
     }
 
     /// <summary>
+    /// Checks whether a token is a language-neutral general stop word (articles, prepositions).
+    /// Header detection uses this instead of <see cref="IsStopWord"/> so domain words that are
+    /// noise in values ("color", "style", "size") still count as meaningful column headers.
+    /// </summary>
+    /// <param name="token">The normalized or raw token.</param>
+    /// <returns>True when the token is a general stop word.</returns>
+    public bool IsGeneralStopWord(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        string normalizedToken = NormalizeToken(token);
+
+        return StopWords.General.Any(stopWord => NormalizeToken(stopWord) == normalizedToken);
+    }
+
+    /// <summary>
     /// Checks whether two tokens are exact matches or configured synonyms.
     /// </summary>
     /// <param name="leftToken">The first token.</param>
@@ -84,6 +109,45 @@ public sealed record TranslationConfig
         }
 
         return SynonymGroups.Any(group => group.ContainsBoth(normalizedLeftToken, normalizedRightToken));
+    }
+
+    /// <summary>
+    /// Checks whether a token is a configured header term in any language.
+    /// </summary>
+    /// <param name="token">A single header token (diacritics already folded by the caller).</param>
+    /// <returns>True when the token belongs to any header group.</returns>
+    public bool IsHeaderTerm(string? token)
+    {
+        return TryResolveHeaderCanonical(token, out _);
+    }
+
+    /// <summary>
+    /// Resolves a header token to its canonical English header id (e.g. "color", "familyid").
+    /// </summary>
+    /// <param name="token">A single header token (diacritics already folded by the caller).</param>
+    /// <param name="canonicalId">The matched group id, or empty when no group contains the token.</param>
+    /// <returns>True when a header group contains the token.</returns>
+    public bool TryResolveHeaderCanonical(string? token, out string canonicalId)
+    {
+        canonicalId = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        string normalizedToken = NormalizeToken(token);
+
+        foreach (HeaderGroup group in HeaderGroups)
+        {
+            if (group.ContainsTerm(normalizedToken))
+            {
+                canonicalId = group.Id;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string NormalizeToken(string token)

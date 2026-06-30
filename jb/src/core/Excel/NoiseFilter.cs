@@ -96,6 +96,7 @@ public static class NoiseFilter
             || normalizedColumnName.Equals("ean", StringComparison.OrdinalIgnoreCase)
             || normalizedColumnName.Equals("sku", StringComparison.OrdinalIgnoreCase)
             || normalizedColumnName.Equals("ref", StringComparison.OrdinalIgnoreCase)
+            || normalizedColumnName.Equals("refco", StringComparison.OrdinalIgnoreCase)
             || normalizedColumnName.Equals("reference", StringComparison.OrdinalIgnoreCase);
     }
 }

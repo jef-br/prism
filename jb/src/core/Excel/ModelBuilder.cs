@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Prism.Core;
@@ -13,29 +15,69 @@ public sealed class ModelBuilder
     private static readonly Regex NonAlphaNumericPattern = new("[^a-z0-9]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex HeaderTokenPattern = new("[a-z0-9]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private const string FamilyIdCanonical = "familyid";
+
     private readonly ExcelConfig config;
+    private readonly TranslationConfig translationConfig;
     private readonly ExcelFileHandler excelFileHandler;
+
+    // Header indicator keys (canonical ids or literal terms) the configuration treats as header signals.
+    private readonly HashSet<string> activeIndicatorIds;
+    // Flat list of every configured header term, ASCII-folded, for edit-distance-1 typo tolerance.
+    private readonly IReadOnlyList<string> fuzzyHeaderTerms;
+    // Canonical ids that are safe to collapse cross-language duplicate columns onto (C1).
+    private static readonly HashSet<string> SafeMergeCanonicals = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "familyid", "ean", "refco", "color", "material", "description",
+        "washinginstructions", "weight", "brand", "season", "gender", "size", "style"
+    };
 
     /// <summary>
     /// Creates a model builder with explicit dependencies.
     /// </summary>
     /// <param name="config">Validated Excel configuration.</param>
+    /// <param name="translationConfig">Multilingual header/value dictionary.</param>
     /// <param name="excelFileHandler">Workbook loader.</param>
-    public ModelBuilder(ExcelConfig config, ExcelFileHandler? excelFileHandler = null)
+    public ModelBuilder(ExcelConfig config, TranslationConfig translationConfig, ExcelFileHandler? excelFileHandler = null)
     {
         this.config = config ?? throw new ArgumentNullException(nameof(config));
         this.config.Validate();
+        this.translationConfig = translationConfig ?? throw new ArgumentNullException(nameof(translationConfig));
         this.excelFileHandler = excelFileHandler ?? new ExcelFileHandler();
+
+        activeIndicatorIds = new HashSet<string>(
+            config.HeaderRowIndicators.Select(NormalizeHeader),
+            StringComparer.OrdinalIgnoreCase);
+
+        fuzzyHeaderTerms = translationConfig.HeaderGroups
+            .Where(group => activeIndicatorIds.Contains(NormalizeHeader(group.Id)))
+            .SelectMany(group => group.Terms)
+            .Select(NormalizeHeader)
+            .Where(term => term.Length >= 4)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     /// <summary>
-    /// Loads ExcelConfig.json and creates a configured model builder.
+    /// Loads ExcelConfig.json (and its sibling TranslationDictionary.json) and creates a configured model builder.
     /// </summary>
     /// <param name="configPath">Path to ExcelConfig.json.</param>
     /// <returns>A configured model builder.</returns>
     public static ModelBuilder FromConfigFile(string configPath)
     {
-        return new ModelBuilder(ExcelConfig.Load(configPath));
+        ExcelConfig excelConfig = ExcelConfig.Load(configPath);
+
+        string configDirectory = System.IO.Path.GetDirectoryName(configPath)
+            ?? throw new PrismConfigurationException($"Could not determine config directory from '{configPath}'.");
+        string translationConfigPath = System.IO.Path.Combine(configDirectory, "TranslationDictionary.json");
+
+        if (!System.IO.File.Exists(translationConfigPath))
+            throw new PrismConfigurationException(
+                $"TranslationDictionary.json was not found next to ExcelConfig.json at '{translationConfigPath}'.");
+
+        TranslationConfig translationConfig = TranslationConfig.Load(translationConfigPath);
+
+        return new ModelBuilder(excelConfig, translationConfig);
     }
 
     /// <summary>
@@ -107,7 +149,10 @@ public sealed class ModelBuilder
             return;
         }
 
-        int familyIdColumnIndex = FindFamilyIDColumnIndex(headerDetectionResult.Headers);
+        IReadOnlyList<WorksheetDataRow> dataRows = ReadDataRows(worksheet, headerDetectionResult.HeaderRowIndex);
+
+        // FamilyID column resolved by header-name signal OR by the 8-digit-unique cell pattern.
+        int familyIdColumnIndex = FindFamilyIDColumnIndex(headerDetectionResult.Headers, dataRows);
 
         if (familyIdColumnIndex < 0)
         {
@@ -117,8 +162,6 @@ public sealed class ModelBuilder
                 worksheet));
             return;
         }
-
-        IReadOnlyList<WorksheetDataRow> dataRows = ReadDataRows(worksheet, headerDetectionResult.HeaderRowIndex);
 
         if (dataRows.Count == 0)
         {
@@ -150,6 +193,8 @@ public sealed class ModelBuilder
         }
     }
 
+    //  Header row detection (token-based, multilingual)
+
     private HeaderDetectionResult? DetectHeaderRow(ExcelWorksheet worksheet)
     {
         HeaderDetectionResult? bestResult = null;
@@ -166,7 +211,11 @@ public sealed class ModelBuilder
                 continue;
             }
 
-            if (bestResult is null || result.Confidence > bestResult.Confidence)
+            // Prefer the row with the most recognized header columns; break ties on average confidence.
+            // This rejects sparse single-cell title rows that would otherwise score a perfect ratio.
+            if (bestResult is null
+                || result.MatchedColumnCount > bestResult.MatchedColumnCount
+                || (result.MatchedColumnCount == bestResult.MatchedColumnCount && result.Confidence > bestResult.Confidence))
             {
                 bestResult = result;
             }
@@ -193,14 +242,13 @@ public sealed class ModelBuilder
             }
 
             candidateCellCount++;
-            HeaderIndicatorMatch? indicatorMatch = FindBestHeaderIndicatorMatch(rawHeader);
 
-            if (indicatorMatch is not null)
+            if (TryMatchHeaderCell(rawHeader, out double cellConfidence))
             {
-                matchedConfidences.Add(indicatorMatch.Confidence);
+                matchedConfidences.Add(cellConfidence);
             }
 
-            headers[columnIndex] = new HeaderCell(columnIndex, rawHeader, BuildCanonicalHeaderName(rawHeader, columnIndex));
+            headers[columnIndex] = new HeaderCell(columnIndex, rawHeader, ResolveColumnCanonicalName(rawHeader, columnIndex));
         }
 
         if (candidateCellCount == 0)
@@ -217,84 +265,139 @@ public sealed class ModelBuilder
 
         double averageConfidence = matchedConfidences.Count == 0 ? 0 : matchedConfidences.Average();
 
-        return new HeaderDetectionResult(rowIndex, headers, averageConfidence);
+        return new HeaderDetectionResult(rowIndex, headers, matchedConfidences.Count, averageConfidence);
     }
 
-    private HeaderIndicatorMatch? FindBestHeaderIndicatorMatch(string rawHeader)
+    /// <summary>
+    /// A header cell matches when any of its significant tokens resolves to an active header
+    /// indicator (exact), or is within edit distance 1 of a configured header term (typo tolerance).
+    /// </summary>
+    private bool TryMatchHeaderCell(string rawHeader, out double confidence)
     {
-        string normalizedHeader = NormalizeHeader(rawHeader);
-        HeaderIndicatorMatch? bestMatch = null;
+        confidence = 0;
+        bool matched = false;
 
-        foreach (string indicator in config.HeaderRowIndicators)
+        foreach (string token in TokenizeFolded(rawHeader))
         {
-            string normalizedIndicator = NormalizeHeader(indicator);
-
-            if (normalizedIndicator.Length == 0)
+            if (translationConfig.IsGeneralStopWord(token))
             {
                 continue;
             }
 
-            int editDistance = ComputeLevenshteinDistance(normalizedHeader, normalizedIndicator);
-            double distanceRatio = editDistance / (double)Math.Max(normalizedHeader.Length, normalizedIndicator.Length);
-
-            if (distanceRatio > config.HeaderDetection.MaximumEditDistanceRatio)
+            if (TokenMatchesIndicator(token))
             {
-                continue;
+                confidence = 1.0;
+                return true;
             }
 
-            double confidence = CalculateHeaderMatchConfidence(rawHeader, normalizedIndicator, editDistance, distanceRatio);
-            HeaderIndicatorMatch match = new(indicator, confidence);
-
-            if (bestMatch is null || match.Confidence > bestMatch.Confidence)
+            if (token.Length >= 4 && fuzzyHeaderTerms.Any(term => ComputeLevenshteinDistance(token, term) <= 1))
             {
-                bestMatch = match;
+                matched = true;
+                confidence = Math.Max(confidence, config.HeaderDetection.EditDistanceOneConfidence);
             }
         }
 
-        return bestMatch;
+        return matched;
     }
 
-    private double CalculateHeaderMatchConfidence(string rawHeader, string normalizedIndicator, int editDistance, double distanceRatio)
+    /// <summary>
+    /// True when a single header token is an active indicator — either by resolving to a configured
+    /// canonical header group id, or by being a literal indicator term in ExcelConfig.
+    /// </summary>
+    private bool TokenMatchesIndicator(string normalizedToken)
     {
-        if (editDistance == 0)
+        if (activeIndicatorIds.Contains(normalizedToken))
         {
-            string[] tokens = TokenizeHeader(rawHeader);
-            double tcd = TokenizedConcatenationDistance.Compute(tokens, normalizedIndicator);
-
-            if (double.IsPositiveInfinity(tcd))
-            {
-                return 1.0;
-            }
-
-            return Math.Max(0.01, TokenizedConcatenationDistance.ConvertDistanceToConfidence(tcd) / 100.0);
+            return true;
         }
 
-        if (editDistance == 1)
-        {
-            return config.HeaderDetection.EditDistanceOneConfidence;
-        }
-
-        if (editDistance == 2)
-        {
-            return config.HeaderDetection.EditDistanceTwoConfidence;
-        }
-
-        return Math.Max(0.01, 1.0 - distanceRatio);
+        return translationConfig.TryResolveHeaderCanonical(normalizedToken, out string canonicalId)
+            && activeIndicatorIds.Contains(NormalizeHeader(canonicalId));
     }
 
-    private int FindFamilyIDColumnIndex(IReadOnlyDictionary<int, HeaderCell> headers)
-    {
-        string normalizedFamilyIdHeader = NormalizeHeader(config.RecordPrimaryKey);
+    //  FamilyID column resolution (header-name OR cell pattern)
 
-        foreach (HeaderCell header in headers.Values)
+    /// <summary>
+    /// Resolves the FamilyID column. A column qualifies by header name (a token resolving to the
+    /// "familyid" group) or by cell pattern (every non-empty cell is exactly an 8-digit, column-unique
+    /// number). Header-name carries sheets that repeat a FamilyID across rows; cell-pattern carries
+    /// sheets whose header text is in an unrecognized language.
+    /// </summary>
+    private int FindFamilyIDColumnIndex(IReadOnlyDictionary<int, HeaderCell> headers, IReadOnlyList<WorksheetDataRow> dataRows)
+    {
+        List<int> nameCandidates = headers.Values
+            .Where(header => HeaderResolvesToFamilyId(header.RawHeader))
+            .Select(header => header.ColumnIndex)
+            .OrderBy(columnIndex => columnIndex)
+            .ToList();
+
+        if (nameCandidates.Count == 1)
         {
-            if (NormalizeHeader(header.RawHeader) == normalizedFamilyIdHeader)
+            return nameCandidates[0];
+        }
+
+        if (nameCandidates.Count > 1)
+        {
+            List<int> patternConfirmed = nameCandidates
+                .Where(columnIndex => ColumnIsFamilyIdByCellPattern(dataRows, columnIndex))
+                .ToList();
+
+            if (patternConfirmed.Count > 0)
             {
-                return header.ColumnIndex;
+                return patternConfirmed[0];
+            }
+
+            // Multiple header-name candidates, none cell-pattern-clean (e.g. repeated keys) — take leftmost.
+            return nameCandidates[0];
+        }
+
+        // No header-name signal: identify the FamilyID column purely by the 8-digit-unique cell pattern.
+        List<int> patternColumns = headers.Values
+            .Select(header => header.ColumnIndex)
+            .Where(columnIndex => ColumnIsFamilyIdByCellPattern(dataRows, columnIndex))
+            .OrderBy(columnIndex => columnIndex)
+            .ToList();
+
+        return patternColumns.Count == 1 ? patternColumns[0] : -1;
+    }
+
+    private bool HeaderResolvesToFamilyId(string rawHeader)
+    {
+        foreach (string token in TokenizeFolded(rawHeader))
+        {
+            if (translationConfig.TryResolveHeaderCanonical(token, out string canonicalId)
+                && string.Equals(NormalizeHeader(canonicalId), FamilyIdCanonical, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
             }
         }
 
-        return -1;
+        return false;
+    }
+
+    /// <summary>
+    /// True when every non-empty cell in the column is a valid FamilyID (per FamilyIDProperties) and
+    /// all those values are unique within the column.
+    /// </summary>
+    private bool ColumnIsFamilyIdByCellPattern(IReadOnlyList<WorksheetDataRow> dataRows, int columnIndex)
+    {
+        List<string> nonEmptyValues = dataRows
+            .Select(row => GetCellValue(row.Cells, columnIndex).Trim())
+            .Where(value => value.Length > 0)
+            .ToList();
+
+        if (nonEmptyValues.Count == 0)
+        {
+            return false;
+        }
+
+        if (!nonEmptyValues.All(IsValidFamilyID))
+        {
+            return false;
+        }
+
+        int uniqueCount = nonEmptyValues.Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        return uniqueCount == nonEmptyValues.Count;
     }
 
     private IReadOnlyList<WorksheetDataRow> ReadDataRows(ExcelWorksheet worksheet, int headerRowIndex)
@@ -608,6 +711,53 @@ public sealed class ModelBuilder
         return value.Any(char.IsLetter) && value.Any(char.IsDigit);
     }
 
+    //  Header canonicalization (C1)
+
+    /// <summary>
+    /// Resolves a column's canonical name. When every significant header token maps to the same
+    /// canonical id and that id is safe to collapse, the canonical id is used so cross-language
+    /// duplicates merge (e.g. "Descripción"/"DESCRIPCION" -> "description"). Otherwise the cleaned
+    /// raw header is kept so distinct columns are never accidentally merged.
+    /// </summary>
+    private string ResolveColumnCanonicalName(string rawHeader, int columnIndex)
+    {
+        string? singleCanonical = null;
+        bool sawSignificantToken = false;
+
+        foreach (string token in TokenizeFolded(rawHeader))
+        {
+            if (translationConfig.IsGeneralStopWord(token))
+            {
+                continue;
+            }
+
+            sawSignificantToken = true;
+
+            if (!translationConfig.TryResolveHeaderCanonical(token, out string canonicalId))
+            {
+                return BuildCanonicalHeaderName(rawHeader, columnIndex);
+            }
+
+            string normalizedCanonical = NormalizeHeader(canonicalId);
+
+            if (singleCanonical is null)
+            {
+                singleCanonical = normalizedCanonical;
+            }
+            else if (!string.Equals(singleCanonical, normalizedCanonical, StringComparison.OrdinalIgnoreCase))
+            {
+                return BuildCanonicalHeaderName(rawHeader, columnIndex);
+            }
+        }
+
+        if (sawSignificantToken && singleCanonical is not null && SafeMergeCanonicals.Contains(singleCanonical))
+        {
+            return singleCanonical;
+        }
+
+        return BuildCanonicalHeaderName(rawHeader, columnIndex);
+    }
+
     private static string BuildCanonicalHeaderName(string rawHeader, int columnIndex)
     {
         string collapsedHeader = Regex.Replace(rawHeader.Trim(), "\\s+", " ");
@@ -622,15 +772,32 @@ public sealed class ModelBuilder
 
     private static string NormalizeHeader(string header)
     {
-        return NonAlphaNumericPattern.Replace(header.Trim().ToLowerInvariant(), string.Empty);
+        return NonAlphaNumericPattern.Replace(FoldDiacritics(header).Trim().ToLowerInvariant(), string.Empty);
     }
 
-    private static string[] TokenizeHeader(string header)
+    /// <summary>Splits a header cell into lowercase, diacritics-folded alphanumeric tokens.</summary>
+    private static IEnumerable<string> TokenizeFolded(string header)
     {
         return HeaderTokenPattern
-            .Matches(header.ToLowerInvariant())
-            .Select(match => match.Value)
-            .ToArray();
+            .Matches(FoldDiacritics(header).ToLowerInvariant())
+            .Select(match => match.Value);
+    }
+
+    /// <summary>Folds accented characters to their ASCII base so "código" tokenizes as "codigo".</summary>
+    private static string FoldDiacritics(string input)
+    {
+        string decomposed = input.Normalize(NormalizationForm.FormD);
+        StringBuilder builder = new(decomposed.Length);
+
+        foreach (char ch in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(ch);
+            }
+        }
+
+        return builder.ToString().Normalize(NormalizationForm.FormC);
     }
 
     private static string NormalizeCellValue(string value)
@@ -690,9 +857,8 @@ public sealed class ModelBuilder
     private sealed record HeaderDetectionResult(
         int HeaderRowIndex,
         IReadOnlyDictionary<int, HeaderCell> Headers,
+        int MatchedColumnCount,
         double Confidence);
-
-    private sealed record HeaderIndicatorMatch(string Indicator, double Confidence);
 
     private sealed record HeaderCell(int ColumnIndex, string RawHeader, string CanonicalName);
 

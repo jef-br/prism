@@ -37,11 +37,55 @@
       - "exotic" column headers (such as 'Operador económico responsable', 'Sin Cierre', and 'EDAD RECOMENDADA') are not found in the dictionary and kept as-is because the cells in thems columnses might be useful during bracket 3 and 4.
       - Family ID and FamilyId have resolved to one 'FamilyID' column
     
+-----
 
-      
+- INPUTMA27
+  - This is the header column I found on row 9:
+```
+SKU PACK/COMP/SOLO | "FAMILYID  PACK /COMP /SOLO " | FAMILY ID LOT |  | Marque | Société | Type de lot BOOST | Référence FNR | EAN UC | EAN PCB | EAN UTILISE | Désignation marque | Color code | Color label | Désignation site VP | Région / Pays | Appellation | Degré alcool | Couleur | Contenance | Millésime | Décompo | Code op reprise | "Family Id reprise" | "Code OP reprise PREVIEW" | "FamilyId reprise PREVIEW" | Poids net (kg ou L) | PCB | Type de lot | UVC | "- Produit majoritairement recyclable  (si les produits recyclés issus du processus de recyclage représentent plus de 50 % de la masse des déchets collectés)  - Entièrement recyclable  (si >95%)  - Vide  (si <50%)" | "- Produit contenant au moins X% de matière recyclée  - Vide  (si pas d'information disponible) " | "- Packaging majoritairement recyclable  (si les produits recyclés issus du processus de recyclage représentent plus de 50 % de la masse des déchets collectés)  - Entièrement recyclable  (si >95%)  - Vide  (si <50%)" | "- Emballage contenant au moins X% de matière recyclée  - Vide  (si pas d'information disponible) " | "- Contient une substance dangereuse: nom des substances  - Contient une substance extrêmement préoccupante: nom des substances  - Vide  (si non concerné)" | "Dans le cadre de la modulation eco-contributions, cet emballage a fait l'objet d'une:  - d'une pénalité en raison de ...  - d'un bonus grâce à ...   - Vide  (si non concerné)" | Pays | Pays | Pays | Pays | Pays | Pays | "- Contient au moins [X milligrammes] de métaux précieux” ou ''contient au moins [X milligrammes] de (préciser l'élément)  (si >1miligrammes)  - Vide  (si <1miligrammes)" | "- Contient au moins [X milligrammes] de terres rares” ou ''contient au moins (X milligrammes) (préciser l'élément)  (si >1miligrammes)  - Vide  (si <1miligrammes)" | De 0,0 à 10 | De 0,0 à 10 | Opérateur économique responsable de la sécurité du produit (fournisseur, importateur, mandataire... :nom, adresse postale, email) | Avertissements de sécurité | Désignation produit | Description détaillée produit | Coloris/motif | Composition | conseils d'entretien | Longueur en cm | Largeur en cm | Hauteur en cm | Poids en Kg | Contenance | Longueur en mm | Largeur en mm | Hauteur en mm |  Poids en g |  |  |  |  |  |  |  |  | 
+
+```
+  - It is written in French and contains conflicting information.
+  - However, it DOES list several FamilyID columns.
+    - These columns should have been deduplicated.
+      - Rule: if multiple familyID columns exist → check cells. If cells have identical values, merge and consider this column +1 more important than other familyID columns.
+      - In a familyID row header cell, there might be a modifier keyword "new" → +1 more important.
+      - in the header row, if a column header cell contains 'opcode' and 'id' exists, it is considered a FamilyID columnheader cell.
+
+-----
+
+- MMERO26
+  - 2 excel files found:
+    1. "MMERO26 - IMAGES MATCH.xlsx" → Header = ```ean | Family id | ID | Collectie | Subcollection | Code | Naam | CompositionFull | Color | Model_f | Model_n | TitleFr | TitleNl | DescriptionFr | DescriptionNl | Description1Fr | Description1Nl```  
+    2. "MMERO26_27-02-2026-10-49-56.xlsx" → Header = ```Photos | Référence | Famille | Désignation | Nom de l’image (sans extension) | Chemin de l'image | Statut | Validation | EANS```
+  
+  - On purpose, this dataset contains many duplicate images, and many poorly named images that can't be matched.
+  - However: The images inside `MMERO26\images\25W\800 X 1200\` such as `25W_308_D.jpg ` can be renamed by linking the familyID column to the image via one of the other columns. The cells in column 'Chemin de l'image' happen to match to files inside that folder as well as the `300 X 450` folder. "/25W_385_60_D.jpg" matches identically to 2 images. The images should already be deduplicated by this point so only the image inside `800 x 1200` should remain.
+  - Improve the matching algorithm by generalizing this case so similar cases can be handled. -> filename found in the excel? -> match to familyID. (This is basically Bracket 1 of matching but to another column. This should be carefully implemented)
+
+-----
+
+- SPACINI29
+  - well known case
+    - images are present twice
+    - one excel file
+    - easy renaming case
+    - reports as 50% OK which is confusing -> This is actually 100% OK. 86 images had a duplicate that was removed prior to matching -> 86 images to match... 86 images matched. = 100% OK
+-----
+
+- TinyTest
+  - 100% OK as expected
+  - Smallest known easy proven matchable dataset
+
+-----
 
 
 ## refined excel parsing
+
+- when collacting worksheets, copy the cell VALUES-ONLY. No formulas, no layout, only the values.
+- include translation (spec'd below)
+- check worksheet collation happens
+- check column deduplication happens
 
 #### Notes per dataset
 - AUTOMAT2 → Excel header not found
@@ -53,7 +97,7 @@
   - Literal translation to *English* =
     ```reference veepee | model | code color | color | description | section | description | composition | care```
     
-- HEORAUT2 → Excel header not found
+- HEORAUT2 + INPUTMA25 → Excel header not found
   - This is correct. No column here qualifies as a FamilyID column. Good job for KO'ing this.
 
 - HEROAUT3 → Excel header not found
