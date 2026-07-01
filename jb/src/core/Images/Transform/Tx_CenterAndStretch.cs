@@ -43,9 +43,7 @@ public class Tx_CenterAndStretch : IImageTransformation
             return InputImage;
         }
 
-        (int canvasSize, int srcX, int srcY) = ComputeLayout(bbox, _margin);
-
-        byte[] result = Tx_util_BgStretch.Stretch(bytes, canvasSize, canvasSize, srcX, srcY);
+        (byte[] result, int canvasSize, double scaleFactor) = CropResizeAndStretch(bytes, bbox, _margin);
         InputImage.ProcessedBytes = result;
 
         var warnings = new System.Collections.Generic.List<string>();
@@ -60,7 +58,8 @@ public class Tx_CenterAndStretch : IImageTransformation
             OutputWidth          = canvasSize,
             OutputHeight         = canvasSize,
             BackgroundFillMethod = "background-stretch",
-            ScaleFactor          = 1.0,
+            ResizeMode           = ResizeModeFor(scaleFactor),
+            ScaleFactor          = scaleFactor,
             Warnings             = [.. warnings],
             SafeSummaryText      = "Center-and-stretch applied."
         };
@@ -69,18 +68,16 @@ public class Tx_CenterAndStretch : IImageTransformation
     }
 
     /// <inheritdoc/>
-    public byte[] Process(byte[] arr, int stride, float upscale_factor)
+    public byte[] Process(byte[] arr, int stride, float upscale_factor, ImageRecord_LAMBDA? lambda = null)
     {
         BoundingBox bbox = FullImageBounds(arr);
 
-        (int canvasSize, int srcX, int srcY) = ComputeLayout(bbox, _margin);
-
-        byte[] stretched = Tx_util_BgStretch.Stretch(arr, canvasSize, canvasSize, srcX, srcY);
+        (byte[] result, int canvasSize, _) = CropResizeAndStretch(arr, bbox, _margin);
 
         if (upscale_factor is not 0f and not 1f)
         {
             int scaledSide = (int)Math.Round(canvasSize * upscale_factor);
-            using Mat canvas = Cv2.ImDecode(stretched, ImreadModes.Color);
+            using Mat canvas = Cv2.ImDecode(result, ImreadModes.Color);
             using Mat scaled = new();
             Cv2.Resize(canvas, scaled, new OpenCvSharp.Size(scaledSide, scaledSide),
                 interpolation: InterpolationFlags.Lanczos4);
@@ -88,22 +85,52 @@ public class Tx_CenterAndStretch : IImageTransformation
             return scaledBytes;
         }
 
-        return stretched;
+        return result;
     }
 
     // Layout
+    //
+    // Crops to the bounding box, resizes it to fit the margin-adjusted target size (preserving
+    // aspect ratio), then centers it on the final square canvas and stretches the background to
+    // fill the remainder. Every offset fed to Tx_util_BgStretch is non-negative by construction:
+    // the resized product's longer side always equals finalBboxSize, which is always strictly
+    // less than canvasSize (since margin > 0), so canvasSize - resizedSize is always positive.
+    //
+    // canvasSize itself: raw = longestSide * (1 + 2*margin), floored, rounded down to the nearest
+    // even number, then reduced by 2px (antialiasing safety margin) — confirmed against a known
+    // worked example (bbox longest side 1800, margin 0.042 -> canvasSize 1948).
 
-    private static (int canvasSize, int srcX, int srcY) ComputeLayout(BoundingBox bbox, double margin)
+    private static (byte[] result, int canvasSize, double scaleFactor) CropResizeAndStretch(
+        byte[] sourceJpeg, BoundingBox bbox, double margin)
     {
-        int longestSide = Math.Max(bbox.Width, bbox.Height);
-        int marginPx    = (int)Math.Round(longestSide * margin);
-        int canvasSize  = longestSide + 2 * marginPx;
+        using Mat decoded = Cv2.ImDecode(sourceJpeg, ImreadModes.Color);
+        using Mat cropped = decoded.SubMat(new Rect(bbox.X, bbox.Y, bbox.Width, bbox.Height));
 
-        int srcX = canvasSize / 2 - (bbox.X + bbox.Width  / 2);
-        int srcY = canvasSize / 2 - (bbox.Y + bbox.Height / 2);
+        int longestSide  = Math.Max(bbox.Width, bbox.Height);
+        int flooredRaw   = (int)Math.Floor(longestSide * (1.0 + 2.0 * margin));
+        int evenRaw      = flooredRaw - (flooredRaw % 2);
+        int canvasSize   = evenRaw - 2;
 
-        return (canvasSize, srcX, srcY);
+        double finalBboxSize = canvasSize * (1.0 - 2.0 * margin);
+        double scaleFactor   = finalBboxSize / longestSide;
+
+        int resizedW = Math.Max(1, (int)Math.Round(bbox.Width  * scaleFactor));
+        int resizedH = Math.Max(1, (int)Math.Round(bbox.Height * scaleFactor));
+
+        using Mat resized = new();
+        Cv2.Resize(cropped, resized, new OpenCvSharp.Size(resizedW, resizedH), interpolation: InterpolationFlags.Lanczos4);
+
+        int srcX = (canvasSize - resizedW) / 2;
+        int srcY = (canvasSize - resizedH) / 2;
+
+        Cv2.ImEncode(".jpg", resized, out byte[] resizedJpeg);
+        byte[] result = Tx_util_BgStretch.Stretch(resizedJpeg, canvasSize, canvasSize, srcX, srcY);
+
+        return (result, canvasSize, scaleFactor);
     }
+
+    private static string ResizeModeFor(double scaleFactor) =>
+        scaleFactor < 1.0 ? "downscale" : scaleFactor > 1.0 ? "upscale" : "none";
 
     private static BoundingBox FullImageBounds(byte[] arr)
     {
