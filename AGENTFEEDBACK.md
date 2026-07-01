@@ -26,7 +26,7 @@ Static reload memory. Not a ticket board. Accepted knowledge lives in `jb/docs/`
 
 Resolved decisions and gotchas agents should know before touching code:
 
-- **ONNX singleton**: migration to application-scoped singleton is an *answered* decision — do not re-open. Not yet implemented; tracked in T-2600.
+- **ONNX singleton**: migration to application-scoped singleton is an *answered* decision — do not re-open. Implemented (done 2026-06-29, per M5 milestone gate): `MatchingService` owns one shared `ImageClassifier` (`_sharedClassifier`) for the job's lifetime, handed to every `ClassificationService`; a `_clipLock` serializes `InferenceSession.Run()` calls.
 - **`illustration-technical-drawing` scope**: option (b) accepted — null/no-phenotype. Do not add a phenotype for it.
 - **CLIP input_ids**: combined-input `Run()` is the fix for the input_ids inference bug. Already merged. Do not revert to separate runs.
 - **Dual-interface contract**: all `Tx_*` processing-tool classes expose `Process(byte[] arr, int stride, float upscale_factor)`. Match this signature exactly.

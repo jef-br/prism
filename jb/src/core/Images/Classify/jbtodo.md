@@ -17,6 +17,10 @@
   - Method: person/body detector — CLIP prompt or dedicated pose model. CLIP already active in `ImageClassifier.cs`; try prompts first.
   - Signature convention: `Analyzer_HasHuman.Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot)`
   - Answer:
+    Proposed triage (pending approval, from existing data — `ClipPrompts.json`): the underlying signal
+    is already CLIP-backed today (prompts exist), so this is a wiring/extraction task rather than a
+    new-detector task — no new model or prompt is required, just have this analyzer read the existing
+    CLIP write-back instead of leaving the feature UNKNOWN.
 
 -------
 - [ ] Implement Analyzer_HasFace.cs — measure `has-head`, `head-visible`, `has-face`, `face-visible`, `body-visible`
@@ -24,12 +28,17 @@
   - Method: HAAR cascade + human anatomical proportions + skin-tone color detection (lips are always darker than surrounding skin and red-ish). Detection area for head limited to top half of image; body extent inferred from skeleton proportions vs. image size. See PRISM-classify.md sections "Human Detection" and "Head Visibility Detection".
   - Prerequisite: `Analyzer_HasHuman.cs` must set `has-human = true` before this analyzer fires.
   - Answer:
+    Proposed triage (pending approval, from existing data — `ClipPrompts.json`): `head-visible` and
+    `body-visible` are already CLIP-backed today (prompts exist) — wiring/extraction, not a new
+    detector.
 
 -------
 - [ ] Implement Analyzer_HeroOrientation.cs — measure `hero-orientation`
   - Sets: `hero-orientation` (enum: FRONT/DIAGONAL/SIDEON/BACK/TOP/BOTTOM/UNKNOWN)
   - Method: CLIP-based — add prompts to `ClipPrompts.json` for orientation labels. Correlate with existing `front-view`, `side-view`, `rear-view`, `top-view` flags already computed.
   - Answer:
+    Proposed triage (pending approval, from existing data — `ClipPrompts.json`): already CLIP-backed
+    today — wiring/extraction, not a new detector.
 
 -------
 - [ ] Implement Analyzer_PoseType.cs — measure `pose-type`, `contains-mannequin`
@@ -69,18 +78,27 @@
   - Note: `top-view` is already used in `flatlay-front` and `flatlay-styled` phenotype rules.
   - Method: CLIP prompts for camera angle labels. `top-view = true` when `camera-angle = overhead`.
   - Answer:
+    Proposed triage (pending approval, from existing data): `camera-angle` is genuinely semantic with
+    no current prompt or pixel proxy — needs a new `ClipPrompts.json` entry, not derivable from
+    existing geometry/pixel mechanisms.
 
 -------
 - [ ] Implement Analyzer_Indoor.cs — measure `indoor`, `outdoor`
   - Sets: `indoor` (boolean), `outdoor` (boolean)
   - Method: CLIP-based or derived from `background-type` (REALLIFE background + color histogram indicating natural/built environment).
   - Answer:
+    Proposed triage (pending approval, from existing data): genuinely semantic, no current prompt or
+    pixel proxy — needs a new `ClipPrompts.json` entry.
 
 -------
 - [ ] Implement Analyzer_SymmetryScore.cs — measure `symmetry-score`
   - Sets: `symmetry-score` (float, 0–1)
   - Method: CPU-only. Mirror the image horizontally, compute per-pixel grayscale difference, normalize by image area. High score = symmetric product (packshot candidate).
   - Answer:
+    Proposed triage (pending approval, from existing data — `SubjectEdgeDetector`): geometry-derivable
+    off the subject bbox already produced by `SubjectEdgeDetector` (same source that writes
+    `intersects-*`/`fully-in-frame`) + frame geometry — no new model/prompt needed, no pixel-sampling
+    step required beyond what already exists.
 
 -------
 - [ ] Implement Analyzer_LogoPresent.cs — measure `logo-present`
@@ -99,12 +117,18 @@
   - Sets: `shadow-present` (boolean)
   - Method: topology — look for a near-elliptical or elongated dark gradient region at the base of the subject on a light background. Darker than background by threshold, smoothly fading outward.
   - Answer:
+    Proposed triage (pending approval, from existing data): genuinely semantic, no current prompt or
+    pixel proxy — needs a new `ClipPrompts.json` entry (the topology method above is an alternative,
+    not a prerequisite).
 
 -------
 - [ ] Implement Analyzer_ReflectionPresent.cs — measure `reflection-present`
   - Sets: `reflection-present` (boolean)
   - Method: topology — detect a vertically symmetric dim or mirrored region below the subject's bottom edge on a reflective surface. Mirror the bottom N pixels and compare to the subject's bottom region.
   - Answer:
+    Proposed triage (pending approval, from existing data): genuinely semantic, no current prompt or
+    pixel proxy — needs a new `ClipPrompts.json` entry (the topology method above is an alternative,
+    not a prerequisite).
 
 -------
 - [ ] Implement Analyzer_MaterialTextureVisible.cs — measure `material-texture-visible`
@@ -117,6 +141,9 @@
   - Sets: `lighting` (enum: EASY/HARD/UNKNOWN), `lighting-detail` (enum: flat/directional/high-key/low-key/mixed/unknown)
   - Method: histogram-based. EASY = narrow luminance range (flat/high-key studio). HARD = bimodal (bright highlight + deep shadow). CLIP secondary signal.
   - Answer:
+    Proposed triage (pending approval, from existing data): `lighting` is genuinely semantic, no
+    current prompt or pixel proxy — a new `ClipPrompts.json` entry is the CLIP secondary signal path;
+    the histogram method above can be built independently of that.
 
 -------
 - [ ] Implement Analyzer_OverlapCount.cs — measure `overlap-count`
