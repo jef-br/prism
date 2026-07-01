@@ -4,15 +4,23 @@ namespace Prism.Core;
 public interface IImageTransformation
 {
     /// <summary>
-    /// Applies the transformation to <paramref name="InputImage"/> using its Lambda record,
-    /// records the outcome in <see cref="ImageRecord_LAMBDA.TransformationResult"/>, and returns the record.
+    /// Pipeline-internal entry point. Called once per image during the Transformed stage, after
+    /// ImagePreProcessor has already populated <paramref name="InputImage"/>.BoundingBox,
+    /// .Features (intersects-top/bottom/left/right, has-human, etc.), and .ProcessedBytes.
+    /// Reads everything it needs directly from InputImage and records the outcome on
+    /// InputImage.TransformationResult. This is the path ImageTransformer always uses today.
     /// </summary>
     ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage);
 
     /// <summary>
-    /// Stateless pixel-only entry point for the webservice path.
-    /// Operates on raw bytes without any Lambda record; uses <paramref name="upscale_factor"/>
-    /// to scale the result to the requested output size.
+    /// Stateless, standalone entry point for callers that only have raw image bytes and no
+    /// pipeline-managed lambda record — e.g. a future webservice caller. Signature is fixed by
+    /// this project's dual-interface contract (see AGENTFEEDBACK.md); <paramref name="lambda"/>
+    /// is an additive optional parameter, not a break of that contract. When a caller happens to
+    /// already have a lambda record (e.g. an internal caller that already ran ImagePreProcessor),
+    /// pass it to reuse its BoundingBox/Features instead of recomputing them from <paramref
+    /// name="arr"/>. When null, this method independently derives whatever bounding-box/geometry
+    /// information it needs from arr itself.
     /// </summary>
-    byte[] Process(byte[] arr, int stride, float upscale_factor);
+    byte[] Process(byte[] arr, int stride, float upscale_factor, ImageRecord_LAMBDA? lambda = null);
 }

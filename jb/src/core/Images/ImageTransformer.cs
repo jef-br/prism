@@ -35,15 +35,15 @@ public static class ImageTransformer {
     /// outcome in <see cref="ImageRecord_LAMBDA.TransformationResult"/>, and returns the record.
     /// </summary>
     public static ImageRecord_LAMBDA TransformImage(
-        ImageRecord_LAMBDA lambda, Mat? colorMat, double margin, bool headcut ) {
-        IImageTransformation transformer = SelectTransformer(lambda, colorMat, margin, headcut);
+        ImageRecord_LAMBDA lambda, Mat? colorMat, CropTransformSettings settings, bool headcut ) {
+        IImageTransformation transformer = SelectTransformer(lambda, colorMat, settings, headcut);
         return transformer.Transform(lambda);
     }
 
     //  Strategy selection
 
     private static IImageTransformation SelectTransformer(
-        ImageRecord_LAMBDA lambda, Mat? colorMat, double margin, bool headcut ) {
+        ImageRecord_LAMBDA lambda, Mat? colorMat, CropTransformSettings settings, bool headcut ) {
         // Step 1 — prerequisites missing: route to conservative processor.
         // The phenotype-null guard is suppressed while phenotypes are bypassed.
         if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null)) return new Tx_ProblemImageProcessor();
@@ -54,11 +54,13 @@ public static class ImageTransformer {
             if (BypassPhenotypes) return new Tx_CropSquare();
 
             bool isCloseupPhenotype = lambda.SelectedPhenotype is "closeup-image" or "model-detail-closeup";
-            return isCloseupPhenotype && !IsDetailCropperDetSlotExcluded(lambda) ? new Tx_DetailCropper() : new Tx_CropSquare();
+            return isCloseupPhenotype && !IsDetailCropperDetSlotExcluded(lambda)
+                ? new Tx_DetailCropper(settings.CropCoverage, settings.CropExtensionOneSided, settings.CropExtensionBiDirectional, headcut, colorMat)
+                : new Tx_CropSquare();
         }
 
         // Step 3 — object fully in frame: center on canvas and fill.
-        return new Tx_CenterAndStretch(margin, headcut, colorMat);
+        return new Tx_CenterAndStretch(settings.WhiteSpaceMargin, headcut, colorMat);
     }
 
     /// <summary>

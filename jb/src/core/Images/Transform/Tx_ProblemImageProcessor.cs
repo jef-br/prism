@@ -83,7 +83,7 @@ public class Tx_ProblemImageProcessor : IImageTransformation
     /// <paramref name="stride"/> is reserved for caller-side alignment and is not used in resize logic.
     /// Input bytes: format auto-detected. Output: JPEG at quality 90.
     /// </remarks>
-    public byte[] Process(byte[] arr, int stride, float upscale_factor)
+    public byte[] Process(byte[] arr, int stride, float upscale_factor, ImageRecord_LAMBDA? lambda = null)
     {
         // Input: raw image bytes (BGR/RGB, format auto-detected by ImageSharp).
         using Image img = Image.Load(arr);

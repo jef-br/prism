@@ -4,6 +4,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="CropTransformSettings.cs" />
     <Compile Include="IImageTransformation.cs" />
     <Compile Include="..\ImageTransformer.cs" />
     <Compile Include="Tx_CenterAndStretch.cs" />

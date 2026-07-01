@@ -41,7 +41,11 @@ public sealed class TransformService : ITransformService
             throw new PrismConfigurationException("Prism_Config.json not found — cannot run preprocessor.");
 
         PrismConfiguration prismConfig = PrismConfiguration.LoadPrismConfig(prismConfigPath);
-        double margin = prismConfig.WhiteSpaceMargin;
+        CropTransformSettings cropSettings = new(
+            prismConfig.WhiteSpaceMargin,
+            prismConfig.CropCoverage,
+            prismConfig.CropExtensionOneSided,
+            prismConfig.CropExtensionBiDirectional);
 
         Dictionary<string, ImageRecord_INPUT> inputByName = matched.Ingest.NormalizedImages
             .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
@@ -60,7 +64,7 @@ public sealed class TransformService : ITransformService
 
             using (colorMat)
             {
-                ImageTransformer.TransformImage(lambda, colorMat, margin, headcut);
+                ImageTransformer.TransformImage(lambda, colorMat, cropSettings, headcut);
             }
 
             okTransformed++;
