@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.Processing;
 
 namespace Prism.Core;
@@ -69,24 +72,29 @@ public sealed class Importer
     {
         string jobTempFolder = PrepareJobTempFolder(jobID, jobTempRoot);
 
-        List<ImageRecord_INPUT>     normalizedImages  = [];
-        List<ExcelProcessingDiagnostic> excelDiagnostics = [];
-        List<ImportKoRecord>        imageKoRecords    = [];
-        List<ZipMemberKoRecord>     zipKoRecords      = [];
-        List<string>                excelFilePaths    = [];
+        ConcurrentBag<ImageRecord_INPUT> normalizedImages  = [];
+        List<ExcelProcessingDiagnostic>  excelDiagnostics  = [];
+        ConcurrentBag<ImportKoRecord>    imageKoRecords    = [];
+        List<ZipMemberKoRecord>          zipKoRecords      = [];
+        List<string>                     excelFilePaths    = [];
 
-        ProcessZipRecords(zipRecords, jobTempFolder, normalizedImages, excelFilePaths, imageKoRecords, zipKoRecords);
-        ProcessDirectImageRecords(imageRecords, jobTempFolder, normalizedImages, imageKoRecords);
+        // Shared across both image loops so normalized filenames stay unique job-wide
+        // regardless of parallel completion order. Array wrapper: a `ref int` local cannot
+        // be captured inside the Parallel.ForEach lambdas below, but an array reference can.
+        int[] normalizedFileNameCounter = [0];
+
+        ProcessZipRecords(zipRecords, jobTempFolder, normalizedImages, excelFilePaths, imageKoRecords, zipKoRecords, normalizedFileNameCounter);
+        ProcessDirectImageRecords(imageRecords, jobTempFolder, normalizedImages, imageKoRecords, normalizedFileNameCounter);
         ProcessDirectExcelRecords(excelRecords, excelFilePaths);
 
         IReadOnlyList<FamilyIDRecord> familyRecords = BuildFamilyRecords(excelFilePaths, excelDiagnostics);
 
         return new ImportStageResult
         {
-            NormalizedImages  = normalizedImages,
+            NormalizedImages  = normalizedImages.ToList(),
             FamilyRecords     = familyRecords,
             ExcelDiagnostics  = excelDiagnostics,
-            ImageKoRecords    = imageKoRecords,
+            ImageKoRecords    = imageKoRecords.ToList(),
             ZipKoRecords      = zipKoRecords,
             JobTempFolder     = jobTempFolder
         };
@@ -103,12 +111,14 @@ public sealed class Importer
     private void ProcessZipRecords(
         IReadOnlyList<InputZipFileRecord> zipRecords,
         string jobTempFolder,
-        List<ImageRecord_INPUT> normalizedImages,
+        ConcurrentBag<ImageRecord_INPUT> normalizedImages,
         List<string> excelFilePaths,
-        List<ImportKoRecord> imageKoRecords,
-        List<ZipMemberKoRecord> zipKoRecords)
+        ConcurrentBag<ImportKoRecord> imageKoRecords,
+        List<ZipMemberKoRecord> zipKoRecords,
+        int[] normalizedFileNameCounter)
     {
         string zipExtractionRoot = Path.Combine(jobTempFolder, ZipExtractSubfolder);
+        ParallelOptions parallelOptions = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
         foreach (InputZipFileRecord zipRecord in zipRecords)
         {
@@ -126,27 +136,29 @@ public sealed class Importer
 
             zipKoRecords.AddRange(extraction.KoRecords);
 
-            foreach (ZipExtractedMember member in extraction.ExtractedMembers)
+            // Excel routing stays sequential (excelFilePaths is a plain, non-concurrent List<T>).
+            foreach (ZipExtractedMember excelMember in extraction.ExtractedMembers.Where(member => member.MediaKind == ZipMemberMediaKind.Excel))
             {
-                if (member.MediaKind == ZipMemberMediaKind.Excel)
-                {
-                    excelFilePaths.Add(member.ExtractedFilePath);
-                    continue;
-                }
-
-                if (member.MediaKind == ZipMemberMediaKind.Image)
-                {
-                    NormalizeAndRecord(
-                        member.ExtractedFilePath,
-                        member.OriginalFileName,
-                        ImageSourceKind.ZipMember,
-                        null,
-                        member.ExpandedByteLength,
-                        jobTempFolder,
-                        normalizedImages,
-                        imageKoRecords);
-                }
+                excelFilePaths.Add(excelMember.ExtractedFilePath);
             }
+
+            List<ZipExtractedMember> imageMembers = extraction.ExtractedMembers
+                .Where(member => member.MediaKind == ZipMemberMediaKind.Image)
+                .ToList();
+
+            Parallel.ForEach(imageMembers, parallelOptions, member =>
+            {
+                NormalizeAndRecord(
+                    member.ExtractedFilePath,
+                    member.OriginalFileName,
+                    ImageSourceKind.ZipMember,
+                    null,
+                    member.ExpandedByteLength,
+                    jobTempFolder,
+                    normalizedImages,
+                    imageKoRecords,
+                    normalizedFileNameCounter);
+            });
         }
     }
 
@@ -160,10 +172,13 @@ public sealed class Importer
     private void ProcessDirectImageRecords(
         IReadOnlyList<ImageRecord_INPUT> imageRecords,
         string jobTempFolder,
-        List<ImageRecord_INPUT> normalizedImages,
-        List<ImportKoRecord> imageKoRecords)
+        ConcurrentBag<ImageRecord_INPUT> normalizedImages,
+        ConcurrentBag<ImportKoRecord> imageKoRecords,
+        int[] normalizedFileNameCounter)
     {
-        foreach (ImageRecord_INPUT record in imageRecords)
+        ParallelOptions parallelOptions = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        Parallel.ForEach(imageRecords, parallelOptions, record =>
         {
             // Prefer TempFilePath (API-spilled file) over InitialFullName (direct local path).
             string sourcePath = ResolveReadablePath(record.TempFilePath, record.InitialFullName);
@@ -174,7 +189,7 @@ public sealed class Importer
                     record.InitialFullName,
                     record.InitialFullName,
                     "The input file could not be found at the expected path."));
-                continue;
+                return;
             }
 
             string extension = Path.GetExtension(record.InitialFullName);
@@ -184,7 +199,7 @@ public sealed class Importer
                 imageKoRecords.Add(ImportKoRecord.UnsupportedFormat(
                     record.InitialFullName,
                     record.InitialFullName));
-                continue;
+                return;
             }
 
             long byteLength = record.ByteLength ?? new FileInfo(sourcePath).Length;
@@ -200,7 +215,7 @@ public sealed class Importer
                     SafeMessage      = "The input image is smaller than the configured minimum file size.",
                     BatchContinues   = true
                 });
-                continue;
+                return;
             }
 
             if (byteLength > configuration.MaxBytesPerImg)
@@ -214,7 +229,7 @@ public sealed class Importer
                     SafeMessage      = "The input image exceeds the configured maximum file size.",
                     BatchContinues   = true
                 });
-                continue;
+                return;
             }
 
             NormalizeAndRecord(
@@ -225,8 +240,9 @@ public sealed class Importer
                 byteLength,
                 jobTempFolder,
                 normalizedImages,
-                imageKoRecords);
-        }
+                imageKoRecords,
+                normalizedFileNameCounter);
+        });
     }
 
     // -------------------------------------------------------------------------
@@ -290,13 +306,15 @@ public sealed class Importer
         string? originalContentType,
         long byteLength,
         string jobTempFolder,
-        List<ImageRecord_INPUT> normalizedImages,
-        List<ImportKoRecord> imageKoRecords)
+        ConcurrentBag<ImageRecord_INPUT> normalizedImages,
+        ConcurrentBag<ImportKoRecord> imageKoRecords,
+        int[] normalizedFileNameCounter)
     {
         string normalizedFolder = Path.Combine(jobTempFolder, NormalizedSubfolder);
         Directory.CreateDirectory(normalizedFolder);
 
-        string normalizedFileName = BuildNormalizedFileName(originalFileName, normalizedImages.Count);
+        int uniqueIndex = Interlocked.Increment(ref normalizedFileNameCounter[0]) - 1;
+        string normalizedFileName = BuildNormalizedFileName(originalFileName, uniqueIndex);
         string normalizedPath     = Path.Combine(normalizedFolder, normalizedFileName);
 
         bool normalizedSuccessfully = TryNormalizeToJpeg(
@@ -355,6 +373,11 @@ public sealed class Importer
         height   = 0;
         koRecord = null;
 
+        if (TryFastPathCopyConformingJpeg(sourcePath, destinationPath, out width, out height))
+        {
+            return true;
+        }
+
         try
         {
             using Image sourceImage = LoadImageWithExifOrientation(sourcePath);
@@ -397,6 +420,55 @@ public sealed class Importer
                 originalFileName,
                 sourcePath,
                 "The image could not be opened or read.");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Fast path: when the source is already a conforming JPEG (baseline JPEG carries no alpha
+    /// channel by definition, and EXIF orientation is absent or already normal so AutoOrient
+    /// would be a no-op), copies the source file into the normalized folder unchanged instead of
+    /// decoding and re-encoding it. Detection reads metadata only via <see cref="Image.Identify(string)"/>
+    /// — no full pixel decode. Returns false on any exception or non-conforming result; the caller
+    /// falls through to the existing full decode/composite/encode path unchanged.
+    /// </summary>
+    /// <param name="sourcePath">Readable source file path.</param>
+    /// <param name="destinationPath">Absolute path for the normalized JPEG output.</param>
+    /// <param name="width">Image width when the fast path is taken.</param>
+    /// <param name="height">Image height when the fast path is taken.</param>
+    /// <returns>True when the source already conformed and was copied unchanged.</returns>
+    private static bool TryFastPathCopyConformingJpeg(
+        string sourcePath,
+        string destinationPath,
+        out int width,
+        out int height)
+    {
+        width  = 0;
+        height = 0;
+
+        try
+        {
+            ImageInfo info = Image.Identify(sourcePath);
+
+            if (info.Metadata.DecodedImageFormat != JpegFormat.Instance)
+            {
+                return false;
+            }
+
+            if (info.Metadata.ExifProfile is not null
+                && info.Metadata.ExifProfile.TryGetValue(ExifTag.Orientation, out IExifValue<ushort>? orientationValue)
+                && orientationValue.Value != ExifOrientationMode.TopLeft)
+            {
+                return false;
+            }
+
+            File.Copy(sourcePath, destinationPath, overwrite: true);
+            width  = info.Size.Width;
+            height = info.Size.Height;
+            return true;
+        }
+        catch
+        {
             return false;
         }
     }

@@ -23,8 +23,7 @@ namespace Prism.Core;
 /// <see cref="Tx_CropSquare"/> instead of <see cref="Tx_DetailCropper"/> (which is phenotype-driven).
 /// Routing then depends only on <see cref="ImageRecord_LAMBDA.BoundingBox"/> and edge intersects.
 /// </remarks>
-public static class ImageTransformer
-{
+public static class ImageTransformer {
     // Temporary gate — see jb/src/core/Images/Classify/jbtodo.md ("HANDMADE BY ME: Temporarily
     // GATE the phenotypes"). While true, routing ignores SelectedPhenotype so basic transforms
     // run off geometry alone. Flip to false once phenotype assignment is validated.
@@ -36,8 +35,7 @@ public static class ImageTransformer
     /// outcome in <see cref="ImageRecord_LAMBDA.TransformationResult"/>, and returns the record.
     /// </summary>
     public static ImageRecord_LAMBDA TransformImage(
-        ImageRecord_LAMBDA lambda, Mat? colorMat, double margin, bool headcut)
-    {
+        ImageRecord_LAMBDA lambda, Mat? colorMat, double margin, bool headcut ) {
         IImageTransformation transformer = SelectTransformer(lambda, colorMat, margin, headcut);
         return transformer.Transform(lambda);
     }
@@ -45,29 +43,18 @@ public static class ImageTransformer
     //  Strategy selection
 
     private static IImageTransformation SelectTransformer(
-        ImageRecord_LAMBDA lambda, Mat? colorMat, double margin, bool headcut)
-    {
+        ImageRecord_LAMBDA lambda, Mat? colorMat, double margin, bool headcut ) {
         // Step 1 — prerequisites missing: route to conservative processor.
         // The phenotype-null guard is suppressed while phenotypes are bypassed.
-        if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null))
-            return new Tx_ProblemImageProcessor();
-
-        bool hasEdgeIntersect = lambda.Features.GetValue("intersects-top")    == "true"
-                             || lambda.Features.GetValue("intersects-bottom")  == "true"
-                             || lambda.Features.GetValue("intersects-left")    == "true"
-                             || lambda.Features.GetValue("intersects-right")   == "true";
+        if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null)) return new Tx_ProblemImageProcessor();
 
         // Step 2 — object touches at least one image edge.
-        if (hasEdgeIntersect)
-        {
+        if (hasEdgeIntersect(lambda.Features)) {
             // DetailCropper is phenotype-driven; while bypassing, fall back to the square crop.
-            if (BypassPhenotypes)
-                return new Tx_CropSquare();
+            if (BypassPhenotypes) return new Tx_CropSquare();
 
             bool isCloseupPhenotype = lambda.SelectedPhenotype is "closeup-image" or "model-detail-closeup";
-            return isCloseupPhenotype && !IsDetailCropperDetSlotExcluded(lambda)
-                ? new Tx_DetailCropper()
-                : new Tx_CropSquare();
+            return isCloseupPhenotype && !IsDetailCropperDetSlotExcluded(lambda) ? new Tx_DetailCropper() : new Tx_CropSquare();
         }
 
         // Step 3 — object fully in frame: center on canvas and fill.
@@ -79,10 +66,11 @@ public static class ImageTransformer
     /// disqualifying it from <see cref="Tx_DetailCropper"/> routing.
     /// Default products exclude slots 0–2; clothing products (<c>clothing-*</c>) exclude slots 0–1.
     /// </summary>
-    private static bool IsDetailCropperDetSlotExcluded(ImageRecord_LAMBDA lambda)
-    {
-        bool isClothing = lambda.ProductTypeId?
-            .StartsWith("clothing-", System.StringComparison.OrdinalIgnoreCase) == true;
+    private static bool IsDetailCropperDetSlotExcluded( ImageRecord_LAMBDA lambda ) {
+        bool isClothing = lambda.ProductTypeId?.StartsWith("clothing-", System.StringComparison.OrdinalIgnoreCase) == true;
         return isClothing ? lambda.DetOrder <= 1 : lambda.DetOrder <= 2;
+    }
+    private static bool hasEdgeIntersect( ImageFeatureSnapshot ImgFeat ) {
+        return ImgFeat.GetValue("intersects-top") == "true" || ImgFeat.GetValue("intersects-bottom") == "true" || ImgFeat.GetValue("intersects-left") == "true" || ImgFeat.GetValue("intersects-right") == "true";
     }
 }

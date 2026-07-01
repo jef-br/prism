@@ -71,6 +71,20 @@ URL policy from HCFG:
 - No EXIF → keep original orientation.
 - Normalized JPG written with default orientation — no EXIF orientation field in IRI, IRL, manifest, or journey payload.
 
+### Parallel Normalization
+
+- Both image loops (direct records and zip-member images) normalize via `Parallel.ForEach`, capped at `Environment.ProcessorCount`, so peak concurrent decodes never exceed the machine's core count regardless of batch size.
+- Result accumulation (`normalizedImages`, `imageKoRecords`) uses `ConcurrentBag<T>`, since order carries no meaning downstream — `Exporter` and matching correlate records by `InitialFullName`, never by list position.
+- The normalized filename's uniqueness index comes from a job-scoped `Interlocked` counter, not list length, so filenames stay collision-free under concurrent completion.
+- Excel/IEM construction (`BuildFamilyRecords`) stays sequential; it runs after both image loops complete and `ModelBuilder` is not thread-safe.
+
+### Fast-Path Already-Conforming JPEGs
+
+- Before decoding, `Importer` checks the source via `Image.Identify` (metadata-only, no full pixel decode): if the format is already JPEG and the EXIF orientation tag is absent or `1`/`TopLeft` (i.e. `AutoOrient` would be a no-op), the source file is copied unchanged into the job's `normalized/` folder instead of being decoded and re-encoded.
+- Baseline JPEG has no alpha channel by definition, so "no alpha channel" is automatically satisfied whenever the fast path's format check passes — no separate check needed.
+- `NormalizedJpgPath` always resolves to a file inside `jobTempFolder/normalized/` either way (decoded-and-encoded, or fast-path-copied) — the job-owned lifetime contract is unchanged.
+- Any exception or non-conforming result during the fast-path check falls through to the existing full decode/composite/encode path; real corruption is still classified by the existing KO paths.
+
 ---
 
 ## Zip Handling

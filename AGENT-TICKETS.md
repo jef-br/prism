@@ -125,7 +125,9 @@ M5 gate condition: all Classify decisions answered; ONNX session migrated to sin
 
 
 ### T-3000 · Parallelize image import normalization
-**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
+
+**Outcome:** Both image loops (`ProcessDirectImageRecords` and the zip-member loop in `ProcessZipRecords`) now normalize via `Parallel.ForEach` capped at `Environment.ProcessorCount`; result accumulation moved to `ConcurrentBag<T>`; the filename-uniqueness index moved from the racy `normalizedImages.Count` read to a job-scoped `Interlocked` counter. The deferred fast-path-JPEG follow-up landed in the same pass (see `PRISM-io-import.md`'s "Fast-Path Already-Conforming JPEGs" section) — already-conforming JPEGs are now copied unchanged into `normalized/` instead of decoded and re-encoded, resolving the jbtodo's (a)/(b) question as (a). `jb/src/core/IO/Import/jbtodo.md` closed and removed.
 
 **Problem:** `Importer.ProcessDirectImageRecords` and the zip-member loop in `ProcessZipRecords` normalize images in a sequential `foreach`. Each image is decoded (`Image.Load`), composited (`AutoOrient` + flatten-to-white), then re-encoded to JPEG q92 and written — all on one thread. On large batches this pins ~1 core (observed 9–17% total CPU on a multi-core box; ~20 min for MMERO26's 4048 images) while the rest of the CPU and the SSD sit idle. The per-image work is independent and embarrassingly parallel.
 
@@ -142,8 +144,6 @@ M5 gate condition: all Classify decisions answered; ONNX session migrated to sin
 - Existing tests green.
 
 **Files:** `jb/src/core/IO/Import/Importer.cs`
-
-**Follow-up (deferred, needs a decision):** fast-path already-conforming JPEGs to skip decode+re-encode — open design question recorded in `jb/src/core/IO/Import/jbtodo.md`.
 
 ---
 
