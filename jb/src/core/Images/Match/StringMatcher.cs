@@ -84,50 +84,7 @@ internal sealed class StringMatcher
         };
     }
 
-    //  Evidence building 
-
-    private List<TokenEvidenceItem> BuildStringEvidence(
-        IReadOnlyList<FilenameToken> imageTokens,
-        FamilyIDRecord family)
-    {
-        List<TokenEvidenceItem> evidence = [];
-
-        foreach (KeyValuePair<string, IReadOnlyList<string>> property in family.NormalizedTokens)
-        {
-            ExcelColumnClassification classification = family.ColumnClassifications.TryGetValue(
-                property.Key, out ExcelColumnClassification cls)
-                    ? cls
-                    : ExcelColumnClassification.Descriptive;
-
-            // Numeric and FamilyID columns belong to NumericMatcher
-            if (classification == ExcelColumnClassification.Numerical ||
-                classification == ExcelColumnClassification.FamilyID)
-                continue;
-
-            IReadOnlyList<string> familyTokens = PrepareExcelTokens(property.Value, property.Key, classification);
-
-            foreach (FilenameToken imageToken in imageTokens)
-            {
-                string? matchedFamilyToken = familyTokens.FirstOrDefault(
-                    ft => translationConfig.AreMatchingTokens(imageToken.Normalized, ft));
-
-                if (matchedFamilyToken is not null)
-                {
-                    bool isExact = matchedFamilyToken.Equals(imageToken.Normalized, StringComparison.OrdinalIgnoreCase);
-                    evidence.Add(new TokenEvidenceItem(
-                        imageToken.Original,
-                        matchedFamilyToken,
-                        property.Key,
-                        family.FamilyID,
-                        isExact ? 1.0 : 0.85));
-                }
-            }
-        }
-
-        return evidence;
-    }
-
-    //  Inverted token index (Bracket 3)
+    //  Inverted token index (Brackets 3 and 4)
 
     /// <summary>
     /// Groups token evidence by FamilyID using the inverted token index. For each image token (and its
@@ -170,8 +127,8 @@ internal sealed class StringMatcher
 
     /// <summary>
     /// Builds (once per family set, cached by reference) an inverted index mapping each accepted family
-    /// token to the families and columns that contain it. Mirrors <see cref="BuildStringEvidence"/>'s
-    /// column rules: Numeric and FamilyID columns are excluded; Descriptive/Mixed are noise-filtered.
+    /// token to the families and columns that contain it. Numeric and FamilyID columns are excluded;
+    /// Descriptive/Mixed columns are noise-filtered before indexing.
     /// </summary>
     private Dictionary<string, List<Posting>> GetOrBuildTokenIndex(IReadOnlyList<FamilyIDRecord> families)
     {
@@ -253,27 +210,46 @@ internal sealed class StringMatcher
         return tokens;
     }
 
-    //  Bracket 4 support 
+    //  Bracket 4 support
 
     /// <summary>
     /// Scores each candidate by how many filename string tokens appear in its columns.
     /// Used by SemanticMatcher (Bracket 4) to rank and reduce the candidate pool.
-    /// Returns all candidates that have at least one token match, ordered by match count descending.
+    /// Returns all candidates (from <paramref name="candidates"/>) that have at least one token
+    /// match, ordered by match count descending.
     /// </summary>
+    /// <param name="filename">The image filename to extract string tokens from.</param>
+    /// <param name="candidates">
+    /// The per-image-filtered candidate subset to score. Changes on nearly every call within a
+    /// single Bracket 4 run (post CLIP/numeric reduction), so it is never used to build the index.
+    /// </param>
+    /// <param name="indexScope">
+    /// The stable superset the inverted token index is built (and reference-equality cached) from —
+    /// <c>unassignedFamilies</c>, computed once per Bracket 4 run. Evidence is collected for this
+    /// whole scope, then filtered down to <paramref name="candidates"/> by FamilyID membership, so
+    /// the index is built once per bracket run instead of once per image.
+    /// </param>
     internal IReadOnlyList<(FamilyIDRecord Family, int MatchCount, List<TokenEvidenceItem> Evidence)>
-        ScoreCandidatesByStringTokens(string filename, IReadOnlyList<FamilyIDRecord> candidates)
+        ScoreCandidatesByStringTokens(string filename, IReadOnlyList<FamilyIDRecord> candidates, IReadOnlyList<FamilyIDRecord> indexScope)
     {
         IReadOnlyList<FilenameToken> imageTokens = ExtractImageTokens(filename);
         if (imageTokens.Count == 0)
+            return [];
+
+        Dictionary<string, List<TokenEvidenceItem>> evidenceByFamily = CollectEvidenceByFamily(imageTokens, indexScope);
+        if (evidenceByFamily.Count == 0)
             return [];
 
         List<(FamilyIDRecord Family, int MatchCount, List<TokenEvidenceItem> Evidence)> results = [];
 
         foreach (FamilyIDRecord family in candidates)
         {
-            List<TokenEvidenceItem> evidence = BuildStringEvidence(imageTokens, family);
-            if (evidence.Count > 0)
-                results.Add((family, evidence.Count, evidence));
+            if (!evidenceByFamily.TryGetValue(family.FamilyID, out List<TokenEvidenceItem>? evidence))
+                continue;
+
+            // evidence.Count, NOT .Distinct().Count() — matches the exact pre-rewrite MatchCount
+            // semantics (raw evidence-item count).
+            results.Add((family, evidence.Count, evidence));
         }
 
         return [..results.OrderByDescending(r => r.MatchCount)];

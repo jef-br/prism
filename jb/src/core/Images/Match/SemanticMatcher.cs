@@ -59,8 +59,10 @@ internal sealed class SemanticMatcher
 
         if (candidates.Count == 0) return null;
 
-        // Step 4: String token scoring — keep only the candidate(s) with the most matching tokens
-        var scored = stringMatcher.ScoreCandidatesByStringTokens(filename, candidates);
+        // Step 4: String token scoring — keep only the candidate(s) with the most matching tokens.
+        // indexScope is unassignedFamilies (the stable superset for this whole Bracket 4 run), so the
+        // inverted token index is built/cached once per bracket run, not once per image.
+        var scored = stringMatcher.ScoreCandidatesByStringTokens(filename, candidates, unassignedFamilies);
 
         FamilyIDRecord winner;
         List<TokenEvidenceItem> stringEvidence;

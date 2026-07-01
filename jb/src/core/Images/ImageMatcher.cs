@@ -88,8 +88,17 @@ internal sealed class ImageMatcher {
         // Bracket 3: string tokens, exactly-1-FamilyID
         unmatched = RunBracket3(unmatched, allRecords, families, rejectedNearTies, crossBracketCandidates);
 
-        // Bracket 4: semantic combined (CLIP + numeric + string) for 0-image families
-        unmatched = RunBracket4(unmatched, allRecords, families, numericRules, labelRules, rejectedNearTies);
+        // Bracket 4: semantic combined (CLIP + numeric + string) for 0-image families.
+        // Skip entirely when no image in the batch carries CLIP classification signal at all.
+        // Safe because MatchingConfig.json always defines ProductType + ProductColor ClipLabelEnricher
+        // rules (verified in jb/src/core/config/MatchingConfig.json) — ClipLabelEnricher.BuildEvidence
+        // returns [] whenever Influential.Length == 0, so FilterByClipProductType/Color already reject
+        // every candidate for an untagged record today. If those two rules are ever both removed from
+        // MatchingConfig.json, re-verify this gate's safety.
+        bool hasClassificationSignal = allRecords.Any(r => r.Tags.Influential.Length > 0);
+        unmatched = hasClassificationSignal
+            ? RunBracket4(unmatched, allRecords, families, numericRules, labelRules, rejectedNearTies)
+            : unmatched;
 
         // Bracket 5: image filename named verbatim in an Excel cell (exact, unique)
         unmatched = RunBracket5FilenameToCell(unmatched, families, rejectedNearTies);
