@@ -5,7 +5,7 @@ $repoRoot = (Resolve-Path "$PSScriptRoot/../..").Path
 Ensure-PrismApi -BaseUrl $BaseUrl -RepoRoot $repoRoot
 $logPath = "$repoRoot/matching-testlogs.txt"
 
-Get-ChildItem "$repoRoot/jb/testing" -Directory | Sort-Object Name | ForEach-Object {
+Get-ChildItem "$repoRoot/test/datasets" -Directory | Sort-Object Name | ForEach-Object {
     Invoke-PrismFolderJob `
         -Folder             $_.FullName `
         -BaseUrl            $BaseUrl `

@@ -15,18 +15,20 @@
     The original image is NOT cropped to the BoundingBox. The original image is repositioned so the BoundingBox center aligns with the canvas center. Background pixels outside the BoundingBox are stretched by Tx_util_BgStretch in all 4 directions to cover uncovered canvas edges.
 
 -------
-- [ ] Tx_util_HeadCutter Algorithm A — anatomy-guided search space refinement: when `has-human == true`, use the lambda BoundingBox dimensional proportions combined with human anatomical ratios (e.g. head ≈ 1/8 of body height) to narrow the Haar face-detection search region before running DetectMultiScale. Requires a deepdive into apparel-image anatomical ratio distributions to determine reliable constants.
-  - File: `jb/src/core/Images/Transform/Tx_util_HeadCutter.cs`
-  - Blocked until: anatomical ratio constants are agreed upon.
-  - Answer:
-
--------
 - [ ] Implement Tx_DetailCropper: square crop anchored at bounding box edges, with optional headcut and greedy crop.
   - File: `jb/src/core/Images/Transform/Tx_DetailCropper.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
   - What is needed: (1) Read `salient-bbox` from `InputImage.Features`. (2) Detect whether the bounding box intersects an image edge. (3) For non-intersecting images: apply greedy crop centered on saliency region; apply headcut placement when `head-visible` and `hero-is-human` features are above configured thresholds. (4) For border-intersecting images: anchor crop to touched edges; record the no-reposition decision. (5) Apply fill when the crop extends beyond original bounds. (6) Populate full `ImageTransformationResult` including crop rectangle, headcut flag, border-intersection flag, fill method used, and warnings.
   - Prerequisites: All saliency map, headcut, greedy crop, fill policy, and border-intersection todos above must be answered. `salient-bbox`, `head-visible`, `hero-is-human` features must be populated by the classifier.
   - Image processor: Same as Tx_CenterAndStretch.
   - Fix: Implement after all prerequisites are answered and classifier features are available.
+  
+-------
+- [ ] Tx_util_HeadCutter Algorithm A — anatomy-guided search space refinement: when `has-human == true`, use the lambda BoundingBox dimensional proportions combined with human anatomical ratios (e.g. head ≈ 1/8 of body height) to narrow the Haar face-detection search region before running DetectMultiScale. Requires a deepdive into apparel-image anatomical ratio distributions to determine reliable constants.
+  - File: `jb/src/core/Images/Transform/Tx_util_HeadCutter.cs`
+  - Blocked until: anatomical ratio constants are agreed upon.
+  - Answer:
+    - The ratio of head-to-body should lie between 1:4 (kids) and 1:8 (adults) anything outside that is weird
+    - 
 
 -------
 - [ ] Spec and implement Tx_util_HeadCutter: utility class that crops a human head at the nose-to-lips boundary, with family-aware fallback for covered or out-of-shot faces.
