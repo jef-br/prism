@@ -58,29 +58,20 @@ Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, 
 **Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker  
 
 Full `Transform()` + `Process()` pixel flow implemented and build clean (0 errors, 0 warnings).
-Canvas math: `longestSide = max(bbox.W, bbox.H)`, `marginPx = round(longestSide * 0.042)`, square canvas = `longestSide + 2*marginPx`. Headcut via `Tx_util_HeadCutter` when requested. Background fill via `Tx_util_BgStretch.Stretch()`. Committed to `transformation` branch.
+Headcut via `Tx_util_HeadCutter` when requested. Background fill via `Tx_util_BgStretch.Stretch()`.
+
+**Amended (while verifying T-2100/T-3100):** the original canvas math (`longestSide + 2*marginPx`, placing the whole uncropped source at a bbox-derived offset) crashed on real photos whenever the bbox wasn't already near the frame's own center — `Tx_util_BgStretch` can only add non-negative borders, and centering an off-center bbox this way can require a negative placement offset. Replaced with: crop to the bbox, resize that crop to fit a margin-adjusted target size (preserving aspect ratio), center the resized product on the final canvas, then stretch the background. The resized product is always strictly smaller than the canvas, so the offset is always non-negative by construction. Verified against a known-good real-world reference implementation's exact worked numbers.
 
 **Files:** `jb/src/core/Images/Transform/Tx_CenterAndStretch.cs`
 
 ---
 
 ### T-2100 · Implement Tx_DetailCropper pixel flow
-**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker  
-**Unblocked-by:** T-2300 Done, T-2200 Done, T-2000 Done
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker  
 
-Pixel body for `Tx_DetailCropper.Transform()` — currently gated and throws.
+Full 6-branch decision tree implemented, covering every bounding-box edge-intersection pattern (0/1/2-opposing/2-adjacent/3/4 touched edges). Crop-sizing driven by `Transformation.Cropping.Coverage`/`Extension.OneSided`/`Extension.BiDirectional` (`Prism_Config.json`), threaded via a new `CropTransformSettings` value struct. All "can't reposition cleanly" cases handled locally (never delegates to `Tx_CropSquare`; `TransformerType` always reports `Tx_DetailCropper`). `IImageTransformation.Process()` gained an optional `ImageRecord_LAMBDA` parameter for callers that already have one. 29 tests, including regression tests for two coordinate-shift bugs found and fixed during implementation/review. Verified against the real TinyTest fixture image `24211507_76_C.jpg` (`BypassPhenotypes` still routes it through `Tx_CropSquare` as designed — T-2600 owns flipping that gate).
 
-**When unblocked, what to do:**
-1. Read `salient-bbox` from `InputImage.Features`.
-2. Detect border intersection (intersects-top/bottom/left/right features).
-3. Non-intersecting: apply greedy crop centered on saliency region; apply headcut when `head-visible` and `hero-is-human` meet configured thresholds.
-4. Border-intersecting: anchor crop to touched edges; record no-reposition decision.
-5. Apply `Tx_util_BgStretch` when crop extends beyond original bounds.
-6. Populate full `ImageTransformationResult`.
-7. Internal fallback to `Tx_CropSquare` when border intersection blocks pixel-level repositioning.
-8. `dotnet build jb/src/PRISM.sln` passes.
-
-**Files:** `jb/src/core/Images/Transform/Tx_DetailCropper.cs`
+**Files:** `jb/src/core/Images/Transform/Tx_DetailCropper.cs`, `CropTransformSettings.cs` (new), `IImageTransformation.cs`, `ImageTransformer.cs`, `jb/src/core/Services/TransformService.cs`, `jb/src/core/config/PrismConfiguration.cs`
 
 ---
 
@@ -149,7 +140,9 @@ M5 gate condition: all Classify decisions answered; ONNX session migrated to sin
 
 
 ### T-3100 · Bracket 4 (SemanticMatcher) perf: skip without CLIP tags; index its string scoring
-**Status:** Ready | **Profile:** P1-feature-worker | **Agent:** worker
+**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
+
+**Outcome:** `ImageMatcher.RunWaterfall` now skips `RunBracket4` entirely when no record in the batch has any influential CLIP tag (`allRecords.Any(r => r.Tags.Influential.Length > 0)`) — verified safe against `MatchingConfig.json`'s actual `ProductType`/`ProductColor` `ClipLabelEnricher` rules. `StringMatcher.ScoreCandidatesByStringTokens` rewritten to reuse Bracket 3's existing inverted token index (via a new `indexScope` parameter carrying the stable per-bracket family superset) instead of an un-indexed per-family scan, preserving exact pre-rewrite `MatchCount`/ordering semantics. 18 tests. Verified against real TinyTest data: identical `FamilyId` assignments with and without `--skip-classification`.
 
 **Problem:** `ImageMatcher.RunBracket4` calls `SemanticMatcher.TryMatch` for every still-unmatched image against all unassigned families. `SemanticMatcher` copies the whole unassigned-family list per image (`[..unassignedFamilies]`) and scores via `StringMatcher.ScoreCandidatesByStringTokens` — the **un-indexed** O(families×tokens) scan (the bracket-3 inverted index does **not** cover this path). After brackets 1–3 leave most images unmatched and most families unassigned, this is O(images × families × tokens) on a single thread. Worse, under **skip-classification there are no CLIP tags**, so bracket 4's CLIP hard filters have nothing to act on — it produces ~no matches yet still scans every family for every unmatched image. Pure wasted compute.
 
