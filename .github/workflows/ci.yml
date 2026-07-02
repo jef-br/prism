@@ -25,12 +25,11 @@ jobs:
 
       - name: Unit tests (xUnit)
         shell: pwsh
-        # PipelineIntegrationTests hard-assert on the gitignored test/datasets/TinyTest dataset (absent on a
-        # fresh checkout) — real end-to-end coverage is the CiMini smoke step below, so exclude them here.
+        # Runs the full suite, including PipelineIntegrationTests. These currently fail on the T-2800
+        # upscaler bug — that is intentional: CI reports the real failure rather than hiding it.
         run: >
           dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj
           -c Release --no-build
-          --filter "FullyQualifiedName!~PipelineIntegrationTests"
           --logger "trx;LogFileName=core-tests.trx"
           --results-directory ${{ github.workspace }}/test-results
 
