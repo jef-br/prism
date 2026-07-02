@@ -1,20 +1,17 @@
 # Daily Brief
 
 ##### Changed
-- Fetcher dispatch now wired: `FetchDispatcher` + `Fetch_DropBox` added; `PrismProcessIngressReader.AddRemoteInputRecordsAsync` routes URLs via `dispatcher.CanHandle`/`FetchAsync` off `configuration.FetchDispatcher`. This is T-2700's scope — implemented in code, but the ticket still reads Status: Ready.
-- New public match-only API surface: `PrismMatchLiteIngressReader` + `MatchOnlyResult` model; `Program.cs` exposes a multipart match-lite route (`prismService.MatchLite`) and `MatchOnlyAsync`. Advances the root `jbtodo.md` "keep matchingservice open to the public" line — no ticket tracks it yet.
-- `ImageMatcher.cs` reworked (~232 lines churn); `PrismService`, `MatchingService`, `ClassificationService`/`IClassificationService` touched alongside.
-- Visual dedup retuned: `VisualHasher.cs` hash-size + Hamming-distance parameters changed (commit fde6d8a).
-- Test harness: new `test/MatchingTestClient` console client + `Run_MatchingTestClient.ps1`/`Run_TinyTest.ps1`; existing `test-scripts/` moved `jb/` → `test/`.
-- Config-path reality: `ImageNGP.json` / `ImageRoles.json` actually live in `jb/src/core/config/`, not `jb/src/core/ImageNGP/` as the docs and `AGENTFEEDBACK.md` table state (that folder now holds only the schema + validator + vocabulary).
+- Self-hosted CI merged (PR #3, commit afeb3c0). `ci.yml` PR gate: Release build → xUnit unit tests (excludes `PipelineIntegrationTests`) → web typecheck+build → match-only CiMini smoke. `full-pipeline.yml`: daily 10:30 Europe/Brussels (DST-aware) + manual full run.
+- CiMini fixture dataset committed under `test/datasets/CiMini/` (the only in-repo dataset) with `expected-match.json` golden; `Invoke-CiPipeline.ps1` golden-assertion harness added; `Submit-PrismJob`/`Wait-PrismResult` exported from `PrismJobRunner.psm1`.
+- ONNX model paths moved out of hard-coded literals into `Prism_Config.json` (new `Models` section) via `PrismConfiguration`; `ClassificationService`/`UpscaleService` repointed. Stale `Run_TinyTest.ps1` dataset path fixed.
+- Classify taxonomy todo has since been FROZEN by you ("captured in canonical files, no reconciliation action needed") — this supersedes last brief's pending name-level verification for that item.
 
 ##### Todo updates
-- Classify taxonomy todo — recorded an existing-data verification (2026-07-01, pending approval): the 26 phenotype NAMES reconcile cleanly across `ImageNGP.json` ↔ `imagePhenotypes.md` ↔ `ImageRoles.json` (set-diff empty in every direction; every id referenced by ≥1 role rule, 0 orphans), and corrected the stale config path in the answer. Why safe: this is exactly the name-level cross-check the todo's own close-out asks for, done with existing files only, no invention. Left open: per-rule IF-*combination* equivalence still unverified.
-- Everything else unimproved — Transform saliency/headcut/greedy/HeadCutter need user product decisions (T-2300/T-2200); Classify `RecordUnknownFeatures` + phenotype validation blocked on taxonomy/labeled set; Generate backend needs a running server. Nothing improvable without guessing.
+- Services test-suites todo (`jb/src/core/Services/jbtodo.md`) — added a proposed-triage note (pending approval, existing data only): the split's design is already present, only the physical project split is missing. Grounded in `.github/workflows/ci.yml` + repo layout — the `I*Service` boundary set exists, `Prism.Core.Tests` is already partitioned by stage folders under one `.csproj`, `PipelineIntegrationTests.cs` is the top-level e2e suite, and CI already enforces the unit/integration split by name filter. Residual work is mechanical (promote folders to per-service `.csproj`). Why safe: no invention, no course change, matches the existing pending-approval pattern.
+- Everything else unimproved: Transform DetailCropper/HeadCutter (T-2200) need product decisions; Classify per-feature analyzers mostly need new `ClipPrompts.json` entries or triage approval; Generate + phenotype-validation todos FROZEN. Nothing improvable without guessing.
 
 ##### Next steps
-- Reconcile T-2700: fetcher dispatch is implemented — mark Done, or note the remaining acceptance gaps (content-type-based routing, explicit KO reason for unsupported URLs) if any are still open.
-- Decide whether the new match-only route needs a ticket; if it satisfies the "matchingservice public" `jbtodo.md` item, record that decision so the todo can close.
-- Finish the taxonomy close-out: run the per-rule IF-combination equivalence check (`ImageRoles.json` rules ↔ `imagePhenotypes.md` definitions) — the only gap left after name-level reconciliation.
-- Fix the stale config-path pointers (docs + `AGENTFEEDBACK.md` say `core/ImageNGP/`; real path is `core/config/`) — needs your OK since those files are approval-gated.
-- Approve the Classify verification above and the standing `illustration-technical-drawing` option (b) recommendation to clear M5 gate item 2.
+- Approve or reject the Services test-suites triage: decide whether per-service project split is worth the multi-project overhead now vs. deferring until services deploy independently.
+- Config-path drift now compounded: ONNX model paths live in `Prism_Config.json` `Models` section — AGENTFEEDBACK's "Upscale model" line + config table should point there (approval-gated).
+- Still unfixed from last brief: `ImageNGP.json`/`ImageRoles.json` path pointers in docs + AGENTFEEDBACK say `core/ImageNGP/`; real path is `core/config/` — needs your OK to correct.
+- Still open from last brief: decide whether the match-only / `MatchLite` route needs a ticket so the root `jbtodo.md` "matchingservice public" line can close.
