@@ -54,49 +54,6 @@ Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, 
 ## Tickets
 
 
-### T-2000 · Implement Tx_CenterAndStretch pixel flow
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker  
-
-Full `Transform()` + `Process()` pixel flow implemented and build clean (0 errors, 0 warnings).
-Headcut via `Tx_util_HeadCutter` when requested. Background fill via `Tx_util_BgStretch.Stretch()`.
-
-**Amended (while verifying T-2100/T-3100):** the original canvas math (`longestSide + 2*marginPx`, placing the whole uncropped source at a bbox-derived offset) crashed on real photos whenever the bbox wasn't already near the frame's own center — `Tx_util_BgStretch` can only add non-negative borders, and centering an off-center bbox this way can require a negative placement offset. Replaced with: crop to the bbox, resize that crop to fit a margin-adjusted target size (preserving aspect ratio), center the resized product on the final canvas, then stretch the background. The resized product is always strictly smaller than the canvas, so the offset is always non-negative by construction. Verified against a known-good real-world reference implementation's exact worked numbers.
-
-**Files:** `jb/src/core/Images/Transform/Tx_CenterAndStretch.cs`
-
----
-
-### T-2100 · Implement Tx_DetailCropper pixel flow
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker  
-
-Full 6-branch decision tree implemented, covering every bounding-box edge-intersection pattern (0/1/2-opposing/2-adjacent/3/4 touched edges). Crop-sizing driven by `Transformation.Cropping.Coverage`/`Extension.OneSided`/`Extension.BiDirectional` (`Prism_Config.json`), threaded via a new `CropTransformSettings` value struct. All "can't reposition cleanly" cases handled locally (never delegates to `Tx_CropSquare`; `TransformerType` always reports `Tx_DetailCropper`). `IImageTransformation.Process()` gained an optional `ImageRecord_LAMBDA` parameter for callers that already have one. 29 tests, including regression tests for two coordinate-shift bugs found and fixed during implementation/review. Verified against the real TinyTest fixture image `24211507_76_C.jpg` (`BypassPhenotypes` still routes it through `Tx_CropSquare` as designed — T-2600 owns flipping that gate).
-
-**Files:** `jb/src/core/Images/Transform/Tx_DetailCropper.cs`, `CropTransformSettings.cs` (new), `IImageTransformation.cs`, `ImageTransformer.cs`, `jb/src/core/Services/TransformService.cs`, `jb/src/core/config/PrismConfiguration.cs`
-
----
-
-### T-2200 · Spec and implement Tx_util_HeadCutter
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker  
-
-Algorithm B (full-image Haar face search, centroid Y < 50%, pick face furthest from top, cutY = face.Y + 0.75×face.Height) implemented. Algorithm A (anatomy-ratio guided search when `has-human=true`) is deferred — deepdive jbtodo recorded in `jb/src/core/Images/Transform/jbtodo.md`.
-
-**Files:** `jb/src/core/Images/Transform/Tx_util_HeadCutter.cs`
-
----
-
-### T-2300 · User decisions: detail crop saliency, headcut, greedy crop
-**Status:** Done | **Profile:** P0-orchestrator  
-
-All three product decisions answered and recorded in `jb/src/core/Images/Transform/jbtodo.md`:
-1. Saliency: BoundingBox from ImagePreProcessor is the sole anchor — no further computation in Transform.
-2. Headcut: controlled by a `Headcut` bool threaded through the pipeline; human presence from `has-human` feature.
-3. Greedy crop: bbox center aligns to canvas center; background filled by Tx_util_BgStretch.
-
-**Files:** `jb/src/core/Images/Transform/jbtodo.md`
-
----
-
-
 ### T-2600 · M5 Classify groundwork
 **Status:** Blocked | **Profile:** P0-orchestrator  
 **Blocked-by:** M5 milestone gate — all Classify `jbtodo.md` decisions must be answered first.
@@ -115,50 +72,42 @@ M5 gate condition: all Classify decisions answered; ONNX session migrated to sin
 ---
 
 
-### T-3000 · Parallelize image import normalization
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
+### T-2800 · API/in-process pipeline never initializes the GPU Real-ESRGAN upscaler
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** self-hosted CI `full-pipeline` smoke (2026-07-02).
 
-**Outcome:** Both image loops (`ProcessDirectImageRecords` and the zip-member loop in `ProcessZipRecords`) now normalize via `Parallel.ForEach` capped at `Environment.ProcessorCount`; result accumulation moved to `ConcurrentBag<T>`; the filename-uniqueness index moved from the racy `normalizedImages.Count` read to a job-scoped `Interlocked` counter. The deferred fast-path-JPEG follow-up landed in the same pass (see `PRISM-io-import.md`'s "Fast-Path Already-Conforming JPEGs" section) — already-conforming JPEGs are now copied unchanged into `normalized/` instead of decoded and re-encoded, resolving the jbtodo's (a)/(b) question as (a). `jb/src/core/IO/Import/jbtodo.md` closed and removed.
+**Problem:** The in-process pipeline built by `PipelineServiceFactory.CreateInProcess` / `CreateFromEnvironment` (used by the API and WPF) never calls `UpscaleService.Create()`, which is the **only** code path that invokes `Upscaler_g_p_u.Initialize()`. That init happens solely in the ServiceHost ([jb/src/services/Prism.ServiceHost/Program.cs:30](jb/src/services/Prism.ServiceHost/Program.cs#L30)). Transform runs in-process through `ImagePreProcessor` ([jb/src/core/Images/ImagePreProcessor.cs:232](jb/src/core/Images/ImagePreProcessor.cs#L232) → `ImageUpscaler.Upscale`). On a machine where `ImageUpscaler.IsGpuAvailable` is true, `ImageUpscaler.Upscale` routes to `Upscaler_g_p_u.Upscale → RunRealEsrgan`, which throws `"Upscaler_g_p_u.Initialize() must be called before RunRealEsrgan."` ([Upscaler_g_p_u.cs:50-53](jb/src/core/Images/Upscale/Upscaler_g_p_u.cs#L50-L53)). Any full job that needs to **upscale** a below-minimum image aborts the whole pipeline → `PrismService.BuildFailedResult` returns `Status="Failed"` with an empty manifest.
 
-**Problem:** `Importer.ProcessDirectImageRecords` and the zip-member loop in `ProcessZipRecords` normalize images in a sequential `foreach`. Each image is decoded (`Image.Load`), composited (`AutoOrient` + flatten-to-white), then re-encoded to JPEG q92 and written — all on one thread. On large batches this pins ~1 core (observed 9–17% total CPU on a multi-core box; ~20 min for MMERO26's 4048 images) while the rest of the CPU and the SSD sit idle. The per-image work is independent and embarrassingly parallel.
+**Evidence:** CI Full run on the committed CiMini fixture (small images, e.g. `CARDIGAN_MAGENTA76_DETAIL.jpg` 230 KB, needing upscale to the 800 px output minimum) fails with `RouteSummaries = ["Pipeline failed: Upscaler_g_p_u.Initialize() must be called before RunRealEsrgan."]`. Match-only (transform off) passes. Only triggers when a GPU/DirectML adapter is present.
 
 **What to do:**
-1. Replace the sequential image loops (direct image records + zip image members) with `Parallel.ForEach`. Cap `MaxDegreeOfParallelism` to `Environment.ProcessorCount` so only N images are decoded in flight at once (bounds peak memory).
-2. Make result accumulation thread-safe: `normalizedImages`, `imageKoRecords`, `zipKoRecords` are `List<T>` mutated inside the loop. Use a concurrent collection or per-partition lists merged afterward; preserve existing OK/KO semantics (batch continues on a per-image failure).
-3. Fix the normalized-filename index race: `BuildNormalizedFileName` uses `normalizedImages.Count` as the uniqueness index, which races under parallelism. Pre-assign a stable index by input position (deterministic filenames) or use an `Interlocked` counter; filenames must stay unique/collision-free.
-4. Leave Excel/IEM build (`BuildFamilyRecords` → `ModelBuilder`) sequential — it is not the bottleneck and `ModelBuilder` is not thread-safe.
+1. Initialize the GPU upscaler once in the in-process/API path — e.g. call `UpscaleService.Create(configuration)` (or `Upscaler_g_p_u.Initialize(modelPath)` directly) at API/PrismService startup so `ImageUpscaler.Upscale` has a live session when a GPU is available. Choose a clean seam (PipelineServiceFactory, PrismService init, or `Prism.Api` startup).
+2. Resolve the model path from config (`configuration.UpscaleModelPath`, now config-driven) via `FindModelAsset` / `PRISM_ONNX_MODEL_DIR`.
+3. Verify the CPU fallback (`Upscaler_c_p_u`) still used when no GPU is present (that path works today).
+4. Consider degrading gracefully (fall back to CPU or skip upscale) if the GPU model can't initialize, rather than aborting the whole job.
 
 **Acceptance:**
-- `dotnet build jb/src/PRISM.sln` clean (0 warnings).
-- Import wall-time on a large set (e.g. MMERO26, 4048 imgs) drops materially; CPU rises from ~1 core toward N cores during import.
-- Identical OK/KO counts and the same set of normalized outputs as the sequential version (order-independent); no filename collisions.
-- Existing tests green.
+- Full pipeline on CiMini completes on a GPU machine (no "Initialize() must be called" abort); `expected-manifest.json` can be captured and CI `full-pipeline.yml` goes green.
+- `dotnet build jb/src/PRISM.sln` clean; existing tests green; CPU-only machines unaffected.
 
-**Files:** `jb/src/core/IO/Import/Importer.cs`
+**Files:** `jb/src/core/Services/PipelineServiceFactory.cs`, `jb/src/core/PrismService.cs`, `jb/src/core/Services/UpscaleService.cs`, `jb/src/core/Images/ImageUpscaler.cs`, `jb/src/core/Images/Upscale/Upscaler_g_p_u.cs`, `jb/src/api/` startup.
 
 ---
 
 
-### T-3100 · Bracket 4 (SemanticMatcher) perf: skip without CLIP tags; index its string scoring
-**Status:** Done | **Profile:** P1-feature-worker | **Agent:** worker
+### T-2810 · PipelineIntegrationTests hard-depend on an uncommitted dataset
+**Status:** Active — paths repointed to CiMini; green blocked by [[T-2800]] | **Profile:** P1-feature-worker
+**Found by:** self-hosted CI setup (2026-07-02).
 
-**Outcome:** `ImageMatcher.RunWaterfall` now skips `RunBracket4` entirely when no record in the batch has any influential CLIP tag (`allRecords.Any(r => r.Tags.Influential.Length > 0)`) — verified safe against `MatchingConfig.json`'s actual `ProductType`/`ProductColor` `ClipLabelEnricher` rules. `StringMatcher.ScoreCandidatesByStringTokens` rewritten to reuse Bracket 3's existing inverted token index (via a new `indexScope` parameter carrying the stable per-bracket family superset) instead of an un-indexed per-family scan, preserving exact pre-rewrite `MatchCount`/ordering semantics. 18 tests. Verified against real TinyTest data: identical `FamilyId` assignments with and without `--skip-classification`.
+**Problem:** `PipelineIntegrationTests` ([jb/src/tests/Prism.Core.Tests/PipelineIntegrationTests.cs](jb/src/tests/Prism.Core.Tests/PipelineIntegrationTests.cs)) resolved fixtures via a broken `ResolveTestFixturePath()` (looked for a non-existent `jb/Testing`, then a hardcoded `c:\Users\JefB\...` path) and asserted on `SPACINI29/TINY` + `SmallTest/*`, none of which exist on a fresh checkout, so the tests **failed** (not skipped) with `DirectoryNotFoundException` — including CI. As a workaround, `ci.yml` currently excludes the whole class via `--filter "FullyQualifiedName!~PipelineIntegrationTests"`, so this real end-to-end coverage does not run in CI.
 
-**Problem:** `ImageMatcher.RunBracket4` calls `SemanticMatcher.TryMatch` for every still-unmatched image against all unassigned families. `SemanticMatcher` copies the whole unassigned-family list per image (`[..unassignedFamilies]`) and scores via `StringMatcher.ScoreCandidatesByStringTokens` — the **un-indexed** O(families×tokens) scan (the bracket-3 inverted index does **not** cover this path). After brackets 1–3 leave most images unmatched and most families unassigned, this is O(images × families × tokens) on a single thread. Worse, under **skip-classification there are no CLIP tags**, so bracket 4's CLIP hard filters have nothing to act on — it produces ~no matches yet still scans every family for every unmatched image. Pure wasted compute.
+**Done (option a, 2026-07-02):** Rewrote `ResolveTestFixturePath()` to walk up to `test/datasets` keyed by the committed `CiMini` folder (no hardcoded path — resolves on the CI runner). Repointed all fixture references (`SPACINI29/TINY`, `SPACINI29-INPUTS.xlsx`, `SmallTest/*`) to CiMini (`test/datasets/CiMini` + `ci-mini.xlsx`). Verified: the tests now load CiMini and run the full pipeline (no more `DirectoryNotFound`; failures shifted to the [[T-2800]] upscaler crash).
 
-**Evidence:** MMERO26 (4048 images) killed at ~40 min with **1 of 20 cores pegged, 0 MB/s disk I/O, 397 MB RAM** — the signature of single-threaded compute, not import. Bracket 3 (now indexed) is fine; bracket 4 is the residual hot path. Smaller sets (INPUTMA27 569 imgs, INPUTMA23 921 imgs) completed only because images×families is far smaller.
+**Blocked on [[T-2800]]:** these E2E tests run with `Transform=true`, so on a GPU machine they hit the T-2800 upscaler crash → `Status="Failed"` (9/12 fail on `Assert.Equal("Completed", …)`). The transform issue is deliberately left untouched, so the tests are **not yet green** and the CI `--filter` exclusion **stays in place**.
 
-**What to do:**
-1. **Skip bracket 4 when the batch carries no CLIP classification signal** (skip-classification, or no record has Tags/phenotype, or `labelRules` empty). Gate it in `RunWaterfall`/`RunBracket4`. Correctness-neutral — bracket 4 is the CLIP-semantic bracket and yields nothing without tags. This matches the intent already documented for `MatchLite` ([PrismService.cs:104-106](jb/src/core/PrismService.cs#L104-L106)).
-2. **For the with-classification path**, replace `SemanticMatcher`'s per-family string scan with the same inverted token index used by `StringMatcher` (bracket 3), or pre-filter candidates via the index before scoring. Eliminate the per-image `[..unassignedFamilies]` full copy.
-3. Preserve bracket 4 semantics (exactly-one survivor + `SemanticThreshold`).
+**Remaining (after T-2800):** confirm the repointed tests pass end-to-end on CiMini, then remove the `--filter "FullyQualifiedName!~PipelineIntegrationTests"` exclusion from `.github/workflows/ci.yml`.
 
-**Acceptance:**
-- Skip-classification MMERO26 completes in minutes (not pinned single-core for tens of minutes); bracket 4 makes 0 assignments under skip-classification (match rate unchanged vs. a bracket-4-disabled baseline).
-- With-classification match outcomes unchanged; no O(images×families) per-image scan (verify via a families-count scaling check or timing).
-- `dotnet build jb/src/PRISM.sln` clean; existing matcher tests green; add a test asserting bracket 4 is skipped when no tags are present.
-
-**Files:** `jb/src/core/Images/ImageMatcher.cs`, `jb/src/core/Images/Match/SemanticMatcher.cs`, `jb/src/core/Images/Match/StringMatcher.cs`
+**Files:** `jb/src/tests/Prism.Core.Tests/PipelineIntegrationTests.cs`, `.github/workflows/ci.yml`.
 
 ---
 
