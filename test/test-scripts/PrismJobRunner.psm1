@@ -341,7 +341,10 @@ function Wait-PrismResult {
                 return Read-ManifestFromZip -ZipPath $ZipSavePath
             }
             # Non-zip completion (failed job serialized as JSON): parse the envelope inline.
-            $parsed = ([System.Text.Encoding]::UTF8.GetString($response.Content)) | ConvertFrom-Json
+            # $response.Content is a string for text content types on PS7+, but a byte[] on
+            # older/edge cases, so branch on the actual type rather than assuming one or the other.
+            $jsonText = if ($response.Content -is [byte[]]) { [System.Text.Encoding]::UTF8.GetString($response.Content) } else { $response.Content }
+            $parsed = $jsonText | ConvertFrom-Json
             return $parsed.Manifest
         }
         if ($response.StatusCode -ne 202) {
