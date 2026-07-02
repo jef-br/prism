@@ -56,6 +56,15 @@ is small (<30 MB), deterministic, and paired with committed **golden** expectati
 
 See [`../datasets/CiMini/README.md`](../datasets/CiMini/README.md) for how to build/refresh it.
 
+> **Status — Full run is currently red (by design).** `-Mode Match` passes and gates every PR.
+> `-Mode Full` currently fails because the in-process/API pipeline does not initialize the GPU
+> Real-ESRGAN upscaler (`Upscaler_g_p_u.Initialize()` is only wired in the ServiceHost, not the API),
+> so Transform throws when it needs to upscale a small image on a GPU machine. CI surfaced this
+> pre-existing pipeline bug; it is **out of scope for the CI setup** and tracked separately. Until it
+> is fixed, `expected-manifest.json` cannot be captured and the daily `full-pipeline.yml` run reports
+> red — which is CI correctly reporting a real failure, not a CI defect. Once the upscaler init is
+> fixed, run `-Mode Full -Capture`, verify, and commit `expected-manifest.json` to turn it green.
+
 ### Running locally
 
 ```powershell
