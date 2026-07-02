@@ -1,0 +1,57 @@
+name: CI
+
+# Build + unit tests + web typecheck + a fast match-only pipeline smoke on the committed CiMini
+# fixture. Runs on the self-hosted Windows runner (it holds the CLIP model via PRISM_ONNX_MODEL_DIR
+# and the .NET 9/10 SDKs + Node — see test/ci/README.md).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: [self-hosted, windows]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build solution (Release)
+        shell: pwsh
+        run: dotnet build jb/src/PRISM.sln -c Release --nologo
+
+      - name: Unit tests (xUnit)
+        shell: pwsh
+        # PipelineIntegrationTests hard-assert on the gitignored jb/testing/TinyTest dataset (absent on a
+        # fresh checkout) — real end-to-end coverage is the CiMini smoke step below, so exclude them here.
+        run: >
+          dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj
+          -c Release --no-build
+          --filter "FullyQualifiedName!~PipelineIntegrationTests"
+          --logger "trx;LogFileName=core-tests.trx"
+          --results-directory ${{ github.workspace }}/test-results
+
+      - name: Web typecheck + build
+        shell: pwsh
+        working-directory: jb/src/workbench/web
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+
+      - name: Match-only pipeline smoke (CiMini)
+        shell: pwsh
+        run: pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Match -Dataset CiMini
+
+      - name: Upload test + CI artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-artifacts
+          path: |
+            test-results/**/*.trx
+            matching-testlogs.txt
+          if-no-files-found: ignore

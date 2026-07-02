@@ -25,7 +25,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _sharedPromptCatalog = ClassificationService.LoadPromptCatalog();
         _sharedClassifier    = new ImageClassifier();
-        ClassificationService.InitializeClassifier(_sharedClassifier);
+        ClassificationService.InitializeClassifier(_sharedClassifier, configuration);
     }
 
     /// <inheritdoc/>

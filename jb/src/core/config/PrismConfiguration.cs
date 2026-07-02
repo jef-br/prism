@@ -77,6 +77,13 @@ public sealed class PrismConfiguration {
     public IReadOnlyList<string> AcceptedZipExtensions { get; private set; } = [];
     public IReadOnlyList<string> AcceptedMediaTypes => [.. AcceptedImageExtensions, .. AcceptedExcelExtensions, .. AcceptedZipExtensions];
 
+    // --- Model assets (paths relative to the core root; resolved by PrismConfigLocator.FindModelAsset)
+    public string ClipModelDir { get; private set; } = "";
+    public string ClipModelFile { get; private set; } = "";
+    public string ClipVocabFile { get; private set; } = "";
+    public string ClipMergesFile { get; private set; } = "";
+    public string UpscaleModelPath { get; private set; } = "";
+
     // --- Factory
     public static PrismConfiguration LoadPrismConfig( string cfgPath ) {
         if (string.IsNullOrWhiteSpace(cfgPath)) {
@@ -166,7 +173,13 @@ public sealed class PrismConfiguration {
 
             AcceptedImageExtensions = RequireStringArray(root, cfgPath, "Input", "Images", "extensions"),
             AcceptedExcelExtensions = RequireStringArray(root, cfgPath, "Input", "EXCEL", "extensions"),
-            AcceptedZipExtensions = RequireStringArray(root, cfgPath, "Input", "ZIP", "extensions")
+            AcceptedZipExtensions = RequireStringArray(root, cfgPath, "Input", "ZIP", "extensions"),
+
+            ClipModelDir = RequireString(root, cfgPath, "Models", "Clip", "Dir"),
+            ClipModelFile = RequireString(root, cfgPath, "Models", "Clip", "Model"),
+            ClipVocabFile = RequireString(root, cfgPath, "Models", "Clip", "Vocab"),
+            ClipMergesFile = RequireString(root, cfgPath, "Models", "Clip", "Merges"),
+            UpscaleModelPath = RequireString(root, cfgPath, "Models", "Upscale", "Path")
         };
 
         config.Validate(cfgPath);
@@ -226,7 +239,13 @@ public sealed class PrismConfiguration {
         if (AcceptedImageExtensions.Count == 0) throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Input.Images.extensions must contain at least one entry.");
         if (AcceptedExcelExtensions.Count == 0) throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Input.EXCEL.extensions must contain at least one entry.");
         if (AcceptedZipExtensions.Count == 0) throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Input.ZIP.extensions must contain at least one entry.");
-        
+
+        AssertNonEmpty(ClipModelDir, cfgPath, "Models.Clip.Dir");
+        AssertNonEmpty(ClipModelFile, cfgPath, "Models.Clip.Model");
+        AssertNonEmpty(ClipVocabFile, cfgPath, "Models.Clip.Vocab");
+        AssertNonEmpty(ClipMergesFile, cfgPath, "Models.Clip.Merges");
+        AssertNonEmpty(UpscaleModelPath, cfgPath, "Models.Upscale.Path");
+
     }
 
     // --- JSON navigation helpers 
@@ -268,6 +287,16 @@ public sealed class PrismConfiguration {
         }
 
         return element.Value.GetBoolean();
+    }
+
+    private static string RequireString( JsonElement root, string cfgPath, params string[] path ) {
+        JsonElement? element = Navigate(root, path);
+
+        if (!element.HasValue || element.Value.ValueKind != JsonValueKind.String) {
+            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': required string field '{string.Join(".", path)}' is missing or not a string.");
+        }
+
+        return element.Value.GetString()!;
     }
 
     private static IReadOnlyList<string> RequireStringArray( JsonElement root, string cfgPath, params string[] path ) {
@@ -353,6 +382,12 @@ public sealed class PrismConfiguration {
     private static void AssertInRange( int val, int min, int max, string cfgPath, string fieldPath ) {
         if (val < min || val > max) {
             throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': field '{fieldPath}' must be between {min} and {max} but was {val}.");
+        }
+    }
+
+    private static void AssertNonEmpty( string val, string cfgPath, string fieldPath ) {
+        if (string.IsNullOrWhiteSpace(val)) {
+            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': field '{fieldPath}' must be a non-empty string.");
         }
     }
 }

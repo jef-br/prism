@@ -1,0 +1,73 @@
+name: Full pipeline
+
+# Full end-to-end pipeline (classify -> transform -> export) on the committed CiMini golden fixture,
+# plus publish artifacts. Heavy; runs once per workday on the self-hosted Windows runner.
+#
+# Scheduling: GitHub cron is UTC and does NOT observe DST, so two cron lines are declared and a gate
+# job lets exactly one through at 10:30 Europe/Brussels (CEST=UTC+2 in summer, CET=UTC+1 in winter).
+# workflow_dispatch always passes the gate.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 8 * * 1-5'   # 10:30 CEST (summer, UTC+2)
+    - cron: '30 9 * * 1-5'   # 10:30 CET  (winter, UTC+1)
+
+concurrency:
+  group: full-pipeline
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: [self-hosted, windows]
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        shell: pwsh
+        run: |
+          # "Romance Standard Time" is the Windows id for Brussels/Paris — DST-aware.
+          $bru = [System.TimeZoneInfo]::FindSystemTimeZoneById('Romance Standard Time')
+          $now = [System.TimeZoneInfo]::ConvertTimeFromUtc([DateTime]::UtcNow, $bru)
+          $run = ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') -or ($now.Hour -eq 10)
+          Write-Host "Brussels local time: $now (event=$env:GITHUB_EVENT_NAME) -> run=$run"
+          "run=$($run.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+  full:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: [self-hosted, windows]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build solution (Release)
+        shell: pwsh
+        run: dotnet build jb/src/PRISM.sln -c Release --nologo
+
+      - name: Full pipeline (CiMini golden)
+        shell: pwsh
+        run: pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini
+
+      - name: Publish API + ServiceHost
+        shell: pwsh
+        run: |
+          dotnet publish jb/src/api/Prism.Api.csproj -c Release -o publish/api --no-build
+          dotnet publish jb/src/services/Prism.ServiceHost/Prism.ServiceHost.csproj -c Release -o publish/servicehost --no-build
+
+      - name: Build web
+        shell: pwsh
+        working-directory: jb/src/workbench/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-pipeline-artifacts
+          path: |
+            publish/**
+            jb/src/workbench/web/.next/**
+            matching-testlogs.txt
+          if-no-files-found: ignore

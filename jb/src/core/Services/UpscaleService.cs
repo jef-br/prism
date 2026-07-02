@@ -13,15 +13,14 @@ public sealed class UpscaleService : IUpscaleService {
     /// loading any model. Throws <see cref="PrismConfigurationException"/> when DirectML is available but
     /// the model asset cannot be located.
     /// </summary>
-    public static UpscaleService Create() {
+    public static UpscaleService Create( PrismConfiguration configuration ) {
         if (ImageUpscaler.IsGpuAvailable) {
-            string? modelPath = PrismConfigLocator.FindModelAsset(
-                "Images/Upscale/ONNX/Real-ESRGAN_x2plus.onnx");
+            string? modelPath = PrismConfigLocator.FindModelAsset(configuration.UpscaleModelPath);
 
             if (modelPath is null)
                 throw new PrismConfigurationException(
-                    "Real-ESRGAN ONNX model not found. Deploy Real-ESRGAN_x2plus.onnx to " +
-                    "Images/Upscale/ONNX/ next to Prism_Config.json, or set PRISM_ONNX_MODEL_DIR.");
+                    $"Real-ESRGAN ONNX model not found at '{configuration.UpscaleModelPath}'. Deploy it next " +
+                    "to Prism_Config.json, or set PRISM_ONNX_MODEL_DIR.");
 
             Upscaler_g_p_u.Initialize(modelPath);
         }

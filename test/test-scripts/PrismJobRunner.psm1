@@ -420,4 +420,4 @@ function Write-PrismLogLine {
     Write-Host $line
 }
 
-Export-ModuleMember -Function Ensure-PrismApi, Get-PrismJobInputFiles, Invoke-PrismFolderJob, Write-PrismLogLine
+Export-ModuleMember -Function Ensure-PrismApi, Get-PrismJobInputFiles, Invoke-PrismFolderJob, Write-PrismLogLine, Submit-PrismJob, Wait-PrismResult

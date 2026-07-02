@@ -133,5 +133,16 @@
                 "BiDirectional": 0.25
             }
         }
+    },
+    "Models": {
+        "Clip": {
+            "Dir": "Images/Classify/ONNX/clip-vit-b32-uint8",
+            "Model": "model_uint8.onnx",
+            "Vocab": "vocab.json",
+            "Merges": "merges.txt"
+        },
+        "Upscale": {
+            "Path": "Images/Upscale/ONNX/Real-ESRGAN_x2plus.onnx"
+        }
     }
 }
