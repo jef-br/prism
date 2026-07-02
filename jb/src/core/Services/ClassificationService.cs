@@ -117,15 +117,15 @@ public sealed class ClassificationService : IClassificationService
         return ClipPromptCatalog.Load(clipPromptsPath);
     }
 
-    internal static void InitializeClassifier(ImageClassifier classifier)
+    internal static void InitializeClassifier(ImageClassifier classifier, PrismConfiguration configuration)
     {
-        string pathRoot = "Images/Classify/ONNX/clip-vit-b32-uint8";
+        string pathRoot = configuration.ClipModelDir;
 
         // The 146 MB model is not copied into build outputs; FindModelAsset resolves it from the deployed
         // location, the PRISM_ONNX_MODEL_DIR override, or the single source-tree copy.
-        string? modelPath  = PrismConfigLocator.FindModelAsset($"{pathRoot}/model_uint8.onnx");
-        string? vocabPath  = PrismConfigLocator.FindModelAsset($"{pathRoot}/vocab.json");
-        string? mergesPath = PrismConfigLocator.FindModelAsset($"{pathRoot}/merges.txt");
+        string? modelPath  = PrismConfigLocator.FindModelAsset($"{pathRoot}/{configuration.ClipModelFile}");
+        string? vocabPath  = PrismConfigLocator.FindModelAsset($"{pathRoot}/{configuration.ClipVocabFile}");
+        string? mergesPath = PrismConfigLocator.FindModelAsset($"{pathRoot}/{configuration.ClipMergesFile}");
 
         if (modelPath is null || vocabPath is null || mergesPath is null)
             throw new PrismConfigurationException(

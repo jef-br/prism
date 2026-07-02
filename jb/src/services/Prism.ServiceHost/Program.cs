@@ -27,7 +27,7 @@ IIngestService ingest         = new IngestService(configuration, modelBuilder);
 IMatchingService matching     = new MatchingService(configuration);
 IGenerateService generate     = new GenerateService();
 ITransformService transform   = new TransformService();
-IUpscaleService upscale       = UpscaleService.Create();
+IUpscaleService upscale       = UpscaleService.Create(configuration);
 
 WebApplication app = builder.Build();
 
