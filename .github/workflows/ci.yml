@@ -25,7 +25,7 @@ jobs:
 
       - name: Unit tests (xUnit)
         shell: pwsh
-        # PipelineIntegrationTests hard-assert on the gitignored jb/testing/TinyTest dataset (absent on a
+        # PipelineIntegrationTests hard-assert on the gitignored test/datasets/TinyTest dataset (absent on a
         # fresh checkout) — real end-to-end coverage is the CiMini smoke step below, so exclude them here.
         run: >
           dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj

@@ -6,7 +6,7 @@ namespace PrismCoreTests;
 /// End-to-end integration tests for the full PRISM pipeline.
 /// These tests exercise the complete pipeline from request to result,
 /// validating stage order, manifest shape, and real-data output quality
-/// against the SPACINI29/TINY fixture dataset.
+/// against the test/datasets/CiMini committed fixture dataset.
 /// </summary>
 public class PipelineIntegrationTests
 {
@@ -22,8 +22,8 @@ public class PipelineIntegrationTests
     [Fact]
     public async Task SPACINI29_TINY_EndToEnd_VerifiesAllEightStagesInOrder()
     {
-        string tinyImagesPath = Path.Combine(TestFixturePath, "SPACINI29", "TINY");
-        string excelPath = Path.Combine(TestFixturePath, "SPACINI29", "SPACINI29-INPUTS.xlsx");
+        string tinyImagesPath = Path.Combine(TestFixturePath, "CiMini");
+        string excelPath = Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx");
 
         Assert.True(Directory.Exists(tinyImagesPath), $"Test fixture directory not found: {tinyImagesPath}");
         Assert.True(File.Exists(excelPath), $"Test fixture Excel file not found: {excelPath}");
@@ -63,8 +63,8 @@ public class PipelineIntegrationTests
     [Fact]
     public async Task PrismJobRequest_WithMinimalInput_AcceptsJob()
     {
-        string tinyImagesPath = Path.Combine(TestFixturePath, "SPACINI29", "TINY");
-        string excelPath = CopyExcelToTemp(Path.Combine(TestFixturePath, "SPACINI29", "SPACINI29-INPUTS.xlsx"));
+        string tinyImagesPath = Path.Combine(TestFixturePath, "CiMini");
+        string excelPath = CopyExcelToTemp(Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx"));
 
         var singleImageRecord = Directory.GetFiles(tinyImagesPath, "*.jpg")
             .Take(1)
@@ -117,7 +117,7 @@ public class PipelineIntegrationTests
     }
 
     // -------------------------------------------------------------------------
-    // Real-data quality tests (SPACINI29/TINY)
+    // Real-data quality tests (test/datasets/CiMini)
     // -------------------------------------------------------------------------
 
     /// <summary>
@@ -127,7 +127,7 @@ public class PipelineIntegrationTests
     public async Task SPACINI29_TINY_NoImagesSilentlyDropped()
     {
         int inputCount = Directory.GetFiles(
-            Path.Combine(TestFixturePath, "SPACINI29", "TINY"), "*.jpg",
+            Path.Combine(TestFixturePath, "CiMini"), "*.jpg",
             SearchOption.TopDirectoryOnly).Length;
 
         var result = await new PrismService().Process(BuildTinyJobRequest());
@@ -256,8 +256,8 @@ public class PipelineIntegrationTests
     [Fact]
     public async Task SmallTest_EndToEnd_CompletesWithManifest()
     {
-        string imagesPath = Path.Combine(TestFixturePath, "SmallTest", "images");
-        string excelPath  = Path.Combine(TestFixturePath, "SmallTest", "tiny-test.xlsx");
+        string imagesPath = Path.Combine(TestFixturePath, "CiMini");
+        string excelPath  = Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx");
 
         Assert.True(Directory.Exists(imagesPath), $"SmallTest images directory not found: {imagesPath}");
         Assert.True(File.Exists(excelPath), $"SmallTest Excel not found: {excelPath}");
@@ -277,7 +277,7 @@ public class PipelineIntegrationTests
     public async Task SmallTest_NoImagesSilentlyDropped()
     {
         int inputCount = Directory.GetFiles(
-            Path.Combine(TestFixturePath, "SmallTest", "images"), "*.jpg",
+            Path.Combine(TestFixturePath, "CiMini"), "*.jpg",
             SearchOption.TopDirectoryOnly).Length;
 
         var result = await new PrismService().Process(BuildSmallTestJobRequest());
@@ -291,14 +291,14 @@ public class PipelineIntegrationTests
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Builds a job request using all images from SPACINI29/TINY and the SPACINI29 Excel.
+    /// Builds a job request using all loose images in test/datasets/CiMini and its ci-mini.xlsx.
     /// TempFilePath carries the full disk path so the Importer can read each file;
     /// InitialFullName keeps the bare filename so token matching works on real names.
     /// </summary>
     private static PrismJobRequest BuildTinyJobRequest(PrismProcessingParameters? parameters = null)
     {
-        string tinyImagesPath = Path.Combine(TestFixturePath, "SPACINI29", "TINY");
-        string excelPath      = CopyExcelToTemp(Path.Combine(TestFixturePath, "SPACINI29", "SPACINI29-INPUTS.xlsx"));
+        string tinyImagesPath = Path.Combine(TestFixturePath, "CiMini");
+        string excelPath      = CopyExcelToTemp(Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx"));
 
         var imageRecords = Directory.GetFiles(tinyImagesPath, "*.jpg", SearchOption.TopDirectoryOnly)
             .Select(f => new ImageRecord_INPUT { InitialFullName = Path.GetFileName(f), TempFilePath = f })
@@ -322,8 +322,8 @@ public class PipelineIntegrationTests
 
     private static PrismJobRequest BuildSmallTestJobRequest(PrismProcessingParameters? parameters = null)
     {
-        string imagesPath = Path.Combine(TestFixturePath, "SmallTest", "images");
-        string excelPath  = CopyExcelToTemp(Path.Combine(TestFixturePath, "SmallTest", "tiny-test.xlsx"));
+        string imagesPath = Path.Combine(TestFixturePath, "CiMini");
+        string excelPath  = CopyExcelToTemp(Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx"));
 
         var imageRecords = Directory.GetFiles(imagesPath, "*.jpg", SearchOption.TopDirectoryOnly)
             .Select(f => new ImageRecord_INPUT { InitialFullName = Path.GetFileName(f), TempFilePath = f })
@@ -364,20 +364,18 @@ public class PipelineIntegrationTests
         var assemblyDir = new FileInfo(typeof(PipelineIntegrationTests).Assembly.Location).DirectoryName
             ?? throw new InvalidOperationException("Cannot determine assembly directory");
 
+        // Walk up from the test assembly to the repo's test/datasets folder, identified by the committed
+        // CiMini fixture. No hardcoded absolute path, so it resolves on any checkout (CI runner included).
         var current = new DirectoryInfo(assemblyDir);
-        while (current.Parent != null)
+        while (current != null)
         {
-            var candidate = Path.Combine(current.FullName, "jb", "Testing");
-            if (Directory.Exists(candidate))
+            var candidate = Path.Combine(current.FullName, "test", "datasets");
+            if (Directory.Exists(Path.Combine(candidate, "CiMini")))
                 return candidate;
             current = current.Parent;
         }
 
-        var fallback = @"c:\Users\JefB\Documents\JBGITROOT\prism\test\datasets";
-        if (Directory.Exists(fallback))
-            return fallback;
-
         throw new DirectoryNotFoundException(
-            $"Test fixture directory 'jb/testing' not found. Started from: {assemblyDir}");
+            $"Test fixture directory 'test/datasets' (with CiMini) not found walking up from: {assemblyDir}");
     }
 }
