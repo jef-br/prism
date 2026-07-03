@@ -19,6 +19,13 @@ public sealed record MatchingConfig
     /// <summary>Weight applied to each semantic signal when computing MatchEvidence.FinalScore for Bracket 4.</summary>
     public double SemanticWeight { get; init; } = 0.15;
 
+    /// <summary>
+    /// Minimum distinct filename tokens the winning family must have matched for a Bracket 3 string
+    /// assignment. 1 preserves the historical behavior; 2 rejects single-common-token matches
+    /// (e.g. one shared color word), trading recall for precision — Brackets 4–5 may still rescue.
+    /// </summary>
+    public int Bracket3MinDistinctTokens { get; init; } = 1;
+
     /// <summary>Rules that drive numeric token matching (familyID, EAN).</summary>
     public IReadOnlyList<MatchingRule> NumericRules =>
         Rules.Where(r => r.Type.Equals("numeric", StringComparison.OrdinalIgnoreCase)).ToList();
@@ -87,4 +94,25 @@ public sealed record MatchingRule
 
     /// <summary>Minimum label overlap count for ALL image_labels rules.</summary>
     public int Overlap { get; init; } = 0;
+
+    /// <summary>
+    /// Comma-separated ImageFeature ids whose CLIP tags this rule may match (e.g. "product-color").
+    /// Empty means every influential tag applies (legacy behavior).
+    /// </summary>
+    public string ClipFeature { get; init; } = string.Empty;
+
+    /// <summary>True when a CLIP tag of <paramref name="feature"/> is eligible for this rule.</summary>
+    public bool AppliesToFeature(string feature)
+    {
+        if (string.IsNullOrWhiteSpace(ClipFeature))
+            return true;
+
+        foreach (string allowed in ClipFeature.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (allowed.Equals(feature, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
 }

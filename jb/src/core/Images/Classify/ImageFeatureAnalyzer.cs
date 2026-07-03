@@ -1,5 +1,6 @@
 using System.Globalization;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -54,7 +55,10 @@ public static class ImageFeatureAnalyzer
         Image<Rgba32> image, ImageFeatureSnapshot snapshot,
         out float bgR, out float bgG, out float bgB)
     {
-        bool hasAlpha = HasTransparentPixels(image);
+        // JPEG carries no alpha channel, and Import normalizes every pipeline input to a flat JPEG —
+        // for JPEG-decoded images the alpha scan is skipped outright. Other sources (in-memory,
+        // PNG paths outside the pipeline) keep the scan, now row-span based with early exit.
+        bool hasAlpha = image.Metadata.DecodedImageFormat != JpegFormat.Instance && HasTransparentPixels(image);
         snapshot.Set("transparent-background", hasAlpha ? "true" : "false", 1.0, "imagesharp");
         snapshot.Set("clipping-path",          hasAlpha ? "true" : "false", 0.90, "imagesharp");
 
@@ -128,17 +132,21 @@ public static class ImageFeatureAnalyzer
         int total = 0;
         int skinPx = 0;
 
-        // Sample every other pixel for performance.
-        for (int y = 0; y < image.Height; y += 2)
+        // Sample every other pixel for performance; row spans instead of the per-pixel indexer.
+        image.ProcessPixelRows(accessor =>
         {
-            for (int x = 0; x < image.Width; x += 2)
+            for (int y = 0; y < accessor.Height; y += 2)
             {
-                Rgba32 px = image[x, y];
-                if (px.A < 128) continue;
-                total++;
-                if (IsSkinTone(px)) skinPx++;
+                Span<Rgba32> row = accessor.GetRowSpan(y);
+                for (int x = 0; x < row.Length; x += 2)
+                {
+                    Rgba32 px = row[x];
+                    if (px.A < 128) continue;
+                    total++;
+                    if (IsSkinTone(px)) skinPx++;
+                }
             }
-        }
+        });
 
         float ratio = total == 0 ? 0f : (float)skinPx / total;
         snapshot.Set("skin-tone-area",
@@ -214,10 +222,18 @@ public static class ImageFeatureAnalyzer
 
     private static bool HasTransparentPixels(Image<Rgba32> image)
     {
-        for (int y = 0; y < image.Height; y++)
-            for (int x = 0; x < image.Width; x++)
-                if (image[x, y].A < 128) return true;
-        return false;
+        bool found = false;
+        image.ProcessPixelRows(accessor =>
+        {
+            for (int y = 0; y < accessor.Height && !found; y++)
+            {
+                foreach (Rgba32 px in accessor.GetRowSpan(y))
+                {
+                    if (px.A < 128) { found = true; break; }
+                }
+            }
+        });
+        return found;
     }
 
     private static void SampleCorners(
@@ -227,64 +243,52 @@ public static class ImageFeatureAnalyzer
         int cw = Math.Max(1, image.Width  / 10);
         int ch = Math.Max(1, image.Height / 10);
 
-        float sumR = 0, sumG = 0, sumB = 0;
+        // Single pass over the four corner blocks via row spans, accumulating sums and squared sums.
+        // variance = E[x²] − E[x]² summed over channels — same statistic as the former two-pass
+        // mean-then-deviation computation.
+        double sumR = 0, sumG = 0, sumB = 0;
+        double sumR2 = 0, sumG2 = 0, sumB2 = 0;
         int n = 0;
 
-        void AddCorner(int x, int y)
+        image.ProcessPixelRows(accessor =>
         {
-            if (x < 0 || x >= image.Width || y < 0 || y >= image.Height) return;
-            Rgba32 px = image[x, y];
-            if (px.A < 128) return;
-            sumR += px.R / 255f;
-            sumG += px.G / 255f;
-            sumB += px.B / 255f;
-            n++;
-        }
+            int width  = accessor.Width;
+            int height = accessor.Height;
 
-        for (int dy = 0; dy < ch; dy++)
-        {
-            for (int dx = 0; dx < cw; dx++)
+            void AddPixel(Rgba32 px)
             {
-                AddCorner(dx, dy);
-                AddCorner(image.Width - 1 - dx, dy);
-                AddCorner(dx, image.Height - 1 - dy);
-                AddCorner(image.Width - 1 - dx, image.Height - 1 - dy);
+                if (px.A < 128) return;
+                float r = px.R / 255f, g = px.G / 255f, b = px.B / 255f;
+                sumR += r; sumG += g; sumB += b;
+                sumR2 += r * r; sumG2 += g * g; sumB2 += b * b;
+                n++;
             }
-        }
+
+            void AddRowCorners(Span<Rgba32> row)
+            {
+                for (int dx = 0; dx < cw; dx++)
+                {
+                    AddPixel(row[dx]);
+                    if (width - 1 - dx >= cw) AddPixel(row[width - 1 - dx]);
+                }
+            }
+
+            for (int dy = 0; dy < ch; dy++)
+            {
+                AddRowCorners(accessor.GetRowSpan(dy));
+                int bottomY = height - 1 - dy;
+                if (bottomY >= ch) AddRowCorners(accessor.GetRowSpan(bottomY));
+            }
+        });
 
         if (n == 0) { avgR = avgG = avgB = variance = 0f; return; }
 
-        avgR = sumR / n;
-        avgG = sumG / n;
-        avgB = sumB / n;
+        avgR = (float)(sumR / n);
+        avgG = (float)(sumG / n);
+        avgB = (float)(sumB / n);
 
-        // Compute variance as mean squared deviation across channels.
-        float varSum = 0;
-        for (int dy = 0; dy < ch; dy++)
-        {
-            for (int dx = 0; dx < cw; dx++)
-            {
-                ComputeVarianceContrib(image, dx, dy, avgR, avgG, avgB, ref varSum);
-                ComputeVarianceContrib(image, image.Width - 1 - dx, dy, avgR, avgG, avgB, ref varSum);
-                ComputeVarianceContrib(image, dx, image.Height - 1 - dy, avgR, avgG, avgB, ref varSum);
-                ComputeVarianceContrib(image, image.Width - 1 - dx, image.Height - 1 - dy, avgR, avgG, avgB, ref varSum);
-            }
-        }
-
-        variance = varSum / (n * 3);
-    }
-
-    private static void ComputeVarianceContrib(
-        Image<Rgba32> image, int x, int y,
-        float avgR, float avgG, float avgB, ref float varSum)
-    {
-        if (x < 0 || x >= image.Width || y < 0 || y >= image.Height) return;
-        Rgba32 px = image[x, y];
-        if (px.A < 128) return;
-        float dr = (px.R / 255f) - avgR;
-        float dg = (px.G / 255f) - avgG;
-        float db = (px.B / 255f) - avgB;
-        varSum += dr * dr + dg * dg + db * db;
+        double varSum = (sumR2 - sumR * sumR / n) + (sumG2 - sumG * sumG / n) + (sumB2 - sumB * sumB / n);
+        variance = (float)(varSum / (n * 3));
     }
 
     /// <summary>

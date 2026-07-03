@@ -15,15 +15,17 @@ internal sealed class StringMatcher
         RegexOptions.Compiled);
 
     private readonly TranslationConfig translationConfig;
+    private readonly int bracket3MinDistinctTokens;
 
     // Inverted token index (family token → postings), built once per family set so Bracket 3 does not
     // rescan every family for every image. Keyed by reference identity of the families list.
     private Dictionary<string, List<Posting>>? tokenIndex;
     private IReadOnlyList<FamilyIDRecord>? indexedFamilies;
 
-    internal StringMatcher(TranslationConfig translationConfig)
+    internal StringMatcher(TranslationConfig translationConfig, int bracket3MinDistinctTokens = 1)
     {
         this.translationConfig = translationConfig;
+        this.bracket3MinDistinctTokens = bracket3MinDistinctTokens;
     }
 
     //  Bracket 3 
@@ -63,6 +65,11 @@ internal sealed class StringMatcher
             .ToList();
 
         if (ranked.Count > 1 && ranked[0].DistinctMatches == ranked[1].DistinctMatches)
+            return null;
+
+        // Precision gate: a winner carried by fewer distinct tokens than configured (e.g. a single
+        // shared color word) is not accepted here — later brackets may still assign it.
+        if (ranked[0].DistinctMatches < bracket3MinDistinctTokens)
             return null;
 
         (string matchedFamilyId, List<TokenEvidenceItem> tokenEvidence, int winnerMatches) = ranked[0];

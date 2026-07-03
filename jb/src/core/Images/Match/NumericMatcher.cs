@@ -17,7 +17,21 @@ internal sealed class NumericMatcher
     private static readonly Regex DigitSequencePattern = new(@"\d+", RegexOptions.Compiled);
     private static readonly Regex DigitsOnlyPattern    = new(@"\d",   RegexOptions.Compiled);
 
+    // The permuted fallback enumerates 2^T token subsets; beyond this many digit runs it is skipped.
+    private const int PermutedTokenCap = 12;
+
     private readonly string familyIdColumnName;
+
+    // Inverted digit-target index (family target digits → postings), built once per (families, rules)
+    // pair so Brackets 1–2 look up tokens/concatenations in O(1) instead of rescanning every family
+    // (with a per-scan digits regex) for every image. Cached by reference identity like StringMatcher.
+    private Dictionary<string, List<DigitPosting>>? digitIndex;
+    private Dictionary<int, List<string>>? digitTargetsByLength;
+    private IReadOnlyList<FamilyIDRecord>? indexedFamilies;
+    private IReadOnlyList<MatchingRule>? indexedRules;
+
+    // One family/rule pair whose digit target equals the index key.
+    private readonly record struct DigitPosting(string FamilyId, string Field, MatchingRule Rule);
 
     /// <summary>
     /// Creates a numeric matcher.
@@ -67,34 +81,32 @@ internal sealed class NumericMatcher
             ? [..tokens, fileDigits]
             : tokens;
 
-        List<CandidateSummary> allMatches = [];
+        Dictionary<string, List<DigitPosting>> index = GetOrBuildDigitIndex(families, numericRules);
+
+        // First matching (token, posting) per FamilyID — one index lookup per candidate token.
+        Dictionary<string, (string Token, DigitPosting Posting)> matchByFamily = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (string candidate in candidates)
         {
-            foreach (FamilyIDRecord family in families)
-            {
-                foreach (MatchingRule rule in numericRules)
-                {
-                    string? target = GetFamilyDigitsForField(family, rule.ExcelField);
-                    if (target is null || candidate != target)
-                        continue;
+            if (!index.TryGetValue(candidate, out List<DigitPosting>? postings))
+                continue;
 
-                    allMatches.Add(new CandidateSummary(family.FamilyID, 1.0, "NumericMatcher.Bracket1"));
-                }
+            foreach (DigitPosting posting in postings)
+            {
+                if (!matchByFamily.ContainsKey(posting.FamilyId))
+                    matchByFamily[posting.FamilyId] = (candidate, posting);
             }
         }
 
-        // Deduplicate by FamilyID
-        List<CandidateSummary> uniqueMatches = allMatches
-            .GroupBy(c => c.FamilyId, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.First())
+        List<CandidateSummary> uniqueMatches = matchByFamily
+            .Select(kv => new CandidateSummary(kv.Key, 1.0, "NumericMatcher.Bracket1"))
             .ToList();
 
         if (uniqueMatches.Count != 1)
             return (null, uniqueMatches); // 0 = no match; 2+ = tie (caller records ties)
 
-        CandidateSummary winner      = uniqueMatches[0];
-        string           matchedToken = FindMatchingToken(candidates, winner.FamilyId, families, numericRules);
+        CandidateSummary winner = uniqueMatches[0];
+        (string matchedToken, DigitPosting matchedPosting) = matchByFamily[winner.FamilyId];
 
         MatchEvidence evidence = new MatchEvidence
         {
@@ -107,10 +119,11 @@ internal sealed class NumericMatcher
             TopCandidates        = uniqueMatches,
             NumericTokenEvidence =
             [
+                // The index key equals the family's digit target, so token == target here.
                 new TokenEvidenceItem(
                     matchedToken,
-                    GetFamilyDigitsForField(FindFamily(families, winner.FamilyId)!, numericRules[0].ExcelField) ?? winner.FamilyId,
-                    FindMatchedRule(winner.FamilyId, families, numericRules)?.ExcelField ?? string.Empty,
+                    matchedToken,
+                    matchedPosting.Field,
                     winner.FamilyId,
                     1.0)
             ],
@@ -152,11 +165,14 @@ internal sealed class NumericMatcher
         if (tokens.Length < 2)
             return (null, []);
 
+        Dictionary<string, List<DigitPosting>> index = GetOrBuildDigitIndex(families, numericRules);
+
         // Collect best TCD per FamilyID
         Dictionary<string, (double Tcd, string[] Subset, string PropertyName)> bestPerFamily =
             new(StringComparer.OrdinalIgnoreCase);
 
-        // In-order pass: consecutive subsets in filename order, TCD ≤ MaxDistance
+        // In-order pass: consecutive subsets in filename order, TCD ≤ MaxDistance. The concatenation
+        // must equal a family target exactly, so each subset is one index lookup.
         for (int start = 0; start < tokens.Length; start++)
         {
             for (int length = 2; length <= tokens.Length - start; length++)
@@ -164,32 +180,36 @@ internal sealed class NumericMatcher
                 string[] subset       = tokens.Skip(start).Take(length).ToArray();
                 string   concatenated = string.Concat(subset);
 
-                foreach (FamilyIDRecord family in families)
+                if (!index.TryGetValue(concatenated, out List<DigitPosting>? postings))
+                    continue;
+
+                double tcd = TokenizedConcatenationDistance.Compute(subset, concatenated);
+                if (double.IsPositiveInfinity(tcd))
+                    continue;
+
+                foreach (DigitPosting posting in postings)
                 {
-                    foreach (MatchingRule rule in numericRules)
-                    {
-                        string? target = GetFamilyDigitsForField(family, rule.ExcelField);
-                        if (target is null || concatenated != target)
-                            continue;
+                    if (tcd > posting.Rule.MaxDistance)
+                        continue;
 
-                        double tcd = TokenizedConcatenationDistance.Compute(subset, target);
-                        if (double.IsPositiveInfinity(tcd) || tcd > rule.MaxDistance)
-                            continue;
-
-                        if (!bestPerFamily.TryGetValue(family.FamilyID, out var existing) || tcd < existing.Tcd)
-                            bestPerFamily[family.FamilyID] = (tcd, subset, rule.ExcelField);
-                    }
+                    if (!bestPerFamily.TryGetValue(posting.FamilyId, out var existing) || tcd < existing.Tcd)
+                        bestPerFamily[posting.FamilyId] = (tcd, subset, posting.Field);
                 }
             }
         }
 
         // Permuted fallback: all token subsets (consecutive or not), any order via TCD permutations,
-        // TCD ≤ MaxDistancePermuted. Only runs when in-order pass found nothing.
+        // TCD ≤ MaxDistancePermuted. Only runs when in-order pass found nothing. Candidate targets
+        // come from the index grouped by exact length (a permutation concatenation preserves total
+        // length), then a digit-count fingerprint check runs before the TCD computation.
         bool fromPermuted = false;
-        if (bestPerFamily.Count == 0 && numericRules.Any(r => r.MaxDistancePermuted > 0))
+        if (bestPerFamily.Count == 0 && tokens.Length <= PermutedTokenCap &&
+            numericRules.Any(r => r.MaxDistancePermuted > 0))
         {
             fromPermuted = true;
+            Dictionary<int, List<string>> targetsByLength = GetTargetsByLength(index);
             int fullMask = 1 << tokens.Length;
+
             for (int mask = 0; mask < fullMask; mask++)
             {
                 if (BitOperations.PopCount((uint)mask) < 2)
@@ -200,23 +220,28 @@ internal sealed class NumericMatcher
                     .Select(i => tokens[i])
                     .ToArray();
 
-                foreach (FamilyIDRecord family in families)
+                int subsetLength = subset.Sum(t => t.Length);
+                if (!targetsByLength.TryGetValue(subsetLength, out List<string>? targets))
+                    continue;
+
+                int[] subsetDigitCounts = CountDigits(subset);
+
+                foreach (string target in targets)
                 {
-                    foreach (MatchingRule rule in numericRules)
+                    if (!DigitCountsMatch(subsetDigitCounts, target))
+                        continue;
+
+                    double tcd = TokenizedConcatenationDistance.Compute(subset, target);
+                    if (double.IsPositiveInfinity(tcd))
+                        continue;
+
+                    foreach (DigitPosting posting in index[target])
                     {
-                        if (rule.MaxDistancePermuted <= 0)
+                        if (posting.Rule.MaxDistancePermuted <= 0 || tcd > posting.Rule.MaxDistancePermuted)
                             continue;
 
-                        string? target = GetFamilyDigitsForField(family, rule.ExcelField);
-                        if (target is null)
-                            continue;
-
-                        double tcd = TokenizedConcatenationDistance.Compute(subset, target);
-                        if (double.IsPositiveInfinity(tcd) || tcd > rule.MaxDistancePermuted)
-                            continue;
-
-                        if (!bestPerFamily.TryGetValue(family.FamilyID, out var existing) || tcd < existing.Tcd)
-                            bestPerFamily[family.FamilyID] = (tcd, subset, rule.ExcelField);
+                        if (!bestPerFamily.TryGetValue(posting.FamilyId, out var existing) || tcd < existing.Tcd)
+                            bestPerFamily[posting.FamilyId] = (tcd, subset, posting.Field);
                     }
                 }
             }
@@ -286,12 +311,27 @@ internal sealed class NumericMatcher
         if (tokens.Length == 0 || candidates.Count <= 1)
             return candidates;
 
+        // The candidate list changes per image (post CLIP filtering), so it must not replace the
+        // single-slot cache. The cached index from Brackets 1–2 covers the full family superset and
+        // the postings are intersected with `remaining` below, so reusing it is equivalent.
+        Dictionary<string, List<DigitPosting>> index =
+            digitIndex is not null && ReferenceEquals(indexedRules, numericRules)
+                ? digitIndex
+                : BuildDigitIndex(candidates, numericRules);
+
         List<FamilyIDRecord> remaining = [..candidates];
 
         foreach (string token in tokens)
         {
+            if (!index.TryGetValue(token, out List<DigitPosting>? postings))
+                continue;
+
+            HashSet<string> familiesWithToken = postings
+                .Select(p => p.FamilyId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             List<FamilyIDRecord> matching = remaining
-                .Where(f => numericRules.Any(r => GetFamilyDigitsForField(f, r.ExcelField) == token))
+                .Where(f => familiesWithToken.Contains(f.FamilyID))
                 .ToList();
 
             // Only reduce when the token is discriminating (matches some but not all)
@@ -300,6 +340,96 @@ internal sealed class NumericMatcher
         }
 
         return remaining;
+    }
+
+    //  Digit-target index
+
+    /// <summary>
+    /// Builds (once per (families, rules) pair, cached by reference) the inverted index mapping each
+    /// family digit target to the family/rule pairs that produce it.
+    /// </summary>
+    private Dictionary<string, List<DigitPosting>> GetOrBuildDigitIndex(
+        IReadOnlyList<FamilyIDRecord> families,
+        IReadOnlyList<MatchingRule> numericRules)
+    {
+        if (digitIndex is not null &&
+            ReferenceEquals(indexedFamilies, families) &&
+            ReferenceEquals(indexedRules, numericRules))
+            return digitIndex;
+
+        digitIndex = BuildDigitIndex(families, numericRules);
+        digitTargetsByLength = null;
+        indexedFamilies = families;
+        indexedRules = numericRules;
+        return digitIndex;
+    }
+
+    /// <summary>Raw index builder — one pass over families × rules.</summary>
+    private Dictionary<string, List<DigitPosting>> BuildDigitIndex(
+        IReadOnlyList<FamilyIDRecord> families,
+        IReadOnlyList<MatchingRule> numericRules)
+    {
+        Dictionary<string, List<DigitPosting>> index = new(StringComparer.Ordinal);
+
+        foreach (FamilyIDRecord family in families)
+        {
+            foreach (MatchingRule rule in numericRules)
+            {
+                string? target = GetFamilyDigitsForField(family, rule.ExcelField);
+                if (target is null)
+                    continue;
+
+                if (!index.TryGetValue(target, out List<DigitPosting>? postings))
+                    index[target] = postings = [];
+
+                postings.Add(new DigitPosting(family.FamilyID, rule.ExcelField, rule));
+            }
+        }
+
+        return index;
+    }
+
+    /// <summary>Distinct index targets grouped by string length, for the permuted fallback.</summary>
+    private Dictionary<int, List<string>> GetTargetsByLength(Dictionary<string, List<DigitPosting>> index)
+    {
+        if (digitTargetsByLength is not null && ReferenceEquals(index, digitIndex))
+            return digitTargetsByLength;
+
+        Dictionary<int, List<string>> byLength = [];
+        foreach (string target in index.Keys)
+        {
+            if (!byLength.TryGetValue(target.Length, out List<string>? list))
+                byLength[target.Length] = list = [];
+            list.Add(target);
+        }
+
+        digitTargetsByLength = byLength;
+        return byLength;
+    }
+
+    /// <summary>Per-digit ('0'–'9') character counts across all tokens in the subset.</summary>
+    private static int[] CountDigits(string[] tokens)
+    {
+        int[] counts = new int[10];
+        foreach (string token in tokens)
+            foreach (char ch in token)
+                if (ch is >= '0' and <= '9') counts[ch - '0']++;
+        return counts;
+    }
+
+    /// <summary>
+    /// True when the target's digit multiset equals the subset's — a permutation concatenation can
+    /// only exist when both sides use exactly the same digits.
+    /// </summary>
+    private static bool DigitCountsMatch(int[] subsetCounts, string target)
+    {
+        Span<int> counts = stackalloc int[10];
+        foreach (char ch in target)
+            if (ch is >= '0' and <= '9') counts[ch - '0']++;
+
+        for (int i = 0; i < 10; i++)
+            if (counts[i] != subsetCounts[i]) return false;
+        return true;
     }
 
     //  Helpers
@@ -353,44 +483,6 @@ internal sealed class NumericMatcher
 
     private static FamilyIDRecord? FindFamily(IReadOnlyList<FamilyIDRecord> families, string familyId) =>
         families.FirstOrDefault(f => f.FamilyID.Equals(familyId, StringComparison.OrdinalIgnoreCase));
-
-    private string FindMatchingToken(
-        string[] candidates,
-        string familyId,
-        IReadOnlyList<FamilyIDRecord> families,
-        IReadOnlyList<MatchingRule> numericRules)
-    {
-        FamilyIDRecord? family = FindFamily(families, familyId);
-        if (family is null) return string.Empty;
-
-        foreach (string candidate in candidates)
-        {
-            foreach (MatchingRule rule in numericRules)
-            {
-                string? target = GetFamilyDigitsForField(family, rule.ExcelField);
-                if (target == candidate) return candidate;
-            }
-        }
-
-        return string.Empty;
-    }
-
-    private MatchingRule? FindMatchedRule(
-        string familyId,
-        IReadOnlyList<FamilyIDRecord> families,
-        IReadOnlyList<MatchingRule> numericRules)
-    {
-        FamilyIDRecord? family = FindFamily(families, familyId);
-        if (family is null) return null;
-
-        foreach (MatchingRule rule in numericRules)
-        {
-            if (GetFamilyDigitsForField(family, rule.ExcelField) is not null)
-                return rule;
-        }
-
-        return null;
-    }
 
     private static string? BuildNgpSummary(ImageRecord_LAMBDA record) =>
         record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}";

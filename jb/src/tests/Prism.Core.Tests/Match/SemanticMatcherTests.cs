@@ -33,8 +33,9 @@ public class SemanticMatcherTests
     public void TryMatch_NoInfluentialTags_WithProductTypeRuleConfigured_ReturnsNull()
     {
         // A ProductType label rule is configured and FAM001 carries a ProductType column, but the
-        // image has no influential tags — ClipLabelEnricher.BuildEvidence returns [] for every
-        // candidate, so the Step 1 hard filter rejects everything.
+        // image has no influential tags — the per-dimension gate skips the CLIP filter (nothing to
+        // contradict), and the sole-survivor guard then refuses to assign with no CLIP, numeric, or
+        // string signal tying the image to the family.
         SemanticMatcher matcher = MakeMatcher(semanticThreshold: 0.1);
         FamilyIDRecord family = FamilyWithProperty("FAM001", "ProductType", "tote", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record = MakeLambda("bag-photo.jpg"); // Tags.Influential stays empty
@@ -133,7 +134,23 @@ public class SemanticMatcherTests
     {
         ImageRecord_LAMBDA record = new() { InitialFullName = filename };
         if (influentialLabel is not null)
-            record.Tags = new TagCollection { Influential = [new ClassificationToken { Label = influentialLabel, Confidence = 0.95 }] };
+        {
+            // Mirror what ClassificationService.ApplyTokens produces: the prompt sentence in Label,
+            // the resolved feature value in Value — ClipLabelEnricher matches on Value only.
+            record.Tags = new TagCollection
+            {
+                Influential =
+                [
+                    new ClassificationToken
+                    {
+                        Label      = $"a photo of a {influentialLabel}",
+                        Feature    = "product-type-label",
+                        Value      = influentialLabel,
+                        Confidence = 0.95
+                    }
+                ]
+            };
+        }
         return record;
     }
 

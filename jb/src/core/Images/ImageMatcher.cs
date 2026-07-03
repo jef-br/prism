@@ -17,7 +17,7 @@ internal sealed class ImageMatcher {
     private ImageMatcher( MatchingConfig matchingConfig, TranslationConfig translationConfig, string familyIdColumnName ) {
         this.matchingConfig = matchingConfig;
         numericMatcher = new NumericMatcher(familyIdColumnName);
-        stringMatcher = new StringMatcher(translationConfig);
+        stringMatcher = new StringMatcher(translationConfig, matchingConfig.Bracket3MinDistinctTokens);
         clipLabelEnricher = new ClipLabelEnricher();
         filenameToCellMatcher = new FilenameToCellMatcher();
         semanticMatcher = new SemanticMatcher(
@@ -48,15 +48,19 @@ internal sealed class ImageMatcher {
             "ExcelConfig.json",
             "ExcelConfig.json not found in the config directory next to Prism_Config.json.");
 
-        MatchingConfig matchingConfig = MatchingConfig.Load(matchingConfigPath);
-        TranslationConfig translationConfig = TranslationConfig.Load(translationConfigPath);
-        ExcelConfig excelConfig = ExcelConfig.Load(excelConfigPath);
+        MatchingConfig matchingConfig = ConfigCache.GetOrLoad(
+            () => MatchingConfig.Load(matchingConfigPath), matchingConfigPath);
+        TranslationConfig translationConfig = ConfigCache.GetOrLoad(
+            () => TranslationConfig.Load(translationConfigPath), translationConfigPath);
+        ExcelConfig excelConfig = ConfigCache.GetOrLoad(
+            () => ExcelConfig.Load(excelConfigPath), excelConfigPath);
 
         string? prismConfigPath = PrismConfigLocator.FindPrismConfigPath();
         if (prismConfigPath is null)
             throw new PrismConfigurationException("Prism_Config.json not found — cannot load convergence weight.");
 
-        PrismConfiguration prismConfig = PrismConfiguration.LoadPrismConfig(prismConfigPath);
+        PrismConfiguration prismConfig = ConfigCache.GetOrLoad(
+            () => PrismConfiguration.LoadPrismConfig(prismConfigPath), prismConfigPath);
 
         ImageMatcher matcher = new(matchingConfig, translationConfig, excelConfig.RecordPrimaryKey);
         return matcher.RunWaterfall(records, families, prismConfig.Weight_MatchingSignalsConverging);

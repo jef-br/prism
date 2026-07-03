@@ -92,6 +92,13 @@
     },
     "Classification": {
         "Confidence_Threshold": 0.9,
+        "Confidence_Thresholds": {
+            "hero-orientation": 0.6,
+            "head-visible": 0.65,
+            "body-visible": 0.6,
+            "product-color": 0.45,
+            "product-type-label": 0.45
+        },
         "Cutoff_Threshold": 0.25,
         "Deduplication": {
             "Enabled": true,

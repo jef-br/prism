@@ -40,7 +40,8 @@ public sealed class TransformService : ITransformService
         if (prismConfigPath is null)
             throw new PrismConfigurationException("Prism_Config.json not found — cannot run preprocessor.");
 
-        PrismConfiguration prismConfig = PrismConfiguration.LoadPrismConfig(prismConfigPath);
+        PrismConfiguration prismConfig = ConfigCache.GetOrLoad(
+            () => PrismConfiguration.LoadPrismConfig(prismConfigPath), prismConfigPath);
         CropTransformSettings cropSettings = new(
             prismConfig.WhiteSpaceMargin,
             prismConfig.CropCoverage,
@@ -50,25 +51,29 @@ public sealed class TransformService : ITransformService
         Dictionary<string, ImageRecord_INPUT> inputByName = matched.Ingest.NormalizedImages
             .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
 
+        // Per-image transforms are independent CPU-bound OpenCV work — safe to fan out. Each thread
+        // writes only its own lambda; the GPU upscaler serializes its InferenceSession.Run calls
+        // internally (Upscaler_g_p_u._sessionLock), so parallel callers are safe there too.
         int okTransformed = 0;
-        foreach (ImageRecord_LAMBDA lambda in matched.LambdaRecords)
-        {
-            if (lambda.IsKo) continue;
-
-            inputByName.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input);
-            (byte[]? preprocessed, Mat? colorMat) = ImagePreProcessor.Preprocess(lambda, input?.NormalizedJpgPath, prismConfig);
-
-            if (lambda.IsKo) { colorMat?.Dispose(); continue; }
-
-            lambda.ProcessedBytes = preprocessed;
-
-            using (colorMat)
+        Parallel.ForEach(
+            matched.LambdaRecords.Where(l => !l.IsKo),
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            lambda =>
             {
-                ImageTransformer.TransformImage(lambda, colorMat, cropSettings, headcut);
-            }
+                inputByName.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input);
+                (byte[]? preprocessed, Mat? colorMat) = ImagePreProcessor.Preprocess(lambda, input?.NormalizedJpgPath, prismConfig);
 
-            okTransformed++;
-        }
+                if (lambda.IsKo) { colorMat?.Dispose(); return; }
+
+                lambda.ProcessedBytes = preprocessed;
+
+                using (colorMat)
+                {
+                    ImageTransformer.TransformImage(lambda, colorMat, cropSettings, headcut);
+                }
+
+                Interlocked.Increment(ref okTransformed);
+            });
 
         return new TransformResult { Matched = matched, OkTransformedCount = okTransformed };
     }

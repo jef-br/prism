@@ -39,13 +39,27 @@ public sealed class ImageClassifier : IDisposable
     private InferenceSession? session;
     private ClipTokenizer? tokenizer;
     private bool supportsTextEncoding;
+    private bool supportsImageBatch;
     private bool disposed;
+
+    // Tokenized prompt tensors cached by prompt-array reference — the prompt catalogue is static per
+    // process, so tokenization runs once instead of once per image. Callers serialize access via the
+    // MatchingService CLIP lock, so no synchronisation is needed here.
+    private string[]? cachedPrompts;
+    private DenseTensor<long>? cachedInputIds;
+    private DenseTensor<long>? cachedAttentionMask;
 
     /// <summary>
     /// True when the ONNX session is loaded and text encoding is available,
     /// enabling full zero-shot classification.
     /// </summary>
     public bool IsReady => session is not null && tokenizer is not null && supportsTextEncoding;
+
+    /// <summary>
+    /// True when the model's pixel_values batch dimension is dynamic, so multiple images can share
+    /// one <see cref="InferenceSession.Run"/> — amortizing the text branch across the batch.
+    /// </summary>
+    public bool SupportsImageBatch => IsReady && supportsImageBatch;
 
     /// <summary>
     /// Loads the CLIP ONNX model and BPE tokenizer from the supplied paths.
@@ -72,6 +86,12 @@ public sealed class ImageClassifier : IDisposable
                 inputMeta.ContainsKey(TensorInputIds) &&
                 inputMeta.ContainsKey(TensorAttentionMask) &&
                 outputMeta.ContainsKey(TensorLogitsPerImage);
+
+            // Dynamic batch dims are reported as <= 0; a fixed 1 forces one image per Run.
+            supportsImageBatch =
+                inputMeta.TryGetValue(TensorPixelValues, out NodeMetadata? pixelMeta) &&
+                pixelMeta.Dimensions.Length == 4 &&
+                pixelMeta.Dimensions[0] <= 0;
 
             if (File.Exists(vocabPath) && File.Exists(mergesPath))
                 tokenizer = new ClipTokenizer(vocabPath, mergesPath);
@@ -101,7 +121,7 @@ public sealed class ImageClassifier : IDisposable
 
         // The graph is entangled: one Run must carry the image AND all prompts together.
         DenseTensor<float> pixelValues = PreprocessImage(image);
-        (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = TokenizePrompts(prompts);
+        (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = GetPromptTensors(prompts);
 
         var inputs = new List<NamedOnnxValue>
         {
@@ -123,14 +143,69 @@ public sealed class ImageClassifier : IDisposable
         return tokens;
     }
 
+    /// <summary>
+    /// Encodes several images against every prompt. When the model's batch dimension is dynamic all
+    /// images share one Run ([B, 3, H, W] → logits [B, N]) so the text branch is computed once per
+    /// batch; otherwise falls back to one Run per image. Returns one token array per image, in input
+    /// order. Empty arrays when <see cref="IsReady"/> is false.
+    /// </summary>
+    /// <param name="images">Pre-loaded normalized images (Rgba32). Not mutated by this method.</param>
+    /// <param name="prompts">Text prompts to score against every image.</param>
+    public ClassificationToken[][] ClassifyImages(IReadOnlyList<Image<Rgba32>> images, string[] prompts)
+    {
+        if (!IsReady || prompts.Length == 0 || images.Count == 0)
+            return [.. images.Select(_ => Array.Empty<ClassificationToken>())];
+
+        if (images.Count == 1 || !SupportsImageBatch)
+            return [.. images.Select(image => ClassifyImage(image, prompts))];
+
+        var pixelValues = new DenseTensor<float>([images.Count, 3, InputHeight, InputWidth]);
+        for (int b = 0; b < images.Count; b++)
+            PreprocessImageInto(images[b], pixelValues, b);
+
+        (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = GetPromptTensors(prompts);
+
+        var inputs = new List<NamedOnnxValue>
+        {
+            NamedOnnxValue.CreateFromTensor(TensorPixelValues,   pixelValues),
+            NamedOnnxValue.CreateFromTensor(TensorInputIds,      inputIds),
+            NamedOnnxValue.CreateFromTensor(TensorAttentionMask, attentionMask)
+        };
+
+        using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
+            session!.Run(inputs, [TensorLogitsPerImage]);
+
+        Tensor<float> logits = outputs.First(o => o.Name == TensorLogitsPerImage).AsTensor<float>();
+
+        var results = new ClassificationToken[images.Count][];
+        for (int b = 0; b < images.Count; b++)
+        {
+            var tokens = new ClassificationToken[prompts.Length];
+            for (int i = 0; i < prompts.Length; i++)
+                tokens[i] = new ClassificationToken { Label = prompts[i], Confidence = logits[b, i] };
+            results[b] = tokens;
+        }
+
+        return results;
+    }
+
     //  Image encoding
 
     private static DenseTensor<float> PreprocessImage(Image<Rgba32> sourceImage)
     {
         // Input shape: [1, 3, H, W] — CHW layout, RGB channel order, normalized.
-        // Clone as Rgb24 to avoid mutating the shared image (resize changes pixel dimensions).
         var tensor = new DenseTensor<float>([1, 3, InputHeight, InputWidth]);
+        PreprocessImageInto(sourceImage, tensor, 0);
+        return tensor;
+    }
 
+    /// <summary>
+    /// Writes one image into batch slot <paramref name="imageIndex"/> of a [B, 3, H, W] tensor.
+    /// Clones as Rgb24 to avoid mutating the shared image (resize changes pixel dimensions), then
+    /// fills the slot via row spans and direct flat-buffer writes (index = c·H·W + y·W + x).
+    /// </summary>
+    private static void PreprocessImageInto(Image<Rgba32> sourceImage, DenseTensor<float> tensor, int imageIndex)
+    {
         using Image<Rgb24> image = sourceImage.CloneAs<Rgb24>();
 
         image.Mutate(ctx => ctx.Resize(new ResizeOptions
@@ -139,21 +214,44 @@ public sealed class ImageClassifier : IDisposable
             Mode = ResizeMode.Crop
         }));
 
-        for (int y = 0; y < InputHeight; y++)
+        image.ProcessPixelRows(accessor =>
         {
-            for (int x = 0; x < InputWidth; x++)
-            {
-                Rgb24 px = image[x, y];
-                tensor[0, 0, y, x] = (px.R / 255f - NormMean[0]) / NormStd[0];
-                tensor[0, 1, y, x] = (px.G / 255f - NormMean[1]) / NormStd[1];
-                tensor[0, 2, y, x] = (px.B / 255f - NormMean[2]) / NormStd[2];
-            }
-        }
+            const int plane = InputHeight * InputWidth;
+            Span<float> data = tensor.Buffer.Span.Slice(imageIndex * 3 * plane, 3 * plane);
 
-        return tensor;
+            for (int y = 0; y < accessor.Height; y++)
+            {
+                Span<Rgb24> row = accessor.GetRowSpan(y);
+                int rowOffset = y * InputWidth;
+
+                for (int x = 0; x < row.Length; x++)
+                {
+                    Rgb24 px = row[x];
+                    int idx = rowOffset + x;
+                    data[idx]             = (px.R / 255f - NormMean[0]) / NormStd[0];
+                    data[plane + idx]     = (px.G / 255f - NormMean[1]) / NormStd[1];
+                    data[2 * plane + idx] = (px.B / 255f - NormMean[2]) / NormStd[2];
+                }
+            }
+        });
     }
 
-    //  Text encoding 
+    //  Text encoding
+
+    /// <summary>
+    /// Returns the tokenized tensors for <paramref name="prompts"/>, re-tokenizing only when the
+    /// prompt array instance changes (the catalogue hands out one cached instance per process).
+    /// </summary>
+    private (DenseTensor<long> InputIds, DenseTensor<long> AttentionMask) GetPromptTensors(string[] prompts)
+    {
+        if (!ReferenceEquals(cachedPrompts, prompts))
+        {
+            (cachedInputIds, cachedAttentionMask) = TokenizePrompts(prompts);
+            cachedPrompts = prompts;
+        }
+
+        return (cachedInputIds!, cachedAttentionMask!);
+    }
 
     /// <summary>
     /// Tokenizes every prompt to the CLIP context length (77) and stacks them into batched

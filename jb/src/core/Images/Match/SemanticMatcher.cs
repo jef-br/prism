@@ -45,12 +45,16 @@ internal sealed class SemanticMatcher
         List<FamilyIDRecord> candidates = [..unassignedFamilies];
 
         // Step 1: CLIP ProductType hard filter
-        candidates = FilterByClipProductType(record, candidates, labelRules);
+        (candidates, bool typeFilterApplied) = FilterByClipProductType(record, candidates, labelRules);
         if (candidates.Count == 0) return null;
 
         // Step 2: CLIP ProductColor hard filter (conditional — only when some candidates carry color)
-        candidates = FilterByClipProductColor(record, candidates, labelRules);
+        (candidates, bool colorFilterApplied) = FilterByClipProductColor(record, candidates, labelRules);
         if (candidates.Count == 0) return null;
+
+        // With per-dimension gating, "survived the CLIP filters" only means something when a filter
+        // actually ran — track it so an unfiltered sole survivor is not mistaken for CLIP evidence.
+        bool clipApplied = typeFilterApplied || colorFilterApplied;
 
         // Step 3: Numeric token candidate reduction
         bool hadMultipleBeforeNumeric = candidates.Count > 1;
@@ -81,7 +85,11 @@ internal sealed class SemanticMatcher
         }
         else if (candidates.Count == 1)
         {
-            // Numeric or CLIP alone narrowed to exactly one — proceed with no string evidence
+            // A sole survivor is only acceptable when some signal actually narrowed the pool —
+            // an image with no CLIP tags and no numeric reduction has no evidence tying it to the
+            // last unassigned family, however alone that family is.
+            if (!clipApplied && !numericReduced) return null;
+
             winner        = candidates[0];
             stringEvidence = [];
             totalImageTokens = 0;
@@ -92,7 +100,7 @@ internal sealed class SemanticMatcher
         }
 
         // Step 5: Compute combined score and check threshold
-        double clipSignal    = 1.0; // candidate survived CLIP hard filters
+        double clipSignal    = clipApplied ? 1.0 : 0.5; // 0.5 = no CLIP filter ran (neutral)
         double numericSignal = numericReduced ? 1.0 : 0.5; // 0.5 = no numeric reduction (neutral)
         double stringSignal  = totalImageTokens > 0
             ? Math.Min(1.0, (double)stringEvidence.Count / totalImageTokens)
@@ -127,9 +135,11 @@ internal sealed class SemanticMatcher
 
     /// <summary>
     /// Removes candidates where no influential CLIP ProductType tag matches the family's ProductType column.
-    /// If no label rule targets ProductType, or no candidate has a ProductType column, returns the list unchanged.
+    /// Applies only when a label rule targets ProductType, at least one candidate carries a ProductType
+    /// column, AND the image actually has a tag the rule may consider — an untagged dimension passes
+    /// candidates through unchanged instead of erasing them. Applied reports whether filtering ran.
     /// </summary>
-    private List<FamilyIDRecord> FilterByClipProductType(
+    private (List<FamilyIDRecord> Candidates, bool Applied) FilterByClipProductType(
         ImageRecord_LAMBDA          record,
         List<FamilyIDRecord>         candidates,
         IReadOnlyList<MatchingRule>   labelRules)
@@ -137,24 +147,29 @@ internal sealed class SemanticMatcher
         MatchingRule? productTypeRule = labelRules.FirstOrDefault(
             r => r.ExcelField.Equals("ProductType", StringComparison.OrdinalIgnoreCase));
 
-        if (productTypeRule is null) return candidates;
+        if (productTypeRule is null) return (candidates, false);
 
         // Only apply the filter when at least one candidate carries a ProductType column
         bool anyHasProductType = candidates.Any(
             f => f.NormalizedTokens.ContainsKey(productTypeRule.ExcelField));
 
-        if (!anyHasProductType) return candidates;
+        if (!anyHasProductType) return (candidates, false);
 
-        return candidates
+        // No product-type signal on this image — nothing to contradict, keep all candidates.
+        if (!ClipLabelEnricher.HasTagForRule(record, productTypeRule)) return (candidates, false);
+
+        List<FamilyIDRecord> filtered = candidates
             .Where(f => clipLabelEnricher.BuildEvidence(record, [f], [productTypeRule]).Count > 0)
             .ToList();
+        return (filtered, true);
     }
 
     /// <summary>
     /// Removes candidates where no influential CLIP color tag matches the family's ProductColor column.
-    /// Only applied when at least one remaining candidate has a non-empty ProductColor value.
+    /// Only applied when at least one remaining candidate has a non-empty ProductColor value and the
+    /// image carries a color tag the rule may consider. Applied reports whether filtering ran.
     /// </summary>
-    private List<FamilyIDRecord> FilterByClipProductColor(
+    private (List<FamilyIDRecord> Candidates, bool Applied) FilterByClipProductColor(
         ImageRecord_LAMBDA          record,
         List<FamilyIDRecord>         candidates,
         IReadOnlyList<MatchingRule>   labelRules)
@@ -162,19 +177,23 @@ internal sealed class SemanticMatcher
         MatchingRule? colorRule = labelRules.FirstOrDefault(
             r => r.ExcelField.Equals("ProductColor", StringComparison.OrdinalIgnoreCase));
 
-        if (colorRule is null) return candidates;
+        if (colorRule is null) return (candidates, false);
 
         bool anyHasColor = candidates.Any(
             f => f.NormalizedTokens.TryGetValue(colorRule.ExcelField, out var tokens) && tokens.Count > 0);
 
-        if (!anyHasColor) return candidates;
+        if (!anyHasColor) return (candidates, false);
 
-        return candidates
+        // No color signal on this image — nothing to contradict, keep all candidates.
+        if (!ClipLabelEnricher.HasTagForRule(record, colorRule)) return (candidates, false);
+
+        List<FamilyIDRecord> filtered = candidates
             .Where(f => {
                 bool hasColorColumn = f.NormalizedTokens.TryGetValue(colorRule.ExcelField, out var tokens) && tokens.Count > 0;
                 if (!hasColorColumn) return true; // no color to contradict → keep
                 return clipLabelEnricher.BuildEvidence(record, [f], [colorRule]).Count > 0;
             })
             .ToList();
+        return (filtered, true);
     }
 }
