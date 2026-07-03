@@ -7,16 +7,16 @@ Static reload memory. Not a ticket board. Accepted knowledge lives in `jb/docs/`
 - **ImageSharp**: locked at 3.1.12 (Apache 2.0). 4.0.0 rejected — commercial license.
 - **Queue**: V1 = single-server in-process bounded queue. RabbitMQ deferred until durable recovery or distributed workers are needed.
 - **Classification model**: `sentence-transformers/clip-ViT-B-32`. SHA-256: see `jb/docs/PRISM-classify.md`.
-- **Upscale model** `Real-ESRGAN_x2plus.onnx` More Inspiration here: (just for me, not for claude: https://github.com/upscayl/custom-models)
+- **Model paths**: CLIP (`clip-vit-b32-uint8`) and Upscale (`Real-ESRGAN_x2plus.onnx`) model paths live in `Prism_Config.json`'s `Models` section — not hard-coded. See config table below. Upscale model inspiration (just for me, not for claude): https://github.com/upscayl/custom-models
 
 ## Config Locations
 
 | File | Path |
 |---|---|
-| `Prism_Config.json` | `jb/src/core/` |
+| `Prism_Config.json` (incl. `Models` section: CLIP + Upscale paths) | `jb/src/core/config/` |
 | `ExcelConfig.json` | `jb/src/core/Excel/` |
 | `MatchingConfig.json` | `jb/src/core/Images/Match/` |
-| `ImageNGP.json` / `ImageRoles.json` | `jb/src/core/ImageNGP/` |
+| `ImageNGP.json` / `ImageRoles.json` | `jb/src/core/config/` |
 | `ClipPrompts.json` | `jb/src/core/Images/Classify/` |
 | `DetOrderRules.json` | `jb/src/core/Images/Order/` |
 | `HostRules.json` | `jb/src/core/IO/cfg/` |

@@ -3,7 +3,9 @@
 ##### Changed
 - Self-hosted CI merged (PR #3, commit afeb3c0). `ci.yml` PR gate: Release build → xUnit unit tests (excludes `PipelineIntegrationTests`) → web typecheck+build → match-only CiMini smoke. `full-pipeline.yml`: daily 10:30 Europe/Brussels (DST-aware) + manual full run.
 - CiMini fixture dataset committed under `test/datasets/CiMini/` (the only in-repo dataset) with `expected-match.json` golden; `Invoke-CiPipeline.ps1` golden-assertion harness added; `Submit-PrismJob`/`Wait-PrismResult` exported from `PrismJobRunner.psm1`.
+- 
 - ONNX model paths moved out of hard-coded literals into `Prism_Config.json` (new `Models` section) via `PrismConfiguration`; `ClassificationService`/`UpscaleService` repointed. Stale `Run_TinyTest.ps1` dataset path fixed.
+
 - Classify taxonomy todo has since been FROZEN by you ("captured in canonical files, no reconciliation action needed") — this supersedes last brief's pending name-level verification for that item.
 
 ##### Todo updates
@@ -12,6 +14,5 @@
 
 ##### Next steps
 - Approve or reject the Services test-suites triage: decide whether per-service project split is worth the multi-project overhead now vs. deferring until services deploy independently.
-- Config-path drift now compounded: ONNX model paths live in `Prism_Config.json` `Models` section — AGENTFEEDBACK's "Upscale model" line + config table should point there (approval-gated).
-- Still unfixed from last brief: `ImageNGP.json`/`ImageRoles.json` path pointers in docs + AGENTFEEDBACK say `core/ImageNGP/`; real path is `core/config/` — needs your OK to correct.
+  
 - Still open from last brief: decide whether the match-only / `MatchLite` route needs a ticket so the root `jbtodo.md` "matchingservice public" line can close.
