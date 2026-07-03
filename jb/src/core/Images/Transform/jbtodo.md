@@ -1,28 +1,5 @@
 # Image Transform Todo
 
-- [x] Define detail crop saliency map behavior for eligible images: say how the most important object region influences square crop placement when no border intersection blocks repositioning.
-  - Answer:
-    The BoundingBox produced by ImagePreProcessor is the saliency anchor for all Transform stage work. No additional saliency computation happens in the Transform stage. Tx_CenterAndStretch centers the BoundingBox on the canvas.
-
--------
-- [x] Define detail crop headcut thresholds and placement: say which human/head confidence thresholds enable headcut and how top crop placement changes for eligible non-intersecting images.
-  - Answer:
-    Controlled by a job-level `Headcut` bool in `PrismProcessingParameters`, threaded through the Transform service chain. No classification confidence check in Transform. Human presence is determined by Analyzer_HasHuman (runs in ImagePreProcessor). Face position is found by Tx_util_HeadCutter's Haar cascade.
-
--------
-- [x] Define detail crop greedy crop behavior for eligible images: say how much original content to keep when no headcut is requested and no border intersection blocks repositioning.
-  - Answer:
-    The original image is NOT cropped to the BoundingBox. The original image is repositioned so the BoundingBox center aligns with the canvas center. Background pixels outside the BoundingBox are stretched by Tx_util_BgStretch in all 4 directions to cover uncovered canvas edges.
-
--------
-- [ ] Implement Tx_DetailCropper: square crop anchored at bounding box edges, with optional headcut and greedy crop.
-  - File: `jb/src/core/Images/Transform/Tx_DetailCropper.cs` — pixel work gated behind `ImageProcessorAvailable() = false`.
-  - What is needed: (1) Read `salient-bbox` from `InputImage.Features`. (2) Detect whether the bounding box intersects an image edge. (3) For non-intersecting images: apply greedy crop centered on saliency region; apply headcut placement when `head-visible` and `hero-is-human` features are above configured thresholds. (4) For border-intersecting images: anchor crop to touched edges; record the no-reposition decision. (5) Apply fill when the crop extends beyond original bounds. (6) Populate full `ImageTransformationResult` including crop rectangle, headcut flag, border-intersection flag, fill method used, and warnings.
-  - Prerequisites: All saliency map, headcut, greedy crop, fill policy, and border-intersection todos above must be answered. `salient-bbox`, `head-visible`, `hero-is-human` features must be populated by the classifier.
-  - Image processor: Same as Tx_CenterAndStretch.
-  - Fix: Implement after all prerequisites are answered and classifier features are available.
-  
--------
 - [ ] Tx_util_HeadCutter Algorithm A — anatomy-guided search space refinement: when `has-human == true`, use the lambda BoundingBox dimensional proportions combined with human anatomical ratios (e.g. head ≈ 1/8 of body height) to narrow the Haar face-detection search region before running DetectMultiScale. Requires a deepdive into apparel-image anatomical ratio distributions to determine reliable constants.
   - File: `jb/src/core/Images/Transform/Tx_util_HeadCutter.cs`
   - Blocked until: anatomical ratio constants are agreed upon.

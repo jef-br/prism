@@ -46,7 +46,7 @@ Pre-step called inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast
 
 Images transformed one by one, each based on image analysis enriched with match information. Salient object detection, bounding box calculation, and background identification feed the per-image transform decision. Useful tags from `ImageMatcher.cs` attenuate transformation parameters. Transform rules in `jb/src/core/Images/Transform`. Transformation parameters guided by per-image IFs and selected INGP phenotype.
 
-**Current impl:** All Tx classes (`Tx_CropSquare`, `Tx_CenterAndStretch`, `Tx_DetailCropper`, `Tx_ProblemImageProcessor`) gated behind `ImageProcessorAvailable() = false`. Every image receives `TransformationStatus.Gated` — no pixel processing runs. Routing logic implemented and tested. Open work in `jb/src/core/Images/Transform/jbtodo.md`.
+**Current impl:** All Tx classes (`Tx_CropSquare`, `Tx_CenterAndStretch`, `Tx_DetailCropper`, `Tx_ProblemImageProcessor`) are active — no processing gate remains. `ImageTransformer.SelectTransformer()` routes live per the matrix below. `Tx_DetailCropper` implements the full 0–4 edge-intersection decision tree (greedy crop with Coverage floor, OneSided/BiDirectional extension budgets, corner-anchored fallbacks) with headcut integration; see `Tx_DetailCropperTests.cs` for coverage. Remaining open work in `jb/src/core/Images/Transform/jbtodo.md` is limited to `Tx_util_HeadCutter` (Algorithm A anatomy-guided search, family-aware mode).
 
 ---
 
@@ -72,6 +72,8 @@ All other IFs (human detection, head visibility, orientation, background, color,
 Represented by `jb/src/core/Images/Transform/BoundingBox.cs`. Fields (all integers): `X`, `Y`, `Width`, `Height`, `Top`, `Left`, `Right`, `Bottom`.
 
 `BoundingBox` does not emit confidence, detection method, or border-intersection flags. Border-intersection state tracked separately as transform/classification evidence.
+
+The `salient-bbox` computed by `ImagePreProcessor` is the sole saliency anchor for all Transform-stage work — no additional saliency computation happens downstream. `Tx_CenterAndStretch` and `Tx_DetailCropper` both center their crop/reposition math on this bounding box directly.
 
 ---
 
@@ -135,6 +137,12 @@ Notes:
 ## Repositioning and Margin Application
 
 Margin applied so there is whitespace between object and image edge. Method: crop original image using bounding box coordinates + desired margin value. If repositioning would require **new pixels** → fill to mimic existing background (background extension).
+
+---
+
+## Headcut
+
+Headcut is a job-level `Headcut` bool on `PrismProcessingParameters`, threaded through the Transform service chain to `Tx_DetailCropper` — there is no classification-confidence threshold gating it. When enabled, `Tx_util_HeadCutter.Analyze()` runs before the crop decision tree: human presence is pre-determined by `Analyzer_HasHuman` (runs in `ImagePreProcessor`, feature `has-human`); face position is found via OpenCV Haar cascade (`haarcascade_frontalface_default.xml`); the cut line is set at 75% of detected face height (nose-to-lips approximation) and the image is cropped from that line downward, with the bounding box shifted up to match. This is the per-image (Algorithm B) path — the anatomy-guided Algorithm A refinement remains blocked (see `jbtodo.md`).
 
 ---
 
