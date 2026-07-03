@@ -23,12 +23,16 @@ public static class PipelineServiceFactory
 
     /// <summary>Builds an all-in-process service set (the modular monolith).</summary>
     public static PipelineServices CreateInProcess(PrismConfiguration configuration, ModelBuilder modelBuilder)
-        => new(
+    {
+        EnsureUpscalerReady(configuration);
+
+        return new(
             new IngestService(configuration, modelBuilder),
             new MatchingService(configuration),
             new GenerateService(),
             new TransformService(),
             new LocalArtifactStore());
+    }
 
     /// <summary>
     /// Builds a service set from environment discovery: each service runs in-process unless its URL
@@ -48,11 +52,40 @@ public static class PipelineServiceFactory
             ? new HttpGenerateService(generateUrl)
             : new GenerateService();
 
-        ITransformService transform = RemoteUrl(TransformUrlVariable) is { } transformUrl
-            ? new HttpTransformService(transformUrl)
-            : new TransformService();
+        ITransformService transform;
+        if (RemoteUrl(TransformUrlVariable) is { } transformUrl)
+        {
+            transform = new HttpTransformService(transformUrl);
+        }
+        else
+        {
+            // Eagerly load the process-wide Real-ESRGAN GPU session before this in-process
+            // TransformService runs (T-2800) — mirrors the MatchingService/CLIP eager-init above. Only
+            // needed when Transform actually runs in this process; a remote Transform host initializes
+            // its own copy at its own startup (Prism.ServiceHost/Program.cs), so there is nothing to do
+            // on the HttpTransformService branch.
+            EnsureUpscalerReady(configuration);
+            transform = new TransformService();
+        }
 
         return new PipelineServices(ingest, matching, generate, transform, new LocalArtifactStore());
+    }
+
+    /// <summary>
+    /// Initializes the process-wide Real-ESRGAN GPU session (<see cref="Upscaler_g_p_u"/>) so the first
+    /// Transform job that needs to upscale a below-minimum image doesn't crash (T-2800). Unlike CLIP,
+    /// Upscaler_g_p_u is a static, process-wide resource, not one instance per service, and a missing
+    /// model asset is not fatal here — <see cref="ImageUpscaler"/> falls back to the CPU Lanczos4 path
+    /// via <see cref="Upscaler_g_p_u.IsReady"/>. <see cref="UpscaleService.Create"/> still throws
+    /// <see cref="PrismConfigurationException"/> when DirectML is present but the model asset can't be
+    /// located (correct for its other caller, the standalone Prism.ServiceHost, which should fail fast);
+    /// that specific exception is swallowed here so a missing GPU model asset degrades to CPU instead of
+    /// blocking pipeline construction.
+    /// </summary>
+    private static void EnsureUpscalerReady(PrismConfiguration configuration)
+    {
+        try { UpscaleService.Create(configuration); }
+        catch (PrismConfigurationException) { }
     }
 
     /// <summary>Reads a service host URL from the environment, or null when unset/blank.</summary>

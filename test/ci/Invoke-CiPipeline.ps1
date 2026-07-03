@@ -67,7 +67,19 @@ if ($null -eq $manifest) { throw "No result / timeout after ${TimeoutMinutes}m f
 
 # ---- Normalise manifest rows: drop tolerated KOs, collapse to one winning row per source --------
 $rows = @($manifest.ImageRows)
-if ($rows.Count -eq 0) { throw "VACUOUS RESULT: manifest has zero ImageRows — treating as failure." }
+if ($rows.Count -eq 0) {
+    # A failed job (PrismService.BuildFailedResult) returns an empty ImageRows but records the real reason
+    # in RouteSummaries ("Pipeline failed: <message>"). Surface it instead of a generic "vacuous" message.
+    Write-Host "[CI] $Mode job returned an empty manifest (0 image rows)." -ForegroundColor Red
+    if ($manifest.PSObject.Properties.Name -contains 'RouteSummaries' -and $manifest.RouteSummaries) {
+        Write-Host "  RouteSummaries:" -ForegroundColor Yellow
+        @($manifest.RouteSummaries) | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+    }
+    if ($manifest.PSObject.Properties.Name -contains 'Summary' -and $manifest.Summary) {
+        Write-Host "  Summary: ImageCount=$($manifest.Summary.ImageCount) OkRenamed=$($manifest.Summary.OkRenamed) KoRecords=$($manifest.Summary.KoRecords)"
+    }
+    throw "$Mode job produced an empty manifest — likely a failed pipeline stage (see RouteSummaries above)."
+}
 
 $kept = @($rows | Where-Object { $toleratedKo -notcontains $_.KoReasonCode })
 $actual = @{}

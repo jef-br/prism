@@ -14,7 +14,7 @@ Primary test for T-150 acceptance criteria. Validates:
 2. Job completes with status "Completed"
 3. Manifest contains summary data
 
-Uses SPACINI29/TINY fixture (11 small JPGs) and SPACINI29-INPUTS.xlsx.
+Uses test/datasets/TinyTest fixture (11 small JPGs) and SPACINI29-INPUTS.xlsx.
 
 ### PrismJobRequest_WithMinimalInput_AcceptsJob
 Verifies that minimal valid input (1 image + 1 Excel file) is accepted without error.

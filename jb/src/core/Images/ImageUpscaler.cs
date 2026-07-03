@@ -9,7 +9,7 @@ public static class ImageUpscaler {
     public static bool IsGpuAvailable => GpuAvailable;
 
     public static byte[] Upscale( byte[] imageBytes, double scaleFactor ) =>
-        GpuAvailable
+        GpuAvailable && Upscaler_g_p_u.IsReady
             ? Upscaler_g_p_u.Upscale(imageBytes, scaleFactor)
             : Upscaler_c_p_u.Upscale(imageBytes, scaleFactor);
 }
