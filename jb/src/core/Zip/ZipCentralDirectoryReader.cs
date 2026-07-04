@@ -13,9 +13,13 @@ internal static class ZipCentralDirectoryReader
 {
     private const uint EndOfCentralDirectorySignature = 0x06054B50;
     private const uint CentralDirectoryHeaderSignature = 0x02014B50;
+    private const uint Zip64EndOfCentralDirectoryLocatorSignature = 0x07064B50;
+    private const uint Zip64EndOfCentralDirectorySignature = 0x06064B50;
     private const ushort EncryptedEntryFlag = 0x0001;
     private const ushort Utf8EntryNameFlag = 0x0800;
     private const int EndOfCentralDirectoryMinimumLength = 22;
+    private const int Zip64EndOfCentralDirectoryLocatorLength = 20;
+    private const int Zip64EndOfCentralDirectoryFixedLength = 56;
     private const int MaximumZipCommentBytes = 65_535;
     private const int CentralDirectoryFixedHeaderLength = 46;
 
@@ -64,13 +68,52 @@ internal static class ZipCentralDirectoryReader
 
             if (centralDirectoryOffset == uint.MaxValue)
             {
-                throw new InvalidDataException("Zip64 central directory metadata is not supported yet.");
+                // ZIP64 archive: the real offset lives in the ZIP64 end-of-central-directory
+                // record, located via the 20-byte locator that immediately precedes the EOCD.
+                return FindZip64CentralDirectoryOffset(zipStream, tailBytes, offset);
             }
 
             return centralDirectoryOffset;
         }
 
         throw new InvalidDataException("The zip archive does not contain a central directory.");
+    }
+
+    /// <summary>
+    /// Resolves the central-directory offset of a ZIP64 archive by following the ZIP64
+    /// end-of-central-directory locator to the ZIP64 end-of-central-directory record.
+    /// </summary>
+    /// <param name="zipStream">Seekable zip file stream.</param>
+    /// <param name="tailBytes">Tail bytes already read from the stream.</param>
+    /// <param name="endOfCentralDirectoryOffset">Offset of the classic EOCD record inside <paramref name="tailBytes"/>.</param>
+    /// <returns>The 64-bit central-directory offset.</returns>
+    private static long FindZip64CentralDirectoryOffset(FileStream zipStream, byte[] tailBytes, int endOfCentralDirectoryOffset)
+    {
+        int locatorOffset = endOfCentralDirectoryOffset - Zip64EndOfCentralDirectoryLocatorLength;
+        if (locatorOffset < 0 ||
+            BinaryPrimitives.ReadUInt32LittleEndian(tailBytes.AsSpan(locatorOffset, 4)) != Zip64EndOfCentralDirectoryLocatorSignature)
+        {
+            throw new InvalidDataException("The ZIP64 end-of-central-directory locator is missing.");
+        }
+
+        long zip64RecordOffset = checked((long)BinaryPrimitives.ReadUInt64LittleEndian(
+            tailBytes.AsSpan(locatorOffset + 8, 8)));
+
+        if (zip64RecordOffset < 0 || zip64RecordOffset + Zip64EndOfCentralDirectoryFixedLength > zipStream.Length)
+        {
+            throw new InvalidDataException("The ZIP64 end-of-central-directory record offset is out of range.");
+        }
+
+        byte[] zip64RecordBytes = new byte[Zip64EndOfCentralDirectoryFixedLength];
+        zipStream.Seek(zip64RecordOffset, SeekOrigin.Begin);
+        ReadExactly(zipStream, zip64RecordBytes);
+
+        if (BinaryPrimitives.ReadUInt32LittleEndian(zip64RecordBytes.AsSpan(0, 4)) != Zip64EndOfCentralDirectorySignature)
+        {
+            throw new InvalidDataException("The ZIP64 end-of-central-directory record is malformed.");
+        }
+
+        return checked((long)BinaryPrimitives.ReadUInt64LittleEndian(zip64RecordBytes.AsSpan(48, 8)));
     }
 
     /// <summary>

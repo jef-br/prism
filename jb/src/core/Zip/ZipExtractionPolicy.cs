@@ -21,11 +21,13 @@ public sealed record ZipExtractionPolicy(
     /// <returns>A zip extraction policy matching the documented default limits.</returns>
     public static ZipExtractionPolicy CreateDefault()
     {
+        // Real supplier drops routinely arrive as 5–7 GB ZIP64 archives of high-resolution shots;
+        // zip-bomb protection is enforced per member (streamed expanded-byte caps), not here.
         return new ZipExtractionPolicy(
             MaxNestedZipDepth: 5,
-            MaxImageMemberBytes: 26_214_400,
-            MaxExcelMemberBytes: 1_048_576,
-            MaxZipArchiveBytes: 2_147_483_648,
+            MaxImageMemberBytes: 67_108_864,
+            MaxExcelMemberBytes: 10_485_760,
+            MaxZipArchiveBytes: 17_179_869_184,
             HeaderProbeBytes: 8192);
     }
 }

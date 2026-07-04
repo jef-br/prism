@@ -106,6 +106,14 @@ static async Task<DatasetResult?> RunDataset(string folder, bool skipClassificat
                 else if (member.MediaKind == ZipMemberMediaKind.Excel)
                     excels.Add(member.ExtractedFilePath);
             }
+
+            Console.WriteLine($"  ZIP     {Path.GetFileName(zipPath)}: {extracted.ExtractedMembers.Count} extracted, {extracted.KoRecords.Count} KO");
+            if (extracted.KoRecords.Count > 0) {
+                var koByReason = extracted.KoRecords
+                    .GroupBy(k => k.ReasonCode)
+                    .Select(g => $"{g.Key}={g.Count()} (e.g. {g.First().MemberPath ?? "<archive>"}: {g.First().SafeMessage})");
+                Console.WriteLine($"  ZIP KO  {Path.GetFileName(zipPath)}: {string.Join("  ", koByReason)}");
+            }
         }
         images.Sort();
 
