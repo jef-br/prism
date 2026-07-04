@@ -20,7 +20,15 @@ internal sealed class FilenameToCellMatcher
 
     // filename key (basename-with-extension and stem, lowercased) → FamilyIDs whose cells name it.
     private Dictionary<string, HashSet<string>>? indexByFilenameKey;
+    // collapsed stem key (separators and copy suffixes removed) → FamilyIDs; separate namespace so
+    // collapsed lookups can never shadow exact ones.
+    private Dictionary<string, HashSet<string>>? indexByCollapsedKey;
     private IReadOnlyList<FamilyIDRecord>? indexedFamilies;
+
+    // Copy/retouch markers appended by explorers and DAM exports: " (1)", "-copy", "_RET".
+    private static readonly System.Text.RegularExpressions.Regex CopySuffixPattern = new(
+        @"(\s*\(\d+\)|[-_ ]+(copy|ret|retouch(ed)?))+$",
+        System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     /// <summary>
     /// Attempts to match by locating the image's own filename inside any Excel cell of exactly one family.
@@ -36,10 +44,12 @@ internal sealed class FilenameToCellMatcher
             return null;
 
         string stemKey = StripExtension(basenameKey);
+        string collapsedKey = CollapseStem(stemKey);
 
         HashSet<string>? matchedFamilies =
             index.TryGetValue(basenameKey, out HashSet<string>? byBasename) ? byBasename
             : index.TryGetValue(stemKey, out HashSet<string>? byStem) ? byStem
+            : collapsedKey.Length > 0 && indexByCollapsedKey!.TryGetValue(collapsedKey, out HashSet<string>? byCollapsed) ? byCollapsed
             : null;
 
         if (matchedFamilies is null || matchedFamilies.Count != 1)
@@ -73,6 +83,7 @@ internal sealed class FilenameToCellMatcher
             return indexByFilenameKey;
 
         Dictionary<string, HashSet<string>> index = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, HashSet<string>> collapsedIndex = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (FamilyIDRecord family in families)
         {
@@ -92,13 +103,28 @@ internal sealed class FilenameToCellMatcher
                     string stem = StripExtension(basename);
                     if (stem.Length > 0)
                         AddKey(index, stem, family.FamilyID);
+
+                    string collapsed = CollapseStem(stem);
+                    if (collapsed.Length > 0)
+                        AddKey(collapsedIndex, collapsed, family.FamilyID);
                 }
             }
         }
 
         indexByFilenameKey = index;
+        indexByCollapsedKey = collapsedIndex;
         indexedFamilies = families;
         return index;
+    }
+
+    /// <summary>
+    /// Collapses a stem for tolerant comparison: strips copy/retouch suffixes and removes
+    /// separator characters, so "92836758_det815 (1)" and "92836758-det815" meet on one key.
+    /// </summary>
+    private static string CollapseStem(string stem)
+    {
+        string withoutCopySuffix = CopySuffixPattern.Replace(stem, string.Empty);
+        return string.Concat(withoutCopySuffix.Where(ch => ch is not (' ' or '_' or '-' or '.')));
     }
 
     private static void AddKey(Dictionary<string, HashSet<string>> index, string key, string familyId)

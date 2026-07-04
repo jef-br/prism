@@ -23,6 +23,9 @@ public sealed record ManifestImageRow
     /// <summary>Matched FamilyID. Null when no family was resolved (KO at or before Matched stage).</summary>
     public string? FamilyId { get; init; }
 
+    /// <summary>Name of the matcher bracket that assigned the FamilyID. Null for KO images.</summary>
+    public string? MatchedBy { get; init; }
+
     /// <summary>Zero-based det-slot index. Null for KO images.</summary>
     public int? DetOrder { get; init; }
 

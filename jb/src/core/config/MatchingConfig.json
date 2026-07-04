@@ -2,6 +2,12 @@
   "semanticThreshold": 0.9,
   "semanticWeight": 0.15,
   "bracket3MinDistinctTokens": 2,
+  "minNumericTokenLength": 5,
+  "indexDigitRunsAllColumns": true,
+  "minSubstringRescueLength": 7,
+  "identifierTokenMinLength": 4,
+  "indexExcelTokenBigrams": true,
+  "enableSiblingPropagation": true,
   "rules": [
     {
       "excelField": "FamilyID",

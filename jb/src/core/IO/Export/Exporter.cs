@@ -172,6 +172,7 @@ internal static class Exporter
             KoReasonCode         = lambda.KoReasonCode,
             KoSafeMessage        = lambda.KoSafeMessage,
             FamilyId             = string.IsNullOrEmpty(lambda.Family) ? null : lambda.Family,
+            MatchedBy            = lambda.IsKo ? null : lambda.MatchEvidence?.AcceptedMatcherName,
             DetOrder             = lambda.IsKo ? null : lambda.DetOrder,
             TransformerType      = lambda.TransformationResult?.TransformerType,
             TransformationStatus = lambda.TransformationResult?.Status.ToString()

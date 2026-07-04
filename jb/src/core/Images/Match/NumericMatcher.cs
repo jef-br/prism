@@ -20,7 +20,15 @@ internal sealed class NumericMatcher
     // The permuted fallback enumerates 2^T token subsets; beyond this many digit runs it is skipped.
     private const int PermutedTokenCap = 12;
 
+    // Whole-value digit strings longer than this are not indexed by the all-columns pass — they are
+    // merged multi-value cells or prose, not identifiers (rule-field targets stay uncapped for
+    // backward compatibility with pipe-joined EAN columns).
+    private const int MaxIndexedWholeValueDigits = 18;
+
     private readonly string familyIdColumnName;
+    private readonly int minTokenLength;
+    private readonly bool indexAllColumns;
+    private readonly int substringRescueLength;
 
     // Inverted digit-target index (family target digits → postings), built once per (families, rules)
     // pair so Brackets 1–2 look up tokens/concatenations in O(1) instead of rescanning every family
@@ -41,9 +49,15 @@ internal sealed class NumericMatcher
     /// resolves against the intrinsic <see cref="FamilyIDRecord.FamilyID"/> — the 8-digit PRISM identifier
     /// that is also the image filename stem — rather than an Excel column lookup.
     /// </param>
-    internal NumericMatcher(string familyIdColumnName)
+    /// <param name="minNumericTokenLength">MatchingConfig.MinNumericTokenLength (1 = legacy behavior).</param>
+    /// <param name="indexDigitRunsAllColumns">MatchingConfig.IndexDigitRunsAllColumns.</param>
+    /// <param name="minSubstringRescueLength">MatchingConfig.MinSubstringRescueLength (0 = disabled).</param>
+    internal NumericMatcher(string familyIdColumnName, int minNumericTokenLength = 1, bool indexDigitRunsAllColumns = false, int minSubstringRescueLength = 0)
     {
         this.familyIdColumnName = familyIdColumnName;
+        minTokenLength = Math.Max(1, minNumericTokenLength);
+        indexAllColumns = indexDigitRunsAllColumns;
+        substringRescueLength = minSubstringRescueLength;
     }
 
     //  Bracket 1
@@ -72,12 +86,13 @@ internal sealed class NumericMatcher
     {
         string   filename      = record.InitialFullName ?? string.Empty;
         string   stem          = Path.GetFileNameWithoutExtension(filename);
-        string[] tokens        = GetNumericTokensFromFilename(filename);
+        string[] tokens        = GetEligibleTokens(filename);
         string   fileDigits    = string.Concat(stem.Where(char.IsDigit));
 
         // Candidate set: individual digit-run tokens + the full monotoken (all digits of stem).
-        // Distinct avoids re-testing when the stem is already a single unbroken digit run.
-        string[] candidates = fileDigits.Length > 0 && !tokens.Contains(fileDigits)
+        // Tokens below MinNumericTokenLength are excluded — a shot suffix like "_01" must not act
+        // as standalone evidence. Distinct avoids re-testing when the stem is one unbroken run.
+        string[] candidates = fileDigits.Length >= minTokenLength && !tokens.Contains(fileDigits)
             ? [..tokens, fileDigits]
             : tokens;
 
@@ -294,6 +309,178 @@ internal sealed class NumericMatcher
         return (evidence, []);
     }
 
+    //  Bracket 2-Intersect
+
+    /// <summary>
+    /// Attempts intersection matching: when individual tokens each hit multiple families, the
+    /// intersection of the per-token candidate sets can still be unique — e.g. color code "60105"
+    /// hits every family of that color while article run "1010930" narrows to one garment, and only
+    /// one family carries both. Hit sets come from eligible single tokens, the monotoken, and
+    /// in-order concatenations; at least two non-empty hit sets are required.
+    /// </summary>
+    /// <returns>Accepted MatchEvidence when the intersection is exactly one FamilyID; null otherwise.</returns>
+    internal MatchEvidence? TryMatchByTokenIntersection(
+        ImageRecord_LAMBDA record,
+        IReadOnlyList<FamilyIDRecord> families,
+        IReadOnlyList<MatchingRule> numericRules)
+    {
+        string   filename = record.InitialFullName ?? string.Empty;
+        string   stem     = Path.GetFileNameWithoutExtension(filename);
+        string[] tokens   = GetNumericTokensFromFilename(filename);
+
+        Dictionary<string, List<DigitPosting>> index = GetOrBuildDigitIndex(families, numericRules);
+
+        // One entry per evidence source (token or concatenation) that hit at least one family.
+        List<(string Token, HashSet<string> Families)> hitSets = [];
+
+        foreach (string token in GetEligibleTokens(filename))
+            CollectHitSet(index, token, hitSets);
+
+        string fileDigits = string.Concat(stem.Where(char.IsDigit));
+        if (fileDigits.Length >= minTokenLength && !tokens.Contains(fileDigits))
+            CollectHitSet(index, fileDigits, hitSets);
+
+        for (int start = 0; start < tokens.Length; start++)
+        {
+            for (int length = 2; length <= tokens.Length - start; length++)
+            {
+                string concatenated = string.Concat(tokens.Skip(start).Take(length));
+                if (concatenated.Length >= minTokenLength && concatenated != fileDigits)
+                    CollectHitSet(index, concatenated, hitSets);
+            }
+        }
+
+        if (hitSets.Count < 2)
+            return null; // a single evidence source is Bracket 1/2 territory, not intersection
+
+        HashSet<string> intersection = new(hitSets[0].Families, StringComparer.OrdinalIgnoreCase);
+        foreach ((_, HashSet<string> hitFamilies) in hitSets.Skip(1))
+            intersection.IntersectWith(hitFamilies);
+
+        if (intersection.Count != 1)
+            return null;
+
+        string familyId = intersection.First();
+        string matcherName = "NumericMatcher.Bracket2-Intersect";
+
+        List<TokenEvidenceItem> tokenEvidence = hitSets
+            .Select(hit => new TokenEvidenceItem(hit.Token, hit.Token, FindPostingField(index, hit.Token, familyId), familyId, 1.0))
+            .ToList();
+
+        return new MatchEvidence
+        {
+            ImageId              = stem,
+            SourceFilename       = filename,
+            FinalFamilyId        = familyId,
+            FinalScore           = 1.0,
+            IsKo                 = false,
+            AcceptedMatcherName  = matcherName,
+            TopCandidates        = [new CandidateSummary(familyId, 1.0, matcherName)],
+            NumericTokenEvidence = tokenEvidence,
+            ImageNgpSummary      = BuildNgpSummary(record),
+            SafeExplanation      = $"Bracket2-Intersect: tokens [{string.Join(", ", hitSets.Select(h => h.Token))}] jointly narrowed to family {familyId}."
+        };
+    }
+
+    /// <summary>Appends the family hit set for <paramref name="token"/> when the index knows it.</summary>
+    private static void CollectHitSet(
+        Dictionary<string, List<DigitPosting>> index,
+        string token,
+        List<(string Token, HashSet<string> Families)> hitSets)
+    {
+        if (hitSets.Any(h => h.Token == token) || !index.TryGetValue(token, out List<DigitPosting>? postings))
+            return;
+
+        hitSets.Add((token, postings.Select(p => p.FamilyId).ToHashSet(StringComparer.OrdinalIgnoreCase)));
+    }
+
+    /// <summary>The source field of the first posting linking <paramref name="token"/> to <paramref name="familyId"/>.</summary>
+    private static string FindPostingField(Dictionary<string, List<DigitPosting>> index, string token, string familyId)
+    {
+        foreach (DigitPosting posting in index[token])
+        {
+            if (posting.FamilyId.Equals(familyId, StringComparison.OrdinalIgnoreCase))
+                return posting.Field;
+        }
+
+        return index[token][0].Field;
+    }
+
+    //  Substring rescue
+
+    /// <summary>
+    /// Attempts substring rescue: accepts the unique family one of whose digit targets contains a
+    /// long filename token (e.g. token "46271023" inside EAN "8446271023117"). Runs only for tokens
+    /// (or the monotoken) of at least MinSubstringRescueLength digits; disabled when that is 0.
+    /// </summary>
+    /// <returns>Accepted MatchEvidence when exactly one family contains the token; null otherwise.</returns>
+    internal MatchEvidence? TryMatchBySubstringRescue(
+        ImageRecord_LAMBDA record,
+        IReadOnlyList<FamilyIDRecord> families,
+        IReadOnlyList<MatchingRule> numericRules)
+    {
+        if (substringRescueLength <= 0)
+            return null;
+
+        string   filename = record.InitialFullName ?? string.Empty;
+        string   stem     = Path.GetFileNameWithoutExtension(filename);
+        string[] tokens   = GetNumericTokensFromFilename(filename);
+
+        string   fileDigits = string.Concat(stem.Where(char.IsDigit));
+        string[] rescueTokens = tokens
+            .Concat(tokens.Contains(fileDigits) ? Array.Empty<string>() : [fileDigits])
+            .Where(t => t.Length >= substringRescueLength)
+            .OrderByDescending(t => t.Length)
+            .ToArray();
+
+        if (rescueTokens.Length == 0)
+            return null;
+
+        Dictionary<string, List<DigitPosting>> index = GetOrBuildDigitIndex(families, numericRules);
+
+        foreach (string token in rescueTokens)
+        {
+            HashSet<string> containingFamilies = new(StringComparer.OrdinalIgnoreCase);
+            string? matchedTarget = null;
+            string? matchedField = null;
+
+            foreach (KeyValuePair<string, List<DigitPosting>> entry in index)
+            {
+                if (entry.Key.Length <= token.Length || !entry.Key.Contains(token, StringComparison.Ordinal))
+                    continue;
+
+                foreach (DigitPosting posting in entry.Value)
+                {
+                    containingFamilies.Add(posting.FamilyId);
+                    matchedTarget = entry.Key;
+                    matchedField = posting.Field;
+                }
+            }
+
+            if (containingFamilies.Count != 1)
+                continue; // 0 → try the next token; 2+ → ambiguous, not rescuable by this token
+
+            string familyId = containingFamilies.First();
+            string matcherName = "NumericMatcher.SubstringRescue";
+
+            return new MatchEvidence
+            {
+                ImageId              = stem,
+                SourceFilename       = filename,
+                FinalFamilyId        = familyId,
+                FinalScore           = 0.9,
+                IsKo                 = false,
+                AcceptedMatcherName  = matcherName,
+                TopCandidates        = [new CandidateSummary(familyId, 0.9, matcherName)],
+                NumericTokenEvidence = [new TokenEvidenceItem(token, matchedTarget!, matchedField!, familyId, 0.9)],
+                ImageNgpSummary      = BuildNgpSummary(record),
+                SafeExplanation      = $"SubstringRescue: token '{token}' is contained in target '{matchedTarget}' of family {familyId}."
+            };
+        }
+
+        return null;
+    }
+
     //  Bracket 4 support
 
     /// <summary>
@@ -364,29 +551,77 @@ internal sealed class NumericMatcher
         return digitIndex;
     }
 
-    /// <summary>Raw index builder — one pass over families × rules.</summary>
+    /// <summary>
+    /// Raw index builder — one pass over families × rules, plus (when IndexDigitRunsAllColumns) one
+    /// pass over every family column indexing each digit run and the capped whole-value digit string.
+    /// Targets shorter than MinNumericTokenLength are never indexed.
+    /// </summary>
     private Dictionary<string, List<DigitPosting>> BuildDigitIndex(
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
         Dictionary<string, List<DigitPosting>> index = new(StringComparer.Ordinal);
+        MatchingRule runRule = BuildRunIndexRule(numericRules);
 
         foreach (FamilyIDRecord family in families)
         {
             foreach (MatchingRule rule in numericRules)
             {
                 string? target = GetFamilyDigitsForField(family, rule.ExcelField);
-                if (target is null)
+                if (target is null || target.Length < minTokenLength)
                     continue;
 
-                if (!index.TryGetValue(target, out List<DigitPosting>? postings))
-                    index[target] = postings = [];
+                AddPosting(index, target, new DigitPosting(family.FamilyID, rule.ExcelField, rule));
+            }
 
-                postings.Add(new DigitPosting(family.FamilyID, rule.ExcelField, rule));
+            if (!indexAllColumns)
+                continue;
+
+            foreach (KeyValuePair<string, string> property in family.CanonicalProperties)
+            {
+                string? wholeDigits = DigitsOnly(property.Value);
+                if (wholeDigits is not null &&
+                    wholeDigits.Length >= minTokenLength && wholeDigits.Length <= MaxIndexedWholeValueDigits)
+                {
+                    AddPosting(index, wholeDigits, new DigitPosting(family.FamilyID, property.Key, runRule));
+                }
+
+                foreach (Match run in DigitSequencePattern.Matches(property.Value))
+                {
+                    if (run.Value.Length >= minTokenLength && run.Value != wholeDigits)
+                        AddPosting(index, run.Value, new DigitPosting(family.FamilyID, property.Key, runRule));
+                }
             }
         }
 
         return index;
+    }
+
+    /// <summary>Appends one posting to the index bucket for <paramref name="target"/>.</summary>
+    private static void AddPosting(Dictionary<string, List<DigitPosting>> index, string target, DigitPosting posting)
+    {
+        if (!index.TryGetValue(target, out List<DigitPosting>? postings))
+            index[target] = postings = [];
+
+        postings.Add(posting);
+    }
+
+    /// <summary>
+    /// The synthetic rule attached to all-columns run postings: distances copied from the first
+    /// configured numeric rule so Bracket 2 TCD gating treats run targets like rule targets.
+    /// </summary>
+    private static MatchingRule BuildRunIndexRule(IReadOnlyList<MatchingRule> numericRules)
+    {
+        MatchingRule? first = numericRules.Count > 0 ? numericRules[0] : null;
+        return new MatchingRule
+        {
+            ExcelField          = "*",
+            Type                = "numeric",
+            Strategy            = "NumericalMatcher",
+            Weight              = first?.Weight ?? 1.0,
+            MaxDistance         = first?.MaxDistance ?? 1.478,
+            MaxDistancePermuted = first?.MaxDistancePermuted ?? 0.0
+        };
     }
 
     /// <summary>Distinct index targets grouped by string length, for the permuted fallback.</summary>
@@ -444,6 +679,15 @@ internal sealed class NumericMatcher
             .Select(m => m.Value)
             .ToArray();
     }
+
+    /// <summary>
+    /// Filename digit tokens long enough to act as standalone numeric evidence
+    /// (length ≥ MinNumericTokenLength). Shorter runs still participate in concatenations.
+    /// </summary>
+    private string[] GetEligibleTokens(string filename) =>
+        GetNumericTokensFromFilename(filename)
+            .Where(t => t.Length >= minTokenLength)
+            .ToArray();
 
     /// <summary>
     /// The digits PRISM matches a filename token against for one rule field.

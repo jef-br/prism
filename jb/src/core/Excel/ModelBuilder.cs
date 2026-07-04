@@ -113,11 +113,16 @@ public sealed class ModelBuilder
 
         InternalExcelModel model = new();
         List<ExcelProcessingDiagnostic> diagnostics = [];
+        List<OrphanRow> orphanRows = [];
 
         foreach (ExcelWorkbook workbook in workbooks)
         {
-            ProcessWorkbook(workbook, model, diagnostics);
+            ProcessWorkbook(workbook, model, diagnostics, orphanRows);
         }
+
+        // Rows that carried no resolvable FamilyID may still belong to a family built from another
+        // sheet or file — join them via unique shared keys (EAN, ref/article digit runs).
+        OrphanRowJoiner.Join(model, orphanRows, diagnostics);
 
         return new ExcelModelBuildResult(model, diagnostics);
     }
@@ -125,18 +130,20 @@ public sealed class ModelBuilder
     private void ProcessWorkbook(
         ExcelWorkbook workbook,
         InternalExcelModel model,
-        List<ExcelProcessingDiagnostic> diagnostics)
+        List<ExcelProcessingDiagnostic> diagnostics,
+        List<OrphanRow> orphanRows)
     {
         foreach (ExcelWorksheet worksheet in workbook.Worksheets)
         {
-            ProcessWorksheet(worksheet, model, diagnostics);
+            ProcessWorksheet(worksheet, model, diagnostics, orphanRows);
         }
     }
 
     private void ProcessWorksheet(
         ExcelWorksheet worksheet,
         InternalExcelModel model,
-        List<ExcelProcessingDiagnostic> diagnostics)
+        List<ExcelProcessingDiagnostic> diagnostics,
+        List<OrphanRow> orphanRows)
     {
         HeaderDetectionResult? headerDetectionResult = DetectHeaderRow(worksheet);
 
@@ -160,6 +167,11 @@ public sealed class ModelBuilder
                 "excel.primary_key_column_not_found",
                 $"Worksheet header row does not contain configured primary key '{config.RecordPrimaryKey}'.",
                 worksheet));
+
+            // The rows are not lost yet: buffer them so OrphanRowJoiner can attach them to
+            // families built from other sheets/files via shared keys.
+            if (dataRows.Count > 0)
+                BufferOrphanRows(worksheet, headerDetectionResult, dataRows, orphanRows, diagnostics);
             return;
         }
 
@@ -189,7 +201,48 @@ public sealed class ModelBuilder
 
         foreach (WorksheetDataRow dataRow in dataRows)
         {
-            AddDataRowToModel(worksheet, dataRow, acceptedColumns, familyIdColumnIndex, columnClassifications, model, diagnostics);
+            AddDataRowToModel(worksheet, dataRow, acceptedColumns, familyIdColumnIndex, columnClassifications, model, diagnostics, orphanRows);
+        }
+    }
+
+    /// <summary>
+    /// Buffers every data row of a worksheet without a FamilyID column as an OrphanRow, using the
+    /// same accepted-column plan a keyed worksheet would get (with no column marked as primary key).
+    /// </summary>
+    private void BufferOrphanRows(
+        ExcelWorksheet worksheet,
+        HeaderDetectionResult headerDetectionResult,
+        IReadOnlyList<WorksheetDataRow> dataRows,
+        List<OrphanRow> orphanRows,
+        List<ExcelProcessingDiagnostic> diagnostics)
+    {
+        IReadOnlyList<ColumnPlan> acceptedColumns = BuildAcceptedColumnPlan(
+            worksheet,
+            headerDetectionResult.Headers,
+            dataRows,
+            familyIdColumnIndex: -1,
+            diagnostics);
+
+        if (acceptedColumns.Count == 0)
+            return;
+
+        IReadOnlyDictionary<string, ExcelColumnClassification> columnClassifications = acceptedColumns
+            .Where(column => column.CanonicalName.Length > 0)
+            .GroupBy(column => column.CanonicalName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First().Classification,
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (WorksheetDataRow dataRow in dataRows)
+        {
+            List<ExcelPropertyValue> propertyValues = acceptedColumns
+                .Select(column => BuildPropertyValue(worksheet, dataRow, column))
+                .Where(propertyValue => propertyValue.SourceValues.Any(value => !string.IsNullOrWhiteSpace(value)))
+                .ToList();
+
+            if (propertyValues.Count > 0)
+                orphanRows.Add(new OrphanRow(worksheet.SourceFile, worksheet.Name, dataRow.RowIndex, propertyValues, columnClassifications));
         }
     }
 
@@ -627,7 +680,8 @@ public sealed class ModelBuilder
         int familyIdColumnIndex,
         IReadOnlyDictionary<string, ExcelColumnClassification> columnClassifications,
         InternalExcelModel model,
-        List<ExcelProcessingDiagnostic> diagnostics)
+        List<ExcelProcessingDiagnostic> diagnostics,
+        List<OrphanRow> orphanRows)
     {
         string familyID = GetCellValue(dataRow.Cells, familyIdColumnIndex).Trim();
 
@@ -639,6 +693,18 @@ public sealed class ModelBuilder
                 worksheet,
                 dataRow.RowIndex,
                 familyID));
+
+            // A header like "VeePee Selection" can name-resolve as the FamilyID column while its
+            // cells hold something else entirely — buffer the row for the shared-key join instead
+            // of discarding it.
+            List<ExcelPropertyValue> orphanValues = acceptedColumns
+                .Where(column => !column.SourceColumnIndexes.Contains(familyIdColumnIndex))
+                .Select(column => BuildPropertyValue(worksheet, dataRow, column))
+                .Where(propertyValue => propertyValue.SourceValues.Any(value => !string.IsNullOrWhiteSpace(value)))
+                .ToList();
+
+            if (orphanValues.Count > 0)
+                orphanRows.Add(new OrphanRow(worksheet.SourceFile, worksheet.Name, dataRow.RowIndex, orphanValues, columnClassifications));
             return;
         }
 
