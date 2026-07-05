@@ -14,6 +14,7 @@ internal sealed class ImageMatcher {
     private readonly SemanticMatcher semanticMatcher;
     private readonly FilenameToCellMatcher filenameToCellMatcher;
     private readonly SiblingPropagator siblingPropagator;
+    private readonly FolderNameEnricher folderNameEnricher;
 
     private ImageMatcher( MatchingConfig matchingConfig, TranslationConfig translationConfig, string familyIdColumnName ) {
         this.matchingConfig = matchingConfig;
@@ -30,6 +31,7 @@ internal sealed class ImageMatcher {
         clipLabelEnricher = new ClipLabelEnricher();
         filenameToCellMatcher = new FilenameToCellMatcher();
         siblingPropagator = new SiblingPropagator();
+        folderNameEnricher = new FolderNameEnricher();
         semanticMatcher = new SemanticMatcher(
             numericMatcher,
             stringMatcher,
@@ -90,6 +92,10 @@ internal sealed class ImageMatcher {
 
         // Keyed by InitialFullName; accumulates every FamilyID an image was a candidate for across all brackets.
         Dictionary<string, HashSet<string>> crossBracketCandidates = new(StringComparer.OrdinalIgnoreCase);
+
+        // Give meaningless filenames a matchable name from their folder before any bracket runs.
+        if (matchingConfig.EnableFolderNameEnrichment)
+            folderNameEnricher.Enrich(allRecords, families);
 
         List<ImageRecord_LAMBDA> unmatched = allRecords.Where(r => !r.IsKo).ToList();
 

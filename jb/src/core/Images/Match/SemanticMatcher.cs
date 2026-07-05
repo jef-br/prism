@@ -39,7 +39,7 @@ internal sealed class SemanticMatcher
         IReadOnlyList<MatchingRule>   numericRules,
         IReadOnlyList<MatchingRule>   labelRules)
     {
-        string filename = record.InitialFullName ?? string.Empty;
+        string filename = record.MatchingName;
         string imageId  = Path.GetFileNameWithoutExtension(filename);
 
         List<FamilyIDRecord> candidates = [..unassignedFamilies];

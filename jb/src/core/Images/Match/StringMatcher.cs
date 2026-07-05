@@ -47,7 +47,7 @@ internal sealed class StringMatcher
         ImageRecord_LAMBDA record,
         IReadOnlyList<FamilyIDRecord> families)
     {
-        string filename      = record.InitialFullName ?? string.Empty;
+        string filename      = record.MatchingName;
         string sourceFilename = filename;
         string imageId       = Path.GetFileNameWithoutExtension(filename);
 

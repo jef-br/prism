@@ -224,6 +224,9 @@ public class MatcherUpgradeTests
     [Fact]
     public void SiblingPropagator_ConflictingSiblings_DoesNotPropagate()
     {
+        // Two different products both have magenta cardigan shots that reduce to {cardigan, magenta}.
+        // The exact profile is owned by two families, so it is NOT a safe key, and a third keyless
+        // shot with that same profile has no way to choose — it stays unmatched.
         SiblingPropagator propagator = new();
 
         ImageRecord_LAMBDA matchedA = MakeLambda("11111111_CARDIGAN_MAGENTA_A.jpg");
@@ -238,6 +241,106 @@ public class MatcherUpgradeTests
 
         Assert.Contains(keyless, stillUnmatched);
         Assert.Null(keyless.MatchEvidence);
+    }
+
+    [Fact]
+    public void SiblingPropagator_ThirdShotOfOneProduct_JoinsDespiteOverlapWithAnother()
+    {
+        // One product (90861052) has two matched magenta-cardigan shots. A third shot, CARDIGAN_MAGENTA76_C,
+        // reduces to the same {cardigan, magenta} profile. A DIFFERENT product (90861099) has one matched
+        // cardigan shot that only loosely overlaps. The exact profile {cardigan,magenta} is owned by exactly
+        // one family, so the third shot joins that family instead of being refused.
+        SiblingPropagator propagator = new();
+
+        ImageRecord_LAMBDA shotA = MakeLambda("24211507_CARDIGAN_76_MAGENTA_A.jpg");
+        shotA.MatchEvidence = new MatchEvidence { ImageId = "a", FinalFamilyId = "90861052", IsKo = false };
+        ImageRecord_LAMBDA shotB = MakeLambda("24211507_CARDIGAN_76_MAGENTA_B.jpg");
+        shotB.MatchEvidence = new MatchEvidence { ImageId = "b", FinalFamilyId = "90861052", IsKo = false };
+        ImageRecord_LAMBDA otherCardigan = MakeLambda("99999999_CARDIGAN_BLACK_A.jpg");
+        otherCardigan.MatchEvidence = new MatchEvidence { ImageId = "o", FinalFamilyId = "90861099", IsKo = false };
+
+        ImageRecord_LAMBDA shotC = MakeLambda("CARDIGAN_MAGENTA76_C.jpg");
+        List<ImageRecord_LAMBDA> allRecords = [shotA, shotB, otherCardigan, shotC];
+
+        List<ImageRecord_LAMBDA> stillUnmatched = propagator.Run([shotC], allRecords);
+
+        Assert.DoesNotContain(shotC, stillUnmatched);
+        Assert.Equal("90861052", shotC.MatchEvidence?.FinalFamilyId);
+    }
+
+    //  Folder-name enrichment
+
+    [Fact]
+    public void FolderNameEnricher_MeaninglessFileInMeaningfulFolder_BorrowsFolderName()
+    {
+        // Filenames are meaningless (1.jpg, 2.jpg); the folders are one-per-product and a folder token
+        // (the reference SH23005) appears in the Excel data. The folder name is borrowed for matching.
+        FolderNameEnricher enricher = new();
+        FamilyIDRecord famA = MakeFamily("98765432", ("reference", "earphones zenith SH23005 pro", ExcelColumnClassification.Mixed));
+        FamilyIDRecord famB = MakeFamily("98765433", ("reference", "earphones apex SH23006 pro", ExcelColumnClassification.Mixed));
+
+        ImageRecord_LAMBDA img = MakeLambda("C:/drop/earphones_zenith_SH23005/1.jpg");
+        ImageRecord_LAMBDA sibling = MakeLambda("C:/drop/earphones_apex_SH23006/1.jpg");
+        List<ImageRecord_LAMBDA> records = [img, sibling];
+
+        enricher.Enrich(records, [famA, famB]);
+
+        Assert.Equal("earphones_zenith_SH23005 1.jpg", img.MatchingAlias);
+        Assert.Contains("SH23005", img.MatchingName);
+
+        // And the borrowed name now matches: StringMatcher finds the unique family via the folder tokens.
+        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2, identifierTokenMinLength: 4, indexExcelTokenBigrams: true);
+        MatchEvidence? evidence = matcher.TryMatch(img, [famA, famB]);
+        Assert.Equal("98765432", evidence?.FinalFamilyId);
+    }
+
+    [Fact]
+    public void FolderNameEnricher_FormatFolder_IsNotBorrowed()
+    {
+        // Folders describe format/size, not the product — nothing is borrowed.
+        FolderNameEnricher enricher = new();
+        FamilyIDRecord fam = MakeFamily("98765432", ("reference", "SH23005", ExcelColumnClassification.Mixed));
+
+        ImageRecord_LAMBDA imgHd = MakeLambda("C:/drop/HD/1.jpg");
+        ImageRecord_LAMBDA imgWeb = MakeLambda("C:/drop/Web/1.jpg");
+        ImageRecord_LAMBDA imgDim = MakeLambda("C:/drop/800 x 1200/1.jpg");
+        List<ImageRecord_LAMBDA> records = [imgHd, imgWeb, imgDim];
+
+        enricher.Enrich(records, [fam]);
+
+        Assert.Null(imgHd.MatchingAlias);
+        Assert.Null(imgWeb.MatchingAlias);
+        Assert.Null(imgDim.MatchingAlias);
+    }
+
+    [Fact]
+    public void FolderNameEnricher_MeaningfulFilename_IsLeftAlone()
+    {
+        // The filename already carries a product word — the folder is never borrowed, even if meaningful.
+        FolderNameEnricher enricher = new();
+        FamilyIDRecord fam = MakeFamily("98765432", ("reference", "zenith SH23005", ExcelColumnClassification.Mixed), ("model", "anastasia", ExcelColumnClassification.Categorical));
+
+        ImageRecord_LAMBDA img = MakeLambda("C:/drop/zenith_SH23005/Anastasia_front.jpg");
+        ImageRecord_LAMBDA sibling = MakeLambda("C:/drop/apex_SH23006/Betty_front.jpg");
+
+        enricher.Enrich(img is null ? [] : [img, sibling], [fam]);
+
+        Assert.Null(img.MatchingAlias);
+    }
+
+    [Fact]
+    public void FolderNameEnricher_FolderTokenNotInExcel_IsNotBorrowed()
+    {
+        // The folder is a per-product pattern, but none of its tokens appear in the Excel — no borrow.
+        FolderNameEnricher enricher = new();
+        FamilyIDRecord fam = MakeFamily("98765432", ("reference", "totally unrelated", ExcelColumnClassification.Mixed));
+
+        ImageRecord_LAMBDA img = MakeLambda("C:/drop/mystery_widget_QQ111/1.jpg");
+        ImageRecord_LAMBDA sibling = MakeLambda("C:/drop/mystery_gadget_QQ222/1.jpg");
+
+        enricher.Enrich([img, sibling], [fam]);
+
+        Assert.Null(img.MatchingAlias);
     }
 
     //  Phase E: orphan row join (MEPAL4 catalog → bundle Ref)

@@ -218,6 +218,20 @@
 </div>
 
 <div class="card">
+  <h3>It gives meaningless photo names a name from their folder</h3>
+  <p>Some photos have names that say nothing, like <code>1.jpg</code> or <code>DSCN2365.jpg</code>.
+  If such a photo sits in a folder whose name <i>is</i> meaningful, PRISM borrows the folder name for
+  matching. A folder counts as meaningful only when the folders next to it follow the same
+  one-folder-per-product pattern <b>and</b> part of the folder name actually appears in the Excel.</p>
+  <div class="example">
+    <b>Borrowed:</b> <code>1.jpg</code> inside folder <code>earphones_zenith_SH23005</code> is matched as
+    if it were called <code>earphones_zenith_SH23005 1.jpg</code> — because <code>SH23005</code> is in the Excel.<br>
+    <b>Not borrowed:</b> a folder called <code>HD</code>, <code>Web</code> or <code>800 x 1200</code> only
+    describes size or quality, so it is ignored. The photo keeps its real name in the delivered files.
+  </div>
+</div>
+
+<div class="card">
   <h3>It accepts very large deliveries</h3>
   <p>Zip files up to 16&nbsp;GB with thousands of photos work fine, including the modern large-zip format
   that big suppliers use.</p>
@@ -323,10 +337,11 @@ on to the next check. This picture shows every path a photo can take:</p>
 
   <div class="rung">
     <div class="try"><b>Check 8 — A sister photo already found the product</b>
-      <p>Photos of the same product usually share the same words in their names. If a photo without any
-      usable code looks like the "sister" of a photo that <i>did</i> match — and of no photo that matched a
-      different product — it takes over that product.</p>
-      <div class="example"><b>Example:</b> <code>CARDIGAN_MAGENTA76_A.jpg</code> has no product number. Its sister <code>24211507_CARDIGAN_76_MAGENTA_B.jpg</code> matched product <code>90861052</code> in Check&nbsp;2. The first photo joins the same product.</div>
+      <p>Photos of the same product usually share the same words in their names. A photo without any usable
+      code joins a product when its words match the "sisters" that already found that product — and no
+      sister points to a different product. All the shots of one product (front, back, extra views) are
+      accepted together and get their positions in the ordering step.</p>
+      <div class="example"><b>Example:</b> <code>..._A.jpg</code> and <code>..._B.jpg</code> matched product <code>90861052</code>. The keyless third shot <code>CARDIGAN_MAGENTA76_C.jpg</code> shares the same words, so it joins <code>90861052</code> too and lands in the next free position.</div>
     </div>
     <div class="yes">→</div>
     <div class="found">One matching sister?<br>✔ Matched</div>

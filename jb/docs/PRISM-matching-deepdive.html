@@ -270,22 +270,61 @@ a counterexample that deliberately does not, and the name of the known algorithm
   <h3><span class="stepno">8</span>Copying from a sister photo <span class="algo">token-set comparison</span></h3>
   <p>Photos of one product usually share the same rare words. PRISM reduces every filename to its rare
   words (dropping shot markers like <code>_A</code>, <code>_01</code>, <code>(1)</code>, and words that
-  half the batch shares, like the brand name). A photo without any usable code inherits the product of a
-  matched photo whose word set contains — or is contained by — its own, but only if <b>all</b> such
-  matched photos agree on one product.</p>
+  half the batch shares, like the brand name). It then works in two steps:</p>
+  <ul style="margin:6px 0; padding-left:20px; font-size:0.95rem;">
+    <li><b>Same shot set (strongest).</b> If a photo's word set is <i>exactly</i> the set already shared
+        by matched photos that all belong to one product, this photo is simply the next shot of that
+        product and joins it.</li>
+    <li><b>Loose overlap (fallback).</b> Otherwise, a photo may inherit a product whose matched photos'
+        word set contains — or is contained by — its own, but only if all such related photos agree on
+        one product.</li>
+  </ul>
   <div class="pair">
-    <div class="ex"><b>✔ match</b>
-      <code>CARDIGAN_MAGENTA76_A.jpg</code> has no product number. Its word set {cardigan, magenta}
-      is contained in that of <code>24211507_CARDIGAN_76_MAGENTA_B.jpg</code>, which matched product
-      <code>90861052</code> in check 2 — and no differently-matched photo is related. Inherited.</div>
-    <div class="cex"><b>✘ refused: two sisters, two products</b>
-      <code>CARDIGAN_MAGENTA_C.jpg</code> relates to two matched photos — one on product A, one on
-      product B (two magenta cardigans in the batch). The sisters disagree → no inheritance, photo is
-      reported instead. Better a gap than a coin flip.</div>
+    <div class="ex"><b>✔ the whole set is accepted</b>
+      <code>24211507_..._A.jpg</code> and <code>_B.jpg</code> matched product <code>90861052</code>;
+      both reduce to {cardigan, magenta}. The keyless third shot
+      <code>CARDIGAN_MAGENTA76_C.jpg</code> reduces to the <i>same</i> set → it is the product's third
+      photo and joins <code>90861052</code> too. The ordering step then places the shots (front → det0,
+      back → det1, this one → the next free slot).</div>
+    <div class="cex"><b>✘ refused: the set belongs to two products</b>
+      If the batch genuinely holds <i>two different</i> magenta cardigans, both reducing to
+      {cardigan, magenta}, then that word set is owned by two products at once. A keyless
+      <code>CARDIGAN_MAGENTA_C.jpg</code> cannot tell which one it belongs to → reported, not guessed.
+      Better a gap than a coin flip.</div>
   </div>
 </div>
 
-<h2>5. The Excel side has algorithms too</h2>
+<h2>5. Before matching: borrowing a name from the folder</h2>
+
+<div class="card">
+  <h3>Meaningless filenames get a name from their folder</h3>
+  <p>Some photos arrive with names that say nothing about the product: <code>1.jpg</code>,
+  <code>DSCN2365.jpg</code>, <code>IMG_10005.png</code>. Before any check runs, PRISM looks at the
+  <i>folder</i> such a photo sits in. It borrows the folder's name only when the folder is meaningful,
+  and all three of these are true:</p>
+  <ul style="margin:6px 0; padding-left:20px; font-size:0.95rem;">
+    <li>The neighbouring folders (same level) follow the same one-folder-per-product pattern — not a
+        handful of format buckets.</li>
+    <li>The folder name is not a format word like <code>HD</code>, <code>Web</code>,
+        <code>packshot</code> or a size like <code>800 x 1200</code>.</li>
+    <li>At least one word or code in the folder name actually appears in the Excel data.</li>
+  </ul>
+  <p>When borrowed, the folder name is only used for matching — the photo keeps its real filename in the
+  output and report.</p>
+  <div class="pair">
+    <div class="ex"><b>✔ borrowed</b>
+      <code>1.jpg</code> inside folder <code>earphones_zenith_SH23005</code>, alongside folders
+      <code>earphones_apex_SH23006</code>, … The code <code>SH23005</code> appears in the Excel, so the
+      photo is matched as if it were named <code>earphones_zenith_SH23005 1.jpg</code>.</div>
+    <div class="cex"><b>✘ not borrowed</b>
+      <code>1.jpg</code> inside folder <code>HD</code> (or <code>Web</code>, or <code>800 x 1200</code>).
+      These describe format, not product, so nothing is borrowed and the photo takes its chances on its
+      own name. Also: a folder whose words appear <i>nowhere</i> in the Excel is not borrowed either —
+      it would add noise, not meaning.</div>
+  </div>
+</div>
+
+<h2>6. The Excel side has algorithms too</h2>
 
 <div class="card">
   <h3>Forgiving header reading <span class="algo">Levenshtein distance</span></h3>
@@ -318,7 +357,7 @@ a counterexample that deliberately does not, and the name of the known algorithm
   </div>
 </div>
 
-<h2>6. Famous-algorithm scorecard</h2>
+<h2>7. Famous-algorithm scorecard</h2>
 <p>Which well-known techniques are inside PRISM — and which famous names are deliberately <i>not</i>:</p>
 
 <div class="card scroll">
@@ -339,7 +378,7 @@ a counterexample that deliberately does not, and the name of the known algorithm
   </table>
 </div>
 
-<h2>7. The design principles behind all of it</h2>
+<h2>8. The design principles behind all of it</h2>
 <div class="card">
   <ul style="margin:6px 0; padding-left: 20px;">
     <li><b>Certain before clever.</b> Exact numbers → combined numbers → words → AI. Each check is cheaper

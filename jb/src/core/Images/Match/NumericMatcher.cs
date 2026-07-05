@@ -84,7 +84,7 @@ internal sealed class NumericMatcher
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
-        string   filename      = record.InitialFullName ?? string.Empty;
+        string   filename      = record.MatchingName;
         string   stem          = Path.GetFileNameWithoutExtension(filename);
         string[] tokens        = GetEligibleTokens(filename);
         string   fileDigits    = string.Concat(stem.Where(char.IsDigit));
@@ -173,7 +173,7 @@ internal sealed class NumericMatcher
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
-        string   filename  = record.InitialFullName ?? string.Empty;
+        string   filename  = record.MatchingName;
         string   stem      = Path.GetFileNameWithoutExtension(filename);
         string[] tokens    = GetNumericTokensFromFilename(filename);
 
@@ -324,7 +324,7 @@ internal sealed class NumericMatcher
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
-        string   filename = record.InitialFullName ?? string.Empty;
+        string   filename = record.MatchingName;
         string   stem     = Path.GetFileNameWithoutExtension(filename);
         string[] tokens   = GetNumericTokensFromFilename(filename);
 
@@ -422,7 +422,7 @@ internal sealed class NumericMatcher
         if (substringRescueLength <= 0)
             return null;
 
-        string   filename = record.InitialFullName ?? string.Empty;
+        string   filename = record.MatchingName;
         string   stem     = Path.GetFileNameWithoutExtension(filename);
         string[] tokens   = GetNumericTokensFromFilename(filename);
 

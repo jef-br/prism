@@ -68,6 +68,14 @@ public sealed record MatchingConfig
     /// </summary>
     public bool EnableSiblingPropagation { get; init; } = false;
 
+    /// <summary>
+    /// When true, images with a meaningless filename (1.jpg, DSCN2365.jpg, IMG_10005.png) borrow
+    /// their folder's name for matching when the folder is meaningful — its siblings form a per-item
+    /// pattern and one of its tokens appears in the Excel data. Format folders (HD, Web, packshot,
+    /// 800 x 1200) are never borrowed.
+    /// </summary>
+    public bool EnableFolderNameEnrichment { get; init; } = false;
+
     /// <summary>Rules that drive numeric token matching (familyID, EAN).</summary>
     public IReadOnlyList<MatchingRule> NumericRules =>
         Rules.Where(r => r.Type.Equals("numeric", StringComparison.OrdinalIgnoreCase)).ToList();

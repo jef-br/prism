@@ -8,6 +8,7 @@
   "identifierTokenMinLength": 4,
   "indexExcelTokenBigrams": true,
   "enableSiblingPropagation": true,
+  "enableFolderNameEnrichment": true,
   "rules": [
     {
       "excelField": "FamilyID",
