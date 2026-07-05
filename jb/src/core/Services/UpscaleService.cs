@@ -7,11 +7,13 @@ namespace Prism.Core;
 public sealed class UpscaleService : IUpscaleService {
     private UpscaleService() { }
 
+    private const string TilingConfigRelativePath = "Images/Upscale/cfg_Upscale.json";
+
     /// <summary>
-    /// Resolves the Real-ESRGAN model asset and initializes the GPU session when a DirectML adapter is
-    /// present. When no hardware DirectML adapter is detected the CPU Lanczos4 fallback is used without
-    /// loading any model. Throws <see cref="PrismConfigurationException"/> when DirectML is available but
-    /// the model asset cannot be located.
+    /// Resolves the Real-ESRGAN model asset and tiling config, and initializes the GPU session when a
+    /// DirectML adapter is present. When no hardware DirectML adapter is detected the CPU Lanczos4
+    /// fallback is used without loading any model. Throws <see cref="PrismConfigurationException"/> when
+    /// DirectML is available but the model asset or tiling config cannot be located.
     /// </summary>
     public static UpscaleService Create( PrismConfiguration configuration ) {
         if (ImageUpscaler.IsGpuAvailable) {
@@ -22,7 +24,14 @@ public sealed class UpscaleService : IUpscaleService {
                     $"Real-ESRGAN ONNX model not found at '{configuration.UpscaleModelPath}'. Deploy it next " +
                     "to Prism_Config.json, or set PRISM_ONNX_MODEL_DIR.");
 
-            Upscaler_g_p_u.Initialize(modelPath);
+            string? configPath = PrismConfigLocator.FindModelAsset(TilingConfigRelativePath);
+
+            if (configPath is null)
+                throw new PrismConfigurationException(
+                    $"cfg_Upscale.json not found at '{TilingConfigRelativePath}'. Deploy it next " +
+                    "to Prism_Config.json, or set PRISM_ONNX_MODEL_DIR.");
+
+            Upscaler_g_p_u.Initialize(modelPath, configPath);
         }
 
         return new UpscaleService();

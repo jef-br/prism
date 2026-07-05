@@ -1,0 +1,6 @@
+{
+    "Tiling": {
+        "TileOverlapPixels": 16,
+        "DiscardBandPixels": 3
+    }
+}

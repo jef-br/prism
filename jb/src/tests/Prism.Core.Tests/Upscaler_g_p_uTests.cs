@@ -13,11 +13,12 @@ namespace PrismCoreTests;
 public class Upscaler_g_p_uTests
 {
     private const string NonexistentModelPath = @"Z:\definitely\does\not\exist\Real-ESRGAN_x2plus.onnx";
+    private const string NonexistentConfigPath = @"Z:\definitely\does\not\exist\cfg_Upscale.json";
 
     [Fact]
     public void Initialize_NonexistentPath_DoesNotThrow()
     {
-        Exception? exception = Record.Exception(() => Upscaler_g_p_u.Initialize(NonexistentModelPath));
+        Exception? exception = Record.Exception(() => Upscaler_g_p_u.Initialize(NonexistentModelPath, NonexistentConfigPath));
 
         Assert.Null(exception);
     }
@@ -27,7 +28,7 @@ public class Upscaler_g_p_uTests
     {
         bool before = Upscaler_g_p_u.IsReady;
 
-        Upscaler_g_p_u.Initialize(NonexistentModelPath);
+        Upscaler_g_p_u.Initialize(NonexistentModelPath, NonexistentConfigPath);
 
         Assert.Equal(before, Upscaler_g_p_u.IsReady);
     }
@@ -35,10 +36,10 @@ public class Upscaler_g_p_uTests
     [Fact]
     public void Initialize_CalledTwiceWithNonexistentPath_IsIdempotentAndDoesNotThrow()
     {
-        Exception? firstException = Record.Exception(() => Upscaler_g_p_u.Initialize(NonexistentModelPath));
+        Exception? firstException = Record.Exception(() => Upscaler_g_p_u.Initialize(NonexistentModelPath, NonexistentConfigPath));
         bool afterFirst = Upscaler_g_p_u.IsReady;
 
-        Exception? secondException = Record.Exception(() => Upscaler_g_p_u.Initialize(NonexistentModelPath));
+        Exception? secondException = Record.Exception(() => Upscaler_g_p_u.Initialize(NonexistentModelPath, NonexistentConfigPath));
 
         Assert.Null(firstException);
         Assert.Null(secondException);
@@ -49,7 +50,7 @@ public class Upscaler_g_p_uTests
     public async Task Initialize_ConcurrentCallsWithNonexistentPath_DoNotDeadlock()
     {
         Task[] tasks = Enumerable.Range(0, 8)
-            .Select(_ => Task.Run(() => Upscaler_g_p_u.Initialize(NonexistentModelPath)))
+            .Select(_ => Task.Run(() => Upscaler_g_p_u.Initialize(NonexistentModelPath, NonexistentConfigPath)))
             .ToArray();
 
         Task allTasks = Task.WhenAll(tasks);
