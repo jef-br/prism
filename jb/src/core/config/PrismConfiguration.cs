@@ -98,6 +98,14 @@ public sealed class PrismConfiguration {
     public string ClipMergesFile { get; private set; } = "";
     public string UpscaleModelPath { get; private set; } = "";
 
+    // --- Output det-order policy
+    /// <summary>
+    /// Output.DET-ORDER-GAPS-ALLOWED. When false (default), each family's det indices are compacted to a
+    /// contiguous 0..n-1 range at export time (gaps closed, relative order preserved). When true, det
+    /// indices are left exactly as the Order stage assigned them. See PRISM-order-rename.md.
+    /// </summary>
+    public bool DetOrderGapsAllowed { get; private set; }
+
     // --- Factory
     public static PrismConfiguration LoadPrismConfig( string cfgPath ) {
         if (string.IsNullOrWhiteSpace(cfgPath)) {
@@ -195,7 +203,10 @@ public sealed class PrismConfiguration {
             ClipModelFile = RequireString(root, cfgPath, "Models", "Clip", "Model"),
             ClipVocabFile = RequireString(root, cfgPath, "Models", "Clip", "Vocab"),
             ClipMergesFile = RequireString(root, cfgPath, "Models", "Clip", "Merges"),
-            UpscaleModelPath = RequireString(root, cfgPath, "Models", "Upscale", "Path")
+            UpscaleModelPath = RequireString(root, cfgPath, "Models", "Upscale", "Path"),
+
+            // Optional with a safe default (false = compact) so existing configs keep working.
+            DetOrderGapsAllowed = OptionalBool(root, "Output", "DET-ORDER-GAPS-ALLOWED") ?? false
         };
 
         config.Validate(cfgPath);

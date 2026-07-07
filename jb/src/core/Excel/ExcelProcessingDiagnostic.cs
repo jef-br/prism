@@ -59,6 +59,26 @@ public sealed record ExcelProcessingDiagnostic(
     }
 
     /// <summary>
+    /// Creates a model-level warning diagnostic not tied to a single worksheet.
+    /// </summary>
+    /// <param name="reasonCode">Stable reason code.</param>
+    /// <param name="message">Safe diagnostic message.</param>
+    /// <param name="columnName">Optional canonical column name.</param>
+    /// <returns>A model-level diagnostic.</returns>
+    public static ExcelProcessingDiagnostic ModelWarning(string reasonCode, string message, string? columnName = null)
+    {
+        return new ExcelProcessingDiagnostic(
+            ExcelDiagnosticSeverity.Warning,
+            reasonCode,
+            message,
+            string.Empty,
+            string.Empty,
+            null,
+            columnName,
+            null);
+    }
+
+    /// <summary>
     /// Creates a row-level KO diagnostic.
     /// </summary>
     /// <param name="reasonCode">Stable reason code.</param>

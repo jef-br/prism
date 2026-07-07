@@ -96,6 +96,11 @@ public sealed class PrismService : IDisposable
         ValidateRequest(request);
         IngestResult ingest   = await Import(request, null, cancellationToken);
         MatchingResult matched = await Match(ingest, null, cancellationToken);
+
+        // Mirror the export-time det-gap policy so match-only filenames match the full pipeline.
+        if (!configuration.DetOrderGapsAllowed)
+            ImageOrderer.CompactDetOrder(matched.LambdaRecords);
+
         return BuildMatchOnlyResult(matched.LambdaRecords);
     }
 
@@ -121,6 +126,10 @@ public sealed class PrismService : IDisposable
 
         ImageMatcher.Run(lambdas, built.FamilyRecords);
         ImageOrderer.Run(lambdas, built.FamilyRecords);
+
+        // Mirror the export-time det-gap policy so MatchLite filenames match the full pipeline.
+        if (!configuration.DetOrderGapsAllowed)
+            ImageOrderer.CompactDetOrder(lambdas);
 
         return BuildMatchOnlyResult(lambdas);
     }

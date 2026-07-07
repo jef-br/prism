@@ -19,6 +19,11 @@ internal static class Exporter
     /// <returns>The canonical manifest plus ZIP bytes when ZIP format was requested.</returns>
     internal static ExportArtifacts Run(ExportRequest request)
     {
+        // Close det-order gaps first so every downstream reader (output records, NewName, manifest rows)
+        // sees the compacted indices. Order stage is untouched; this only renumbers, never reorders.
+        if (!request.DetOrderGapsAllowed)
+            ImageOrderer.CompactDetOrder(request.LambdaRecords);
+
         BuildOutputRecords(request);
 
         return string.Equals(request.Format, "zip", StringComparison.OrdinalIgnoreCase)

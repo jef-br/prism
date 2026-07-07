@@ -124,6 +124,16 @@ public sealed class ModelBuilder
         // sheet or file — join them via unique shared keys (EAN, ref/article digit runs).
         OrphanRowJoiner.Join(model, orphanRows, diagnostics);
 
+        // Model-scope prune: a canonical property can survive the per-worksheet fill-ratio gate yet be
+        // blank across every merged family record. Drop those to shrink the matcher search space.
+        foreach (string droppedProperty in model.PruneEmptyProperties(config.RecordPrimaryKey))
+        {
+            diagnostics.Add(ExcelProcessingDiagnostic.ModelWarning(
+                "excel.column_dropped_empty_model_wide",
+                $"Column '{droppedProperty}' was dropped because it was empty across all family records.",
+                droppedProperty));
+        }
+
         return new ExcelModelBuildResult(model, diagnostics);
     }
 

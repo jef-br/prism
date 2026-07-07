@@ -62,6 +62,57 @@ public sealed class InternalExcelModel
             .ToArray();
     }
 
+    /// <summary>
+    /// Removes canonical properties that are empty across every family record, shrinking the model
+    /// and the downstream matcher search space. Runs once after collation completes. The primary-key
+    /// property is never pruned. Returns the dropped property names for diagnostic emission.
+    /// </summary>
+    /// <param name="primaryKeyName">Configured primary-key property to exempt from pruning.</param>
+    /// <returns>Names of the properties dropped, sorted for stable diagnostics.</returns>
+    internal IReadOnlyList<string> PruneEmptyProperties(string primaryKeyName)
+    {
+        // A property can linger in classifications/tokens without ever holding a canonical value (an
+        // all-blank column that survived the per-worksheet fill gate registers a classification but no
+        // canonical value). Union all property-name-keyed dictionaries so we prune that bloat too.
+        HashSet<string> candidateNames = new(StringComparer.OrdinalIgnoreCase);
+        foreach (FamilyIDRecord record in recordsByFamilyID.Values)
+        {
+            foreach (string propertyName in record.CanonicalProperties.Keys
+                .Concat(record.ColumnClassifications.Keys)
+                .Concat(record.NormalizedTokens.Keys)
+                .Concat(record.OriginalSourceCellValues.Keys))
+            {
+                if (!string.Equals(propertyName, primaryKeyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    candidateNames.Add(propertyName);
+                }
+            }
+        }
+
+        string[] emptyNames = candidateNames
+            .Where(name => recordsByFamilyID.Values.All(record =>
+                !record.CanonicalProperties.TryGetValue(name, out string? value) || string.IsNullOrWhiteSpace(value)))
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (emptyNames.Length == 0)
+        {
+            return emptyNames;
+        }
+
+        foreach (FamilyIDRecord record in recordsByFamilyID.Values)
+        {
+            foreach (string emptyName in emptyNames)
+            {
+                record.RemoveProperty(emptyName);
+            }
+
+            TokenStore.RefreshFromRecord(record);
+        }
+
+        return emptyNames;
+    }
+
     private FamilyIDRecord GetOrCreateFamilyRecord(string familyID)
     {
         if (recordsByFamilyID.TryGetValue(familyID, out FamilyIDRecord? existingRecord))

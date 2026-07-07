@@ -62,6 +62,7 @@
         "JobRetries": 3
     },
     "Output": {
+        "DET-ORDER-GAPS-ALLOWED": false,
         "Images": {
             "Processed": {
                 "MINIMUM_SIZE_IN_PIXELS": {

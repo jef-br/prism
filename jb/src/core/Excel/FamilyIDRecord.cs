@@ -145,6 +145,19 @@ public sealed class FamilyIDRecord
             propertyValue.SourceLocations));
     }
 
+    /// <summary>
+    /// Removes a dynamic property from this record across all four property-keyed dictionaries.
+    /// Used by the model-wide empty-column prune after collation.
+    /// </summary>
+    /// <param name="propertyName">Canonical property name to remove.</param>
+    public void RemoveProperty(string propertyName)
+    {
+        canonicalProperties.Remove(propertyName);
+        columnClassifications.Remove(propertyName);
+        normalizedTokens.Remove(propertyName);
+        originalSourceCellValues.Remove(propertyName);
+    }
+
     private List<string> GetExistingSourceValues(string propertyName)
     {
         return originalSourceCellValues.TryGetValue(propertyName, out IReadOnlyList<string>? existingValues)

@@ -34,7 +34,28 @@ internal static class ImageOrderer
         }
     }
 
-    //  Family processing 
+    //  Det compaction (gap policy)
+
+    /// <summary>
+    /// Compacts each family's det indices to a contiguous 0..n-1 range: gaps are closed and the relative
+    /// order the Order stage assigned is preserved exactly (renumber only, never reorder). Applied when
+    /// Output.DET-ORDER-GAPS-ALLOWED is false. Operates on non-KO matched records grouped by Family.
+    /// </summary>
+    internal static void CompactDetOrder(IReadOnlyList<ImageRecord_LAMBDA> records)
+    {
+        IEnumerable<IGrouping<string, ImageRecord_LAMBDA>> familyGroups = records
+            .Where(r => !r.IsKo && !string.IsNullOrEmpty(r.Family))
+            .GroupBy(r => r.Family!);
+
+        foreach (IGrouping<string, ImageRecord_LAMBDA> group in familyGroups)
+        {
+            int det = 0;
+            foreach (ImageRecord_LAMBDA lambda in group.OrderBy(r => r.DetOrder))
+                lambda.DetOrder = det++;
+        }
+    }
+
+    //  Family processing
 
     /// <summary>
     /// Assigns det slots to all images within one FamilyID group.
