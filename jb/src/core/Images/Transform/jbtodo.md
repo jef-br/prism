@@ -5,7 +5,7 @@
   - Blocked until: anatomical ratio constants are agreed upon.
   - Answer:
     - The ratio of head-to-body should lie between 1:4 (kids) and 1:8 (adults) anything outside that is weird
-    - 
+    - Implied search band (derived from that ratio + shipped Algorithm B Haar path, not a new constant): head occupies the top H/4 (kids, widest case) to H/8 (adults) of the lambda BoundingBox height H. So restrict `DetectMultiScale` to the top ~25% of the BoundingBox — covers the widest 1:4 case — instead of the full frame: ~75% fewer pixels scanned, and torso/hand false positives fall out of the region entirely. Bound the scale sweep too: face height ≈ head height, so `minSize` ≈ H/8, `maxSize` ≈ H/4 — the same ratio caps the cascade's window range. Still blocked on confirming the exact top-of-band offset (crown sits above the face box) before wiring in.
 
 -------
 - [ ] Spec and implement Tx_util_HeadCutter: utility class that crops a human head at the nose-to-lips boundary, with family-aware fallback for covered or out-of-shot faces.

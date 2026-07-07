@@ -1,18 +1,18 @@
 # Daily Brief
 
 ##### Changed
-- Self-hosted CI merged (PR #3, commit afeb3c0). `ci.yml` PR gate: Release build → xUnit unit tests (excludes `PipelineIntegrationTests`) → web typecheck+build → match-only CiMini smoke. `full-pipeline.yml`: daily 10:30 Europe/Brussels (DST-aware) + manual full run.
-- CiMini fixture dataset committed under `test/datasets/CiMini/` (the only in-repo dataset) with `expected-match.json` golden; `Invoke-CiPipeline.ps1` golden-assertion harness added; `Submit-PrismJob`/`Wait-PrismResult` exported from `PrismJobRunner.psm1`.
-- 
-- ONNX model paths moved out of hard-coded literals into `Prism_Config.json` (new `Models` section) via `PrismConfiguration`; `ClassificationService`/`UpscaleService` repointed. Stale `Run_TinyTest.ps1` dataset path fixed.
-
-- Classify taxonomy todo has since been FROZEN by you ("captured in canonical files, no reconciliation action needed") — this supersedes last brief's pending name-level verification for that item.
+- T-2800 fixed and merged (PR #4): GPU upscaler was never built on the in-process path (only the API path constructed it) — `PipelineServiceFactory` now wires it in-process; `Upscaler_g_p_u.cs` gains tiled inference for large images; `Upscaler_g_p_uTests.cs` added. `Invoke-CiPipeline.ps1` now surfaces the real pipeline failure reason instead of a generic error.
+- Transform todos closed (saliency anchor, headcut thresholds, Tx_DetailCropper): `PRISM-transform-generate.md` corrected — Transform stage is fully active, no `ImageProcessorAvailable()=false` gate; `Tx_DetailCropper` ships the full 0–4 edge-intersection decision tree; headcut Algorithm B (Haar `frontalface`, cut at 75% face height) is live. Only `Tx_util_HeadCutter` Algorithm A remains open.
+- Classify analyzers deleted (`Analyzer_Interior.cs`, `Analyzer_IsIllustration.cs`) and `.csproj` repointed; Classify jbtodo trimmed to two FROZEN items.
+- T-2800/T-2810 archived to `AGENT-TICKET-ARCHIVE.md`.
+- Two new Ready tickets block trusting a golden manifest: T-2820 (det-slot for tied images changes every run — CiMini families 94613033 and 90861083 flip-flop; needs a deterministic secondary tie-break) and T-2830 (det numbering starts at det8, not documented zero-based det0).
 
 ##### Todo updates
-- Services test-suites todo (`jb/src/core/Services/jbtodo.md`) — added a proposed-triage note (pending approval, existing data only): the split's design is already present, only the physical project split is missing. Grounded in `.github/workflows/ci.yml` + repo layout — the `I*Service` boundary set exists, `Prism.Core.Tests` is already partitioned by stage folders under one `.csproj`, `PipelineIntegrationTests.cs` is the top-level e2e suite, and CI already enforces the unit/integration split by name filter. Residual work is mechanical (promote folders to per-service `.csproj`). Why safe: no invention, no course change, matches the existing pending-approval pattern.
-- Everything else unimproved: Transform DetailCropper/HeadCutter (T-2200) need product decisions; Classify per-feature analyzers mostly need new `ClipPrompts.json` entries or triage approval; Generate + phenotype-validation todos FROZEN. Nothing improvable without guessing.
+- Transform `Tx_util_HeadCutter` Algorithm A (`jb/src/core/Images/Transform/jbtodo.md`) — filled the empty answer bullet by deriving the Haar search band from the accepted 1:4–1:8 head:body ratio plus the already-shipped Algorithm B Haar path: restrict `DetectMultiScale` to the top ~25% of the lambda BoundingBox (widest 1:4 case), ~75% fewer pixels scanned and torso/hand false positives fall outside the region; cap the scale sweep at minSize≈H/8, maxSize≈H/4. Derivation from existing data, no new constant; still flags the crown-offset as the one open point before wiring in.
+- Everything else unimproved: Services test-suites triage already recorded last pass and untouched by this week's diffs; Classify/Generate todos FROZEN; HeadCutter spec (landmark model, thresholds) needs product decisions; root job-expectation log (MMERO26/HEROAUT2/HEROAUT3 still `???` from 01/07) needs real runs. Nothing else improvable without guessing.
 
 ##### Next steps
-- Approve or reject the Services test-suites triage: decide whether per-service project split is worth the multi-project overhead now vs. deferring until services deploy independently.
-  
-- Still open from last brief: decide whether the match-only / `MatchLite` route needs a ticket so the root `jbtodo.md` "matchingservice public" line can close.
+- Sequence T-2820 → T-2830 → recapture golden: land a deterministic tie-break (filename or original-index secondary key) in `ImageOrderer`/`Order` before pinning any `expected-manifest.json`.
+- T-2830 first needs the intent call: is the det8 start a real off-by-N indexing bug or an undocumented convention — resolve against `PRISM-order-rename.md` before touching code or CLAUDE.md.
+- Approve or reject the Services per-service `.csproj` split (still pending from last pass — mechanical work, only the multi-project overhead-vs-defer call is open).
+- Run MMERO26/HEROAUT2/HEROAUT3 to close the three `???` entries in the root job-expectation log.
