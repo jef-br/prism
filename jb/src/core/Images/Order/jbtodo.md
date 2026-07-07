@@ -20,4 +20,15 @@ order (deterministic), but numbering still starts at det8. Once B2 threshold cal
 fire, real slot assignments (det0–det7) will appear and mixed families will have both semantic slots and
 overflow slots — the decision affects how consumers interpret the suffix.
 
-**Answer:** _pending_
+**Answer:** (a) Compact per family. Implemented as the `DET-ORDER-GAPS-ALLOWED` gap policy (default
+`false` = compact) already designed in `jb/docs/PRISM-order-rename.md`. Export renumbers each family to
+contiguous det0..detN, preserving relative order (never reorders); the Order stage is untouched.
+Code: `ImageOrderer.CompactDetOrder` called from `Exporter.Run` (and the MatchLite / MatchOnly paths in
+`PrismService`), gated by `PrismConfiguration.DetOrderGapsAllowed`.
+
+Note: this fixes the *numbering* (families now start at det0 instead of det8). It does **not** make real
+semantic det0–det7 slots appear — that still depends on phenotypes firing. Today every image overflows
+because per-feature analyzers return `UNKNOWN`, so `PhenotypeRuleSet.Assign` returns null. The
+phenotype-gating fix ("BypassPhenotypes flip" / real analyzers) is tracked in
+`jb/src/core/Images/Classify/jbtodo.md`. Until then, compaction yields det0-based numbering over the
+overflow (filename-hint → natural-filename) order.

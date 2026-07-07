@@ -122,7 +122,7 @@ internal sealed class Pipeline : IDisposable
     /// Gathers the final LAMBDA collection plus every accumulated count into the explicit
     /// <see cref="ExportRequest"/> the Exporter needs to build the manifest summary.
     /// </summary>
-    private static ExportRequest BuildExportRequest(
+    private ExportRequest BuildExportRequest(
         TransformResult transformed,
         IReadOnlyList<ImageRecord_GENERATED> generatedImages,
         PrismJobRequest request)

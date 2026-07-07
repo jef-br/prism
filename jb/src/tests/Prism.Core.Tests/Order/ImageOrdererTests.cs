@@ -220,7 +220,64 @@ public class ImageOrdererTests
         Assert.Null(koImage.OrderEvidence);
     }
 
-    //  Helpers 
+    //  CompactDetOrder — gap policy
+
+    [Fact]
+    public void CompactDetOrder_OverflowIndices_RenumberedToContiguousFromZeroPreservingOrder()
+    {
+        // Three overflow images in one family at det8, det9, det10 → expect det0, det1, det2 in the
+        // same relative order (compaction closes gaps, never reorders).
+        ImageRecord_LAMBDA a = MakeLambda("a.jpg", null, "FAM001"); a.Family = "FAM001"; a.DetOrder = 8;
+        ImageRecord_LAMBDA b = MakeLambda("b.jpg", null, "FAM001"); b.Family = "FAM001"; b.DetOrder = 9;
+        ImageRecord_LAMBDA c = MakeLambda("c.jpg", null, "FAM001"); c.Family = "FAM001"; c.DetOrder = 10;
+
+        ImageOrderer.CompactDetOrder([a, b, c]);
+
+        Assert.Equal(0, a.DetOrder);
+        Assert.Equal(1, b.DetOrder);
+        Assert.Equal(2, c.DetOrder);
+    }
+
+    [Fact]
+    public void CompactDetOrder_MultipleFamilies_EachRenumberedIndependentlyFromZero()
+    {
+        ImageRecord_LAMBDA a = MakeLambda("a.jpg", null, "FAM001"); a.Family = "FAM001"; a.DetOrder = 8;
+        ImageRecord_LAMBDA b = MakeLambda("b.jpg", null, "FAM001"); b.Family = "FAM001"; b.DetOrder = 9;
+        ImageRecord_LAMBDA c = MakeLambda("c.jpg", null, "FAM002"); c.Family = "FAM002"; c.DetOrder = 8;
+
+        ImageOrderer.CompactDetOrder([a, b, c]);
+
+        Assert.Equal(0, a.DetOrder);
+        Assert.Equal(1, b.DetOrder);
+        Assert.Equal(0, c.DetOrder);
+    }
+
+    [Fact]
+    public void CompactDetOrder_GapBetweenSemanticSlots_ClosedWithoutReordering()
+    {
+        // A family holding det2 and det5 (det0/1 empty) → det0, det1, order preserved.
+        ImageRecord_LAMBDA side   = MakeLambda("side.jpg",   "side-packshot",   "FAM001"); side.Family = "FAM001"; side.DetOrder = 2;
+        ImageRecord_LAMBDA bottom = MakeLambda("bottom.jpg", "bottom-packshot", "FAM001"); bottom.Family = "FAM001"; bottom.DetOrder = 5;
+
+        ImageOrderer.CompactDetOrder([side, bottom]);
+
+        Assert.Equal(0, side.DetOrder);
+        Assert.Equal(1, bottom.DetOrder);
+    }
+
+    [Fact]
+    public void CompactDetOrder_KoImagesExcludedFromRenumbering()
+    {
+        ImageRecord_LAMBDA ok = MakeLambda("ok.jpg", null, "FAM001"); ok.Family = "FAM001"; ok.DetOrder = 8;
+        ImageRecord_LAMBDA ko = MakeLambda("ko.jpg", null, "FAM001"); ko.Family = "FAM001"; ko.DetOrder = 9; ko.IsKo = true;
+
+        ImageOrderer.CompactDetOrder([ok, ko]);
+
+        Assert.Equal(0, ok.DetOrder);
+        Assert.Equal(9, ko.DetOrder); // untouched
+    }
+
+    //  Helpers
 
     /// <summary>
     /// Creates a minimal <see cref="ImageRecord_LAMBDA"/> with MatchEvidence set for ordering.
