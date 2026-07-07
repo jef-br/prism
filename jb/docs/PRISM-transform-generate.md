@@ -34,11 +34,19 @@ Pre-step called inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast
 **Decision (T-2500, closed):** `Upscaler_g_p_u.RunRealEsrgan` implemented. Uses `Microsoft.ML.OnnxRuntime.DirectML` (already in NuGet).
 
 - Model: `Real-ESRGAN_x2plus.onnx` — fixed ×2 super-resolution. Located at `jb/src/core/Images/Upscale/ONNX/Real-ESRGAN_x2plus.onnx`.
-- Session init: `Upscaler_g_p_u.Initialize(modelPath)` called from `UpscaleService.Create()` when `ImageUpscaler.IsGpuAvailable` is true. CPU Lanczos4 fallback active when no DirectML adapter is detected.
+- Session init: `Upscaler_g_p_u.Initialize(modelPath, configPath)` called from `UpscaleService.Create()` when `ImageUpscaler.IsGpuAvailable` is true. CPU Lanczos4 fallback active when no DirectML adapter is detected.
 - Tensor pipeline: JPEG → BGR uint8 → NCHW float32 [0,1] → `_session.Run(["input"])` → NCHW float32 [0,1] × 2 → clamp → BGR uint8 → JPEG. Tensor names: `input` / `output`.
 - Top-up: remaining scale after ×2 SR applied via Lanczos4 resize.
 - Config: model asset resolved via `PrismConfigLocator.FindModelAsset("Images/Upscale/ONNX/Real-ESRGAN_x2plus.onnx")`. Throws `PrismConfigurationException` when DirectML is available but model is missing.
 - Access boundary: `GpuProbe` is internal to `Prism.Core.Images.Upscale`. External callers (e.g. `UpscaleService` in `Prism.Core`) use `ImageUpscaler.IsGpuAvailable` rather than calling `GpuProbe` directly.
+
+### Tile stitching — weighted blend (no seams)
+
+The committed model export has a fixed `[1, 3, 64, 64]` input, so `RunTiled` splits each image into overlapping tiles. Adjacent tiles' outputs are combined with a weighted blend across the overlap band rather than a hard crop-and-paste, so no seam is visible at internal tile boundaries:
+
+- Each tile edge that faces a real neighboring tile discards a small band nearest the seam (least-accurate pixels, at the edge of the model's receptive field), then tapers from 0 to 1 across the remaining overlap with a raised-cosine ramp. An edge facing the true image border carries full weight throughout — there is no neighbor to blend against there.
+- Every output pixel accumulates a weighted sum from every tile that covers it (`AccumulateTile`) and is normalized by the accumulated weight at the end (`NormalizeAccumulator`). A pixel's "home" tile always contributes full weight, so the divide is never by zero.
+- Tunable via `jb/src/core/Images/Upscale/cfg_Upscale.json` (`UpscaleConfig`): `Tiling.TileOverlapPixels` (total overlap reserved per seam, source pixels) and `Tiling.DiscardBandPixels` (portion of that overlap discarded before blending starts). Resolved via `PrismConfigLocator.FindModelAsset("Images/Upscale/cfg_Upscale.json")`; `UpscaleService.Create()` throws `PrismConfigurationException` if it can't be found. A missing/unreadable config at the `Upscaler_g_p_u.Initialize` level itself falls back to hardcoded defaults (16px overlap / 3px discard) rather than blocking GPU session load.
 
 ---
 
