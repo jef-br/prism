@@ -1,6 +1,6 @@
 {
     "Input": {
-        "MAXIMUM_REQUEST_SIZE": 2684354560,
+        "MAXIMUM_REQUEST_SIZE": 26843545600,
         "Images": {
             "extensions": [
                 ".jpg",
@@ -15,11 +15,11 @@
             ],
             "amount": {
                 "min": 1,
-                "max": 2500
+                "max": 10000
             },
             "filesize": {
                 "min": 2048,
-                "max": 26214400
+                "max": 262144000
             }, "MINIMUM_SIZE_IN_PIXELS":{
                 "width":570,
                 "height":570
@@ -36,7 +36,7 @@
             },
             "filesize": {
                 "min": 1048,
-                "max": 2147483648
+                "max": 5368709120
             }
         },
         "EXCEL": {
@@ -49,7 +49,7 @@
             },
             "filesize": {
                 "min": 9216,
-                "max": 1048576
+                "max": 5242880
             }
         }
     },
@@ -62,6 +62,7 @@
         "JobRetries": 3
     },
     "Output": {
+        "DET-ORDER-GAPS-ALLOWED": false,
         "Images": {
             "Processed": {
                 "MINIMUM_SIZE_IN_PIXELS": {
@@ -92,6 +93,13 @@
     },
     "Classification": {
         "Confidence_Threshold": 0.9,
+        "Confidence_Thresholds": {
+            "hero-orientation": 0.6,
+            "head-visible": 0.65,
+            "body-visible": 0.6,
+            "product-color": 0.45,
+            "product-type-label": 0.45
+        },
         "Cutoff_Threshold": 0.25,
         "Deduplication": {
             "Enabled": true,

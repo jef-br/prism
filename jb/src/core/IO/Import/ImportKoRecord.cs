@@ -21,6 +21,9 @@ public sealed record ImportKoRecord
     /// <summary>Reason code for a file that exceeds the configured maximum size.</summary>
     public const string FileTooLargeReason = "import.file_too_large";
 
+    /// <summary>Reason code for an image whose pixel dimensions are below the configured input minimum.</summary>
+    public const string ImageTooSmallReason = "import.image_too_small";
+
     /// <summary>Reason code for a file with an extension that is not accepted.</summary>
     public const string UnsupportedFormatReason = "import.unsupported_format";
 
@@ -32,6 +35,9 @@ public sealed record ImportKoRecord
 
     /// <summary>KO group for oversized input files.</summary>
     public const string OversizedKoGroup = "oversized inputs";
+
+    /// <summary>KO group for images whose pixel dimensions are below the accepted input minimum.</summary>
+    public const string UndersizedKoGroup = "undersized inputs";
 
     /// <summary>KO group for unsupported input file formats.</summary>
     public const string UnsupportedFormatKoGroup = "unsupported format";

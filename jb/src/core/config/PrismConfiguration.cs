@@ -29,6 +29,20 @@ public sealed class PrismConfiguration {
     // --- Classification thresholds 
     public double ThresholdForInfluentialTags { get; private set; }
     public double ThresholdForDiscardingClassificationTags { get; private set; }
+
+    /// <summary>
+    /// Optional per-feature influential-threshold overrides (Classification.Confidence_Thresholds).
+    /// A single global threshold penalizes high-cardinality feature groups — a 5-way softmax winner
+    /// rarely reaches the confidence a 2-way winner does — so groups can declare their own bar here.
+    /// </summary>
+    public IReadOnlyDictionary<string, double> InfluentialThresholdsByFeature { get; private set; } =
+        new Dictionary<string, double>();
+
+    /// <summary>The influential threshold for <paramref name="feature"/>: its override, or the global default.</summary>
+    public double InfluentialThresholdFor(string feature) =>
+        InfluentialThresholdsByFeature.TryGetValue(feature, out double threshold)
+            ? threshold
+            : ThresholdForInfluentialTags;
     public bool ShouldDeduplicate { get; private set; }
     public int MaxHammingDistance { get; private set; }
 
@@ -84,6 +98,14 @@ public sealed class PrismConfiguration {
     public string ClipMergesFile { get; private set; } = "";
     public string UpscaleModelPath { get; private set; } = "";
 
+    // --- Output det-order policy
+    /// <summary>
+    /// Output.DET-ORDER-GAPS-ALLOWED. When false (default), each family's det indices are compacted to a
+    /// contiguous 0..n-1 range at export time (gaps closed, relative order preserved). When true, det
+    /// indices are left exactly as the Order stage assigned them. See PRISM-order-rename.md.
+    /// </summary>
+    public bool DetOrderGapsAllowed { get; private set; }
+
     // --- Factory
     public static PrismConfiguration LoadPrismConfig( string cfgPath ) {
         if (string.IsNullOrWhiteSpace(cfgPath)) {
@@ -138,6 +160,8 @@ public sealed class PrismConfiguration {
 
             ThresholdForInfluentialTags = RequireDouble(root, cfgPath, "Classification", "Confidence_Threshold"),
             ThresholdForDiscardingClassificationTags = RequireDouble(root, cfgPath, "Classification", "Cutoff_Threshold"),
+            InfluentialThresholdsByFeature = OptionalDoubleMap(root, "Classification", "Confidence_Thresholds")
+                ?? new Dictionary<string, double>(),
 
             // Deduplication is optional with safe defaults so existing configs keep working.
             ShouldDeduplicate = OptionalBool(root, "Classification", "Deduplication", "Enabled") ?? true,
@@ -179,7 +203,10 @@ public sealed class PrismConfiguration {
             ClipModelFile = RequireString(root, cfgPath, "Models", "Clip", "Model"),
             ClipVocabFile = RequireString(root, cfgPath, "Models", "Clip", "Vocab"),
             ClipMergesFile = RequireString(root, cfgPath, "Models", "Clip", "Merges"),
-            UpscaleModelPath = RequireString(root, cfgPath, "Models", "Upscale", "Path")
+            UpscaleModelPath = RequireString(root, cfgPath, "Models", "Upscale", "Path"),
+
+            // Optional with a safe default (false = compact) so existing configs keep working.
+            DetOrderGapsAllowed = OptionalBool(root, "Output", "DET-ORDER-GAPS-ALLOWED") ?? false
         };
 
         config.Validate(cfgPath);
@@ -341,6 +368,19 @@ public sealed class PrismConfiguration {
         foreach (JsonElement item in element.Value.EnumerateArray()) {
             if (item.ValueKind == JsonValueKind.String)
                 values.Add(item.GetString()!);
+        }
+        return values;
+    }
+
+    private static IReadOnlyDictionary<string, double>? OptionalDoubleMap( JsonElement root, params string[] path ) {
+        JsonElement? element = Navigate(root, path);
+        if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Object)
+            return null;
+
+        Dictionary<string, double> values = new(StringComparer.OrdinalIgnoreCase);
+        foreach (JsonProperty property in element.Value.EnumerateObject()) {
+            if (property.Value.ValueKind == JsonValueKind.Number)
+                values[property.Name] = property.Value.GetDouble();
         }
         return values;
     }

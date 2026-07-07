@@ -14,16 +14,27 @@ internal sealed class StringMatcher
         @"[^a-zA-ZÀ-ÖØ-öø-ÿ0-9]+",
         RegexOptions.Compiled);
 
+    // Splits mixed tokens at letter↔digit boundaries: "magenta76" → ["magenta", "76"].
+    private static readonly Regex AlphaDigitBoundaryPattern = new(
+        @"(?<=\d)(?=\D)|(?<=\D)(?=\d)",
+        RegexOptions.Compiled);
+
     private readonly TranslationConfig translationConfig;
+    private readonly int bracket3MinDistinctTokens;
+    private readonly int identifierTokenMinLength;
+    private readonly bool indexExcelTokenBigrams;
 
     // Inverted token index (family token → postings), built once per family set so Bracket 3 does not
     // rescan every family for every image. Keyed by reference identity of the families list.
     private Dictionary<string, List<Posting>>? tokenIndex;
     private IReadOnlyList<FamilyIDRecord>? indexedFamilies;
 
-    internal StringMatcher(TranslationConfig translationConfig)
+    internal StringMatcher(TranslationConfig translationConfig, int bracket3MinDistinctTokens = 1, int identifierTokenMinLength = 0, bool indexExcelTokenBigrams = false)
     {
         this.translationConfig = translationConfig;
+        this.bracket3MinDistinctTokens = bracket3MinDistinctTokens;
+        this.identifierTokenMinLength = identifierTokenMinLength;
+        this.indexExcelTokenBigrams = indexExcelTokenBigrams;
     }
 
     //  Bracket 3 
@@ -36,7 +47,7 @@ internal sealed class StringMatcher
         ImageRecord_LAMBDA record,
         IReadOnlyList<FamilyIDRecord> families)
     {
-        string filename      = record.InitialFullName ?? string.Empty;
+        string filename      = record.MatchingName;
         string sourceFilename = filename;
         string imageId       = Path.GetFileNameWithoutExtension(filename);
 
@@ -63,6 +74,21 @@ internal sealed class StringMatcher
             .ToList();
 
         if (ranked.Count > 1 && ranked[0].DistinctMatches == ranked[1].DistinctMatches)
+        {
+            // Top tie: short digit tokens (excluded from string tokens) may still discriminate —
+            // "76" picks the family whose columns carry color code 76 over its 13-coded sibling.
+            string? tiebreakWinner = BreakTieWithShortDigitTokens(filename, ranked, families);
+            if (tiebreakWinner is null)
+                return null;
+
+            ranked = [ranked.First(r => r.FamilyId == tiebreakWinner)];
+        }
+
+        // Precision gate: a winner carried by fewer distinct tokens than configured (e.g. a single
+        // shared color word) is not accepted here — later brackets may still assign it — unless one
+        // matched token is identifier-grade (letters+digits, unique to this family across the index).
+        if (ranked[0].DistinctMatches < bracket3MinDistinctTokens &&
+            !HasUniqueIdentifierToken(ranked[0].Evidence, ranked[0].FamilyId))
             return null;
 
         (string matchedFamilyId, List<TokenEvidenceItem> tokenEvidence, int winnerMatches) = ranked[0];
@@ -82,6 +108,85 @@ internal sealed class StringMatcher
             ImageNgpSummary     = BuildNgpSummary(record),
             SafeExplanation     = $"Bracket3: {winnerMatches} string token(s) uniquely matched family {matchedFamilyId} (score={score:F3})."
         };
+    }
+
+    /// <summary>
+    /// Attempts to break a Bracket 3 top tie using the pure-digit filename tokens that string
+    /// matching excludes. A short digit token that appears in the normalized tokens of exactly one
+    /// tied family picks that family; tokens pointing at different families leave the tie standing.
+    /// </summary>
+    /// <returns>The FamilyID every discriminating digit token agrees on; null when none or conflicting.</returns>
+    private string? BreakTieWithShortDigitTokens(
+        string filename,
+        List<(string FamilyId, List<TokenEvidenceItem> Evidence, int DistinctMatches)> ranked,
+        IReadOnlyList<FamilyIDRecord> families)
+    {
+        int topMatches = ranked[0].DistinctMatches;
+        HashSet<string> tiedFamilyIds = ranked
+            .Where(r => r.DistinctMatches == topMatches)
+            .Select(r => r.FamilyId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        List<FamilyIDRecord> tiedFamilies = families
+            .Where(f => tiedFamilyIds.Contains(f.FamilyID))
+            .ToList();
+
+        string stem = Path.GetFileNameWithoutExtension(filename);
+        string? agreedWinner = null;
+
+        foreach (string token in TokenSplitPattern.Split(stem))
+        {
+            if (token.Length == 0 || !IsAllDigits(token))
+                continue;
+
+            List<string> holders = tiedFamilies
+                .Where(f => f.NormalizedTokens.Values.Any(tokens => tokens.Contains(token, StringComparer.OrdinalIgnoreCase)))
+                .Select(f => f.FamilyID)
+                .ToList();
+
+            if (holders.Count != 1)
+                continue; // not discriminating among the tied families
+
+            if (agreedWinner is not null && !agreedWinner.Equals(holders[0], StringComparison.OrdinalIgnoreCase))
+                return null; // two digit tokens point at different tied families
+
+            agreedWinner = holders[0];
+        }
+
+        return agreedWinner;
+    }
+
+    /// <summary>
+    /// True when the evidence contains an identifier-grade filename token — letters and digits mixed,
+    /// at least IdentifierTokenMinLength long, and present in exactly one family across the token
+    /// index. Such a token (e.g. "1707527E", "A129") is a reference code, not a shared word, and is
+    /// allowed to carry a Bracket 3 assignment alone.
+    /// </summary>
+    private bool HasUniqueIdentifierToken(List<TokenEvidenceItem> evidence, string familyId)
+    {
+        if (identifierTokenMinLength <= 0 || tokenIndex is null)
+            return false;
+
+        foreach (TokenEvidenceItem item in evidence)
+        {
+            string normalized = NormalizeDiacritics(item.FilenameToken.ToLowerInvariant());
+
+            if (normalized.Length < identifierTokenMinLength ||
+                !normalized.Any(char.IsLetter) || !normalized.Any(char.IsDigit))
+                continue;
+
+            if (!tokenIndex.TryGetValue(normalized, out List<Posting>? postings))
+                continue;
+
+            HashSet<string> holders = postings
+                .Select(p => p.FamilyId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (holders.Count == 1 && holders.Contains(familyId))
+                return true;
+        }
+
+        return false;
     }
 
     //  Inverted token index (Brackets 3 and 4)
@@ -160,12 +265,61 @@ internal sealed class StringMatcher
 
                     postings.Add(new Posting(family.FamilyID, property.Key, familyToken));
                 }
+
+                if (indexExcelTokenBigrams)
+                    IndexAdjacentTokenBigrams(index, family, property.Key);
             }
         }
 
         tokenIndex = index;
         indexedFamilies = families;
         return index;
+    }
+
+    /// <summary>
+    /// Indexes concatenations of adjacent cell tokens in both orders for one family column, so a
+    /// glued filename token ("palmblue", "magenta76") finds the family whose cell reads
+    /// "…PALM BLUE" / "76 MAGENTA". Adjacency comes from the original cell values —
+    /// NormalizedTokens are sorted alphabetically and have lost it. Digit-only pairs are skipped
+    /// (digit concatenations belong to NumericMatcher).
+    /// </summary>
+    private void IndexAdjacentTokenBigrams(Dictionary<string, List<Posting>> index, FamilyIDRecord family, string propertyName)
+    {
+        if (!family.OriginalSourceCellValues.TryGetValue(propertyName, out IReadOnlyList<string>? cellValues))
+            return;
+
+        foreach (string cellValue in cellValues)
+        {
+            string? previous = null;
+
+            foreach (string rawToken in TokenSplitPattern.Split(cellValue))
+            {
+                string token = NormalizeDiacritics(rawToken.ToLowerInvariant());
+                if (token.Length < 2)
+                {
+                    previous = null; // a 1-char fragment breaks adjacency
+                    continue;
+                }
+
+                if (previous is not null && !(IsAllDigits(previous) && IsAllDigits(token)))
+                {
+                    AddBigramPosting(index, previous + token, family.FamilyID, propertyName, $"{previous} {token}");
+                    AddBigramPosting(index, token + previous, family.FamilyID, propertyName, $"{previous} {token}");
+                }
+
+                previous = token;
+            }
+        }
+    }
+
+    /// <summary>Adds one bigram posting unless the same family already holds that key.</summary>
+    private static void AddBigramPosting(Dictionary<string, List<Posting>> index, string key, string familyId, string propertyName, string familyToken)
+    {
+        if (!index.TryGetValue(key, out List<Posting>? postings))
+            index[key] = postings = [];
+
+        if (!postings.Any(p => p.FamilyId.Equals(familyId, StringComparison.OrdinalIgnoreCase)))
+            postings.Add(new Posting(familyId, propertyName, familyToken));
     }
 
     /// <summary>
@@ -266,17 +420,40 @@ internal sealed class StringMatcher
     /// <summary>
     /// Extracts string tokens from a filename, preserving both the original text and the
     /// normalized form (lowercase, diacritics stripped) used for comparison.
-    /// Excludes pure-digit tokens (those belong to NumericMatcher).
+    /// Excludes pure-digit tokens (those belong to NumericMatcher). Mixed tokens are additionally
+    /// split at letter↔digit boundaries so "magenta76" also yields "magenta".
     /// </summary>
     private IReadOnlyList<FilenameToken> ExtractImageTokens(string filename)
     {
         string stem = Path.GetFileNameWithoutExtension(filename);
+        List<FilenameToken> tokens = [];
 
-        return TokenSplitPattern.Split(stem)
-            .Select(t => new FilenameToken(t, NormalizeDiacritics(t.ToLowerInvariant())))
-            .Where(t => t.Normalized.Length >= 2 && !IsAllDigits(t.Normalized))
-            .Where(t => !translationConfig.IsStopWord(t.Normalized))
-            .ToList();
+        foreach (string raw in TokenSplitPattern.Split(stem))
+        {
+            AddImageToken(tokens, raw);
+
+            string[] parts = AlphaDigitBoundaryPattern.Split(raw);
+            if (parts.Length > 1)
+            {
+                foreach (string part in parts)
+                    AddImageToken(tokens, part);
+            }
+        }
+
+        return tokens;
+    }
+
+    /// <summary>Appends one candidate token when it passes the length/digit/stop-word filters.</summary>
+    private void AddImageToken(List<FilenameToken> tokens, string raw)
+    {
+        FilenameToken token = new(raw, NormalizeDiacritics(raw.ToLowerInvariant()));
+
+        if (token.Normalized.Length < 2 || IsAllDigits(token.Normalized) ||
+            translationConfig.IsStopWord(token.Normalized))
+            return;
+
+        if (!tokens.Any(t => t.Normalized.Equals(token.Normalized, StringComparison.Ordinal)))
+            tokens.Add(token);
     }
 
     //  Scoring 

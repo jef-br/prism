@@ -89,15 +89,33 @@ public sealed class Importer
 
         IReadOnlyList<FamilyIDRecord> familyRecords = BuildFamilyRecords(excelFilePaths, excelDiagnostics);
 
+        // ConcurrentBag enumeration order varies per run (per-thread stacks). Sort into a stable
+        // order so every downstream stage — matching aggregation, det-order tie-breaking, manifest
+        // rows — sees the same sequence on every run with the same input (T-2820).
         return new ImportStageResult
         {
-            NormalizedImages  = normalizedImages.ToList(),
+            NormalizedImages  = SortDeterministically(normalizedImages),
             FamilyRecords     = familyRecords,
             ExcelDiagnostics  = excelDiagnostics,
-            ImageKoRecords    = imageKoRecords.ToList(),
+            ImageKoRecords    = imageKoRecords.OrderBy(k => k.OriginalFileName, StringComparer.Ordinal).ToList(),
             ZipKoRecords      = zipKoRecords,
             JobTempFolder     = jobTempFolder
         };
+    }
+
+    /// <summary>
+    /// Orders normalized records by input-content keys only (never by the racy normalized-file
+    /// counter): original filename, then byte length, then pixel size. Identical files compare
+    /// equal on every key, so their relative order is irrelevant.
+    /// </summary>
+    private static List<ImageRecord_INPUT> SortDeterministically(ConcurrentBag<ImageRecord_INPUT> records)
+    {
+        return records
+            .OrderBy(r => r.InitialFullName, StringComparer.Ordinal)
+            .ThenBy(r => r.ByteLength ?? 0)
+            .ThenBy(r => r.NormalizedWidth)
+            .ThenBy(r => r.NormalizedHeight)
+            .ToList();
     }
 
     // -------------------------------------------------------------------------
@@ -332,6 +350,22 @@ public sealed class Importer
                 imageKoRecords.Add(koRecord);
             }
 
+            return;
+        }
+
+        // The salient object can never reach MinInputSizeInPixels when the whole image is smaller —
+        // KO here instead of spending classify/match/order effort before Transform rejects it anyway.
+        if (Math.Max(normalizedWidth, normalizedHeight) < configuration.MinInputSizeInPixels)
+        {
+            imageKoRecords.Add(new ImportKoRecord
+            {
+                OriginalFileName = originalFileName,
+                SourceProvenance = sourcePath,
+                ReasonCode       = ImportKoRecord.ImageTooSmallReason,
+                KoGroup          = ImportKoRecord.UndersizedKoGroup,
+                SafeMessage      = $"Image is {normalizedWidth}x{normalizedHeight}px; the accepted input minimum is {configuration.MinInputSizeInPixels}px on the longest side.",
+                BatchContinues   = true
+            });
             return;
         }
 

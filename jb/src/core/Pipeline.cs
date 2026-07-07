@@ -14,6 +14,7 @@ internal sealed class Pipeline : IDisposable
     private readonly IMatchingService matchingService;
     private readonly IGenerateService generateService;
     private readonly ITransformService transformService;
+    private readonly bool detOrderGapsAllowed;
 
     /// <summary>
     /// Creates a Pipeline by discovering its services from the environment: in-process by default, or HTTP
@@ -24,7 +25,8 @@ internal sealed class Pipeline : IDisposable
     internal Pipeline(PrismConfiguration configuration, ModelBuilder modelBuilder)
         : this(PipelineServiceFactory.CreateFromEnvironment(
             configuration ?? throw new ArgumentNullException(nameof(configuration)),
-            modelBuilder ?? throw new ArgumentNullException(nameof(modelBuilder))))
+            modelBuilder ?? throw new ArgumentNullException(nameof(modelBuilder))),
+            configuration!.DetOrderGapsAllowed)
     {
     }
 
@@ -33,15 +35,17 @@ internal sealed class Pipeline : IDisposable
     /// HTTP-client implementations without the pipeline knowing which.
     /// </summary>
     /// <param name="services">The service implementations and shared artifact store this pipeline runs on.</param>
-    internal Pipeline(PipelineServices services)
+    /// <param name="detOrderGapsAllowed">Output.DET-ORDER-GAPS-ALLOWED policy; forwarded to Export for det compaction.</param>
+    internal Pipeline(PipelineServices services, bool detOrderGapsAllowed = false)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        artifactStore     = services.ArtifactStore;
-        ingestService     = services.Ingest;
-        matchingService   = services.Matching;
-        generateService   = services.Generate;
-        transformService  = services.Transform;
+        artifactStore       = services.ArtifactStore;
+        ingestService       = services.Ingest;
+        matchingService     = services.Matching;
+        generateService     = services.Generate;
+        transformService    = services.Transform;
+        this.detOrderGapsAllowed = detOrderGapsAllowed;
     }
 
     /// <summary>Disposes services that own native resources (e.g. the CLIP ONNX session in MatchingService).</summary>
@@ -118,7 +122,7 @@ internal sealed class Pipeline : IDisposable
     /// Gathers the final LAMBDA collection plus every accumulated count into the explicit
     /// <see cref="ExportRequest"/> the Exporter needs to build the manifest summary.
     /// </summary>
-    private static ExportRequest BuildExportRequest(
+    private ExportRequest BuildExportRequest(
         TransformResult transformed,
         IReadOnlyList<ImageRecord_GENERATED> generatedImages,
         PrismJobRequest request)
@@ -140,6 +144,7 @@ internal sealed class Pipeline : IDisposable
             KoRecordCount      = ingest.KoRecordCount + matched.KoRecordCount,
             OkTransformedCount = transformed.OkTransformedCount,
             GeneratedCount     = generatedImages.Count,
+            DetOrderGapsAllowed = detOrderGapsAllowed,
             Warnings           = [.. ingest.Warnings, .. matched.Warnings]
         };
     }

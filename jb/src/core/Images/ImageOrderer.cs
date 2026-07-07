@@ -34,7 +34,28 @@ internal static class ImageOrderer
         }
     }
 
-    //  Family processing 
+    //  Det compaction (gap policy)
+
+    /// <summary>
+    /// Compacts each family's det indices to a contiguous 0..n-1 range: gaps are closed and the relative
+    /// order the Order stage assigned is preserved exactly (renumber only, never reorder). Applied when
+    /// Output.DET-ORDER-GAPS-ALLOWED is false. Operates on non-KO matched records grouped by Family.
+    /// </summary>
+    internal static void CompactDetOrder(IReadOnlyList<ImageRecord_LAMBDA> records)
+    {
+        IEnumerable<IGrouping<string, ImageRecord_LAMBDA>> familyGroups = records
+            .Where(r => !r.IsKo && !string.IsNullOrEmpty(r.Family))
+            .GroupBy(r => r.Family!);
+
+        foreach (IGrouping<string, ImageRecord_LAMBDA> group in familyGroups)
+        {
+            int det = 0;
+            foreach (ImageRecord_LAMBDA lambda in group.OrderBy(r => r.DetOrder))
+                lambda.DetOrder = det++;
+        }
+    }
+
+    //  Family processing
 
     /// <summary>
     /// Assigns det slots to all images within one FamilyID group.
@@ -74,16 +95,23 @@ internal static class ImageOrderer
         }
 
         // Images with no qualifying phenotype become overflow after the last configured slot.
+        // Overflow order uses real signal instead of raw list position: the earliest slot whose
+        // keyword stems match the filename first, then numeric-aware natural filename order —
+        // so 'Pareo_F1' precedes 'Pareo_F2' and 'img_2' precedes 'img_10'.
         int overflowSlot = lastConfiguredSlot + 1;
-        foreach ((ImageRecord_LAMBDA img, int idx) in images
-            .Select((img, idx) => (img, idx))
+        foreach ((ImageRecord_LAMBDA img, int idx, int hintSlot) in images
+            .Select((img, idx) => (img, idx, HintSlot: ResolveHintSlot(img.InitialFullName, slots, config)))
             .Where(x => !imageAssigned[x.idx])
-            .OrderBy(x => x.idx))
+            .OrderBy(x => x.HintSlot)
+            .ThenBy(x => x.img.InitialFullName, NaturalFilenameComparer)
+            .ThenBy(x => x.idx))
         {
             int ngpConfidence = img.Features.All.Count(kv => !kv.Value.IsUnknown);
             assignments[idx] = new AssignmentRecord(
                 overflowSlot++, WinningPhenotype: null, PhenotypeRank: -1,
-                ngpConfidence, TieBreakerWon: "none", IsOverflow: true);
+                ngpConfidence,
+                TieBreakerWon: hintSlot != int.MaxValue ? "overflow-filename-hint" : "overflow-natural-order",
+                IsOverflow: true);
         }
 
         // Write results back to records.
@@ -105,7 +133,61 @@ internal static class ImageOrderer
         }
     }
 
-    //  Candidate building 
+    //  Overflow ordering signal
+
+    /// <summary>
+    /// The earliest configured slot whose keyword stems match the filename, or int.MaxValue when no
+    /// keyword matches — used to order overflow images by intent (front before back before side).
+    /// </summary>
+    private static int ResolveHintSlot(string filename, IReadOnlyList<DetSlotRule> slots, DetOrderConfig config)
+    {
+        foreach (DetSlotRule slot in slots)
+        {
+            if (config.FilenameMatchesSlotKeyword(filename, slot.Keyword))
+                return slot.SlotIndex;
+        }
+
+        return int.MaxValue;
+    }
+
+    /// <summary>Numeric-aware ordinal filename comparer: digit runs compare as numbers, text ordinally.</summary>
+    private static readonly Comparer<string> NaturalFilenameComparer = Comparer<string>.Create(CompareNatural);
+
+    private static int CompareNatural(string a, string b)
+    {
+        int i = 0, j = 0;
+
+        while (i < a.Length && j < b.Length)
+        {
+            if (char.IsDigit(a[i]) && char.IsDigit(b[j]))
+            {
+                int startA = i, startB = j;
+                while (i < a.Length && char.IsDigit(a[i])) i++;
+                while (j < b.Length && char.IsDigit(b[j])) j++;
+
+                // Compare digit runs numerically: longer run of significant digits wins.
+                ReadOnlySpan<char> runA = a.AsSpan(startA, i - startA).TrimStart('0');
+                ReadOnlySpan<char> runB = b.AsSpan(startB, j - startB).TrimStart('0');
+                if (runA.Length != runB.Length) return runA.Length - runB.Length;
+                int cmp = runA.CompareTo(runB, StringComparison.Ordinal);
+                if (cmp != 0) return cmp;
+            }
+            else
+            {
+                int cmp = char.ToLowerInvariant(a[i]).CompareTo(char.ToLowerInvariant(b[j]));
+                if (cmp != 0) return cmp;
+                i++; j++;
+            }
+        }
+
+        int lengthCmp = (a.Length - i) - (b.Length - j);
+        if (lengthCmp != 0) return lengthCmp;
+
+        // Case-insensitive equal — fall back to ordinal so the order is still total and deterministic.
+        return string.CompareOrdinal(a, b);
+    }
+
+    //  Candidate building
 
     /// <summary>
     /// Builds all (image, slot) candidates where the image's selected phenotype qualifies for the slot.
@@ -131,7 +213,7 @@ internal static class ImageOrderer
                 if (phenotypeRank < 0) continue;
 
                 int hintScore = config.FilenameMatchesSlotKeyword(img.InitialFullName, slot.Keyword) ? 1 : 0;
-                result.Add(new CandidateDetOrder(i, slot.SlotIndex, phenotypeRank, ngpConfidence, hintScore, i, img.SelectedPhenotype));
+                result.Add(new CandidateDetOrder(i, slot.SlotIndex, phenotypeRank, ngpConfidence, hintScore, i, img.SelectedPhenotype, img.InitialFullName));
             }
         }
 
@@ -142,7 +224,9 @@ internal static class ImageOrderer
 
     /// <summary>
     /// Sorts candidates so the best assignment comes first.
-    /// Priority: earlier det slot → lower phenotype rank → higher NGP confidence → filename hint → lower source index.
+    /// Priority: earlier det slot → lower phenotype rank → higher NGP confidence → filename hint →
+    /// filename ordinal → lower source index. Filename ordinal comes before source index so the
+    /// outcome does not depend on list position even if upstream ordering ever changes (T-2820).
     /// </summary>
     private static int CompareCandidates(CandidateDetOrder a, CandidateDetOrder b)
     {
@@ -150,6 +234,7 @@ internal static class ImageOrderer
         cmp = a.PhenotypeRank.CompareTo(b.PhenotypeRank);     if (cmp != 0) return cmp;
         cmp = b.NgpConfidence.CompareTo(a.NgpConfidence);     if (cmp != 0) return cmp;
         cmp = b.HintScore.CompareTo(a.HintScore);             if (cmp != 0) return cmp;
+        cmp = string.CompareOrdinal(a.Filename, b.Filename);  if (cmp != 0) return cmp;
         return a.SourceIndex.CompareTo(b.SourceIndex);
     }
 
@@ -213,7 +298,7 @@ internal static class ImageOrderer
             throw new PrismConfigurationException(
                 "DetOrderKeywordStems.json not found. Ensure DetOrderKeywordStems.json is present in the config directory next to Prism_Config.json.");
 
-        return DetOrderConfig.Load(rulesPath, stemsPath);
+        return ConfigCache.GetOrLoad(() => DetOrderConfig.Load(rulesPath, stemsPath), rulesPath, stemsPath);
     }
 
 }

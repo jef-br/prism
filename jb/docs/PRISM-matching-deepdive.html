@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRISM matching, in depth</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --ink: #24292f;
+    --muted: #6a737d;
+    --line: #d8dde3;
+    --accent: #2563eb;
+    --accent-soft: #e8effc;
+    --ok: #15803d;
+    --ok-soft: #e7f6ec;
+    --ko: #b91c1c;
+    --ko-soft: #fdeaea;
+    --warn: #b45309;
+    --warn-soft: #fdf3e3;
+    --algo: #6d28d9;
+    --algo-soft: #f0eafc;
+    --mono: Consolas, "Courier New", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16191d; --card: #1f2329; --ink: #e6e8eb; --muted: #9aa4af;
+      --line: #3a414a; --accent: #7aa5f8; --accent-soft: #263650;
+      --ok: #5cc98a; --ok-soft: #1d3327; --ko: #f08a8a; --ko-soft: #402226;
+      --warn: #e3b264; --warn-soft: #3d3020; --algo: #b79df2; --algo-soft: #322747;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif; line-height: 1.55;
+  }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 20px 80px; }
+  h1 { font-size: 1.9rem; margin: 18px 0 4px; }
+  h2 { font-size: 1.35rem; margin: 48px 0 6px; }
+  h3 { font-size: 1.02rem; margin: 0 0 2px; }
+  p.lead { color: var(--muted); font-size: 1.05rem; margin-top: 0; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px 18px; margin: 14px 0;
+  }
+  code {
+    font-family: var(--mono); font-size: 0.88em;
+    background: rgba(127,127,127,0.13); border-radius: 4px; padding: 1px 5px;
+    white-space: nowrap;
+  }
+  .algo {
+    display: inline-block; font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.03em; border-radius: 999px; padding: 2px 10px;
+    background: var(--algo-soft); color: var(--algo); margin: 2px 4px 2px 0;
+    white-space: nowrap;
+  }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  @media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
+  .ex, .cex { border-radius: 8px; padding: 10px 14px; font-size: 0.92rem; }
+  .ex  { background: var(--ok-soft); border: 1px solid var(--ok); }
+  .cex { background: var(--ko-soft); border: 1px solid var(--ko); }
+  .ex b  { color: var(--ok); display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .cex b { color: var(--ko); display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .why { color: var(--muted); font-size: 0.88rem; margin-top: 6px; }
+  .stepno {
+    display: inline-flex; min-width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 0.85rem;
+    align-items: center; justify-content: center; margin-right: 8px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+  .used { color: var(--ok); font-weight: 700; }
+  .notused { color: var(--ko); font-weight: 700; }
+  footer { margin-top: 60px; color: var(--muted); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>PRISM matching, in depth</h1>
+<p class="lead">How each matching check works under the hood — with a real example that matches,
+a counterexample that deliberately does not, and the name of the known algorithm behind it.</p>
+
+<div class="card">
+  <b>How to read this page.</b> For every check you get three things:
+  <ul style="margin:6px 0; padding-left:20px;">
+    <li><b>What it does</b>, in plain words.</li>
+    <li><span class="ex" style="padding:1px 8px;">✔ Example</span> — a real case that matches, and
+        <span class="cex" style="padding:1px 8px;">✘ Counterexample</span> — a case that looks similar but is
+        <i>refused on purpose</i>. The counterexamples matter most: they show the safety rules that keep wrong
+        photos off product pages.</li>
+    <li>Purple badges like <span class="algo">Levenshtein distance</span> name the textbook algorithm used, so you can look it up.</li>
+  </ul>
+</div>
+
+<h2>0. Two ideas used everywhere</h2>
+
+<div class="card">
+  <h3>The phone book <span class="algo">inverted index</span></h3>
+  <p>Before matching starts, PRISM builds lookup tables that work like a phone book, but reversed:
+  instead of "product → its numbers", they store "number → which products have it" and
+  "word → which products mention it". Finding all products that contain <code>60105</code> is then one
+  instant lookup instead of re-reading the whole Excel for every photo. The same structure powers web search engines.</p>
+</div>
+
+<div class="card">
+  <h3>The one-owner rule</h3>
+  <p>Every check follows the same contract: it may only answer when <b>exactly one</b> product fits.
+  Zero fits → pass the photo to the next check. Two or more fits → also pass it on (and remember the tie).
+  No check ever picks the "most likely" of several candidates. This is why PRISM can be aggressive in
+  <i>finding</i> clues without ever <i>guessing</i>.</p>
+  <p class="why">This also makes the whole system deterministic: same input, same output, every run. There is no
+  randomness anywhere — no <span class="algo">Monte Carlo</span> methods, by design.</p>
+</div>
+
+<h2>1. Entry: removing duplicates <span class="algo">dHash (perceptual hashing)</span> <span class="algo">Hamming distance</span></h2>
+
+<div class="card">
+  <p>Each photo is shrunk to a tiny 17×8 grid and, for each pair of neighbouring cells, PRISM notes only
+  "is the left one brighter than the right one?". That yields a 128-bit fingerprint of the image's
+  <i>structure</i>, not its pixels — so the same photo saved twice, resized, or re-compressed gets a
+  near-identical fingerprint. Two fingerprints are compared by counting the bits where they differ
+  (Hamming distance); 6 or fewer differing bits means "same picture".</p>
+  <div class="pair">
+    <div class="ex"><b>✔ removed as duplicate</b>
+      The batch contains <code>photo.jpg</code> loose <i>and</i> the same picture inside the supplier's zip.
+      Fingerprints differ by 0 bits → the second copy is set aside as a duplicate.</div>
+    <div class="cex"><b>✘ not a duplicate</b>
+      Front view and back view of the same sweater. They show the same product, but their brightness
+      structure differs in far more than 6 bits → both are kept. Also: EU energy labels and technical
+      drawings are exempt, because two labels legitimately look almost identical.</div>
+  </div>
+</div>
+
+<h2>2. The number checks</h2>
+
+<div class="card">
+  <h3><span class="stepno">1</span>Exact number match</h3>
+  <p>Every group of digits in the filename (5 digits or longer) is looked up in the phone book of product
+  numbers, barcodes, references — and every long digit group found <i>anywhere</i> in a product's row,
+  even in the middle of a text cell like <code>MAN-Posy Green-1010930-60105</code>.</p>
+  <div class="pair">
+    <div class="ex"><b>✔ match</b>
+      <code>94671115_2.jpg</code> → digit group <code>94671115</code> is exactly one product's number.
+      The <code>2</code> is too short to count, so it cannot interfere.</div>
+    <div class="cex"><b>✘ refused: short numbers are ignored</b>
+      Product B has reference <code>MGGE073</code>, which contains the digits <code>073</code>. The photo
+      <code>94671115_073.jpg</code> must <i>not</i> hesitate between product 94671115 and product B.
+      Because 3-digit groups are below the 5-digit minimum, <code>073</code> is simply not evidence.
+      (Before this rule, over 1,200 photos in one real batch were refused as "fits several products".)</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="stepno">2</span>Numbers glued back together <span class="algo">Kendall tau distance</span> <span class="algo">dynamic programming</span></h3>
+  <p>Filenames often split one code into pieces. PRISM concatenates neighbouring digit groups and looks
+  the result up. If nothing fits in the original order, it tries reordered combinations — and scores how
+  much shuffling was needed using the Kendall tau distance (the number of neighbour swaps needed to sort
+  a sequence; also known as bubble-sort distance). Too much shuffling makes the match too far-fetched and
+  it is rejected. Trying orders efficiently uses dynamic programming instead of brute force.</p>
+  <div class="pair">
+    <div class="ex"><b>✔ match</b>
+      <code>24211507_CARDIGAN_76_MAGENTA_B.jpg</code> → <code>24211507</code>&nbsp;+&nbsp;<code>76</code> in
+      original order equals reference <code>24211507-76</code>. Zero swaps needed → confident match.</div>
+    <div class="cex"><b>✘ refused: two products, same glue</b>
+      Suppose gluing <code>12</code>+<code>34</code> gives <code>1234</code>, and product A's number is
+      <code>1234</code> while product B's barcode also contains exactly <code>1234</code>. Two owners fit →
+      the one-owner rule blocks the match and the photo moves to the next check.</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="stepno">3</span>The combination lock <span class="algo">set intersection</span></h3>
+  <p>Sometimes each number alone fits many products, but the <i>combination</i> fits one. PRISM takes the
+  candidate list of every number and intersects them — like a combination lock where each digit narrows
+  the possibilities.</p>
+  <div class="pair">
+    <div class="ex"><b>✔ match</b>
+      <code>1010930_60105_A_01.png</code>: colour code <code>60105</code> fits 14 products, article
+      <code>1010930</code> fits 6 products — but the overlap of both lists is exactly one product.
+      Matched. (This single check rescued ~1,265 photos in the FILA batch.)</div>
+    <div class="cex"><b>✘ refused: the overlap is still two</b>
+      A photo names <code>1010930</code> and <code>60105</code>, but the product exists in two lengths,
+      both with the same article and colour codes. The intersection contains two products → refused,
+      reported as "fits several products" so a human can decide.</div>
+  </div>
+</div>
+
+<h2>3. The word checks</h2>
+
+<div class="card">
+  <h3><span class="stepno">4</span>Words and codes <span class="algo">n-grams (bigrams)</span></h3>
+  <p>Words from the filename are looked up in product descriptions. Three refinements make this robust:</p>
+  <ul style="margin:6px 0; padding-left:20px; font-size:0.95rem;">
+    <li><b>Glued words:</b> the index also stores every pair of neighbouring words joined together
+        (a classic n-gram trick), so <code>palmblue</code> finds "PALM BLUE".</li>
+    <li><b>Codes made of letters+digits:</b> a code like <code>1707527E</code> that exists in exactly one
+        product may carry a match on its own — normal words may not.</li>
+    <li><b>Small-number tiebreak:</b> if two products tie on words, a short number in the filename
+        (like colour code <code>76</code>) may break the tie — but only if it appears in exactly one of the tied products.</li>
+  </ul>
+  <div class="pair">
+    <div class="ex"><b>✔ match</b>
+      <code>Anastasia_palmblue_2.jpg</code> → "anastasia" + "palmblue" both point to the product described
+      as <code>ANASTASIA AB-PALM BLUE</code>, and no other product scores as high.</div>
+    <div class="cex"><b>✘ refused: common words are not identity</b>
+      <code>blue-shirt.jpg</code> where twenty products are blue shirts. "blue" and "shirt" fit all twenty
+      equally → top tie → refused. A single ordinary word (even a unique one, like a colour that happens
+      to appear once) is also refused, because one common word is weak evidence — only unique
+      letter+digit <i>codes</i> may stand alone.</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="stepno">5</span>What the AI saw <span class="algo">CLIP neural network</span> <span class="algo">cosine similarity</span> <span class="algo">softmax</span></h3>
+  <p>A vision model (CLIP) converts the photo and a set of short descriptions ("a photo of a dress",
+  "a red product", …) into points in the same mathematical space; the closer the photo lands to a
+  description (cosine similarity), the better it fits. Scores across the options are turned into
+  percentages with softmax, and only confident winners count. Those impressions (product type, colour)
+  are used to <i>rule out</i> products — only among products that received no photos at all.</p>
+  <div class="pair">
+    <div class="ex"><b>✔ match</b>
+      An unnamed photo shows a red bag. Of the three products still without photos, one is a red bag,
+      one a green scarf, one a white mug. The type and colour impressions eliminate two; a leftover
+      filename clue confirms the third. Matched.</div>
+    <div class="cex"><b>✘ refused: "last one standing" is not evidence</b>
+      Only one product is left without photos, and an unnamed photo has no AI impression and no filename
+      clue at all. It would be convenient to hand the photo to the last product — PRISM refuses.
+      Being the only candidate is not the same as being pointed at by evidence.</div>
+  </div>
+</div>
+
+<h2>4. The last resorts</h2>
+
+<div class="card">
+  <h3><span class="stepno">6</span>The Excel names the file</h3>
+  <p>If the photo's own filename appears in exactly one product's row (photo-link columns are common),
+  that settles it. The comparison forgives capitals, spaces, dashes, dots and copy markers like
+  <code>&nbsp;(1)</code> or <code>_RET</code> (retouched).</p>
+  <div class="pair">
+    <div class="ex"><b>✔ match</b>
+      Cell: <code>/medias/92836758_det815.jpg</code>. Photo: <code>92836758_det815&nbsp;(1).jpg</code>.
+      After normalising both sides they are identical → matched.</div>
+    <div class="cex"><b>✘ refused: two rows name the same file</b>
+      Two products of a set share one packshot, and both rows link to <code>set-photo.jpg</code>.
+      The file is named by two rows → ambiguous → refused rather than guessed.</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="stepno">7</span>Number hidden inside a longer number <span class="algo">substring search</span></h3>
+  <p>A long filename number (7+ digits) is searched for <i>inside</i> product numbers, because article
+  references are often embedded in barcodes.</p>
+  <div class="pair">
+    <div class="ex"><b>✔ match</b>
+      <code>46271023.jpg</code> → <code>46271023</code> sits inside barcode <code>84<u>46271023</u>117</code>
+      of exactly one product.</div>
+    <div class="cex"><b>✘ refused: too short, or found twice</b>
+      <code>12345.jpg</code> is never tried (5 digits could sit inside hundreds of barcodes by chance —
+      the minimum is 7). And a 7-digit number found inside <i>two</i> different barcodes is refused by
+      the one-owner rule.</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="stepno">8</span>Copying from a sister photo <span class="algo">token-set comparison</span></h3>
+  <p>Photos of one product usually share the same rare words. PRISM reduces every filename to its rare
+  words (dropping shot markers like <code>_A</code>, <code>_01</code>, <code>(1)</code>, and words that
+  half the batch shares, like the brand name). It then works in two steps:</p>
+  <ul style="margin:6px 0; padding-left:20px; font-size:0.95rem;">
+    <li><b>Same shot set (strongest).</b> If a photo's word set is <i>exactly</i> the set already shared
+        by matched photos that all belong to one product, this photo is simply the next shot of that
+        product and joins it.</li>
+    <li><b>Loose overlap (fallback).</b> Otherwise, a photo may inherit a product whose matched photos'
+        word set contains — or is contained by — its own, but only if all such related photos agree on
+        one product.</li>
+  </ul>
+  <div class="pair">
+    <div class="ex"><b>✔ the whole set is accepted</b>
+      <code>24211507_..._A.jpg</code> and <code>_B.jpg</code> matched product <code>90861052</code>;
+      both reduce to {cardigan, magenta}. The keyless third shot
+      <code>CARDIGAN_MAGENTA76_C.jpg</code> reduces to the <i>same</i> set → it is the product's third
+      photo and joins <code>90861052</code> too. The ordering step then places the shots (front → det0,
+      back → det1, this one → the next free slot).</div>
+    <div class="cex"><b>✘ refused: the set belongs to two products</b>
+      If the batch genuinely holds <i>two different</i> magenta cardigans, both reducing to
+      {cardigan, magenta}, then that word set is owned by two products at once. A keyless
+      <code>CARDIGAN_MAGENTA_C.jpg</code> cannot tell which one it belongs to → reported, not guessed.
+      Better a gap than a coin flip.</div>
+  </div>
+</div>
+
+<h2>5. Before matching: borrowing a name from the folder</h2>
+
+<div class="card">
+  <h3>Meaningless filenames get a name from their folder</h3>
+  <p>Some photos arrive with names that say nothing about the product: <code>1.jpg</code>,
+  <code>DSCN2365.jpg</code>, <code>IMG_10005.png</code>. Before any check runs, PRISM looks at the
+  <i>folder</i> such a photo sits in. It borrows the folder's name only when the folder is meaningful,
+  and all three of these are true:</p>
+  <ul style="margin:6px 0; padding-left:20px; font-size:0.95rem;">
+    <li>The neighbouring folders (same level) follow the same one-folder-per-product pattern — not a
+        handful of format buckets.</li>
+    <li>The folder name is not a format word like <code>HD</code>, <code>Web</code>,
+        <code>packshot</code> or a size like <code>800 x 1200</code>.</li>
+    <li>At least one word or code in the folder name actually appears in the Excel data.</li>
+  </ul>
+  <p>When borrowed, the folder name is only used for matching — the photo keeps its real filename in the
+  output and report.</p>
+  <div class="pair">
+    <div class="ex"><b>✔ borrowed</b>
+      <code>1.jpg</code> inside folder <code>earphones_zenith_SH23005</code>, alongside folders
+      <code>earphones_apex_SH23006</code>, … The code <code>SH23005</code> appears in the Excel, so the
+      photo is matched as if it were named <code>earphones_zenith_SH23005 1.jpg</code>.</div>
+    <div class="cex"><b>✘ not borrowed</b>
+      <code>1.jpg</code> inside folder <code>HD</code> (or <code>Web</code>, or <code>800 x 1200</code>).
+      These describe format, not product, so nothing is borrowed and the photo takes its chances on its
+      own name. Also: a folder whose words appear <i>nowhere</i> in the Excel is not borrowed either —
+      it would add noise, not meaning.</div>
+  </div>
+</div>
+
+<h2>6. The Excel side has algorithms too</h2>
+
+<div class="card">
+  <h3>Forgiving header reading <span class="algo">Levenshtein distance</span></h3>
+  <p>Column titles are compared with known names (in six languages) using edit distance — the number of
+  single-letter changes needed to turn one word into another. One letter of difference is accepted as a typo.</p>
+  <div class="pair">
+    <div class="ex"><b>✔ understood</b>
+      A header <code>Famliyid</code> (letters swapped) is 2 edits from <code>familyid</code>… too far —
+      but <code>Familid</code> (1 letter missing) is 1 edit away and is accepted as the product-number column.</div>
+    <div class="cex"><b>✘ not forced</b>
+      A header <code>Family price</code> contains the word "family" but the column holds prices, not
+      8-digit product numbers. The cell-pattern check (every value must look like a product number and be
+      unique) stops it from being crowned the product-number column.</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Rescuing rows without a product number <span class="algo">key join</span></h3>
+  <p>Rows from sheets that lack a product-number column are matched to known products through shared
+  codes — first by barcode, then by any long digit run both sides share. This is the same idea as a
+  database join, done on messy real-world keys.</p>
+  <div class="pair">
+    <div class="ex"><b>✔ joined</b>
+      Catalogue row: article <code>106297094700</code>, no product number. Bundle file: the ref cell
+      <code>106297094700|…</code> belongs to product <code>98985645</code>. The row's colour and name now
+      enrich that product.</div>
+    <div class="cex"><b>✘ left aside</b>
+      The article code appears in the ref cells of <i>two</i> products (a single item and a 2-pack).
+      Joining would be a guess → the row stays unjoined and is listed in the report.</div>
+  </div>
+</div>
+
+<h2>7. Famous-algorithm scorecard</h2>
+<p>Which well-known techniques are inside PRISM — and which famous names are deliberately <i>not</i>:</p>
+
+<div class="card scroll">
+  <table>
+    <tr><th>Algorithm</th><th>Used?</th><th>Where / why not</th></tr>
+    <tr><td>Inverted index</td><td class="used">Yes</td><td>All lookup tables: numbers, words, filenames. Same structure as a search engine.</td></tr>
+    <tr><td>Levenshtein (edit) distance</td><td class="used">Yes</td><td>Typo-tolerant Excel header recognition (1 edit allowed).</td></tr>
+    <tr><td>Kendall tau distance</td><td class="used">Yes</td><td>Scores how shuffled the digit groups are in check 2's reordered pass.</td></tr>
+    <tr><td>Dynamic programming</td><td class="used">Yes</td><td>Finds the least-shuffled reordering without trying every permutation.</td></tr>
+    <tr><td>n-grams (bigrams)</td><td class="used">Yes</td><td>Glued-word matching: "palm"+"blue" indexed as "palmblue".</td></tr>
+    <tr><td>Perceptual hashing (dHash) + Hamming distance</td><td class="used">Yes</td><td>Duplicate photo detection: 128-bit structure fingerprint, ≤6 differing bits = same picture.</td></tr>
+    <tr><td>CLIP + cosine similarity + softmax</td><td class="used">Yes</td><td>The AI impression of type and colour used in check 5 and for photo ordering.</td></tr>
+    <tr><td>Set intersection</td><td class="used">Yes</td><td>Check 3's combination lock.</td></tr>
+    <tr><td>Greedy assignment</td><td class="used">Yes</td><td>Photo ordering: best photo per position, decided position by position.</td></tr>
+    <tr><td>Hungarian algorithm</td><td class="notused">No</td><td>The optimal-assignment classic. Overkill here: with stable tie-breaks, greedy ordering gives the same result at a fraction of the complexity.</td></tr>
+    <tr><td>Monte Carlo methods</td><td class="notused">No</td><td>No randomness anywhere — the same batch must give the same output every run, so results can be audited and compared.</td></tr>
+    <tr><td>Manhattan / Euclidean distance</td><td class="notused">No</td><td>Geometric distances don't fit this problem; the distances that matter here are edit distance (letters), Kendall tau (order) and Hamming (bits).</td></tr>
+  </table>
+</div>
+
+<h2>8. The design principles behind all of it</h2>
+<div class="card">
+  <ul style="margin:6px 0; padding-left: 20px;">
+    <li><b>Certain before clever.</b> Exact numbers → combined numbers → words → AI. Each check is cheaper
+        to trust than the next; the confident checks get the first shot.</li>
+    <li><b>Every check can say "I don't know."</b> The counterexamples above are not failures — they are
+        the system declining to gamble. A refused photo with a clear reason costs a minute of human time;
+        a wrong photo on a live product page costs much more.</li>
+    <li><b>Evidence, not elimination.</b> Being the only remaining candidate never wins on its own;
+        something must actively point to the product.</li>
+    <li><b>Auditable.</b> The report names the check that matched every photo, so any match can be
+        re-explained a month later.</li>
+  </ul>
+</div>
+
+<footer>PRISM — matching deep-dive for staff. Companion to "How PRISM sorts product photos". Generated from the current system behaviour.</footer>
+
+</main>
+</body>
+</html>

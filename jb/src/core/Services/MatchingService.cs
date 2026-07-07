@@ -51,25 +51,78 @@ public sealed class MatchingService : IMatchingService, IDisposable
         IImageNgpService ngp                     = new ImageNgpService(LoadRuleSet());
         IFeatureAnalysisService featureAnalysis  = new FeatureAnalysisService();
         using IClassificationService classification =
-            new ClassificationService(_sharedClassifier, _sharedPromptCatalog, configuration.MaxHammingDistance);
+            new ClassificationService(_sharedClassifier, _sharedPromptCatalog, configuration);
 
-        // Pre-allocate a fixed results array — each thread writes to its own index, no synchronisation needed.
+        // Chunked fan-out/fan-in: decode + hash + feature analysis run CPU-parallel per chunk, then
+        // the whole chunk classifies in one batched CLIP Run under the global lock (the DML execution
+        // provider does not support concurrent InferenceSession.Run calls), then phenotypes evaluate
+        // and the chunk's images are disposed. Batching amortizes the prompt text branch across the
+        // chunk; a fixed-batch model export transparently degrades to one Run per image inside
+        // ApplyClipTagsBatch.
         var results = new (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, UInt128 Hash)[okImages.Count];
         int classifyKo        = 0;
         int classifyDegraded  = 0;
         int phenotypeAssigned = 0;
+        bool doClassify = classification.IsReady && !ingest.Parameters.SkipClassification;
 
-        Parallel.For(0, okImages.Count,
-            new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8) },
-            i =>
+        var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8) };
+
+        for (int chunkStart = 0; chunkStart < okImages.Count; chunkStart += ClipChunkSize)
+        {
+            int chunkCount = Math.Min(ClipChunkSize, okImages.Count - chunkStart);
+            var chunkImages = new Image<Rgba32>?[chunkCount];
+
+            Parallel.For(0, chunkCount, parallelOptions, i =>
             {
-                var (lambda, hash, wasKo, wasDegraded, wasPhenotype) = BuildLambda(
-                    okImages[i], featureAnalysis, classification, ngp, ingest.Parameters.SkipClassification);
-                results[i] = (lambda, okImages[i], hash);
-                if (wasKo)        Interlocked.Increment(ref classifyKo);
-                if (wasDegraded)  Interlocked.Increment(ref classifyDegraded);
-                if (wasPhenotype) Interlocked.Increment(ref phenotypeAssigned);
+                int index = chunkStart + i;
+                var (lambda, image, hash, wasKo) = PrepareLambda(okImages[index], featureAnalysis);
+                results[index] = (lambda, okImages[index], hash);
+                chunkImages[i] = image;
+                if (wasKo) Interlocked.Increment(ref classifyKo);
             });
+
+            if (doClassify)
+            {
+                var alive = new List<(Image<Rgba32> Image, ImageRecord_LAMBDA Lambda)>(chunkCount);
+                for (int i = 0; i < chunkCount; i++)
+                {
+                    if (chunkImages[i] is not null && !results[chunkStart + i].Lambda.IsKo)
+                        alive.Add((chunkImages[i]!, results[chunkStart + i].Lambda));
+                }
+
+                // CLIP failure → degrade, never KO: tags are optional enrichment, and FamilyID matching
+                // keys off filename tokens, so the images must still flow to ImageNGP and the waterfall.
+                if (alive.Count > 0)
+                {
+                    try
+                    {
+                        lock (_clipLock)
+                        {
+                            classification.ApplyClipTagsBatch(alive,
+                                configuration.ThresholdForInfluentialTags,
+                                configuration.ThresholdForDiscardingClassificationTags);
+                        }
+                    }
+                    catch
+                    {
+                        classifyDegraded += alive.Count;
+                    }
+                }
+            }
+
+            for (int i = 0; i < chunkCount; i++)
+            {
+                chunkImages[i]?.Dispose();
+
+                ImageRecord_LAMBDA lambda = results[chunkStart + i].Lambda;
+                if (lambda.IsKo) continue;
+
+                string[] candidates = ngp.EvaluateCandidates(lambda.Features);
+                lambda.CandidatePhenotypes = candidates;
+                lambda.SelectedPhenotype   = candidates.Length > 0 ? candidates[0] : null;
+                if (lambda.SelectedPhenotype is not null) phenotypeAssigned++;
+            }
+        }
 
         // Aggregate into ordered collections (single-threaded; preserves input order for deterministic matching).
         List<ImageRecord_LAMBDA> lambdaRecords = new(okImages.Count);
@@ -166,22 +219,21 @@ public sealed class MatchingService : IMatchingService, IDisposable
         return [$"CLIP classification unavailable for {classifyDegraded} image(s); matched on filename tokens only."];
     }
 
-    //  Per-image classification (fan-out FA + Classification, fan-in ImageNGP)
+    //  Per-image preparation (fan-out: decode + hash + FeatureAnalysis; CLIP and ImageNGP run per chunk)
+
+    // Images per batched CLIP Run — also bounds how many decoded images a chunk holds in memory.
+    private const int ClipChunkSize = 8;
 
     /// <summary>
-    /// Builds and classifies one LAMBDA. Loads the normalized image once and shares it across
-    /// FeatureAnalysis, CLIP tagging, and perceptual-hash computation (one disk read for all three).
-    /// FeatureAnalysis is the core measurement — a failure there KOs the image.
-    /// CLIP tagging is optional enrichment — a failure there degrades the image to "no tags", never KO.
-    /// Returns the lambda plus per-image counters so the caller can aggregate with Interlocked — no shared
-    /// mutable state, safe to call from Parallel.For.
+    /// Loads and measures one LAMBDA. The normalized image is loaded once and shared across
+    /// FeatureAnalysis, perceptual-hash computation, and (by the caller) batched CLIP tagging — the
+    /// returned image is kept open for the chunk's classification pass and disposed by the caller.
+    /// FeatureAnalysis is the core measurement — a failure there KOs the image (and returns no image).
+    /// Safe to call from Parallel.For: no shared mutable state.
     /// </summary>
-    private (ImageRecord_LAMBDA Lambda, UInt128 Hash, bool WasKo, bool WasDegraded, bool WasPhenotypeAssigned) BuildLambda(
+    private static (ImageRecord_LAMBDA Lambda, Image<Rgba32>? Image, UInt128 Hash, bool WasKo) PrepareLambda(
         ImageRecord_INPUT source,
-        IFeatureAnalysisService featureAnalysis,
-        IClassificationService classification,
-        IImageNgpService ngp,
-        bool skipClassification = false)
+        IFeatureAnalysisService featureAnalysis)
     {
         ImageRecord_LAMBDA lambda = new()
         {
@@ -191,7 +243,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
         };
 
         if (source.NormalizedJpgPath is null)
-            return (lambda, UInt128.Zero, false, false, false);
+            return (lambda, null, UInt128.Zero, false);
 
         Image<Rgba32> image;
         try
@@ -203,57 +255,28 @@ public sealed class MatchingService : IMatchingService, IDisposable
             lambda.IsKo          = true;
             lambda.KoReasonCode  = "CLASSIFY_ERROR";
             lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
-            return (lambda, UInt128.Zero, true, false, false);
+            return (lambda, null, UInt128.Zero, true);
         }
 
-        bool wasDegraded = false;
+        // Hash computed here — same load shared with feature analysis and the chunk's CLIP pass.
+        UInt128 hash = UInt128.Zero;
+        try { hash = VisualHasher.ComputeHash(image); } catch { }
 
-        using (image)
+        // FeatureAnalysis failure → KO: the geometric/visual measurement feeds ImageNGP and ordering.
+        try
         {
-            // Hash computed here — same load shared with feature analysis and CLIP below.
-            UInt128 hash = UInt128.Zero;
-            try { hash = VisualHasher.ComputeHash(image); } catch { }
-
-            // FeatureAnalysis failure → KO: the geometric/visual measurement feeds ImageNGP and ordering.
-            try
-            {
-                featureAnalysis.Analyze(image, lambda.Features);
-            }
-            catch (Exception ex)
-            {
-                lambda.IsKo          = true;
-                lambda.KoReasonCode  = "CLASSIFY_ERROR";
-                lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
-                return (lambda, hash, true, false, false);
-            }
-
-            // CLIP failure → degrade, never KO: tags are optional enrichment, and FamilyID matching keys
-            // off filename tokens, so the image must still flow to ImageNGP and the matching waterfall.
-            // _clipLock serializes inference across all images (intra-job) and all concurrent jobs — required
-            // because the DML execution provider does not support concurrent InferenceSession.Run calls.
-            if (classification.IsReady && !skipClassification)
-            {
-                try
-                {
-                    lock (_clipLock)
-                    {
-                        classification.ApplyClipTags(image, lambda,
-                            configuration.ThresholdForInfluentialTags,
-                            configuration.ThresholdForDiscardingClassificationTags);
-                    }
-                }
-                catch
-                {
-                    wasDegraded = true;
-                }
-            }
-
-            string[] candidates = ngp.EvaluateCandidates(lambda.Features);
-            lambda.CandidatePhenotypes = candidates;
-            lambda.SelectedPhenotype   = candidates.Length > 0 ? candidates[0] : null;
-
-            return (lambda, hash, false, wasDegraded, lambda.SelectedPhenotype is not null);
+            featureAnalysis.Analyze(image, lambda.Features);
         }
+        catch (Exception ex)
+        {
+            image.Dispose();
+            lambda.IsKo          = true;
+            lambda.KoReasonCode  = "CLASSIFY_ERROR";
+            lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
+            return (lambda, null, hash, true);
+        }
+
+        return (lambda, image, hash, false);
     }
 
     //  Post-classification visual deduplication
@@ -312,7 +335,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
             throw new PrismConfigurationException(
                 "ImageRoles.json not found. Ensure ImageRoles.json is present in the config directory next to Prism_Config.json.");
 
-        return PhenotypeRuleSet.Load(imageRolesPath);
+        return ConfigCache.GetOrLoad(() => PhenotypeRuleSet.Load(imageRolesPath), imageRolesPath);
     }
 
     /// <summary>

@@ -46,6 +46,22 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
     public string[] CandidatePhenotypes { get; set; } = [];
 
     // -------------------------------------------------------------------------
+    // Matching inputs — populated before the Matched stage
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// The name token-based matchers should read instead of the raw filename, set by
+    /// <c>FolderNameEnricher</c> when the filename is meaningless but a sibling folder carries
+    /// Excel-relevant meaning (e.g. filename <c>1.jpg</c> in folder <c>earphones_zenith_SH23005</c>
+    /// becomes alias <c>earphones_zenith_SH23005 1.jpg</c>). Null when the filename is left as-is.
+    /// The FilenameToCell matcher deliberately ignores this and matches the literal filename.
+    /// </summary>
+    public string? MatchingAlias { get; set; }
+
+    /// <summary>The name token-based matchers read: <see cref="MatchingAlias"/> when set, else the raw filename.</summary>
+    public string MatchingName => MatchingAlias ?? InitialFullName;
+
+    // -------------------------------------------------------------------------
     // Matching outputs — populated by the Matched stage
     // -------------------------------------------------------------------------
 

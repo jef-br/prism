@@ -15,6 +15,28 @@
     { "prompt": "a photo showing the full body of the model",                   "feature": "body-visible",    "value": "full" },
     { "prompt": "a photo showing three quarters of the body",                   "feature": "body-visible",    "value": "three-quarter" },
     { "prompt": "a photo showing only the upper half of the body",              "feature": "body-visible",    "value": "half" },
-    { "prompt": "a photo showing only the bust or chest of the model",          "feature": "body-visible",    "value": "bust" }
+    { "prompt": "a photo showing only the bust or chest of the model",          "feature": "body-visible",    "value": "bust" },
+
+    { "prompt": "a photo of a mainly black product",                            "feature": "product-color",  "value": "black" },
+    { "prompt": "a photo of a mainly white product",                            "feature": "product-color",  "value": "white" },
+    { "prompt": "a photo of a mainly red product",                              "feature": "product-color",  "value": "red" },
+    { "prompt": "a photo of a mainly blue product",                             "feature": "product-color",  "value": "blue" },
+    { "prompt": "a photo of a mainly green product",                            "feature": "product-color",  "value": "green" },
+    { "prompt": "a photo of a mainly yellow product",                           "feature": "product-color",  "value": "yellow" },
+    { "prompt": "a photo of a mainly pink product",                             "feature": "product-color",  "value": "pink" },
+    { "prompt": "a photo of a mainly brown product",                            "feature": "product-color",  "value": "brown" },
+    { "prompt": "a photo of a mainly grey product",                             "feature": "product-color",  "value": "grey" },
+    { "prompt": "a photo of a mainly beige product",                            "feature": "product-color",  "value": "beige" },
+
+    { "prompt": "a photo of a shirt or top",                                    "feature": "product-type-label", "value": "shirt" },
+    { "prompt": "a photo of a dress",                                           "feature": "product-type-label", "value": "dress" },
+    { "prompt": "a photo of trousers or pants",                                 "feature": "product-type-label", "value": "trousers" },
+    { "prompt": "a photo of shoes or footwear",                                 "feature": "product-type-label", "value": "shoes" },
+    { "prompt": "a photo of a jacket or coat",                                  "feature": "product-type-label", "value": "jacket" },
+    { "prompt": "a photo of a sweater or knitwear",                             "feature": "product-type-label", "value": "sweater" },
+    { "prompt": "a photo of a skirt",                                           "feature": "product-type-label", "value": "skirt" },
+    { "prompt": "a photo of a bag or backpack",                                 "feature": "product-type-label", "value": "bag" },
+    { "prompt": "a photo of furniture",                                         "feature": "product-type-label", "value": "furniture" },
+    { "prompt": "a photo of a packaged consumer product",                       "feature": "product-type-label", "value": "packaging" }
   ]
 }

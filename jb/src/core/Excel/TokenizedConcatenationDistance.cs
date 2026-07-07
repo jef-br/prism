@@ -39,28 +39,23 @@ public static class TokenizedConcatenationDistance
             return normalizedTokens[0] == normalizedTarget ? 0.0 : double.PositiveInfinity;
         }
 
-        int minimumKendallTau = int.MaxValue;
-        bool foundValidPermutation = false;
-
-        foreach (int[] permutation in BuildPermutations(Enumerable.Range(0, normalizedTokens.Length).ToArray()))
+        // No permutation can concatenate to the target unless the total token length matches —
+        // cheap guard that rejects almost all candidates before any search.
+        if (normalizedTokens.Sum(token => token.Length) != normalizedTarget.Length)
         {
-            string concatenatedCandidate = string.Concat(permutation.Select(index => normalizedTokens[index]));
-
-            if (concatenatedCandidate != normalizedTarget)
-            {
-                continue;
-            }
-
-            foundValidPermutation = true;
-            int kendallTau = ComputeKendallTau(permutation);
-
-            if (kendallTau < minimumKendallTau)
-            {
-                minimumKendallTau = kendallTau;
-            }
+            return double.PositiveInfinity;
         }
 
-        if (!foundValidPermutation)
+        // Beyond this the 2^N mask table stops being reasonable; the previous N! enumeration never
+        // completed for such inputs anyway, so treating them as no-match loses nothing.
+        if (normalizedTokens.Length > MaxTokensForPermutationSearch)
+        {
+            return double.PositiveInfinity;
+        }
+
+        int minimumKendallTau = ComputeMinimumKendallTau(normalizedTokens, normalizedTarget);
+
+        if (minimumKendallTau < 0)
         {
             return double.PositiveInfinity;
         }
@@ -94,40 +89,67 @@ public static class TokenizedConcatenationDistance
         return 100.0 * Math.Exp(-lambda * tcd);
     }
 
-    private static IEnumerable<int[]> BuildPermutations(int[] values)
+    private const int MaxTokensForPermutationSearch = 16;
+
+    /// <summary>
+    /// Minimum Kendall tau (inversion count) over all token permutations whose concatenation equals
+    /// the target, or -1 when no permutation matches. Dynamic program over token-usage masks: a
+    /// mask's position in the target is the total length of its used tokens, and appending token
+    /// <c>i</c> adds one inversion for every already-used token with a higher original index —
+    /// replacing the former N! permutation enumeration with O(2^N × N).
+    /// </summary>
+    private static int ComputeMinimumKendallTau(string[] tokens, string target)
     {
-        if (values.Length <= 1)
+        int tokenCount = tokens.Length;
+        int fullMask = (1 << tokenCount) - 1;
+
+        int[] bestInversions = new int[fullMask + 1];
+        Array.Fill(bestInversions, int.MaxValue);
+        bestInversions[0] = 0;
+
+        // positionByMask[mask] = total length of the tokens used in mask (the target prefix covered).
+        int[] positionByMask = new int[fullMask + 1];
+        for (int mask = 1; mask <= fullMask; mask++)
         {
-            yield return values.ToArray();
-            yield break;
+            int lowestBitIndex = System.Numerics.BitOperations.TrailingZeroCount(mask);
+            positionByMask[mask] = positionByMask[mask & (mask - 1)] + tokens[lowestBitIndex].Length;
         }
 
-        for (int index = 0; index < values.Length; index++)
+        for (int mask = 0; mask < fullMask; mask++)
         {
-            int[] remainingValues = values.Where((_, remainingIndex) => remainingIndex != index).ToArray();
-
-            foreach (int[] subPermutation in BuildPermutations(remainingValues))
+            if (bestInversions[mask] == int.MaxValue)
             {
-                yield return new[] { values[index] }.Concat(subPermutation).ToArray();
+                continue;
             }
-        }
-    }
 
-    private static int ComputeKendallTau(IReadOnlyList<int> permutation)
-    {
-        int inversions = 0;
+            int position = positionByMask[mask];
 
-        for (int left = 0; left < permutation.Count - 1; left++)
-        {
-            for (int right = left + 1; right < permutation.Count; right++)
+            for (int index = 0; index < tokenCount; index++)
             {
-                if (permutation[left] > permutation[right])
+                if ((mask >> index & 1) != 0)
                 {
-                    inversions++;
+                    continue;
+                }
+
+                string token = tokens[index];
+
+                if (position + token.Length > target.Length ||
+                    !target.AsSpan(position, token.Length).SequenceEqual(token))
+                {
+                    continue;
+                }
+
+                int added = System.Numerics.BitOperations.PopCount((uint)(mask >> (index + 1)));
+                int candidate = bestInversions[mask] + added;
+                int nextMask = mask | (1 << index);
+
+                if (candidate < bestInversions[nextMask])
+                {
+                    bestInversions[nextMask] = candidate;
                 }
             }
         }
 
-        return inversions;
+        return bestInversions[fullMask] == int.MaxValue ? -1 : bestInversions[fullMask];
     }
 }

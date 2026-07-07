@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How PRISM sorts product photos</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --ink: #24292f;
+    --muted: #6a737d;
+    --line: #d8dde3;
+    --accent: #2563eb;
+    --accent-soft: #e8effc;
+    --ok: #15803d;
+    --ok-soft: #e7f6ec;
+    --ko: #b91c1c;
+    --ko-soft: #fdeaea;
+    --warn: #b45309;
+    --warn-soft: #fdf3e3;
+    --mono: Consolas, "Courier New", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16191d;
+      --card: #1f2329;
+      --ink: #e6e8eb;
+      --muted: #9aa4af;
+      --line: #3a414a;
+      --accent: #7aa5f8;
+      --accent-soft: #263650;
+      --ok: #5cc98a;
+      --ok-soft: #1d3327;
+      --ko: #f08a8a;
+      --ko-soft: #402226;
+      --warn: #e3b264;
+      --warn-soft: #3d3020;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    line-height: 1.55;
+  }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 20px 80px; }
+  h1 { font-size: 1.9rem; margin: 18px 0 4px; }
+  h2 { font-size: 1.35rem; margin: 48px 0 6px; }
+  h3 { font-size: 1.05rem; margin: 22px 0 6px; }
+  p.lead { color: var(--muted); font-size: 1.05rem; margin-top: 0; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px 18px; margin: 14px 0;
+  }
+  .example {
+    background: var(--accent-soft); border-radius: 8px;
+    padding: 10px 14px; margin-top: 10px; font-size: 0.93rem;
+  }
+  .example b { color: var(--accent); }
+  code {
+    font-family: var(--mono); font-size: 0.88em;
+    background: rgba(127,127,127,0.13); border-radius: 4px; padding: 1px 5px;
+    white-space: nowrap;
+  }
+  .tag {
+    display: inline-block; font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    border-radius: 999px; padding: 2px 10px; margin-right: 6px;
+  }
+  .tag.ok  { background: var(--ok-soft);  color: var(--ok); }
+  .tag.ko  { background: var(--ko-soft);  color: var(--ko); }
+  .tag.step{ background: var(--accent-soft); color: var(--accent); }
+
+  /* ---- horizontal journey stepper ---- */
+  .journey { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+  .journey .stop {
+    flex: 1 1 150px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; position: relative;
+  }
+  .journey .stop .num {
+    display: inline-flex; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 0.8rem;
+    align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .journey .stop b { display: block; font-size: 0.95rem; }
+  .journey .stop span { font-size: 0.83rem; color: var(--muted); }
+
+  /* ---- the ladder flowchart ---- */
+  .ladder { margin: 20px 0; }
+  .rung { display: grid; grid-template-columns: 1fr 44px 200px; gap: 0; align-items: stretch; }
+  .rung .try {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 16px; margin: 0;
+  }
+  .rung .try b { font-size: 0.98rem; }
+  .rung .try p { margin: 4px 0 0; font-size: 0.88rem; color: var(--muted); }
+  .rung .yes {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ok); font-weight: 700; font-size: 1.1rem;
+  }
+  .rung .found {
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    background: var(--ok-soft); color: var(--ok); border: 1px dashed var(--ok);
+    border-radius: 10px; font-weight: 600; font-size: 0.88rem; padding: 8px;
+  }
+  .down {
+    display: grid; grid-template-columns: 1fr 44px 200px;
+  }
+  .down .arrow {
+    text-align: center; color: var(--muted); font-size: 1.15rem;
+    padding: 2px 0; line-height: 1.2;
+  }
+  .down .arrow small { display: block; font-size: 0.72rem; }
+  .endbox {
+    display: grid; grid-template-columns: 1fr 44px 200px;
+  }
+  .endbox .stop-ko {
+    background: var(--ko-soft); border: 1px solid var(--ko);
+    color: var(--ko); border-radius: 10px; padding: 12px 16px; font-weight: 600;
+  }
+  .endbox .stop-ko p { font-weight: 400; margin: 4px 0 0; font-size: 0.88rem; }
+  .gate {
+    background: var(--warn-soft); border: 1px solid var(--warn);
+    border-radius: 10px; padding: 12px 16px;
+  }
+  .gate b { color: var(--warn); }
+  .gate p { margin: 4px 0 0; font-size: 0.88rem; color: var(--muted); }
+  .rung .no-side {
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    background: var(--ko-soft); color: var(--ko); border: 1px dashed var(--ko);
+    border-radius: 10px; font-weight: 600; font-size: 0.85rem; padding: 8px;
+  }
+  .greenpath { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0; }
+  .greenpath .g {
+    background: var(--ok-soft); border: 1px solid var(--ok); color: var(--ok);
+    border-radius: 10px; padding: 10px 14px; font-weight: 600; font-size: 0.9rem;
+    flex: 1 1 130px; text-align: center;
+  }
+  .greenpath .g small { display: block; font-weight: 400; color: var(--ink); opacity: .75; }
+  .greenpath .a { color: var(--muted); font-size: 1.2rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+  footer { margin-top: 60px; color: var(--muted); font-size: 0.8rem; }
+  @media (max-width: 620px) {
+    .rung, .down, .endbox { grid-template-columns: 1fr 30px 110px; }
+    .rung .found, .rung .no-side { font-size: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>How PRISM sorts product photos</h1>
+<p class="lead">A plain-language guide to what the system does with the photos and Excel files you give it.</p>
+
+<div class="card">
+  <b>The job in one sentence:</b> you give PRISM a batch of product photos and the Excel files that describe the products.
+  PRISM works out <b>which product each photo belongs to</b>, renames each photo to that product's number,
+  puts the photos in the right order, improves them, and hands everything back — with a report that explains
+  what happened to every single photo.
+  <div class="example">
+    <b>In:</b> <code>Pareo_exotica_F1.jpg</code> + an Excel file where one row describes product <code>94613033</code> as a pareo called "Exotica".<br>
+    <b>Out:</b> <code>94613033_det9.jpg</code> — same photo, now named after its product and given position 9.
+  </div>
+</div>
+
+<h2>1. The journey of one photo</h2>
+<p>Every photo travels through the same eight stations, always in this order:</p>
+
+<div class="journey">
+  <div class="stop"><span class="num">1</span><b>Received</b><span>Photos are unpacked (also from very large zip files) and checked.</span></div>
+  <div class="stop"><span class="num">2</span><b>Looked at</b><span>An AI glances at each photo: is there a person? Which side of the product do we see?</span></div>
+  <div class="stop"><span class="num">3</span><b>Matched</b><span>The system finds the product each photo belongs to. This is the heart of PRISM — see below.</span></div>
+  <div class="stop"><span class="num">4</span><b>Ordered</b><span>Photos of the same product get positions: front first, then back, then details.</span></div>
+  <div class="stop"><span class="num">5</span><b>Renamed</b><span>Each photo gets its final name: product number + position.</span></div>
+  <div class="stop"><span class="num">6</span><b>Generated</b><span>Missing photo types can be created from existing ones (for example a close-up crop).</span></div>
+  <div class="stop"><span class="num">7</span><b>Improved</b><span>Photos are straightened, cleaned up and enlarged where needed.</span></div>
+  <div class="stop"><span class="num">8</span><b>Delivered</b><span>You receive the renamed photos plus a report on every photo.</span></div>
+</div>
+
+<div class="card">
+  <b>Photos are never silently thrown away.</b> A photo that cannot be processed is <i>set aside</i>,
+  and the report always says why. The rest of the batch continues normally.
+</div>
+
+<h2>2. Reading the Excel files</h2>
+<p>Suppliers send Excel files in every imaginable shape. PRISM handles this by itself:</p>
+
+<div class="card">
+  <h3>It finds the table, wherever it is</h3>
+  <p>The header row does not have to be the first row, and column names can be in English, French, Dutch,
+  German, Spanish or Italian. Small typing mistakes in the header are forgiven.</p>
+  <div class="example"><b>Example:</b> a column called <code>Famille</code>, <code>FamilY id</code> or <code>Familyid</code> is understood as the product-number column every time.</div>
+</div>
+
+<div class="card">
+  <h3>It combines several sheets and files</h3>
+  <p>All sheets of all Excel files are merged into one product list. If the same product appears in
+  several places, the information is combined into a single record.</p>
+</div>
+
+<div class="card">
+  <h3>It rescues rows that have no product number</h3>
+  <p>Some sheets describe products but contain no product-number column at all. PRISM does not throw
+  these rows away. It looks for a code the row shares with a product it already knows — for example
+  a barcode or an article number — and attaches the row to that product.</p>
+  <div class="example">
+    <b>Example:</b> a catalogue row lists article <code>106297094700</code> but no product number.
+    A second file (a bundle list) says article <code>106297094700</code> belongs to product
+    <code>98985645</code>. The catalogue row is attached to product <code>98985645</code>, and all
+    its extra details (colour, name, size) become usable for matching photos.
+  </div>
+</div>
+
+<div class="card">
+  <h3>It gives meaningless photo names a name from their folder</h3>
+  <p>Some photos have names that say nothing, like <code>1.jpg</code> or <code>DSCN2365.jpg</code>.
+  If such a photo sits in a folder whose name <i>is</i> meaningful, PRISM borrows the folder name for
+  matching. A folder counts as meaningful only when the folders next to it follow the same
+  one-folder-per-product pattern <b>and</b> part of the folder name actually appears in the Excel.</p>
+  <div class="example">
+    <b>Borrowed:</b> <code>1.jpg</code> inside folder <code>earphones_zenith_SH23005</code> is matched as
+    if it were called <code>earphones_zenith_SH23005 1.jpg</code> — because <code>SH23005</code> is in the Excel.<br>
+    <b>Not borrowed:</b> a folder called <code>HD</code>, <code>Web</code> or <code>800 x 1200</code> only
+    describes size or quality, so it is ignored. The photo keeps its real name in the delivered files.
+  </div>
+</div>
+
+<div class="card">
+  <h3>It accepts very large deliveries</h3>
+  <p>Zip files up to 16&nbsp;GB with thousands of photos work fine, including the modern large-zip format
+  that big suppliers use.</p>
+</div>
+
+<h2>3. How a photo finds its product</h2>
+<p>The system tries a series of checks, from the most certain to the least certain.
+As soon as one check finds <b>exactly one</b> product, the photo is matched and the search stops.
+If a check finds two or more possible products, that check does <b>not</b> guess — it passes the photo
+on to the next check. This picture shows every path a photo can take:</p>
+
+<div class="ladder">
+
+  <div class="endbox">
+    <div class="gate"><b>Entry check</b>
+      <p>Is the photo readable, not a duplicate of another photo in the batch, and big enough to use?</p>
+    </div>
+    <div class="yes">→</div>
+    <div class="no-side">Broken, duplicate or too small?<br>Set aside with the reason.</div>
+  </div>
+  <div class="down"><div class="arrow">↓<small>photo is fine</small></div><div></div><div></div></div>
+
+  <div class="rung">
+    <div class="try"><b>Check 1 — A number in the filename equals a product number</b>
+      <p>Digit groups in the filename are compared with the product number, the barcode and the reference
+      of every product. Very short numbers like <code>_01</code> (photo 1 of a set) are ignored, so they
+      cannot cause wrong matches. Numbers written anywhere in a product's row also count.</p>
+      <div class="example"><b>Example:</b> <code>94671115_2.jpg</code> → the number <code>94671115</code> is exactly one product's number. Matched.</div>
+    </div>
+    <div class="yes">→</div>
+    <div class="found">Exactly one product fits?<br>✔ Matched</div>
+  </div>
+  <div class="down"><div class="arrow">↓<small>no, or more than one fits</small></div><div></div><div></div></div>
+
+  <div class="rung">
+    <div class="try"><b>Check 2 — Several numbers together form a product code</b>
+      <p>Filenames often split one code into pieces. The pieces are put back together, in the original
+      order first, and in a different order if needed.</p>
+      <div class="example"><b>Example:</b> <code>24211507_CARDIGAN_76_MAGENTA_B.jpg</code> → <code>24211507</code>&nbsp;+&nbsp;<code>76</code> together form reference <code>24211507-76</code>. Matched.</div>
+    </div>
+    <div class="yes">→</div>
+    <div class="found">Exactly one product fits?<br>✔ Matched</div>
+  </div>
+  <div class="down"><div class="arrow">↓</div><div></div><div></div></div>
+
+  <div class="rung">
+    <div class="try"><b>Check 3 — Only one product has <i>all</i> the numbers</b>
+      <p>Sometimes each number alone fits many products, but the combination fits only one.</p>
+      <div class="example"><b>Example:</b> <code>1010930_60105_A_01.png</code> — the colour code <code>60105</code> appears in many products, the article <code>1010930</code> in a few, but only one product has <b>both</b>. Matched.</div>
+    </div>
+    <div class="yes">→</div>
+    <div class="found">Exactly one product fits?<br>✔ Matched</div>
+  </div>
+  <div class="down"><div class="arrow">↓</div><div></div><div></div></div>
+
+  <div class="rung">
+    <div class="try"><b>Check 4 — Words in the filename match one product's description</b>
+      <p>Words like a model name or colour are looked up in the product descriptions. This also works when
+      two words are glued together in the filename, and when the filename contains a supplier code made of
+      letters and digits. If two products tie, a small number in the filename (such as a colour code) may
+      break the tie.</p>
+      <div class="example"><b>Example 1:</b> <code>Anastasia_palmblue_2.jpg</code> → "Anastasia" + "palmblue" match the product described as <code>ANASTASIA AB-PALM BLUE</code>.</div>
+      <div class="example"><b>Example 2:</b> <code>1707527E.jpg</code> → the code <code>1707527E</code> appears in exactly one product's reference column. Matched on that alone.</div>
+    </div>
+    <div class="yes">→</div>
+    <div class="found">One clear winner?<br>✔ Matched</div>
+  </div>
+  <div class="down"><div class="arrow">↓</div><div></div><div></div></div>
+
+  <div class="rung">
+    <div class="try"><b>Check 5 — What the AI saw in the photo</b>
+      <p>Only for products that still have no photos at all. The AI's impression of the photo
+      (product type, colour) is combined with any leftover filename clues to rule products out.
+      A match is accepted only when a single product remains <i>and</i> real evidence points to it.</p>
+    </div>
+    <div class="yes">→</div>
+    <div class="found">One product remains?<br>✔ Matched</div>
+  </div>
+  <div class="down"><div class="arrow">↓</div><div></div><div></div></div>
+
+  <div class="rung">
+    <div class="try"><b>Check 6 — The filename is written inside the Excel</b>
+      <p>Many catalogues contain a column with the photo filenames or photo links. If the photo's own name
+      appears in exactly one product's row, that settles it. Small differences are forgiven: capital
+      letters, spaces, dashes, and copy-markers like <code>&nbsp;(1)</code> at the end.</p>
+      <div class="example"><b>Example:</b> a cell contains <code>/medias/92836758_det815.jpg</code> and the photo is called <code>92836758_det815&nbsp;(1).jpg</code>. Matched.</div>
+    </div>
+    <div class="yes">→</div>
+    <div class="found">Named in one row?<br>✔ Matched</div>
+  </div>
+  <div class="down"><div class="arrow">↓</div><div></div><div></div></div>
+
+  <div class="rung">
+    <div class="try"><b>Check 7 — The filename number is hidden inside a longer number</b>
+      <p>A long number from the filename (7 digits or more) is searched for <i>inside</i> the products'
+      numbers, because references are often embedded in barcodes.</p>
+      <div class="example"><b>Example:</b> <code>46271023.jpg</code> → <code>46271023</code> sits inside barcode <code>8446271023117</code> of exactly one product. Matched.</div>
+    </div>
+    <div class="yes">→</div>
+    <div class="found">Inside one product's number?<br>✔ Matched</div>
+  </div>
+  <div class="down"><div class="arrow">↓</div><div></div><div></div></div>
+
+  <div class="rung">
+    <div class="try"><b>Check 8 — A sister photo already found the product</b>
+      <p>Photos of the same product usually share the same words in their names. A photo without any usable
+      code joins a product when its words match the "sisters" that already found that product — and no
+      sister points to a different product. All the shots of one product (front, back, extra views) are
+      accepted together and get their positions in the ordering step.</p>
+      <div class="example"><b>Example:</b> <code>..._A.jpg</code> and <code>..._B.jpg</code> matched product <code>90861052</code>. The keyless third shot <code>CARDIGAN_MAGENTA76_C.jpg</code> shares the same words, so it joins <code>90861052</code> too and lands in the next free position.</div>
+    </div>
+    <div class="yes">→</div>
+    <div class="found">One matching sister?<br>✔ Matched</div>
+  </div>
+  <div class="down"><div class="arrow">↓<small>still no owner</small></div><div></div><div></div></div>
+
+  <div class="endbox">
+    <div class="stop-ko">✖ Set aside, with one of these reasons:
+      <p><b>No match found</b> — nothing in the name or the photo points to any product in the list.<br>
+      <b>Fits several products</b> — the clues point to two or more products; guessing is not allowed.<br>
+      <b>Not in the catalogue</b> — the photo clearly names a product number, but that product is not in the Excel files. The photo is fine; the data is missing.</p>
+    </div>
+    <div></div><div></div>
+  </div>
+</div>
+
+<h2>4. After the match</h2>
+<p>Every matched photo continues along one shared road:</p>
+<div class="greenpath">
+  <div class="g">Matched<small>photo has its product</small></div>
+  <div class="a">→</div>
+  <div class="g">Ordered<small>front, back, details get positions</small></div>
+  <div class="a">→</div>
+  <div class="g">Renamed<small><code>90861052_det9.jpg</code></small></div>
+  <div class="a">→</div>
+  <div class="g">Improved<small>straightened, cleaned, enlarged</small></div>
+  <div class="a">→</div>
+  <div class="g">Delivered<small>zip + report</small></div>
+</div>
+<p>The same result comes out every time: running the same batch twice gives exactly the same names,
+positions and matches. Nothing depends on chance or on the order in which files happen to load.</p>
+
+<h2>5. What the report tells you</h2>
+<div class="card scroll">
+  <table>
+    <tr><th>You see</th><th>It means</th></tr>
+    <tr><td><span class="tag ok">OK</span> + new filename + which check matched it</td>
+        <td>The photo was matched, renamed and delivered. The report names the exact check (1–8) that found the product, so a match can always be explained.</td></tr>
+    <tr><td><span class="tag ko">No match found</span></td>
+        <td>None of the eight checks found an owner. Usually the filename carries no usable code and no recognisable words.</td></tr>
+    <tr><td><span class="tag ko">Fits several products</span></td>
+        <td>The clues fit two or more products equally well. PRISM never picks one at random — a wrong photo on a product page is worse than a missing one.</td></tr>
+    <tr><td><span class="tag ko">Not in the catalogue</span></td>
+        <td>The photo names a product number that simply is not in the Excel files. Fix: add the product to the data and run again.</td></tr>
+    <tr><td><span class="tag ko">Duplicate photo</span></td>
+        <td>The exact same image was already in the batch (for example once loose and once inside a zip). Only one copy is processed.</td></tr>
+    <tr><td><span class="tag ko">Too small</span></td>
+        <td>The image has too few pixels to produce good output.</td></tr>
+  </table>
+</div>
+
+<h2>6. What to remember</h2>
+<div class="card">
+  <ul style="margin:6px 0; padding-left: 20px;">
+    <li><b>Certain before clever:</b> exact numbers are tried first, AI impressions last.</li>
+    <li><b>Never guess:</b> a photo is only matched when exactly one product fits.</li>
+    <li><b>Nothing disappears:</b> every photo appears in the report — matched or set aside with a reason.</li>
+    <li><b>Messy input is normal:</b> foreign-language headers, multiple sheets, missing product numbers, glued words in filenames and 6&nbsp;GB zips are all handled automatically.</li>
+  </ul>
+</div>
+
+<footer>PRISM — internal explainer for junior staff. Generated from the current system behaviour.</footer>
+
+</main>
+</body>
+</html>

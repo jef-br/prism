@@ -166,7 +166,39 @@ public class ExporterTests : IDisposable
         Assert.Equal("MATCH_FAIL", row.KoReasonCode);
     }
 
-    //  Helpers 
+    //  Det-order gap policy
+
+    [Fact]
+    public void Run_DefaultGapPolicy_CompactsOverflowDetIndicesFromZero()
+    {
+        // Two overflow images at det8, det9 → manifest filenames must be det0, det1.
+        ExportArtifacts result = Exporter.Run(MakeRequest(
+            [MakeInput("a.jpg", null), MakeInput("b.jpg", null)],
+            [MakeLambda("a.jpg", "FAM001", 8), MakeLambda("b.jpg", "FAM001", 9)],
+            "json"));
+
+        ManifestImageRow rowA = result.Manifest.ImageRows.Single(r => r.SourceReference == "a.jpg");
+        ManifestImageRow rowB = result.Manifest.ImageRows.Single(r => r.SourceReference == "b.jpg");
+        Assert.Equal("FAM001_det0.jpg", rowA.FinalFileName);
+        Assert.Equal("FAM001_det1.jpg", rowB.FinalFileName);
+    }
+
+    [Fact]
+    public void Run_GapsAllowed_LeavesDetIndicesUntouched()
+    {
+        ExportArtifacts result = Exporter.Run(MakeRequest(
+            [MakeInput("a.jpg", null), MakeInput("b.jpg", null)],
+            [MakeLambda("a.jpg", "FAM001", 8), MakeLambda("b.jpg", "FAM001", 9)],
+            "json",
+            detOrderGapsAllowed: true));
+
+        ManifestImageRow rowA = result.Manifest.ImageRows.Single(r => r.SourceReference == "a.jpg");
+        ManifestImageRow rowB = result.Manifest.ImageRows.Single(r => r.SourceReference == "b.jpg");
+        Assert.Equal("FAM001_det8.jpg", rowA.FinalFileName);
+        Assert.Equal("FAM001_det9.jpg", rowB.FinalFileName);
+    }
+
+    //  Helpers
 
     public void Dispose()
     {
@@ -186,19 +218,21 @@ public class ExporterTests : IDisposable
         IReadOnlyList<ImageRecord_INPUT> inputs,
         IReadOnlyList<ImageRecord_LAMBDA> lambdas,
         string format,
-        string? excelPath = null)
+        string? excelPath = null,
+        bool detOrderGapsAllowed = false)
     {
         return new ExportRequest
         {
-            JobID              = Guid.NewGuid(),
-            LambdaRecords      = lambdas,
-            NormalizedImages   = inputs,
-            FirstExcelTempPath = excelPath,
-            Format             = format,
-            ImageCount         = inputs.Count,
-            ExcelCount         = excelPath is not null ? 1 : 0,
-            ZipCount           = 0,
-            Warnings           = []
+            JobID               = Guid.NewGuid(),
+            LambdaRecords       = lambdas,
+            NormalizedImages    = inputs,
+            FirstExcelTempPath  = excelPath,
+            Format              = format,
+            ImageCount          = inputs.Count,
+            ExcelCount          = excelPath is not null ? 1 : 0,
+            ZipCount            = 0,
+            DetOrderGapsAllowed = detOrderGapsAllowed,
+            Warnings            = []
         };
     }
 

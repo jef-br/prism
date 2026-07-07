@@ -11,8 +11,13 @@ public sealed class ClipPromptCatalog {
     // prompt label → (feature id, feature value)
     private readonly Dictionary<string, (string Feature, string Value)> byPrompt;
 
+    // Materialized once — callers receive the same array instance so the classifier can cache
+    // tokenized prompt tensors by reference instead of re-tokenizing per image.
+    private readonly string[] promptArray;
+
     private ClipPromptCatalog( Dictionary<string, (string Feature, string Value)> byPrompt ) {
         this.byPrompt = byPrompt;
+        promptArray = [.. byPrompt.Keys];
     }
 
     // --- Factory
@@ -57,8 +62,9 @@ public sealed class ClipPromptCatalog {
 
     // --- Public API
 
-    /// <summary>All prompt strings to feed the CLIP zero-shot classifier.</summary>
-    public string[] BuildPrompts() => [.. byPrompt.Keys];
+    /// <summary>All prompt strings to feed the CLIP zero-shot classifier. Returns the same cached
+    /// array instance on every call — do not mutate.</summary>
+    public string[] BuildPrompts() => promptArray;
 
     /// <summary> Maps a CLIP result label back to its feature id and value. Returns false for an unrecognised label.</summary>
     public bool TryResolve( string label, out string feature, out string value ) {

@@ -1,6 +1,14 @@
 {
   "semanticThreshold": 0.9,
   "semanticWeight": 0.15,
+  "bracket3MinDistinctTokens": 2,
+  "minNumericTokenLength": 5,
+  "indexDigitRunsAllColumns": true,
+  "minSubstringRescueLength": 7,
+  "identifierTokenMinLength": 4,
+  "indexExcelTokenBigrams": true,
+  "enableSiblingPropagation": true,
+  "enableFolderNameEnrichment": true,
   "rules": [
     {
       "excelField": "FamilyID",
@@ -42,26 +50,30 @@
       "excelField": "ProductColor",
       "type": "string",
       "strategy": "ClipLabelEnricher",
-      "weight": 1.0
+      "weight": 1.0,
+      "clipFeature": "product-color"
     },
     {
       "excelField": "ProductType",
       "type": "string",
       "strategy": "ClipLabelEnricher",
-      "weight": 0.8
+      "weight": 0.8,
+      "clipFeature": "product-type-label"
     },
     {
       "excelField": "ProductMaterial",
       "type": "string",
       "strategy": "ClipLabelEnricher",
-      "weight": 0.5
+      "weight": 0.5,
+      "clipFeature": "product-material"
     },
     {
       "excelField": "ALL",
       "type": "image_labels",
       "strategy": "ClipLabelEnricher",
       "Overlap": 2,
-      "weight": 0.6
+      "weight": 0.6,
+      "clipFeature": "product-color,product-type-label"
     }
   ]
 }

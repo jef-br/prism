@@ -17,9 +17,9 @@ $script:ZipExtension    = '.zip'
 
 # Ingress byte limits (mirror Prism_Config.json — any single out-of-range file rejects the whole job).
 $script:MinImageBytes = 2048
-$script:MaxImageBytes = 26214400
+$script:MaxImageBytes = 262144000
 $script:MinExcelBytes = 9216
-$script:MaxExcelBytes = 1048576
+$script:MaxExcelBytes = 5242880
 
 function Ensure-PrismApi {
     <#
@@ -161,8 +161,10 @@ function Invoke-PrismFolderJob {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $workDir = Join-Path ([System.IO.Path]::GetTempPath()) "prism-test-$folderName-$([System.Guid]::NewGuid().ToString('N'))"
     try {
-        $files = Get-PrismJobInputFiles -Folder $Folder -ZipExpandDir $workDir
-        if ($null -eq $files) {
+        # @(...) is load-bearing: a single accepted file comes back as a scalar string, which has no
+        # .Count under StrictMode.
+        $files = @(Get-PrismJobInputFiles -Folder $Folder -ZipExpandDir $workDir)
+        if ($files.Count -eq 0) {
             Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId '-' -Total 0 -Ok 0 -DurationSeconds $stopwatch.Elapsed.TotalSeconds -Note 'NO_VALID_XLSX'
             return
         }
@@ -247,21 +249,37 @@ function Submit-PrismJob {
     }
 
     $seed = $imageFiles[0]
-    $rest = if ($imageFiles.Count -gt 1) { $imageFiles[1..($imageFiles.Count - 1)] } else { @() }
+    # @(...) wrapper is load-bearing: assigning `if (...) { } else { @() }` collapses the empty array
+    # to $null, and a 2-element slice returns a scalar string — both break .Count under StrictMode.
+    $rest = @(if ($imageFiles.Count -gt 1) { $imageFiles[1..($imageFiles.Count - 1)] } else { @() })
 
-    # Pack the non-seed images into one stored ZIP — leaf filenames are already unique (de-duped in
-    # Get-PrismJobInputFiles), so ZIP entry names do not collide.
-    $zipPath = $null
+    # Pack the non-seed images into stored ZIPs — leaf filenames are already unique (de-duped in
+    # Get-PrismJobInputFiles), so ZIP entry names do not collide. Chunked at 3.5 GB per archive:
+    # a stored zip past 4 GB needs ZIP64 (which the core zip reader rejects), and Prism_Config caps
+    # a single zip member at MaxZipBytes anyway.
+    $zipPaths = New-Object System.Collections.Generic.List[string]
     if ($rest.Count -gt 0) {
         New-Item -ItemType Directory -Path $WorkDir -Force | Out-Null
-        $zipPath = Join-Path $WorkDir '__prism_upload_images.zip'
-        $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+        $chunkLimit = 3.5GB
+        $chunkBytes = 0
+        $chunkIndex = 0
+        $zip = $null
         try {
             foreach ($img in $rest) {
+                $len = (Get-Item -LiteralPath $img).Length
+                if ($null -eq $zip -or ($chunkBytes + $len) -gt $chunkLimit) {
+                    if ($zip) { $zip.Dispose() }
+                    $chunkIndex++
+                    $zipPath = Join-Path $WorkDir ("__prism_upload_images_$chunkIndex.zip")
+                    $zipPaths.Add($zipPath)
+                    $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+                    $chunkBytes = 0
+                }
                 [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $img, [System.IO.Path]::GetFileName($img), [System.IO.Compression.CompressionLevel]::NoCompression) | Out-Null
+                $chunkBytes += $len
             }
         } finally {
-            $zip.Dispose()
+            if ($zip) { $zip.Dispose() }
         }
     }
 
@@ -289,7 +307,7 @@ function Submit-PrismJob {
 
         $uploadPaths = New-Object System.Collections.Generic.List[string]
         $uploadPaths.Add($seed)              # loose seed image (satisfies ingress min-image gate)
-        if ($zipPath) { $uploadPaths.Add($zipPath) }   # all remaining images, expanded by core
+        foreach ($zp in $zipPaths) { $uploadPaths.Add($zp) }   # all remaining images, expanded by core
         foreach ($x in $excelFiles) { $uploadPaths.Add($x) }
 
         foreach ($path in $uploadPaths) {

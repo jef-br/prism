@@ -12,13 +12,13 @@ public sealed class ClassificationService : IClassificationService
 {
     private readonly ImageClassifier classifier;
     private readonly ClipPromptCatalog promptCatalog;
-    private readonly int maxHammingDistance;
+    private readonly PrismConfiguration configuration;
 
-    internal ClassificationService(ImageClassifier classifier, ClipPromptCatalog promptCatalog, int maxHammingDistance)
+    internal ClassificationService(ImageClassifier classifier, ClipPromptCatalog promptCatalog, PrismConfiguration configuration)
     {
-        this.classifier         = classifier;
-        this.promptCatalog      = promptCatalog;
-        this.maxHammingDistance = maxHammingDistance;
+        this.classifier    = classifier;
+        this.promptCatalog = promptCatalog;
+        this.configuration = configuration;
     }
 
     /// <inheritdoc/>
@@ -28,6 +28,27 @@ public sealed class ClassificationService : IClassificationService
     public void ApplyClipTags(Image<Rgba32> image, ImageRecord_LAMBDA lambda, double influentialThreshold, double cutoffThreshold)
     {
         ClassificationToken[] logitTokens = classifier.ClassifyImage(image, promptCatalog.BuildPrompts());
+        ApplyTokens(logitTokens, lambda, influentialThreshold, cutoffThreshold);
+    }
+
+    /// <inheritdoc/>
+    public void ApplyClipTagsBatch(IReadOnlyList<(Image<Rgba32> Image, ImageRecord_LAMBDA Lambda)> items, double influentialThreshold, double cutoffThreshold)
+    {
+        if (items.Count == 0) return;
+
+        ClassificationToken[][] tokenSets = classifier.ClassifyImages(
+            [.. items.Select(item => item.Image)], promptCatalog.BuildPrompts());
+
+        for (int i = 0; i < items.Count; i++)
+            ApplyTokens(tokenSets[i], items[i].Lambda, influentialThreshold, cutoffThreshold);
+    }
+
+    /// <summary>
+    /// Converts raw per-prompt logits into influential/trivial tags and CLIP-derived feature values
+    /// on one LAMBDA — the shared tail of the single and batched classification paths.
+    /// </summary>
+    private void ApplyTokens(ClassificationToken[] logitTokens, ImageRecord_LAMBDA lambda, double influentialThreshold, double cutoffThreshold)
+    {
         if (logitTokens.Length == 0) return;
 
         // Resolve each prompt to the (feature, value) it represents; drop unrecognised prompts.
@@ -43,7 +64,9 @@ public sealed class ClassificationService : IClassificationService
 
         // CLIP zero-shot: within each mutually-exclusive feature group (e.g. hero-orientation's
         // FRONT/BACK/SIDEON/...), softmax the prompt logits into a calibrated probability per value, then
-        // take the winning value as the measurement for that feature.
+        // take the winning value as the measurement for that feature. The influential bar is per-feature:
+        // a 5-way softmax winner rarely reaches the confidence a 2-way winner does, so each group may
+        // override the global threshold via Classification.Confidence_Thresholds.
         foreach (IGrouping<string, (ClassificationToken Token, string Feature, string Value)> group in resolved.GroupBy(r => r.Feature))
         {
             var members = group.ToList();
@@ -52,9 +75,19 @@ public sealed class ClassificationService : IClassificationService
             double winningProbability = probabilities[winner];
             (ClassificationToken Token, string Feature, string Value) best = members[winner];
 
-            var tag = new ClassificationToken { Label = best.Token.Label, Confidence = winningProbability };
+            var tag = new ClassificationToken
+            {
+                Label      = best.Token.Label,
+                Confidence = winningProbability,
+                Feature    = best.Feature,
+                Value      = best.Value
+            };
 
-            if (winningProbability >= influentialThreshold)
+            double featureThreshold = configuration.InfluentialThresholdsByFeature.TryGetValue(best.Feature, out double overrideThreshold)
+                ? overrideThreshold
+                : influentialThreshold;
+
+            if (winningProbability >= featureThreshold)
             {
                 influential.Add(tag);
                 lambda.Features.Set(best.Feature, best.Value, winningProbability, "clip");
@@ -100,7 +133,7 @@ public sealed class ClassificationService : IClassificationService
 
     /// <inheritdoc/>
     public IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<(ImageRecord_INPUT Record, UInt128 Hash)> entries)
-        => new VisualHasher(maxHammingDistance).FindDuplicates(entries);
+        => new VisualHasher(configuration.MaxHammingDistance).FindDuplicates(entries);
 
     /// <inheritdoc/>
     public void Dispose() { }

@@ -10,4 +10,5 @@ internal sealed record CandidateDetOrder(
     int NgpConfidence,
     int HintScore,
     int SourceIndex,
-    string Phenotype);
+    string Phenotype,
+    string Filename);

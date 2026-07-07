@@ -1,10 +1,6 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 using OpenCvSharp;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using CvSize = OpenCvSharp.Size;
 
 namespace Prism.Core;
@@ -85,7 +81,7 @@ public static class ImagePreProcessor {
     public static (byte[]? bytes, Mat? colorMat) Preprocess(
         ImageRecord_LAMBDA lambda, string? imagePath, PrismConfiguration config)
     {
-        byte[]? flatJpg = NormalizeToFlatJpg(imagePath);
+        byte[]? flatJpg = ReadNormalizedJpg(imagePath);
         if (flatJpg is null) return (null, null);
 
         // Decode to BGR Mat once — reused for bbox detection, analyzers, and downstream transforms.
@@ -118,21 +114,12 @@ public static class ImagePreProcessor {
         return ParseSalientBox(bbox.coords, bbox.origW, bbox.origH);
     }
 
-    // Steps 1 + 2: EXIF orientation → flat single-layer JPG (no alpha, sRGB)
-    private static byte[]? NormalizeToFlatJpg( string? imagePath ) {
+    // Steps 1 + 2 are already done by Import: the file at imagePath is an oriented, alpha-flattened
+    // JPEG. Re-normalizing here would decode it, apply two no-op mutations, and re-encode a second
+    // lossy JPEG generation before upscale/crop — so the bytes are read as-is instead.
+    private static byte[]? ReadNormalizedJpg( string? imagePath ) {
         if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath)) return null;
-        try {
-            using Image<Rgba32> img = Image.Load<Rgba32>(imagePath);
-            img.Mutate(x => x.AutoOrient());
-            img.Mutate(x => x.BackgroundColor(Color.White));
-            return EncodeToJpg(img);
-        } catch { return null; }
-    }
-
-    private static byte[] EncodeToJpg( Image img ) {
-        using MemoryStream ms = new();
-        img.Save(ms, new JpegEncoder());
-        return ms.ToArray();
+        try { return File.ReadAllBytes(imagePath); } catch { return null; }
     }
 
     // Step 3: salient bounding box detection from BGR Mat
@@ -241,7 +228,8 @@ public static class ImagePreProcessor {
                 Path.GetDirectoryName(PrismConfigLocator.FindPrismConfigPath() ?? string.Empty) ?? string.Empty,
                 "Images", "Analyzers", "cfg_ImageAnalyzer.json");
 
-            ImageAnalyzerConfig analyzerCfg = ImageAnalyzerConfig.Load(analyzerCfgPath);
+            ImageAnalyzerConfig analyzerCfg = ConfigCache.GetOrLoad(
+                () => ImageAnalyzerConfig.Load(analyzerCfgPath), analyzerCfgPath);
             bool hasHuman = Analyzer_HasHuman.Analyze(colorMat, bbox, analyzerCfg);
             lambda.Features.Set("has-human", hasHuman ? "true" : "false", 1.0, "Analyzer_HasHuman");
         } catch {

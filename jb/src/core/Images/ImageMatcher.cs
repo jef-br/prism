@@ -13,13 +13,25 @@ internal sealed class ImageMatcher {
     private readonly ClipLabelEnricher clipLabelEnricher;
     private readonly SemanticMatcher semanticMatcher;
     private readonly FilenameToCellMatcher filenameToCellMatcher;
+    private readonly SiblingPropagator siblingPropagator;
+    private readonly FolderNameEnricher folderNameEnricher;
 
     private ImageMatcher( MatchingConfig matchingConfig, TranslationConfig translationConfig, string familyIdColumnName ) {
         this.matchingConfig = matchingConfig;
-        numericMatcher = new NumericMatcher(familyIdColumnName);
-        stringMatcher = new StringMatcher(translationConfig);
+        numericMatcher = new NumericMatcher(
+            familyIdColumnName,
+            matchingConfig.MinNumericTokenLength,
+            matchingConfig.IndexDigitRunsAllColumns,
+            matchingConfig.MinSubstringRescueLength);
+        stringMatcher = new StringMatcher(
+            translationConfig,
+            matchingConfig.Bracket3MinDistinctTokens,
+            matchingConfig.IdentifierTokenMinLength,
+            matchingConfig.IndexExcelTokenBigrams);
         clipLabelEnricher = new ClipLabelEnricher();
         filenameToCellMatcher = new FilenameToCellMatcher();
+        siblingPropagator = new SiblingPropagator();
+        folderNameEnricher = new FolderNameEnricher();
         semanticMatcher = new SemanticMatcher(
             numericMatcher,
             stringMatcher,
@@ -48,15 +60,19 @@ internal sealed class ImageMatcher {
             "ExcelConfig.json",
             "ExcelConfig.json not found in the config directory next to Prism_Config.json.");
 
-        MatchingConfig matchingConfig = MatchingConfig.Load(matchingConfigPath);
-        TranslationConfig translationConfig = TranslationConfig.Load(translationConfigPath);
-        ExcelConfig excelConfig = ExcelConfig.Load(excelConfigPath);
+        MatchingConfig matchingConfig = ConfigCache.GetOrLoad(
+            () => MatchingConfig.Load(matchingConfigPath), matchingConfigPath);
+        TranslationConfig translationConfig = ConfigCache.GetOrLoad(
+            () => TranslationConfig.Load(translationConfigPath), translationConfigPath);
+        ExcelConfig excelConfig = ConfigCache.GetOrLoad(
+            () => ExcelConfig.Load(excelConfigPath), excelConfigPath);
 
         string? prismConfigPath = PrismConfigLocator.FindPrismConfigPath();
         if (prismConfigPath is null)
             throw new PrismConfigurationException("Prism_Config.json not found — cannot load convergence weight.");
 
-        PrismConfiguration prismConfig = PrismConfiguration.LoadPrismConfig(prismConfigPath);
+        PrismConfiguration prismConfig = ConfigCache.GetOrLoad(
+            () => PrismConfiguration.LoadPrismConfig(prismConfigPath), prismConfigPath);
 
         ImageMatcher matcher = new(matchingConfig, translationConfig, excelConfig.RecordPrimaryKey);
         return matcher.RunWaterfall(records, families, prismConfig.Weight_MatchingSignalsConverging);
@@ -77,6 +93,10 @@ internal sealed class ImageMatcher {
         // Keyed by InitialFullName; accumulates every FamilyID an image was a candidate for across all brackets.
         Dictionary<string, HashSet<string>> crossBracketCandidates = new(StringComparer.OrdinalIgnoreCase);
 
+        // Give meaningless filenames a matchable name from their folder before any bracket runs.
+        if (matchingConfig.EnableFolderNameEnrichment)
+            folderNameEnricher.Enrich(allRecords, families);
+
         List<ImageRecord_LAMBDA> unmatched = allRecords.Where(r => !r.IsKo).ToList();
 
         // Bracket 1: single numeric token, TCD = 0
@@ -84,6 +104,9 @@ internal sealed class ImageMatcher {
 
         // Bracket 2: multi-token numeric concatenation, TCD ≤ maxDistance
         unmatched = RunBracket2(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
+
+        // Bracket 2-Intersect: per-token candidate sets intersect to exactly one FamilyID
+        unmatched = RunBracket2Intersect(unmatched, families, numericRules, rejectedNearTies);
 
         // Bracket 3: string tokens, exactly-1-FamilyID
         unmatched = RunBracket3(unmatched, allRecords, families, rejectedNearTies, crossBracketCandidates);
@@ -103,11 +126,18 @@ internal sealed class ImageMatcher {
         // Bracket 5: image filename named verbatim in an Excel cell (exact, unique)
         unmatched = RunBracket5FilenameToCell(unmatched, families, rejectedNearTies);
 
+        // Substring rescue: unique family whose digit target contains a long filename token
+        unmatched = RunSubstringRescue(unmatched, families, numericRules, rejectedNearTies);
+
+        // Sibling propagation: inherit the FamilyID of the unique matched sibling image
+        if (matchingConfig.EnableSiblingPropagation)
+            unmatched = siblingPropagator.Run(unmatched, allRecords);
+
         // Add CLIP label evidence to already-matched records (no new assignments)
         AddClipLabelEvidence(allRecords, families, labelRules);
 
         // Bracket 6 cleanup: KO any image still without a FamilyID assignment
-        int koAdded = KoUnmatched(unmatched, crossBracketCandidates);
+        int koAdded = KoUnmatched(unmatched, crossBracketCandidates, families);
 
         // Bracket 7: finalize clustering (single-pass waterfall means no structural ties)
         FinalizeMatches(allRecords, convergenceWeight);
@@ -200,7 +230,40 @@ internal sealed class ImageMatcher {
         return stillUnmatched;
     }
 
-    //  Bracket 3 
+    //  Bracket 2-Intersect
+
+    /// <summary>
+    /// Runs NumericMatcher token-intersection bracket: tokens that individually tie across several
+    /// families can jointly narrow to exactly one. Returns images not yet matched.
+    /// </summary>
+    private List<ImageRecord_LAMBDA> RunBracket2Intersect(
+        List<ImageRecord_LAMBDA> candidates,
+        IReadOnlyList<FamilyIDRecord> families,
+        IReadOnlyList<MatchingRule> numericRules,
+        Dictionary<string, List<CandidateSummary>> rejectedNearTies ) {
+        List<ImageRecord_LAMBDA> stillUnmatched = [];
+        double numericWeight = numericRules.Count > 0 ? numericRules[0].Weight : 1.0;
+
+        foreach (ImageRecord_LAMBDA record in candidates) {
+            string key = record.InitialFullName ?? string.Empty;
+            MatchEvidence? evidence = numericMatcher.TryMatchByTokenIntersection(record, families, numericRules);
+
+            if (evidence is not null) {
+                record.MatchEvidence = evidence with {
+                    ThresholdStatus = evidence.FinalScore >= matchingConfig.SemanticThreshold,
+                    RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
+                    MatcherWeights = [new MatcherContribution("NumericMatcher.Bracket2-Intersect", numericWeight, evidence.FinalScore)]
+                };
+            }
+            else {
+                stillUnmatched.Add(record);
+            }
+        }
+
+        return stillUnmatched;
+    }
+
+    //  Bracket 3
 
     /// <summary>
     /// Runs StringMatcher exactly-1-FamilyID bracket. Returns images not yet matched.
@@ -344,6 +407,38 @@ internal sealed class ImageMatcher {
         return stillUnmatched;
     }
 
+    //  Substring rescue
+
+    /// <summary>
+    /// Runs NumericMatcher substring rescue: accepts the unique family one of whose digit targets
+    /// contains a long filename token. Returns images still unmatched after this pass.
+    /// </summary>
+    private List<ImageRecord_LAMBDA> RunSubstringRescue(
+        List<ImageRecord_LAMBDA> candidates,
+        IReadOnlyList<FamilyIDRecord> families,
+        IReadOnlyList<MatchingRule> numericRules,
+        Dictionary<string, List<CandidateSummary>> rejectedNearTies ) {
+        List<ImageRecord_LAMBDA> stillUnmatched = [];
+
+        foreach (ImageRecord_LAMBDA record in candidates) {
+            string key = record.InitialFullName ?? string.Empty;
+            MatchEvidence? evidence = numericMatcher.TryMatchBySubstringRescue(record, families, numericRules);
+
+            if (evidence is not null) {
+                record.MatchEvidence = evidence with {
+                    ThresholdStatus = evidence.FinalScore >= matchingConfig.SemanticThreshold,
+                    RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
+                    MatcherWeights = [new MatcherContribution("NumericMatcher.SubstringRescue", 1.0, evidence.FinalScore)]
+                };
+            }
+            else {
+                stillUnmatched.Add(record);
+            }
+        }
+
+        return stillUnmatched;
+    }
+
     //  CLIP label enrichment
 
     /// <summary>
@@ -380,23 +475,33 @@ internal sealed class ImageMatcher {
     //  Bracket 5 cleanup 
 
     /// <summary>
-    /// KOs any image that was not matched by brackets 1–4.
+    /// KOs any image that was not matched by brackets 1–5.
     /// Images that were candidates for 2+ FamilyIDs receive <c>MATCHES_MULTIPLE_FAMILYIDS</c>;
-    /// images with no signal at all receive <c>MATCH_NOT_FOUND</c>.
+    /// images whose stem carries a well-formed FamilyID that the catalogue simply does not contain
+    /// receive <c>NOT_IN_CATALOG</c>; images with no signal at all receive <c>MATCH_NOT_FOUND</c>.
     /// </summary>
     /// <returns>Number of records KO'd.</returns>
-    private static int KoUnmatched( List<ImageRecord_LAMBDA> unmatched, IReadOnlyDictionary<string, HashSet<string>> crossBracketCandidates ) {
+    private static int KoUnmatched( List<ImageRecord_LAMBDA> unmatched, IReadOnlyDictionary<string, HashSet<string>> crossBracketCandidates, IReadOnlyList<FamilyIDRecord> families ) {
+        HashSet<string> knownFamilyIds = families
+            .Select(f => f.FamilyID)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         foreach (ImageRecord_LAMBDA record in unmatched) {
             string sourceFilename = record.InitialFullName ?? string.Empty;
             string imageId = Path.GetFileNameWithoutExtension(sourceFilename);
 
             bool multiFamily = crossBracketCandidates.TryGetValue(sourceFilename, out HashSet<string>? seen)
                                && seen.Count >= 2;
+            bool outOfCatalog = !multiFamily && StemCarriesUnknownFamilyId(imageId, knownFamilyIds);
 
             string candidates = multiFamily ? string.Join(", ", seen!) : string.Empty;
-            string reasonCode = multiFamily ? "MATCHES_MULTIPLE_FAMILYIDS" : "MATCH_NOT_FOUND";
+            string reasonCode = multiFamily ? "MATCHES_MULTIPLE_FAMILYIDS" : outOfCatalog ? "NOT_IN_CATALOG" : "MATCH_NOT_FOUND";
             string safeMsg = multiFamily ? $"{candidates}" : $"{imageId}";
-            string explanation = multiFamily ? $"'{imageId}' qualifies for {seen!.Count} FamilyIDs. Has to be exactly one." : $"'{imageId}': no unique FamilyID match.";
+            string explanation = multiFamily
+                ? $"'{imageId}' qualifies for {seen!.Count} FamilyIDs. Has to be exactly one."
+                : outOfCatalog
+                    ? $"'{imageId}' names a FamilyID that is not in the supplied Excel data."
+                    : $"'{imageId}': no unique FamilyID match.";
             record.IsKo = true;
             record.KoReasonCode = reasonCode;
             record.KoSafeMessage = safeMsg;
@@ -411,6 +516,19 @@ internal sealed class ImageMatcher {
         }
 
         return unmatched.Count;
+    }
+
+    /// <summary>
+    /// True when the stem contains an 8-digit run that looks like a PRISM FamilyID but is absent
+    /// from the supplied families — the image belongs to a product outside this batch's catalogue.
+    /// </summary>
+    private static bool StemCarriesUnknownFamilyId( string imageId, HashSet<string> knownFamilyIds ) {
+        foreach (System.Text.RegularExpressions.Match run in System.Text.RegularExpressions.Regex.Matches(imageId, @"\d+")) {
+            if (run.Value.Length == 8 && !knownFamilyIds.Contains(run.Value))
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>Adds all FamilyIds from <paramref name="candidates"/> to the cross-bracket accumulator for <paramref name="key"/>.</summary>

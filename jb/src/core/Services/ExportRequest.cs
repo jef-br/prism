@@ -22,6 +22,13 @@ public sealed record ExportRequest
     /// <summary>Requested output format ("zip" or "json").</summary>
     public required string Format { get; init; }
 
+    /// <summary>
+    /// When false (default), Export compacts each family's det indices to a contiguous 0..n-1 range
+    /// (gaps closed, relative order preserved). When true, det indices are left as the Order stage
+    /// assigned them. Mirrors Output.DET-ORDER-GAPS-ALLOWED in Prism_Config.json.
+    /// </summary>
+    public bool DetOrderGapsAllowed { get; init; }
+
     /// <summary>Original accepted image count for the manifest summary.</summary>
     public int ImageCount { get; init; }
 
