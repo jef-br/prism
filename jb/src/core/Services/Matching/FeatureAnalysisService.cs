@@ -10,7 +10,7 @@ namespace Prism.Services.Matching;
 /// </summary>
 public sealed class FeatureAnalysisService : IFeatureAnalysisService
 {
-    private const string YoloModelRelativePath = "Services/Matching/Analyzers/ONNX/yolov8n/yolov8n.onnx";
+    private const string YoloModelRelativePath = "Services/Matching/Analyzers/ONNX/yolo26s.onnx";
 
     private readonly AnalyzerConfig analyzerConfig;
     private readonly ProductTypeResolver productTypes;
@@ -32,12 +32,12 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService
 
         productTypes = ConfigCache.GetOrLoad(() => ProductTypeResolver.Load(mapPath), mapPath);
 
-        // The 12 MB detector is not copied into build outputs; FindModelAsset resolves it from the
+        // The 37 MB detector is not copied into build outputs; FindModelAsset resolves it from the
         // deployed location, the PRISM_ONNX_MODEL_DIR override, or the single source-tree copy.
         yoloModelPath = PrismConfigLocator.FindModelAsset(YoloModelRelativePath);
         if (yoloModelPath is null)
             throw new PrismConfigurationException(
-                "YOLOv8n ONNX model not found. Deploy Images/Analyzers/ONNX/yolov8n/ next to " +
+                "YOLO26 ONNX model not found. Deploy Services/Matching/Analyzers/ONNX/yolo26s.onnx next to " +
                 "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
     }
 

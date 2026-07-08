@@ -1,7 +1,7 @@
 namespace Prism.Services.Matching;
 
 /// <summary>
-/// The 80 COCO class names in canonical index order for the bundled yolov8n.onnx model.
+/// The 80 COCO class names in canonical index order for the bundled yolo26s.onnx model.
 /// Index 0 is "person" — the class the human/face analyzer wave keys off.
 /// </summary>
 internal static class YoloClassNames

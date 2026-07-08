@@ -7,7 +7,7 @@ using SixLabors.ImageSharp.Processing;
 namespace Prism.Services.Matching;
 
 /// <summary>
-/// YOLOv8n ONNX boundary: sole class permitted to access the detector InferenceSession.
+/// YOLO26 ONNX boundary: sole class permitted to access the detector InferenceSession.
 /// Detects the 80 COCO object classes in a product image and returns normalized boxes —
 /// the subject box, person detections, and object counts feeding the analyzer chain.
 /// One shared instance per process (the session is expensive); Run calls are serialized
@@ -15,11 +15,11 @@ namespace Prism.Services.Matching;
 /// </summary>
 public sealed class YoloDetector : IDisposable
 {
-    // Tensor names for the standard ultralytics YOLOv8 ONNX export.
+    // Tensor names for the ultralytics YOLO26 end-to-end ONNX export.
     private const string TensorImages  = "images";
     private const string TensorOutput0 = "output0";
 
-    // YOLOv8n preprocessing — 640×640 CHW, RGB, pixel/255 normalization, no letterboxing
+    // YOLO26 preprocessing — 640×640 CHW, RGB, pixel/255 normalization, no letterboxing
     // (plain resize; boxes are normalized back against the resized frame so aspect distortion cancels).
     private const int InputWidth  = 640;
     private const int InputHeight = 640;
@@ -55,7 +55,7 @@ public sealed class YoloDetector : IDisposable
     }
 
     /// <summary>
-    /// Loads the YOLOv8n ONNX model. Does not throw on a missing file — sets
+    /// Loads the YOLO26 ONNX model. Does not throw on a missing file — sets
     /// <see cref="IsReady"/> to false instead; startup validation guarantees presence in production.
     /// </summary>
     public void Initialize(string modelPath)
@@ -117,66 +117,36 @@ public sealed class YoloDetector : IDisposable
         return tensor;
     }
 
-    // Output is [1, 84, N] (4 box coords + 80 class scores per anchor, N ≈ 8400). Per anchor the
-    // best class is taken; survivors above the confidence threshold go through class-wise NMS.
+    // YOLO26 exports an end-to-end (NMS-free) head: output is [1, 300, 6], each row
+    // [x1, y1, x2, y2, score, classId] with box coords in 640-input pixel space and detections
+    // already NMS-filtered and ranked. Unused slots are zero-padded (score 0). We threshold on
+    // confidence, normalize boxes to [0,1] of the resized frame, and cap at MaxDetections —
+    // no argmax or NMS needed (contrast the retired YOLOv8n [1, 84, 8400] raw head).
     private static IReadOnlyList<YoloDetection> Postprocess(Tensor<float> prediction, YoloAnalyzerConfig cfg)
     {
-        int anchors = prediction.Dimensions[2];
-        int classes = prediction.Dimensions[1] - 4;
+        int detections = prediction.Dimensions[1];
 
-        List<YoloDetection> candidates = [];
-        for (int a = 0; a < anchors; a++)
-        {
-            int bestClass = -1;
-            float bestScore = 0f;
-            for (int c = 0; c < classes; c++)
-            {
-                float score = prediction[0, 4 + c, a];
-                if (score > bestScore) { bestScore = score; bestClass = c; }
-            }
-            if (bestClass < 0 || bestScore < cfg.ConfidenceThreshold) continue;
-
-            // Box coords are center-x, center-y, width, height in 640-space; normalize to [0,1].
-            float cx = prediction[0, 0, a] / InputWidth;
-            float cy = prediction[0, 1, a] / InputHeight;
-            float w  = prediction[0, 2, a] / InputWidth;
-            float h  = prediction[0, 3, a] / InputHeight;
-
-            string name = bestClass < YoloClassNames.Names.Length ? YoloClassNames.Names[bestClass] : $"class-{bestClass}";
-            candidates.Add(new YoloDetection(bestClass, name, bestScore,
-                Math.Clamp(cx - w / 2f, 0f, 1f), Math.Clamp(cy - h / 2f, 0f, 1f),
-                Math.Clamp(cx + w / 2f, 0f, 1f), Math.Clamp(cy + h / 2f, 0f, 1f)));
-        }
-
-        return ApplyClassWiseNms(candidates, cfg);
-    }
-
-    // Standard greedy NMS per class: keep the strongest box, drop same-class boxes overlapping
-    // it above the IoU threshold, repeat.
-    private static IReadOnlyList<YoloDetection> ApplyClassWiseNms(List<YoloDetection> candidates, YoloAnalyzerConfig cfg)
-    {
         List<YoloDetection> kept = [];
-        foreach (IGrouping<int, YoloDetection> group in candidates.GroupBy(d => d.ClassId))
+        for (int d = 0; d < detections; d++)
         {
-            List<YoloDetection> remaining = [.. group.OrderByDescending(d => d.Confidence)];
-            while (remaining.Count > 0)
-            {
-                YoloDetection best = remaining[0];
-                kept.Add(best);
-                remaining.RemoveAll(d => IntersectionOverUnion(best, d) > cfg.NmsIouThreshold);
-            }
+            float score = prediction[0, d, 4];
+            if (score < cfg.ConfidenceThreshold) continue;
+
+            int classId = (int)prediction[0, d, 5];
+
+            // Box coords are x1,y1,x2,y2 in 640-space; normalize to [0,1] of the resized frame.
+            float x1 = prediction[0, d, 0] / InputWidth;
+            float y1 = prediction[0, d, 1] / InputHeight;
+            float x2 = prediction[0, d, 2] / InputWidth;
+            float y2 = prediction[0, d, 3] / InputHeight;
+
+            string name = classId >= 0 && classId < YoloClassNames.Names.Length ? YoloClassNames.Names[classId] : $"class-{classId}";
+            kept.Add(new YoloDetection(classId, name, score,
+                Math.Clamp(x1, 0f, 1f), Math.Clamp(y1, 0f, 1f),
+                Math.Clamp(x2, 0f, 1f), Math.Clamp(y2, 0f, 1f)));
         }
 
         return [.. kept.OrderByDescending(d => d.Confidence).Take(cfg.MaxDetections)];
-    }
-
-    private static float IntersectionOverUnion(YoloDetection a, YoloDetection b)
-    {
-        float ix = MathF.Max(0f, MathF.Min(a.X2, b.X2) - MathF.Max(a.X1, b.X1));
-        float iy = MathF.Max(0f, MathF.Min(a.Y2, b.Y2) - MathF.Max(a.Y1, b.Y1));
-        float inter = ix * iy;
-        float union = a.Area + b.Area - inter;
-        return union <= 0f ? 0f : inter / union;
     }
 
     /// <inheritdoc/>

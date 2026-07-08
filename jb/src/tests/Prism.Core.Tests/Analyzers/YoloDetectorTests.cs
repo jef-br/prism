@@ -6,8 +6,8 @@ using Xunit;
 namespace Prism.Core.Tests.Analyzers;
 
 /// <summary>
-/// Smoke tests for the YOLOv8n detector boundary: the bundled model must load from the source
-/// tree and produce parseable, NMS-filtered detections without throwing.
+/// Smoke tests for the YOLO26 detector boundary: the bundled model must load from the source
+/// tree and produce parseable, normalized detections without throwing.
 /// </summary>
 public class YoloDetectorTests
 {
@@ -15,7 +15,7 @@ public class YoloDetectorTests
     {
         for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
         {
-            string candidate = Path.Combine(dir.FullName, "jb", "src", "core", "Services", "Matching", "Analyzers", "ONNX", "yolov8n", "yolov8n.onnx");
+            string candidate = Path.Combine(dir.FullName, "jb", "src", "core", "Services", "Matching", "Analyzers", "ONNX", "yolo26s.onnx");
             if (File.Exists(candidate)) return candidate;
         }
         return null;
