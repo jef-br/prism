@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Prism.Core;
+namespace Prism.Lib.Zip;
 
 /// <summary>
 /// Reads central-directory metadata needed by the zip foundation module.

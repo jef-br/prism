@@ -9,7 +9,7 @@ using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.Processing;
 
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /// <summary>
 /// Normalizes all accepted input records into flat JPEG image artifacts and builds the Internal

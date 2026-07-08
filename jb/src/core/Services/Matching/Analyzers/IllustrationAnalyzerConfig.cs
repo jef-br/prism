@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Thresholds for Analyzer_IsIllustration, bound from the "IsIllustration" section of

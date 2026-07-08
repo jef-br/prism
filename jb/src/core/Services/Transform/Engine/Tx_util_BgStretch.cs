@@ -1,6 +1,6 @@
 using OpenCvSharp;
 
-namespace Prism.Core;
+namespace Prism.Services.Transform;
 
 /// <summary>
 /// Tiered background-fill helper. Not an <see cref="IImageTransformation"/> implementor.

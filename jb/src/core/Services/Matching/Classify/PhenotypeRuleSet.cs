@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Loads <c>ImageRoles.json</c> at startup and evaluates phenotype rules against

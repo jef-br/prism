@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /*
 Represents one canonical image through the definitive route:

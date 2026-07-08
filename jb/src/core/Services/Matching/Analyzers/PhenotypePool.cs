@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// The shrinking set of phenotype candidates for one image during the post-match refinement chain.

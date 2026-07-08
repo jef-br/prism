@@ -1,6 +1,6 @@
 using OpenCvSharp;
 
-namespace Prism.Core;
+namespace Prism.Services.Upscale;
 
 /// <summary>CPU fallback — Lanczos4, capped at ×1.42.</summary>
 public static class Upscaler_c_p_u {

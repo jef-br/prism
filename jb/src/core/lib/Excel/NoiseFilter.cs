@@ -1,7 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 
-namespace Prism.Core;
+namespace Prism.Lib.Excel;
 
 /// <summary>
 /// Removes numeric values that look like measurements, dates, or other non-identity

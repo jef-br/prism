@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Maps raw product-type evidence — Excel producttype/NGP column values, filename tokens, and

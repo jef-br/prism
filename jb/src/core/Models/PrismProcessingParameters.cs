@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Processing options selected by the caller for one PRISM job.

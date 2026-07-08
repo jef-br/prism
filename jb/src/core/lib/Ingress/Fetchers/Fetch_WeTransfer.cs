@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /// <summary>Fetches a file from a WeTransfer share link using a headless browser.</summary>
 internal sealed class Fetch_WeTransfer : IFetchStrategy

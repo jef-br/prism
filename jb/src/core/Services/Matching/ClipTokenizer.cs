@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Minimal CLIP BPE tokenizer: loads vocab.json and merges.txt and converts

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /// <summary>
 /// Typed representation of HostRules.json.

@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Sets the <c>has-human</c>, <c>human-count</c>, and <c>hero-is-human</c> ImageFeatures from

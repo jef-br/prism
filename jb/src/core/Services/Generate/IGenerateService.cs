@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Generate;
 
 /// <summary>
 /// Pipeline-visible Generate service. For families below the minimum image count it enriches the hero

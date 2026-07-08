@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /// <summary>
 /// Safe KO record emitted by the Imported stage for one image that could not be normalized.

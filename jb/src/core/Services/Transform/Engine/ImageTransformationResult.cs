@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Outcome of image preprocessing, cropping, centering, stretching, and cleanup for one image.

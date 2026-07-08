@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Matches images to FamilyIDs using normalized string token comparison.

@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /// <summary>
 /// Routes a remote URL to the first <see cref="IFetchStrategy"/> that can handle it

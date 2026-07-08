@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// One pipeline stage's contribution to an image's journey.

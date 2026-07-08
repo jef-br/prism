@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Prism.Core;
+namespace Prism.Lib.Zip;
 
 /// <summary>
 /// Defines the fixed PRISM zip output layout.

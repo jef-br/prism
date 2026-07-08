@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// One YOLOv8n object detection. Box coordinates are normalized to [0,1] of the original

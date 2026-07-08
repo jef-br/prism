@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Prism.Core;
+namespace Prism.Lib.Zip;
 
 /// <summary>
 /// Result returned by the zip foundation module after extracting processable members.

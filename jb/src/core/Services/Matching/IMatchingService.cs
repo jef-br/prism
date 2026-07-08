@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Pipeline-visible Matching service. Owns the ImageRecord_INPUT → ImageRecord_LAMBDA conversion:

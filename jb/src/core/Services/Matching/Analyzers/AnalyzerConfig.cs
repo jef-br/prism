@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Root configuration for the analyzer chain, loaded from analyzer_Config.json in the core config

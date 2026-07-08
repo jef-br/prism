@@ -1,6 +1,6 @@
 using System;
 
-namespace Prism.Core;
+namespace Prism.Lib.Excel;
 
 /// <summary>
 /// Lightweight executable-style test cases for numeric noise filtering.

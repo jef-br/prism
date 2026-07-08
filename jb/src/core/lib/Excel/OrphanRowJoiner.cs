@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace Prism.Core;
+namespace Prism.Lib.Excel;
 
 /// <summary>
 /// Joins orphan worksheet rows (rows without a resolvable FamilyID) to existing families via

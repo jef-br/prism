@@ -1,6 +1,6 @@
 using System;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Lightweight executable-style test cases for translation matching behavior.

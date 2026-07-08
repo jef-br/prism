@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Thresholds and the named palette for Analyzer_DominantColors, Analyzer_ProductColor, and

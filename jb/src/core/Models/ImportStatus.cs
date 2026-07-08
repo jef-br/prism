@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary> Import outcome for a single image. </summary>
 public enum ImportStatus {

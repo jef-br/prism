@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /// <summary>
 /// Structured result returned by <see cref="Importer"/> after the Imported stage completes.

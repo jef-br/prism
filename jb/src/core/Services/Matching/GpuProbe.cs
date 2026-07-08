@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 // Probes DXGI for a hardware DX12-capable adapter (i.e. not Microsoft WARP software renderer).
 // Hardware adapter present → DirectML will run on GPU.

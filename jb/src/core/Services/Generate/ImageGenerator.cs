@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Prism.Core;
+namespace Prism.Services.Generate;
 
 /// <summary>
 /// Evaluates each FamilyID group and creates <see cref="ImageRecord_GENERATED"/> records

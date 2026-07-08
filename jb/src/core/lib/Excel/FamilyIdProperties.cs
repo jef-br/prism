@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Excel;
 
 /// <summary>
 /// Validation rules for the configured FamilyID primary key.

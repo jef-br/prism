@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Orders images within each matched FamilyID group using ImageNGP phenotype qualification,

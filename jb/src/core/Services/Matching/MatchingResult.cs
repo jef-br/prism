@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// What the Matching service hands forward: the ImageRecord_LAMBDA collection it produced by

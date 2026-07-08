@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Bounded per-image stage journey for web visualization.

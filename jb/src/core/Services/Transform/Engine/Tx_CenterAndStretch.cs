@@ -1,6 +1,6 @@
 using OpenCvSharp;
 
-namespace Prism.Core;
+namespace Prism.Services.Transform;
 
 /// <summary>
 /// Centers the salient object on a square canvas and fills the background with a stretched

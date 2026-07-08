@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// The 80 COCO class names in canonical index order for the bundled yolov8n.onnx model.

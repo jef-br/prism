@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Gives meaningless image filenames (<c>1.jpg</c>, <c>DSCN2365.jpg</c>, <c>IMG_10005.png</c>) a

@@ -4,6 +4,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Using Include="Prism.Contracts" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="..\ImageClassifier.cs" />
     <Compile Include="..\GpuProbe.cs" />
     <Compile Include="..\ClipTokenizer.cs" />

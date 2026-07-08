@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Loaded configuration for det-slot ordering rules and filename keyword stems.

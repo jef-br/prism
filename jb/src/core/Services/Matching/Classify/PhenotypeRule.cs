@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// A single phenotype rule loaded from <c>ImageRoles.json</c>.

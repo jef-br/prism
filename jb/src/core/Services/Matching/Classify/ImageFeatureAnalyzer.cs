@@ -4,7 +4,7 @@ using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /*JB: Note to Claude: Haar-Features can help detect facial features. */
 

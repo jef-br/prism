@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Thresholds for the YOLOv8n detector and the analyzers built on its detections,

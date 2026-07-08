@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Export;
 
 public abstract class PrismIOException : Exception
 {

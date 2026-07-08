@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Transform;
 
 /// <summary>
 /// What the Transform service hands forward: the LAMBDA collection enriched in place with each image's

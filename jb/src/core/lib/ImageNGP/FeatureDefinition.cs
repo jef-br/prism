@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.ImageNGP;
 
 /// <summary>
 /// One feature entry from <c>ImageNGP.json</c>: the canonical id, its datatype, and —

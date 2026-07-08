@@ -1,6 +1,6 @@
 using Microsoft.Playwright;
 
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /// <summary>
 /// Downloads files from WeTransfer, SwissTransfer, and other browser-driven file-sharing services.

@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Excel;
 
 /// <summary>
 /// Worksheet area scanned for a likely header row.

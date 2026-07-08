@@ -4,6 +4,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Using Include="Prism.Contracts" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="CropTransformSettings.cs" />
     <Compile Include="IImageTransformation.cs" />
     <Compile Include="..\ImageTransformer.cs" />

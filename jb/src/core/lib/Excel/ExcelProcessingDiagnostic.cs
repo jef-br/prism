@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Excel;
 
 /// <summary>
 /// Safe diagnostic emitted for worksheet and row issues during Excel parsing.

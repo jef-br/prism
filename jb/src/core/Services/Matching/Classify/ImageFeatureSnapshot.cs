@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Collected ImageFeature measurements for one canonical image after the Classified stage.

@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /// <summary>Downloads a remote resource into the job temp folder and returns an INPUT record.</summary>
 internal interface IFetchStrategy

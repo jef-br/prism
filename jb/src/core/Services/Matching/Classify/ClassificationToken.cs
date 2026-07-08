@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>A CLIP zero-shot classification result pairing a text prompt with its cosine similarity score.</summary>
 public class ClassificationToken

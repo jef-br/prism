@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Thresholds for Analyzer_Interior, bound from the "Interior" section of analyzer_Config.json.

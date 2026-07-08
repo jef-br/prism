@@ -5,7 +5,7 @@ using SixLabors.ImageSharp.Processing;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Prism.Core.Tests")]
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>Detects whether the image subject intersects one or more image boundaries.
 /// <para> Fast path (JPEG only): parses the EXIF APP1 block to extract the embedded IFD1 thumbnail without decoding the main image. Falls back to a full load capped at <c>MaxAnalysisSize</c> on the longest side.</para>

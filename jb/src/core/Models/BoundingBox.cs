@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Axis-aligned rectangle identifying a region of interest within an image, in pixels.

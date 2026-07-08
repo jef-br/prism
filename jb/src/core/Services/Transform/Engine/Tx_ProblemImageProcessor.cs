@@ -2,7 +2,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
 
-namespace Prism.Core;
+namespace Prism.Services.Transform;
 
 /// <summary>
 /// Conservative transform path for images whose critical features (salient object bounds,

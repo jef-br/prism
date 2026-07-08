@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Bounded matching decision and evidence for one image produced by the Matched stage.

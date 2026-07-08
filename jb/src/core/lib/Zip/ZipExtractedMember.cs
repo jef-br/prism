@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Zip;
 
 /// <summary>
 /// Describes a healthy processable member extracted from a zip archive.

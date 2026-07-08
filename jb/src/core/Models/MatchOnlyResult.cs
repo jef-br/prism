@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Result returned by the match-only routes: a mapping from each submitted filename to the computed

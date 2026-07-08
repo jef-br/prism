@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using OpenCvSharp;
 using CvSize = OpenCvSharp.Size;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /*
 Here is a script that shows you how to get the bounding box using opencv/python

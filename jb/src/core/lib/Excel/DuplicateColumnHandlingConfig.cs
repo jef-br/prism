@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Excel;
 
 /// <summary>
 /// Duplicate column handling thresholds from ExcelConfig.json.

@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /*
 Represents an image generated to supplement an existing FamilyID image collection.

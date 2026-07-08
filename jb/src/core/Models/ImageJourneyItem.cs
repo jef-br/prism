@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Per-image journey entry serialized into images.ok[] and images.ko[] in the JSON result envelope.

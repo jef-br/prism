@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Represents one deduplicated product family record built from the Internal Excel Model.

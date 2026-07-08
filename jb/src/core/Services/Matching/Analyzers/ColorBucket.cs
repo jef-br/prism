@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// One populated quantization bucket from the dominant-color analysis: the mean color of the

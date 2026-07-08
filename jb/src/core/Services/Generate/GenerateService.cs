@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Generate;
 
 /// <summary>
 /// In-process Generate implementation. Wraps <see cref="ImageGenerator"/>. Enriches hero LAMBDAs in place

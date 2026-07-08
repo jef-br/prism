@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Transform;
 
 /// <summary>
 /// Crop-sizing and positioning values consumed by <see cref="ImageTransformer"/> when selecting

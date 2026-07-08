@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Prism.Core;
+namespace Prism.Lib.Excel;
 
 /// <summary>
 /// Builds the Internal Excel Model from one or more workbook files.

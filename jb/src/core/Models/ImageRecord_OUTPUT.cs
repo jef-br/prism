@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /*
 Represents the final output image bytes and output filename metadata.

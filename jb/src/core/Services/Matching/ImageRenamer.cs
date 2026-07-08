@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Validates det-slot uniqueness within each matched family and counts successfully renamed images.

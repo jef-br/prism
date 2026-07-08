@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Thresholds for Analyzer_Exposure, bound from the "Exposure" section of analyzer_Config.json.

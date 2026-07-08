@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Export;
 
 /*
 Represents a structured reason why an export image became KO.

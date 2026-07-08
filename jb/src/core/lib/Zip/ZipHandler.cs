@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace Prism.Core;
+namespace Prism.Lib.Zip;
 
 /// <summary>
 /// Extracts processable PRISM members from zip archives.

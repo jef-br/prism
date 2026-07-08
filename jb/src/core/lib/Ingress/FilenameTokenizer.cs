@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /*
 Contains all logic needed to extract tokens from any input image's filename

@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Upscale;
 
 // Probes for a hardware DirectML adapter once at startup, then routes all upscale calls to
 // the GPU strategy (Real-ESRGAN ×2 + Lanczos4) or the CPU fallback (Lanczos4, capped ×1.42).

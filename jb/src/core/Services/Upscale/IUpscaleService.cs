@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Upscale;
 
 /// <summary>
 /// Upscales raw JPEG image bytes by a given scale factor. Can run in-process or as a standalone

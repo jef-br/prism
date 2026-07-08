@@ -4,6 +4,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Using Include="Prism.Services.Matching" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="..\ImageUpscaler.cs" />
     <Compile Include="..\..\Matching\GpuProbe.cs" />
     <Compile Include="AssemblyInfo.cs" />

@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Internal to Matching — not visible to the orchestrator. The fan-in step: evaluates the phenotype

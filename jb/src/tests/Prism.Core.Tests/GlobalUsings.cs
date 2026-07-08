@@ -1,1 +1,11 @@
 global using Prism.Core;
+global using Prism.Contracts;
+global using Prism.Services.Matching;
+global using Prism.Services.Transform;
+global using Prism.Services.Generate;
+global using Prism.Services.Upscale;
+global using Prism.Lib.Excel;
+global using Prism.Lib.Export;
+global using Prism.Lib.Zip;
+global using Prism.Lib.ImageNGP;
+global using Prism.Lib.Ingress;

@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /// <summary>
 /// Smoke test for the Imported stage. Exercises <see cref="Importer"/> against a local

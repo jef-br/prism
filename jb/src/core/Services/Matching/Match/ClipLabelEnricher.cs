@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Provides CLIP label evidence for images. Evidence-only: never creates or overrides FamilyID assignments.

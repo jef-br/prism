@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>Outcome of the generation route decision for a family evaluated by the Generated stage.</summary>
 public enum GenerationRouteState {

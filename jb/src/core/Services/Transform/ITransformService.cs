@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Transform;
 
 /// <summary>
 /// Pipeline-visible Transform service. Routes each non-KO LAMBDA through its transformation strategy and

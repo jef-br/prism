@@ -1,6 +1,6 @@
 using OpenCvSharp;
 
-namespace Prism.Core;
+namespace Prism.Services.Transform;
 
 /// <summary>
 /// In-process Transform implementation. Routes each non-KO LAMBDA through <see cref="ImageTransformer"/> and

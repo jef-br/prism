@@ -1,7 +1,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// In-process Matching implementation — owns the ImageRecord_INPUT → ImageRecord_LAMBDA conversion.

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Prism.Core;
+namespace Prism.Lib.Excel;
 
 /// <summary>
 /// One data row parsed from a worksheet that could not resolve a FamilyID — either the worksheet

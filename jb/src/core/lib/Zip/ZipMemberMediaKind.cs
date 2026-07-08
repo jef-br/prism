@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Zip;
 
 /// <summary>
 /// Describes how a zip member should be handled by the zip foundation module.

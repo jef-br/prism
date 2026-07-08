@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Prism.Core;
+namespace Prism.Lib.Zip;
 
 /// <summary>
 /// Manifest-facing KO data for a processable zip member that could not be extracted.

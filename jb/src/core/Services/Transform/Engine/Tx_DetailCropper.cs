@@ -1,6 +1,6 @@
 using OpenCvSharp;
 
-namespace Prism.Core;
+namespace Prism.Services.Transform;
 
 /// <summary>
 /// Crops the image to a square anchored at the edges touched by the salient-object bounding box.

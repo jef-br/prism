@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// A visual deduplication group with one canonical image and zero or more duplicates.

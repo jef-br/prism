@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// A qualifying (image, det-slot) pair built during det-order candidate evaluation.

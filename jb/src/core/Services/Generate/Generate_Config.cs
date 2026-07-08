@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Generate;
 
 /// <summary>
 /// Typed generation parameters extracted from the <c>Generation</c> section of <c>Prism_Config.json</c>.

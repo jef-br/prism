@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Bracket 4 matcher: combined CLIP + numeric + string semantic attempt for images unmatched by Brackets 1–3.

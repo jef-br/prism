@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 
-namespace Prism.Core;
+namespace Prism.Lib.ImageNGP;
 
 /// <summary>
 /// The canonical PRISM image taxonomy loaded from <c>ImageNGP.json</c>: every feature id with its

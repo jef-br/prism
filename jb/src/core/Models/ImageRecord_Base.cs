@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>Base fields shared by all image record types across the pipeline.</summary>
 public class ImageRecord_Base {

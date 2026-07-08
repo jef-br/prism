@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Det-slot assignment decision and tie-breaking evidence produced by the Ordered stage.

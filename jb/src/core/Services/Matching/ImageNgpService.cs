@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// In-process ImageNGP implementation. Holds the loaded <see cref="PhenotypeRuleSet"/> (from

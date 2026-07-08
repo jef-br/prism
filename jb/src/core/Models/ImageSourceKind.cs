@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary> Describes where an image originated. </summary>
 public enum ImageSourceKind {

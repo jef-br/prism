@@ -1,6 +1,6 @@
 using OpenCvSharp;
 
-namespace Prism.Core;
+namespace Prism.Services.Transform;
 
 /// <summary>
 /// Applies CLAHE (Contrast Limited Adaptive Histogram Equalization) to the full image to

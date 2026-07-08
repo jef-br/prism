@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Contracts;
 
 /// <summary>
 /// Describes the background type of an image, as determined by the Classified stage preprocessor.

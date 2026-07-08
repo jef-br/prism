@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /*
  Proposed workings

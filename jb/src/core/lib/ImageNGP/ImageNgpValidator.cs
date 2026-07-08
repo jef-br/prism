@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Prism.Core;
+namespace Prism.Lib.ImageNGP;
 
 /// <summary>
 /// Startup cross-file validator. Checks that every feature id, feature value, and phenotype id used

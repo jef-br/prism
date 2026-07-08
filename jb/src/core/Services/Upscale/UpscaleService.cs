@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Upscale;
 
 /// <summary>
 /// In-process <see cref="IUpscaleService"/> backed by <see cref="ImageUpscaler"/>.

@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// The normalized [0,1] bounding box of the main subject in an image, with the confidence and

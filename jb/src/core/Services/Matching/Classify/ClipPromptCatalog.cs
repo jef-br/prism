@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Prism.Core;
+namespace Prism.Services.Matching;
 
 /// <summary>
 /// Loads <c>ClipPrompts.json</c> and maps each natural-language CLIP prompt to the feature id and

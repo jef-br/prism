@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Transform;
 
 /// <summary>Contract for all image transformation strategies.</summary>
 public interface IImageTransformation

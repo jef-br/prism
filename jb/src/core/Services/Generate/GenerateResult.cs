@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Services.Generate;
 
 /// <summary>
 /// What the Generate service hands forward, made up of its two distinct outputs so neither is hidden:

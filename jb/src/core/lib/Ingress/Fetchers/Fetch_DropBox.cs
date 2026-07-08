@@ -1,4 +1,4 @@
-namespace Prism.Core;
+namespace Prism.Lib.Ingress;
 
 /// <summary>
 /// Normalizes a public Dropbox share link to a direct-download URL and delegates to
