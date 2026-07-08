@@ -10,7 +10,7 @@ namespace Prism.Core;
 /// </summary>
 public sealed class FeatureAnalysisService : IFeatureAnalysisService
 {
-    private const string YoloModelRelativePath = "Images/Analyzers/ONNX/yolov8n/yolov8n.onnx";
+    private const string YoloModelRelativePath = "Services/Matching/Analyzers/ONNX/yolov8n/yolov8n.onnx";
 
     private readonly AnalyzerConfig analyzerConfig;
     private readonly ProductTypeResolver productTypes;

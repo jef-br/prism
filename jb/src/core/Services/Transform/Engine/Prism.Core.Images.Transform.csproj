@@ -23,6 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Models\Prism.Core.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Models\Prism.Core.Contracts.csproj" />
   </ItemGroup>
 </Project>

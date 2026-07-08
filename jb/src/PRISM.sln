@@ -13,11 +13,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Images", "Images", "{C6B246
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Transform", "Transform", "{02D68C88-3C81-3BAA-3829-98E40FB45818}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prism.Core.Images.Transform", "core\Images\Transform\Prism.Core.Images.Transform.csproj", "{D41E248A-0916-436D-A731-120D65F081EA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prism.Core.Images.Transform", "core\Services\Transform\Engine\Prism.Core.Images.Transform.csproj", "{D41E248A-0916-436D-A731-120D65F081EA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Classify", "Classify", "{A39613AD-C71F-75A0-A575-2F20A5261847}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prism.Core.Images.Classify", "core\Images\Classify\Prism.Core.Images.Classify.csproj", "{0BBC79A6-ABDA-4E45-BBF8-1A225EC2623B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prism.Core.Images.Classify", "core\Services\Matching\Classify\Prism.Core.Images.Classify.csproj", "{0BBC79A6-ABDA-4E45-BBF8-1A225EC2623B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prism.Core", "core\Prism.Core.csproj", "{E8D53701-5209-4434-8A38-D595C43D7389}"
 EndProject

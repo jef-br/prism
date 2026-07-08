@@ -6,21 +6,21 @@
     <Compile Remove="lib\Export\BatchManifestSummary.cs" />
     <Compile Remove="lib\Export\ManifestImageRow.cs" />
     <Compile Remove="lib\Excel\FamilyIDRecord.cs" />
-    <Compile Remove="Images\Classify\**\*.cs" />
-    <Compile Remove="Images\Analyzers\**\*.cs" />
-    <Compile Remove="Images\ImageClassifier.cs" />
-    <Compile Remove="Images\ClipTokenizer.cs" />
-    <Compile Remove="Images\Transform\**\*.cs" />
-    <Compile Remove="Images\ImageTransformer.cs" />
-    <Compile Remove="Images\Upscale\**\*.cs" />
-    <Compile Remove="Images\ImageUpscaler.cs" />
+    <Compile Remove="Services\Matching\Classify\**\*.cs" />
+    <Compile Remove="Services\Matching\Analyzers\**\*.cs" />
+    <Compile Remove="Services\Matching\ImageClassifier.cs" />
+    <Compile Remove="Services\Matching\ClipTokenizer.cs" />
+    <Compile Remove="Services\Transform\Engine\**\*.cs" />
+    <Compile Remove="Services\Transform\ImageTransformer.cs" />
+    <Compile Remove="Services\Upscale\Engine\**\*.cs" />
+    <Compile Remove="Services\Upscale\ImageUpscaler.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Images\Match\MatchEvidence.cs" />
-    <Compile Remove="Images\Match\MatcherContribution.cs" />
-    <Compile Remove="Images\Match\MatchType.cs" />
-    <Compile Remove="Images\Order\OrderEvidence.cs" />
+    <Compile Remove="Services\Matching\Match\MatchEvidence.cs" />
+    <Compile Remove="Services\Matching\Match\MatcherContribution.cs" />
+    <Compile Remove="Services\Matching\Match\MatchType.cs" />
+    <Compile Remove="Services\Matching\Order\OrderEvidence.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,9 +32,9 @@
 
   <ItemGroup>
     <ProjectReference Include="Models\Prism.Core.Contracts.csproj" />
-    <ProjectReference Include="Images\Classify\Prism.Core.Images.Classify.csproj" />
-    <ProjectReference Include="Images\Transform\Prism.Core.Images.Transform.csproj" />
-    <ProjectReference Include="Images\Upscale\Prism.Core.Images.Upscale.csproj" />
+    <ProjectReference Include="Services\Matching\Classify\Prism.Core.Images.Classify.csproj" />
+    <ProjectReference Include="Services\Transform\Engine\Prism.Core.Images.Transform.csproj" />
+    <ProjectReference Include="Services\Upscale\Engine\Prism.Core.Images.Upscale.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -45,8 +45,8 @@
     <Content Include="config\TranslationDictionary.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\DetOrderKeywordStems.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\DetOrderRules.json" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Images\Classify\ONNX\clip-vit-b32-uint8\merges.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Images\Classify\ONNX\clip-vit-b32-uint8\merges.txt')" />
-    <Content Include="Images\Classify\ONNX\clip-vit-b32-uint8\vocab.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Images\Classify\ONNX\clip-vit-b32-uint8\vocab.json')" />
+    <Content Include="Services\Matching\Classify\ONNX\clip-vit-b32-uint8\merges.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Services\Matching\Classify\ONNX\clip-vit-b32-uint8\merges.txt')" />
+    <Content Include="Services\Matching\Classify\ONNX\clip-vit-b32-uint8\vocab.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Services\Matching\Classify\ONNX\clip-vit-b32-uint8\vocab.json')" />
     <Content Include="config\ImageRoles.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\ImageNGP.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\ClipPrompts.json" CopyToOutputDirectory="PreserveNewest" />

@@ -146,9 +146,9 @@ public sealed class PrismConfiguration {
     // Fail fast on missing analyzer assets: the refinement chain needs the YOLOv8n detector, and a
     // per-image degradation would be silent. Same resolution order as the CLIP model assets.
     private static void ValidateAnalyzerAssets() {
-        if (PrismConfigLocator.FindModelAsset("Images/Analyzers/ONNX/yolov8n/yolov8n.onnx") is null)
+        if (PrismConfigLocator.FindModelAsset("Services/Matching/Analyzers/ONNX/yolov8n/yolov8n.onnx") is null)
             throw new PrismConfigurationException(
-                "YOLOv8n ONNX model not found. Deploy Images/Analyzers/ONNX/yolov8n/ next to " +
+                "YOLOv8n ONNX model not found. Deploy Services/Matching/Analyzers/ONNX/yolov8n/ next to " +
                 "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
     }
 

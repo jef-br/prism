@@ -24,16 +24,16 @@
     <Compile Include="..\lib\Export\BatchManifestSummary.cs" Link="BatchManifestSummary.cs" />
     <Compile Include="..\lib\Export\ManifestImageRow.cs" Link="ManifestImageRow.cs" />
     <Compile Include="..\Pipeline\PipelineProgressEvent.cs" Link="PipelineProgressEvent.cs" />
-    <Compile Include="..\Images\Classify\ClassificationToken.cs" Link="ClassificationToken.cs" />
-    <Compile Include="..\Images\Classify\EdgeIntersectionResult.cs" Link="EdgeIntersectionResult.cs" />
-    <Compile Include="..\Images\Classify\ImageFeatureValue.cs" Link="ImageFeatureValue.cs" />
-    <Compile Include="..\Images\Classify\ImageFeatureSnapshot.cs" Link="ImageFeatureSnapshot.cs" />
-    <Compile Include="..\Images\Match\MatchEvidence.cs" Link="MatchEvidence.cs" />
-    <Compile Include="..\Images\Match\MatcherContribution.cs" Link="MatcherContribution.cs" />
-    <Compile Include="..\Images\Order\OrderEvidence.cs" Link="OrderEvidence.cs" />
-<Compile Include="..\Images\Transform\BackgroundType.cs" Link="BackgroundType.cs" />
+    <Compile Include="..\Services\Matching\Classify\ClassificationToken.cs" Link="ClassificationToken.cs" />
+    <Compile Include="..\Services\Matching\Classify\EdgeIntersectionResult.cs" Link="EdgeIntersectionResult.cs" />
+    <Compile Include="..\Services\Matching\Classify\ImageFeatureValue.cs" Link="ImageFeatureValue.cs" />
+    <Compile Include="..\Services\Matching\Classify\ImageFeatureSnapshot.cs" Link="ImageFeatureSnapshot.cs" />
+    <Compile Include="..\Services\Matching\Match\MatchEvidence.cs" Link="MatchEvidence.cs" />
+    <Compile Include="..\Services\Matching\Match\MatcherContribution.cs" Link="MatcherContribution.cs" />
+    <Compile Include="..\Services\Matching\Order\OrderEvidence.cs" Link="OrderEvidence.cs" />
+    <Compile Include="..\Services\Transform\Engine\BackgroundType.cs" Link="BackgroundType.cs" />
     <Compile Include="BoundingBox.cs" />
-    <Compile Include="..\Images\Transform\ImageTransformationResult.cs" Link="ImageTransformationResult.cs" />
-    <Compile Include="..\Images\Transform\TransformationStatus.cs" Link="TransformationStatus.cs" />
+    <Compile Include="..\Services\Transform\Engine\ImageTransformationResult.cs" Link="ImageTransformationResult.cs" />
+    <Compile Include="..\Services\Transform\Engine\TransformationStatus.cs" Link="TransformationStatus.cs" />
   </ItemGroup>
 </Project>

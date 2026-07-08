@@ -15,7 +15,7 @@ public class YoloDetectorTests
     {
         for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
         {
-            string candidate = Path.Combine(dir.FullName, "jb", "src", "core", "Images", "Analyzers", "ONNX", "yolov8n", "yolov8n.onnx");
+            string candidate = Path.Combine(dir.FullName, "jb", "src", "core", "Services", "Matching", "Analyzers", "ONNX", "yolov8n", "yolov8n.onnx");
             if (File.Exists(candidate)) return candidate;
         }
         return null;

@@ -7,7 +7,7 @@ namespace Prism.Core;
 public sealed class UpscaleService : IUpscaleService {
     private UpscaleService() { }
 
-    private const string TilingConfigRelativePath = "Images/Upscale/cfg_Upscale.json";
+    private const string TilingConfigRelativePath = "Services/Upscale/Engine/cfg_Upscale.json";
 
     /// <summary>
     /// Resolves the Real-ESRGAN model asset and tiling config, and initializes the GPU session when a
