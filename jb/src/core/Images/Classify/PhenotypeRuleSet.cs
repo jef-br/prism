@@ -62,6 +62,25 @@ public sealed class PhenotypeRuleSet
         return null;
     }
 
+    /// <summary>All phenotype ids in rule evaluation order.</summary>
+    public IReadOnlyList<string> PhenotypeIds => rules.Select(r => r.Id).ToArray();
+
+    /// <summary>
+    /// Returns true when the phenotype is definitively ruled out by the measured features:
+    /// at least one required condition fails on a KNOWN (non-UNKNOWN) feature value.
+    /// UNKNOWN features never contradict — absence of evidence keeps the phenotype in play.
+    /// Unknown phenotype ids are never contradicted.
+    /// </summary>
+    public bool IsContradicted(string phenotypeId, ImageFeatureSnapshot features)
+    {
+        foreach (PhenotypeRule rule in rules)
+        {
+            if (!string.Equals(rule.Id, phenotypeId, StringComparison.OrdinalIgnoreCase)) continue;
+            return rule.Required.Any(c => ConditionDefinitivelyFails(c, features));
+        }
+        return false;
+    }
+
     /// <summary>
     /// Returns all matching phenotype ids in evaluation order.
     /// Used for diagnostics; only the first match is the selected phenotype.
@@ -87,6 +106,23 @@ public sealed class PhenotypeRuleSet
                 return false;
         }
         return true;
+    }
+
+    // A condition definitively fails only when every feature it touches is known and the
+    // comparison still fails. An anyOf group fails only when all of its children do.
+    private static bool ConditionDefinitivelyFails(FeatureCondition condition, ImageFeatureSnapshot features)
+    {
+        if (condition.IsAnyOfGroup)
+            return condition.AnyOf!.All(c => ConditionDefinitivelyFails(c, features));
+
+        if (condition.Feature is null)
+            return false;
+
+        string value = features.GetValue(condition.Feature);
+        if (string.Equals(value, "UNKNOWN", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return !ConditionMet(condition, features);
     }
 
     private static bool ConditionMet(FeatureCondition condition, ImageFeatureSnapshot features)

@@ -1,53 +1,43 @@
-using System.Runtime.InteropServices;
-using OpenCvSharp;
-
 namespace Prism.Core;
 
 /// <summary>
-/// Detects human presence in an image by measuring skin-colored pixel ratio within the salient bounding box.
-/// Uses the BGR Mat produced by ImagePreProcessor — no additional image decode.
-/// Sets the <c>has-human</c> ImageFeature.
+/// Sets the <c>has-human</c>, <c>human-count</c>, and <c>hero-is-human</c> ImageFeatures from
+/// YOLOv8n person detections. Replaces the retired HSV skin-ratio heuristic: a person detection
+/// is direct evidence, robust on any background and unaffected by skin-colored products.
+/// hero-is-human is derived from dominance — a person box covering enough of the frame means the
+/// human wearing the product is the hero; no person at all means the hero cannot be human.
+/// Detection absence is weaker evidence than presence, so absence writes use the configured
+/// absence confidence, and a stronger existing measurement (e.g. CLIP) is never overwritten.
 /// </summary>
 internal static class Analyzer_HasHuman
 {
-    /// <summary>
-    /// Returns true when the fraction of skin-colored pixels within <paramref name="bbox"/>
-    /// exceeds the configured threshold. BoundingBox is always set when this is called.
-    /// </summary>
-    public static bool Analyze(Mat colorMat, BoundingBox bbox, ImageAnalyzerConfig cfg)
+    public static void Analyze(IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot, YoloAnalyzerConfig cfg)
     {
-        // Crop to the bounding box region.
-        using Mat roi = colorMat.SubMat(new Rect(bbox.X, bbox.Y, bbox.Width, bbox.Height));
-        using Mat hsv = new Mat();
-        Cv2.CvtColor(roi, hsv, ColorConversionCodes.BGR2HSV);
+        List<YoloDetection> persons = [.. detections.Where(d => d.IsPerson && d.Confidence >= cfg.HumanMinConfidence)];
 
-        int totalPixels = hsv.Rows * hsv.Cols;
-        if (totalPixels == 0) return false;
-
-        int stride = (int)hsv.Step();
-        byte[] data = new byte[hsv.Rows * stride];
-        Marshal.Copy(hsv.Data, data, 0, data.Length);
-
-        int skinPixels = 0;
-        for (int y = 0; y < hsv.Rows; y++)
+        if (persons.Count > 0)
         {
-            for (int x = 0; x < hsv.Cols; x++)
-            {
-                int idx = y * stride + x * 3;
-                // OpenCV HSV: H in [0,180], S in [0,255], V in [0,255]
-                float h = data[idx]     * 2f;         // convert to degrees [0,360]
-                float s = data[idx + 1] / 255f;
-                float v = data[idx + 2] / 255f;
+            float best = persons.Max(d => d.Confidence);
+            snapshot.Set("has-human", "true", best, "yolo");
+            snapshot.Set("human-count", persons.Count.ToString(System.Globalization.CultureInfo.InvariantCulture), best, "yolo");
 
-                bool hueInRange = (h >= cfg.SkinHueMin1 && h <= cfg.SkinHueMax1)
-                               || (h >= cfg.SkinHueMin2 && h <= cfg.SkinHueMax2);
-                bool satInRange = s >= cfg.SkinSatMin && s <= cfg.SkinSatMax;
-                bool valInRange = v >= cfg.SkinValMin && v <= cfg.SkinValMax;
-
-                if (hueInRange && satInRange && valInRange) skinPixels++;
-            }
+            if (persons.Max(d => d.Area) >= cfg.HeroPersonMinArea)
+                SetIfStronger(snapshot, "hero-is-human", "TRUE", best);
         }
+        else
+        {
+            snapshot.Set("has-human", "false", cfg.AbsenceConfidence, "yolo");
+            snapshot.Set("human-count", "0", cfg.AbsenceConfidence, "yolo");
+            SetIfStronger(snapshot, "hero-is-human", "FALSE", cfg.AbsenceConfidence);
+        }
+    }
 
-        return (float)skinPixels / totalPixels >= cfg.MinSkinPixelRatio;
+    private static void SetIfStronger(ImageFeatureSnapshot snapshot, string featureId, string value, double confidence)
+    {
+        bool weaker = !snapshot.TryGet(featureId, out ImageFeatureValue? current)
+            || current.IsUnknown
+            || current.Confidence < confidence;
+
+        if (weaker) snapshot.Set(featureId, value, confidence, "yolo");
     }
 }

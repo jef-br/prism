@@ -7,6 +7,7 @@
     <Compile Remove="IO\ManifestImageRow.cs" />
     <Compile Remove="Excel\FamilyIDRecord.cs" />
     <Compile Remove="Images\Classify\**\*.cs" />
+    <Compile Remove="Images\Analyzers\**\*.cs" />
     <Compile Remove="Images\ImageClassifier.cs" />
     <Compile Remove="Images\ClipTokenizer.cs" />
     <Compile Remove="Images\Transform\**\*.cs" />
@@ -49,5 +50,7 @@
     <Content Include="config\ImageRoles.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\ImageNGP.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\ClipPrompts.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="config\analyzer_Config.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="config\ProductTypeMap.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

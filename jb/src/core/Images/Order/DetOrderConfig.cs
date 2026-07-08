@@ -14,12 +14,22 @@ public sealed class DetOrderConfig
     // keyword → list of stem strings (lowercase)
     private readonly Dictionary<string, List<string>> stemsByKeyword;
 
+    /// <summary>Anchor position (in slot-index units) for overflow images without a filename hint.</summary>
+    public double OverflowUnhintedAnchor { get; }
+
+    /// <summary>When true, overflow images with hero-is-human=TRUE rank before packshots within the same anchor.</summary>
+    public bool OverflowOnModelFirst { get; }
+
     private DetOrderConfig(
         Dictionary<string, List<DetSlotRule>> slotsByProductType,
-        Dictionary<string, List<string>> stemsByKeyword)
+        Dictionary<string, List<string>> stemsByKeyword,
+        double overflowUnhintedAnchor,
+        bool overflowOnModelFirst)
     {
         this.slotsByProductType = slotsByProductType;
         this.stemsByKeyword     = stemsByKeyword;
+        OverflowUnhintedAnchor  = overflowUnhintedAnchor;
+        OverflowOnModelFirst    = overflowOnModelFirst;
     }
 
     //  Factory 
@@ -34,7 +44,8 @@ public sealed class DetOrderConfig
     {
         var slots = ParseRules(rulesPath);
         var stems = ParseStems(stemsPath);
-        return new DetOrderConfig(slots, stems);
+        (double unhintedAnchor, bool onModelFirst) = ParseOverflowPolicy(rulesPath);
+        return new DetOrderConfig(slots, stems, unhintedAnchor, onModelFirst);
     }
 
     //  Public API 
@@ -137,6 +148,29 @@ public sealed class DetOrderConfig
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Parses the optional "overflowPolicy" object in DetOrderRules.json.
+    /// Missing object or members fall back to unhintedAnchor 2.5 / onModelFirst true.
+    /// </summary>
+    private static (double UnhintedAnchor, bool OnModelFirst) ParseOverflowPolicy(string path)
+    {
+        string json = ReadJsonFile(path);
+        using JsonDocument doc = ParseJsonDocument(json, path);
+
+        double unhintedAnchor = 2.5;
+        bool onModelFirst = true;
+
+        if (doc.RootElement.TryGetProperty("overflowPolicy", out JsonElement policy))
+        {
+            if (policy.TryGetProperty("unhintedAnchor", out JsonElement anchorEl) && anchorEl.TryGetDouble(out double anchor))
+                unhintedAnchor = anchor;
+            if (policy.TryGetProperty("onModelFirst", out JsonElement onModelEl))
+                onModelFirst = onModelEl.GetBoolean();
+        }
+
+        return (unhintedAnchor, onModelFirst);
     }
 
     /// <summary>

@@ -12,66 +12,24 @@ namespace Prism.Core;
 /// </summary>
 internal static class Analyzer_Interior
 {
-    // Minimum fraction of image area an interior region must cover
-    private const float MinAreaFraction = 0.04f;
-    // Edge strength threshold (0–1 scale, gradient magnitude from 0–255 pixels)
-    private const float MinEdgeStrength = 30f / 255f;
-    // Interior texture must be meaningfully smoother than surroundings
-    private const float TextureDiffMin = 0.015f;
-
     /// <summary>
     /// Returns true when the image contains an interior region: a large enclosed cavity
     /// surrounded by a strong boundary and contained within a larger foreground object.
-    /// Uses CPU-only ImageSharp processing.
+    /// Uses CPU-only ImageSharp processing. Thresholds come from analyzer_Config.json.
     /// </summary>
-    public static bool Analyze(Image<Rgba32> image)
+    public static bool Analyze(Image<Rgba32> image, InteriorAnalyzerConfig cfg)
     {
         int w = image.Width;
         int h = image.Height;
-        float[,] gray = ToGrayscale(image, w, h);
-        float[,] edges = ComputeGradientMagnitude(gray, w, h);
-        return HasInteriorRegion(gray, edges, w, h);
-    }
-
-    private static float[,] ToGrayscale(Image<Rgba32> image, int w, int h)
-    {
-        float[,] gray = new float[h, w];
-        image.ProcessPixelRows(accessor =>
-        {
-            for (int y = 0; y < h; y++)
-            {
-                Span<Rgba32> row = accessor.GetRowSpan(y);
-                for (int x = 0; x < w; x++)
-                {
-                    Rgba32 p = row[x];
-                    gray[y, x] = (0.299f * p.R + 0.587f * p.G + 0.114f * p.B) / 255f;
-                }
-            }
-        });
-        return gray;
-    }
-
-    // Sobel-style gradient magnitude: gx = right - left, gy = below - above.
-    // Input values are [0,1]; output is sqrt(gx^2 + gy^2), also in [0, ~1.4].
-    private static float[,] ComputeGradientMagnitude(float[,] gray, int w, int h)
-    {
-        float[,] mag = new float[h, w];
-        for (int y = 1; y < h - 1; y++)
-        {
-            for (int x = 1; x < w - 1; x++)
-            {
-                float gx = gray[y, x + 1] - gray[y, x - 1];
-                float gy = gray[y + 1, x] - gray[y - 1, x];
-                mag[y, x] = MathF.Sqrt(gx * gx + gy * gy);
-            }
-        }
-        return mag;
+        float[,] gray = AnalyzerMath.ToGrayscale(image, w, h);
+        float[,] edges = AnalyzerMath.ComputeGradientMagnitude(gray, w, h);
+        return HasInteriorRegion(gray, edges, w, h, cfg);
     }
 
     // Scans a grid of candidate rectangular patches. For each candidate, tests whether
     // the interior is smoother than its surrounding ring and bounded by strong edges,
     // and whether the patch lies well inside the image frame.
-    private static bool HasInteriorRegion(float[,] gray, float[,] edges, int w, int h)
+    private static bool HasInteriorRegion(float[,] gray, float[,] edges, int w, int h, InteriorAnalyzerConfig cfg)
     {
         float totalArea = w * h;
         int borderRing = Math.Max(4, Math.Min(w, h) / 10);
@@ -91,14 +49,14 @@ internal static class Analyzer_Interior
                     if (y1 >= h - borderRing || x1 >= w - borderRing) continue;
 
                     float regionArea = (y1 - y0) * (x1 - x0);
-                    if (regionArea / totalArea < MinAreaFraction) continue;
+                    if (regionArea / totalArea < cfg.MinAreaFraction) continue;
 
                     float interiorVar  = ComputeVariance(gray, x0, y0, x1, y1);
                     float surroundVar  = ComputeSurroundVariance(gray, x0, y0, x1, y1, borderRing, w, h);
                     float boundaryEdge = ComputeBoundaryEdge(edges, x0, y0, x1, y1);
 
-                    bool strongBoundary   = boundaryEdge >= MinEdgeStrength;
-                    bool smootherInterior = surroundVar - interiorVar >= TextureDiffMin;
+                    bool strongBoundary   = boundaryEdge >= cfg.MinEdgeStrength;
+                    bool smootherInterior = surroundVar - interiorVar >= cfg.TextureDiffMin;
                     bool containedInFrame = x0 > borderRing && y0 > borderRing
                                         && x1 < w - borderRing && y1 < h - borderRing;
 

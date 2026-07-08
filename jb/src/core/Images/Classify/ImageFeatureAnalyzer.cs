@@ -28,19 +28,95 @@ public static class ImageFeatureAnalyzer
     /// feature values into <paramref name="snapshot"/>.
     /// Features that cannot be determined are recorded as UNKNOWN.
     /// </summary>
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot, AnalyzerConfig config)
     {
         AnalyzeGeometry(image, snapshot);
         AnalyzeBackground(image, snapshot, out _, out _, out _);
         WriteEdgeIntersections(SubjectEdgeDetector.Detect(image), snapshot);
         DeriveOcclusionLevel(snapshot);
         AnalyzeSkinTone(image, snapshot);
-        AnalyzeInterior(image, snapshot);
-        AnalyzeIllustration(image, snapshot);
+        AnalyzeInterior(image, snapshot, config.Interior);
+        AnalyzeIllustration(image, snapshot, config.IsIllustration);
         RecordUnknownFeatures(snapshot);
     }
 
-    //  Geometry 
+    /// <summary>
+    /// Post-match refinement chain. Runs after the Matched stage, when the image's family (IEM)
+    /// is known, and narrows the phenotype pool wave by wave in cheap-first, most-eliminating-first
+    /// order: IEM + filename evidence, then detector-backed visual analyzers. At the start the image
+    /// qualifies for every phenotype; each wave eliminates those with strong contra-evidence.
+    /// The final assignment overwrites the provisional phenotype set at the Classified stage.
+    /// </summary>
+    public static void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet, AnalyzerConfig config, string? yoloModelPath, ProductTypeResolver productTypes)
+    {
+        PhenotypePool pool = new(ruleSet);
+
+        // Wave 1 — IEM + filename evidence. Phase-1 measurements (background, edge intersections)
+        // already sit in the snapshot, so this first elimination is also the big intersection cut.
+        Analyzer_ProductType.Analyze(lambda, family, productTypes);
+        Analyzer_FilenameEvidence.Analyze(lambda, productTypes, config.Filename);
+        pool.Eliminate(lambda.Features);
+
+        if (imagePath is not null && File.Exists(imagePath))
+        {
+            using Image<Rgba32> image = Image.Load<Rgba32>(imagePath);
+
+            // Wave 2 — human/face evidence: YOLO person detections, then face/pose refinement.
+            IReadOnlyList<YoloDetection> detections = yoloModelPath is null
+                ? []
+                : YoloDetector.GetShared(yoloModelPath).Detect(image, config.Yolo);
+            Analyzer_HasHuman.Analyze(detections, lambda.Features, config.Yolo);
+            Analyzer_FacePose.Analyze(image, detections, lambda.Features);
+            Analyzer_Mannequin.Analyze(image, detections, lambda.Features);
+            pool.Eliminate(lambda.Features);
+
+            // Wave 3 — remaining visual analyzers: geometry from the shared subject box, then
+            // colors sampling the same box, exposure, detection-count features, and the stubs.
+            SubjectBox? subject = Analyzer_SubjectGeometry.Analyze(image, detections, lambda.Features, config.SubjectGeometry);
+            IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, lambda.Features, config.Colors);
+            Analyzer_ProductColor.Analyze(buckets, lambda.Features, config.Colors);
+            Analyzer_BackgroundColor.Analyze(image, lambda.Features, config.Colors);
+            Analyzer_Exposure.Analyze(image, lambda.Features, config.Exposure, config.Colors);
+            Analyzer_MultipleProducts.Analyze(detections, lambda.Features, config.MultipleProducts);
+            Analyzer_TextPresent.Analyze(image, lambda.Features);
+            Analyzer_LogoPresent.Analyze(image, lambda.Features);
+            Analyzer_CameraAngle.Analyze(image, lambda.Features);
+            Analyzer_IndoorOutdoor.Analyze(lambda.Features);
+            Analyzer_ShadowReflection.Analyze(image, lambda.Features);
+            Analyzer_Packaging.Analyze(lambda.Features);
+            Analyzer_MaterialTexture.Analyze(image, lambda.Features);
+            Analyzer_LightingDetail.Analyze(image, lambda.Features);
+        }
+
+        pool.Eliminate(lambda.Features);
+        FinalizePhenotype(lambda, pool, ruleSet);
+    }
+
+    // The refined phenotype: first fully-satisfied rule wins; otherwise the provisional pick
+    // survives only while it is still in the pool. CandidatePhenotypes lists the selected
+    // phenotype first, then the remaining uncontradicted pool members in rule order.
+    private static void FinalizePhenotype(ImageRecord_LAMBDA lambda, PhenotypePool pool, PhenotypeRuleSet ruleSet)
+    {
+        string[] satisfied = ruleSet.EvaluateCandidates(lambda.Features);
+        string? provisional = lambda.SelectedPhenotype;
+
+        string? selected = satisfied.Length > 0
+            ? satisfied[0]
+            : provisional is not null && pool.Contains(provisional) ? provisional : null;
+
+        List<string> candidates = [];
+        if (selected is not null) candidates.Add(selected);
+        foreach (string id in pool.Candidates)
+        {
+            if (!candidates.Contains(id, StringComparer.OrdinalIgnoreCase))
+                candidates.Add(id);
+        }
+
+        lambda.SelectedPhenotype   = selected;
+        lambda.CandidatePhenotypes = [.. candidates];
+    }
+
+    //  Geometry
 
     private static void AnalyzeGeometry(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
     {
@@ -143,7 +219,7 @@ public static class ImageFeatureAnalyzer
                     Rgba32 px = row[x];
                     if (px.A < 128) continue;
                     total++;
-                    if (IsSkinTone(px)) skinPx++;
+                    if (AnalyzerMath.IsSkinTone(px)) skinPx++;
                 }
             }
         });
@@ -155,17 +231,17 @@ public static class ImageFeatureAnalyzer
 
     //  Interior detection
 
-    private static void AnalyzeInterior(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
+    private static void AnalyzeInterior(Image<Rgba32> image, ImageFeatureSnapshot snapshot, InteriorAnalyzerConfig cfg)
     {
-        bool detected = Analyzer_Interior.Analyze(image);
+        bool detected = Analyzer_Interior.Analyze(image, cfg);
         snapshot.Set("interior-detected", detected ? "true" : "false", 1.0, "geometry");
     }
 
     //  Illustration / technical drawing detection
 
-    private static void AnalyzeIllustration(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
+    private static void AnalyzeIllustration(Image<Rgba32> image, ImageFeatureSnapshot snapshot, IllustrationAnalyzerConfig cfg)
     {
-        bool detected = Analyzer_IsIllustration.Analyze(image);
+        bool detected = Analyzer_IsIllustration.Analyze(image, cfg);
         snapshot.Set("is-illustration", detected ? "true" : "false", 1.0, "topology");
     }
 
@@ -291,19 +367,4 @@ public static class ImageFeatureAnalyzer
         variance = (float)(varSum / (n * 3));
     }
 
-    /// <summary>
-    /// Multi-tone skin detection using YCbCr chrominance ranges.
-    /// Covers all human skin tones under common studio and daylight conditions.
-    /// </summary>
-    private static bool IsSkinTone(Rgba32 px)
-    {
-        float r = px.R / 255f, g = px.G / 255f, b = px.B / 255f;
-        float y  =  0.299f  * r + 0.587f  * g + 0.114f  * b;
-        float cb = -0.1687f * r - 0.3313f * g + 0.5f    * b + 0.5f;
-        float cr =  0.5f    * r - 0.4187f * g - 0.0813f * b + 0.5f;
-
-        return y is > 0.10f and < 0.95f
-            && cb is > 0.30f and < 0.53f
-            && cr is > 0.52f and < 0.68f;
-    }
 }

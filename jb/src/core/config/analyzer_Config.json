@@ -1,0 +1,68 @@
+{
+    "_comment": "Analyzer chain thresholds. One section per analyzer in jb/src/core/Images/Analyzers/. All edge/channel thresholds use the normalized [0,1] pixel scale (e.g. 0.1176 = 30/255).",
+
+    "Interior": {
+        "MinAreaFraction": 0.04,
+        "MinEdgeStrength": 0.1176,
+        "TextureDiffMin": 0.015
+    },
+
+    "IsIllustration": {
+        "MinEdgeDensity": 0.12,
+        "EdgeStrengthThreshold": 0.2353,
+        "WhiteChannelMin": 0.9020,
+        "BackgroundFlatnessMin": 0.80,
+        "BorderSampleDepth": 0.05,
+        "ColorBinsPerChannel": 8,
+        "MaxColorClusters": 8,
+        "MinClusterPopulation": 0.01
+    },
+
+    "Yolo": {
+        "ConfidenceThreshold": 0.40,
+        "NmsIouThreshold": 0.60,
+        "MaxDetections": 32,
+        "HumanMinConfidence": 0.50,
+        "AbsenceConfidence": 0.60,
+        "HeroPersonMinArea": 0.15
+    },
+
+    "Filename": {
+        "OrientationConfidence": 0.75
+    },
+
+    "SubjectGeometry": {
+        "ForegroundColorDistance": 0.15,
+        "MinForegroundFraction": 0.005,
+        "FallbackConfidence": 0.60
+    },
+
+    "Colors": {
+        "BucketCount": 4,
+        "BinsPerChannel": 8,
+        "MinBucketShare": 0.02,
+        "BackgroundDistance": 0.12,
+        "MinSampleFraction": 0.02,
+        "DominantColorsConfidence": 0.70,
+        "ProductColorConfidence": 0.80,
+        "BackgroundColorConfidence": 0.85,
+        "Palette": {
+            "black": "#000000", "white": "#ffffff", "grey": "#808080",
+            "red": "#cc0000", "blue": "#0044cc", "green": "#00aa44",
+            "yellow": "#ffdd00", "orange": "#ff8800", "pink": "#ff66aa",
+            "purple": "#7733aa", "brown": "#8b5a2b", "beige": "#d9c7a7"
+        }
+    },
+
+    "Exposure": {
+        "HighLuminance": 0.98,
+        "LowLuminance": 0.02,
+        "FlaggedFraction": 0.25,
+        "Confidence": 0.70
+    },
+
+    "MultipleProducts": {
+        "OverlapIou": 0.10,
+        "Confidence": 0.70
+    }
+}

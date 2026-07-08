@@ -138,8 +138,18 @@ public sealed class PrismConfiguration {
             PrismConfiguration config = ParseAndValidate(document.RootElement, cfgPath);
             string coreConfigDirectory = Path.GetDirectoryName(cfgPath) ?? string.Empty;
             ImageNgpValidator.Validate(coreConfigDirectory);
+            ValidateAnalyzerAssets();
             return config;
         }
+    }
+
+    // Fail fast on missing analyzer assets: the refinement chain needs the YOLOv8n detector, and a
+    // per-image degradation would be silent. Same resolution order as the CLIP model assets.
+    private static void ValidateAnalyzerAssets() {
+        if (PrismConfigLocator.FindModelAsset("Images/Analyzers/ONNX/yolov8n/yolov8n.onnx") is null)
+            throw new PrismConfigurationException(
+                "YOLOv8n ONNX model not found. Deploy Images/Analyzers/ONNX/yolov8n/ next to " +
+                "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
     }
 
     // --- Parsing helpers 

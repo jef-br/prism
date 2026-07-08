@@ -99,7 +99,21 @@ public class ImageOrdererTests
         Assert.Equal("FAM001", back.Family);
     }
 
-    //  Tie-breakers 
+    [Fact]
+    public void Run_RefinedProductTypeId_WinsOverValueSniffing()
+    {
+        // The refinement chain (Analyzer_ProductType) resolved footwear from the IEM; the orderer
+        // must adopt it for the whole family instead of sniffing canonical property values.
+        ImageRecord_LAMBDA image = MakeLambda("shoe_front.jpg", "front-packshot", "FAM001");
+        image.ProductTypeId = "footwear";
+
+        List<ImageRecord_LAMBDA> records = [image];
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
+
+        Assert.Equal("footwear", records[0].ProductTypeId);
+    }
+
+    //  Tie-breakers
 
     [Fact]
     public void Run_TieBreakerByNgpConfidence_HigherConfidenceWinsDet0()
@@ -263,6 +277,63 @@ public class ImageOrdererTests
 
         Assert.Equal(0, side.DetOrder);
         Assert.Equal(1, bottom.DetOrder);
+    }
+
+    //  Overflow ordering policy
+
+    [Fact]
+    public void Run_Overflow_DetailHintedImage_ClosesTheRanks()
+    {
+        // CiMini regression: a DETAIL-named image with no qualifying phenotype must never jump
+        // ahead of the family's main shots — its "detail" hint anchors it after the unhinted ones.
+        ImageRecord_LAMBDA main1  = MakeLambda("24211507_CARDIGAN_76_MAGENTA_B.jpg", null, "FAM001");
+        ImageRecord_LAMBDA main2  = MakeLambda("CARDIGAN_MAGENTA76_A.jpg", null, "FAM001");
+        ImageRecord_LAMBDA detail = MakeLambda("CARDIGAN_MAGENTA76_DETAIL.jpg", null, "FAM001");
+
+        List<ImageRecord_LAMBDA> records = [detail, main1, main2];
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
+        ImageOrderer.CompactDetOrder(records);
+
+        Assert.True(detail.DetOrder > main1.DetOrder);
+        Assert.True(detail.DetOrder > main2.DetOrder);
+        Assert.Equal(2, detail.DetOrder);
+    }
+
+    [Fact]
+    public void Run_Overflow_OnModelImagesRankBeforePackshot()
+    {
+        // A packshot (hero-is-human FALSE) is less valuable than the product on a human model.
+        ImageRecord_LAMBDA packshot = MakeLambda("Pareo Exotica.jpg", null, "FAM001");
+        packshot.Features.Set("hero-is-human", "FALSE", 0.6, "yolo");
+
+        ImageRecord_LAMBDA onModel1 = MakeLambda("Pareo_exotica_F1.jpg", null, "FAM001");
+        onModel1.Features.Set("hero-is-human", "TRUE", 0.9, "yolo");
+
+        ImageRecord_LAMBDA onModel2 = MakeLambda("Pareo_exotica_F2.jpg", null, "FAM001");
+        onModel2.Features.Set("hero-is-human", "TRUE", 0.9, "yolo");
+
+        List<ImageRecord_LAMBDA> records = [packshot, onModel1, onModel2];
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
+        ImageOrderer.CompactDetOrder(records);
+
+        Assert.Equal(0, onModel1.DetOrder);
+        Assert.Equal(1, onModel2.DetOrder);
+        Assert.Equal(2, packshot.DetOrder);
+    }
+
+    [Fact]
+    public void Run_Overflow_FrontHintedImage_StaysFirst()
+    {
+        // A front-hinted overflow image must still lead unhinted siblings.
+        ImageRecord_LAMBDA front = MakeLambda("product_front.jpg", null, "FAM001");
+        ImageRecord_LAMBDA other = MakeLambda("product_extra.jpg", null, "FAM001");
+
+        List<ImageRecord_LAMBDA> records = [other, front];
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
+        ImageOrderer.CompactDetOrder(records);
+
+        Assert.Equal(0, front.DetOrder);
+        Assert.Equal(1, other.DetOrder);
     }
 
     [Fact]

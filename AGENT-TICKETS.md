@@ -122,6 +122,57 @@ M5 gate condition: all Classify decisions answered; ONNX session migrated to sin
 ---
 
 
+### T-3200 · Close Services test coverage gaps: `IIngestService` IO/import path + `IArtifactStore`
+**Status:** Ready | **Profile:** P1-feature-worker
+**Tracks:** `jb/src/core/Services/jbtodo.md` (per-service test suite todo, triaged 2026-07-07).
+
+**Problem:** Existing test folders already mirror stage boundaries by namespace (`PrismCoreTests.Transform`, `.Match`, `.Classify`, etc.), so per-stage isolation already works today via `dotnet test --filter "FullyQualifiedName~PrismCoreTests.<Stage>"` — no restructuring needed for that. But two service interfaces have no real coverage:
+1. `IIngestService` — `Excel/` tests only exercise Excel parsing/IEM building (`ModelBuilder*Tests.cs`). Nothing tests the IO/import side documented in `jb/docs/PRISM-io-import.md` and implemented in `jb/src/core/IO/Import/Importer.cs` — multipart, ZIP, URL, and stream ingestion paths.
+2. `IArtifactStore` — `LocalArtifactStore` (`jb/src/core/Services/LocalArtifactStore.cs`) has no direct unit tests; it's only exercised indirectly through `Export/ExporterTests.cs`.
+
+**What to do:**
+1. Add a `jb/src/tests/Prism.Core.Tests/Ingest/` folder (namespace `PrismCoreTests.Ingest`) covering `Importer.cs`'s multipart, ZIP, URL, and stream code paths — success and malformed-input cases for each.
+2. Add direct unit tests for `LocalArtifactStore`: put/get roundtrip, missing-key behavior, concurrent writes if applicable.
+3. Keep the existing per-folder namespace convention consistent (`PrismCoreTests.<Folder>`).
+
+**Acceptance:**
+- New tests fail if the corresponding production code is reverted (real behavioral coverage, not vacuous passes).
+- `dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj` green.
+
+**Files:** `jb/src/tests/Prism.Core.Tests/` (new folders), `jb/src/core/IO/Import/Importer.cs`, `jb/src/core/Services/LocalArtifactStore.cs`.
+
+---
+
+
+### T-3300 · Validate and complete the Phase 2 distributed-services seam
+**Status:** Ready | **Profile:** P4-critical-architecture
+**Tracks:** `jb/src/core/Services/jbtodo.md` (per-service test suite todo, triaged 2026-07-07).
+
+**Problem:** The physical separation of deployables described as "Phase 2" in `PipelineServices.cs` is largely already built, not merely planned:
+- `PipelineServiceFactory.CreateFromEnvironment` already swaps any of Ingest/Matching/Generate/Transform for its HTTP client (`Http*Service` in `jb/src/core/Services/Http/`) when `PRISM_INGEST_URL` / `PRISM_MATCHING_URL` / `PRISM_GENERATE_URL` / `PRISM_TRANSFORM_URL` is set.
+- `jb/src/services/Prism.ServiceHost/Program.cs` already exposes each service over HTTP independently via `PRISM_SERVICE=ingest|matching|generate|transform|upscale`.
+
+None of this is validated end-to-end, and one known bug would break it in production:
+1. No test exercises the actual HTTP round trip for any `Http*Service` client against `Prism.ServiceHost` — only in-process paths are tested today.
+2. No CI job runs PRISM as actually-separate processes (multiple `Prism.ServiceHost` instances + URL env vars wired per service) — `ci.yml`/`full-pipeline.yml` only run the monolith API.
+3. Known bug (`test/ci/README.md`): the API's in-process pipeline never calls `Upscaler_g_p_u.Initialize()` — only `Prism.ServiceHost` does — so Transform throws when it needs to upscale a small image on the monolith today, and the same gap would break a standalone Transform deployable.
+
+**What to do:**
+1. Fix the upscaler GPU-init gap in the API path (mirror what `Prism.ServiceHost/Program.cs` already does) so `-Mode Full` on CiMini goes green — this blocks trusting any distributed run too.
+2. Add integration tests that stand up a `Prism.ServiceHost` instance (or in-memory `WebApplicationFactory`) per service and exercise each `Http*Service` client against it — real HTTP, not mocked.
+3. Add a CI (or scheduled) job that runs the full pipeline with all four service URLs pointed at separate `Prism.ServiceHost` processes, and asserts it produces the same manifest as the in-process run on CiMini.
+4. Only once distributed correctness is proven: split `Prism.Core.Tests` into per-service `.csproj` files along the existing namespace boundaries (`Transform/`, `Match/`, `Classify/`, `ImageNGP/`, `Order/`, `Rename/`, `Generate/`, `Export/`, plus [[T-3200]]'s new `Ingest/`). This step only pays off once steps 1-3 make Phase 2 real — do not do it speculatively first.
+
+**Acceptance:**
+- `-Mode Full -Dataset CiMini` passes both in-process and fully distributed (4 separate `Prism.ServiceHost` processes), producing identical `expected-manifest.json`.
+- Each `Http*Service` has at least one real-HTTP-roundtrip test.
+- Test projects physically split, mirroring the proven service boundaries.
+
+**Files:** `jb/src/core/Services/PipelineServiceFactory.cs`, `jb/src/core/Services/Http/*.cs`, `jb/src/services/Prism.ServiceHost/Program.cs`, `jb/src/api/*` (upscaler init fix), `jb/src/tests/Prism.Core.Tests/*`, `.github/workflows/ci.yml`.
+
+---
+
+
 ## Verification Rules
 
 - After project/solution setup: `dotnet build jb/src/PRISM.sln`, API/WPF run smoke, web `npm run typecheck` + `npm run build`.

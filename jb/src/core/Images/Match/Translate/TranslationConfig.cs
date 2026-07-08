@@ -150,9 +150,69 @@ public sealed record TranslationConfig
         return false;
     }
 
+    /// <summary>
+    /// Resolves a complete header cell to its canonical id by comparing the whole phrase —
+    /// diacritics folded, lowercased, all non-alphanumerics stripped — against every configured
+    /// term normalized the same way. This is how multi-word terms like "Product Type" /
+    /// "Tipo di prodotto" match, since the per-token path cannot see across token boundaries.
+    /// </summary>
+    /// <param name="header">The raw header cell text.</param>
+    /// <param name="canonicalId">The matched group id, or empty when no group matches the phrase.</param>
+    /// <returns>True when a header group term equals the normalized phrase.</returns>
+    public bool TryResolveHeaderPhrase(string? header, out string canonicalId)
+    {
+        canonicalId = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(header))
+        {
+            return false;
+        }
+
+        string normalizedPhrase = NormalizePhrase(header);
+
+        if (normalizedPhrase.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (HeaderGroup group in HeaderGroups)
+        {
+            if (group.Terms.Any(term => NormalizePhrase(term) == normalizedPhrase))
+            {
+                canonicalId = group.Id;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static string NormalizeToken(string token)
     {
         return token.Trim().ToLowerInvariant();
+    }
+
+    // Folds diacritics ("código" -> "codigo"), lowercases, and strips every non-alphanumeric
+    // character so "Product Type", "product-type", and "producttype" normalize identically.
+    private static string NormalizePhrase(string text)
+    {
+        string decomposed = text.Normalize(System.Text.NormalizationForm.FormD);
+        var builder = new System.Text.StringBuilder(decomposed.Length);
+
+        foreach (char ch in decomposed)
+        {
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            if (char.IsLetterOrDigit(ch))
+            {
+                builder.Append(char.ToLowerInvariant(ch));
+            }
+        }
+
+        return builder.ToString();
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()

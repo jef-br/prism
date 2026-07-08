@@ -1,4 +1,9 @@
 {
+  "overflowPolicy": {
+    "_comment": "Ordering of overflow images (no qualifying phenotype). Filename-hinted images anchor at their hinted slot index; unhinted images anchor at unhintedAnchor - between the main-view slots (front/back/side, det0-2) and the detail/label/material slots (det3+), so a detail-hinted file can never jump ahead of the family's main shots. onModelFirst ranks hero-is-human=TRUE images before packshots within the same anchor.",
+    "unhintedAnchor": 2.5,
+    "onModelFirst": true
+  },
   "productTypes": {
     "default": {
       "det0": { "keyword": "front",   "phenotypes": ["front-packshot", "front-on-model-full-product", "diagonal-packshot"] },

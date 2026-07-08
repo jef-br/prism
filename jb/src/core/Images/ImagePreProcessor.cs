@@ -95,10 +95,6 @@ public static class ImagePreProcessor {
         byte[]? processedBytes = Upscale(flatJpg, bbox, config, lambda);
         if (lambda.IsKo) { colorMat.Dispose(); return (null, null); }
 
-        // Run analyzers on the bbox region (always set at this point).
-        if (lambda.BoundingBox.HasValue)
-            RunAnalyzers(lambda, colorMat, lambda.BoundingBox.Value, config);
-
         return (processedBytes, colorMat);
     }
 
@@ -217,24 +213,6 @@ public static class ImagePreProcessor {
             return Ko(lambda, "PREPROCESS_UPSCALE_EXCEEDED", $"Required scale {scale:F2}× exceeds maximum {config.MaxUpScaleFactor:F2}×.");
 
         return ImageUpscaler.Upscale(flatJpg, scale);
-    }
-
-    // Step 5: run image analyzers and set features on the lambda
-    private static void RunAnalyzers(
-        ImageRecord_LAMBDA lambda, Mat colorMat, BoundingBox bbox, PrismConfiguration config)
-    {
-        try {
-            string analyzerCfgPath = Path.Combine(
-                Path.GetDirectoryName(PrismConfigLocator.FindPrismConfigPath() ?? string.Empty) ?? string.Empty,
-                "Images", "Analyzers", "cfg_ImageAnalyzer.json");
-
-            ImageAnalyzerConfig analyzerCfg = ConfigCache.GetOrLoad(
-                () => ImageAnalyzerConfig.Load(analyzerCfgPath), analyzerCfgPath);
-            bool hasHuman = Analyzer_HasHuman.Analyze(colorMat, bbox, analyzerCfg);
-            lambda.Features.Set("has-human", hasHuman ? "true" : "false", 1.0, "Analyzer_HasHuman");
-        } catch {
-            lambda.Features.Set("has-human", "false", 0.0, "Analyzer_HasHuman");
-        }
     }
 
     private static byte[]? Ko( ImageRecord_LAMBDA lambda, string code, string message ) {

@@ -12,4 +12,10 @@ public interface IFeatureAnalysisService
 {
     /// <summary>Measures features for the pre-loaded image and records them on <paramref name="target"/>.</summary>
     void Analyze(Image<Rgba32> image, ImageFeatureSnapshot target);
+
+    /// <summary>
+    /// Post-match refinement: narrows the image's phenotype pool using family (IEM), filename,
+    /// and detector evidence, then overwrites the provisional phenotype with the refined one.
+    /// </summary>
+    void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet);
 }

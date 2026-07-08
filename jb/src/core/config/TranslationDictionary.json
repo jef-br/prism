@@ -30,7 +30,16 @@
     },
     {
       "id": "producttype",
-      "terms": [ "type", "typ", "tipo", "soort", "producttype", "typeproduct", "articletype" ]
+      "terms": [
+        "producttype", "typeofproduct", "productkind",
+        "typedeproduit", "typeproduit",
+        "tipodeproducto", "tipoproducto",
+        "tipodiprodotto", "tipoprodotto",
+        "tipodeproduto", "tipoproduto",
+        "produkttyp", "produktart", "produkttype",
+        "productsoort", "soortproduct",
+        "articletype", "artikeltype", "artikeltyp", "artikelart", "artikelsoort", "typeproduct"
+      ]
     },
     {
       "id": "category",

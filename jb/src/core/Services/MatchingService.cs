@@ -48,7 +48,8 @@ public sealed class MatchingService : IMatchingService, IDisposable
         if (ingest.FamilyRecords.Count == 0)
             return await BuildNoFamiliesResult(ingest, store, okImages, progress, cancellationToken);
 
-        IImageNgpService ngp                     = new ImageNgpService(LoadRuleSet());
+        PhenotypeRuleSet ruleSet                 = LoadRuleSet();
+        IImageNgpService ngp                     = new ImageNgpService(ruleSet);
         IFeatureAnalysisService featureAnalysis  = new FeatureAnalysisService();
         using IClassificationService classification =
             new ClassificationService(_sharedClassifier, _sharedPromptCatalog, configuration);
@@ -143,6 +144,10 @@ public sealed class MatchingService : IMatchingService, IDisposable
         //  Matched: resolve a FamilyID for each image via the waterfall
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Matched, cancellationToken);
         int matchKo = ImageMatcher.Run(lambdaRecords, ingest.FamilyRecords);
+
+        //  Refine: post-match analyzer chain — now that the family (IEM) is known, narrow each
+        //  image's phenotype pool with IEM/filename/detector evidence and finalize the phenotype.
+        phenotypeAssigned = RefinePhenotypes(results, ingest.FamilyRecords, featureAnalysis, ruleSet);
 
         //  Ordered: assign det slots within each family
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Ordered, cancellationToken);
@@ -277,6 +282,39 @@ public sealed class MatchingService : IMatchingService, IDisposable
         }
 
         return (lambda, image, hash, false);
+    }
+
+    //  Post-match phenotype refinement
+
+    /// <summary>
+    /// Runs the refinement chain for every surviving image: resolves its FamilyIDRecord from the
+    /// match evidence, hands lambda + family + image path to the analyzer chain, and returns the
+    /// refined phenotype-assigned count. A refinement failure keeps the provisional phenotype —
+    /// refinement improves evidence, it never KOs an image.
+    /// </summary>
+    private static int RefinePhenotypes(
+        (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, UInt128 Hash)[] results,
+        IReadOnlyList<FamilyIDRecord> families,
+        IFeatureAnalysisService featureAnalysis,
+        PhenotypeRuleSet ruleSet)
+    {
+        Dictionary<string, FamilyIDRecord> familyById = new(StringComparer.OrdinalIgnoreCase);
+        foreach (FamilyIDRecord family in families) familyById.TryAdd(family.FamilyID, family);
+
+        int assigned = 0;
+        foreach (var (lambda, source, _) in results)
+        {
+            if (lambda.IsKo) continue;
+
+            FamilyIDRecord? family = lambda.MatchEvidence?.FinalFamilyId is string familyId
+                && familyById.TryGetValue(familyId, out FamilyIDRecord? match) ? match : null;
+
+            try { featureAnalysis.Refine(lambda, family, source.NormalizedJpgPath, ruleSet); }
+            catch { /* keep the provisional phenotype — refinement never KOs an image */ }
+
+            if (lambda.SelectedPhenotype is not null) assigned++;
+        }
+        return assigned;
     }
 
     //  Post-classification visual deduplication

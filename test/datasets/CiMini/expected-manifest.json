@@ -1,0 +1,100 @@
+[
+  {
+    "SourceReference": "2021_3024_46_A.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861025",
+    "FinalFileName": "90861025_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "2021_3024_46_B.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861025",
+    "FinalFileName": "90861025_det1.jpg",
+    "DetOrder": 1
+  },
+  {
+    "SourceReference": "2021_3041_65_A.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861026",
+    "FinalFileName": "90861026_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "23211008_02_A.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861083",
+    "FinalFileName": "90861083_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "23211008_02_B.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861083",
+    "FinalFileName": "90861083_det1.jpg",
+    "DetOrder": 1
+  },
+  {
+    "SourceReference": "23231096_35_A.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861071",
+    "FinalFileName": "90861071_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "24211507_CARDIGAN_76_MAGENTA_B.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861052",
+    "FinalFileName": "90861052_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "24211511_86_A.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861075",
+    "FinalFileName": "90861075_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "24211511_96_A.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861076",
+    "FinalFileName": "90861076_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "CARDIGAN_MAGENTA76_A.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861052",
+    "FinalFileName": "90861052_det1.jpg",
+    "DetOrder": 1
+  },
+  {
+    "SourceReference": "CARDIGAN_MAGENTA76_DETAIL.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861052",
+    "FinalFileName": "90861052_det2.jpg",
+    "DetOrder": 2
+  },
+  {
+    "SourceReference": "Pareo Exotica.jpg",
+    "Status": "Ok",
+    "FamilyId": "94613033",
+    "FinalFileName": "94613033_det2.jpg",
+    "DetOrder": 2
+  },
+  {
+    "SourceReference": "Pareo_exotica_F1.jpg",
+    "Status": "Ok",
+    "FamilyId": "94613033",
+    "FinalFileName": "94613033_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "Pareo_exotica_F2.jpg",
+    "Status": "Ok",
+    "FamilyId": "94613033",
+    "FinalFileName": "94613033_det1.jpg",
+    "DetOrder": 1
+  }
+]

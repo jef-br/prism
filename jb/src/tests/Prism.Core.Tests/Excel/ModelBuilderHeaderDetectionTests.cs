@@ -143,6 +143,81 @@ public class ModelBuilderHeaderDetectionTests
         Assert.True(record.CanonicalProperties.ContainsKey("color"));
     }
 
+    //  Product-type / NGP column canonicalization (compound phrase terms only)
+
+    [Fact]
+    public void ProductTypeHeader_EnglishTwoWords_CanonicalizedToProducttype()
+    {
+        ModelBuilder builder = BuildBuilder();
+        ExcelWorkbook workbook = Workbook("pt-en",
+            ["Family ID", "Product Type", "Color"],
+            ["50000001", "sneakers", "blue"],
+            ["50000002", "sandals", "red"]);
+
+        FamilyIDRecord record = builder.BuildFromWorkbooks([workbook]).Model.ToFamilyRecords()[0];
+
+        Assert.True(record.CanonicalProperties.ContainsKey("producttype"));
+    }
+
+    [Fact]
+    public void ProductTypeHeader_ItalianPhrase_CanonicalizedToProducttype()
+    {
+        ModelBuilder builder = BuildBuilder();
+        ExcelWorkbook workbook = Workbook("pt-it",
+            ["Family ID", "Tipo di prodotto", "Colore"],
+            ["50000003", "camicia", "blu"],
+            ["50000004", "borsa", "rosso"]);
+
+        FamilyIDRecord record = builder.BuildFromWorkbooks([workbook]).Model.ToFamilyRecords()[0];
+
+        Assert.True(record.CanonicalProperties.ContainsKey("producttype"));
+    }
+
+    [Fact]
+    public void ProductTypeHeader_GermanSingleCompound_CanonicalizedToProducttype()
+    {
+        ModelBuilder builder = BuildBuilder();
+        ExcelWorkbook workbook = Workbook("pt-de",
+            ["Family ID", "Produkttyp", "Farbe"],
+            ["50000005", "hemd", "blau"],
+            ["50000006", "tasche", "rot"]);
+
+        FamilyIDRecord record = builder.BuildFromWorkbooks([workbook]).Model.ToFamilyRecords()[0];
+
+        Assert.True(record.CanonicalProperties.ContainsKey("producttype"));
+    }
+
+    [Fact]
+    public void BareTypeHeader_KeepsRawHeader_NotCanonicalized()
+    {
+        // "Type" alone is not allowed as a product-type header — only compound "product type"
+        // terms qualify, in any language. The raw header must survive untouched.
+        ModelBuilder builder = BuildBuilder();
+        ExcelWorkbook workbook = Workbook("pt-bare",
+            ["Family ID", "Type", "Color"],
+            ["50000007", "closure", "blue"],
+            ["50000008", "zipper", "red"]);
+
+        FamilyIDRecord record = builder.BuildFromWorkbooks([workbook]).Model.ToFamilyRecords()[0];
+
+        Assert.False(record.CanonicalProperties.ContainsKey("producttype"));
+        Assert.True(record.CanonicalProperties.ContainsKey("Type"));
+    }
+
+    [Fact]
+    public void NgpHeader_CanonicalizedToNgp()
+    {
+        ModelBuilder builder = BuildBuilder();
+        ExcelWorkbook workbook = Workbook("ngp",
+            ["Family ID", "NGP", "Color"],
+            ["50000009", "clothing-tops", "blue"],
+            ["50000010", "footwear", "red"]);
+
+        FamilyIDRecord record = builder.BuildFromWorkbooks([workbook]).Model.ToFamilyRecords()[0];
+
+        Assert.True(record.CanonicalProperties.ContainsKey("ngp"));
+    }
+
     //  AUTOMAT2 transition: refco-style key column is identified, then rows fail PK validation
 
     [Fact]
@@ -217,7 +292,7 @@ public class ModelBuilderHeaderDetectionTests
                 new HeaderGroup { Id = "color", Terms = ["color", "colour", "couleur"] },
                 new HeaderGroup { Id = "material", Terms = ["material", "composition", "composicion"] },
                 new HeaderGroup { Id = "description", Terms = ["description", "descripcion", "designation"] },
-                new HeaderGroup { Id = "producttype", Terms = ["type", "tipo"] },
+                new HeaderGroup { Id = "producttype", Terms = ["producttype", "typedeproduit", "tipodeproducto", "tipodiprodotto", "produkttyp", "productsoort", "articletype"] },
                 new HeaderGroup { Id = "category", Terms = ["category", "categorie", "seccion"] },
                 new HeaderGroup { Id = "washinginstructions", Terms = ["cuidados", "entretien", "conseils", "washing"] },
                 new HeaderGroup { Id = "ngp", Terms = ["ngp"] }

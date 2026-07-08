@@ -29,7 +29,8 @@ public sealed class ModelBuilder
     private static readonly HashSet<string> SafeMergeCanonicals = new(StringComparer.OrdinalIgnoreCase)
     {
         "familyid", "ean", "refco", "color", "material", "description",
-        "washinginstructions", "weight", "brand", "season", "gender", "size", "style"
+        "washinginstructions", "weight", "brand", "season", "gender", "size", "style",
+        "producttype", "ngp"
     };
 
     /// <summary>
@@ -352,6 +353,14 @@ public sealed class ModelBuilder
     {
         confidence = 0;
         bool matched = false;
+
+        // Whole-phrase indicators ("Product Type", "Tipo di prodotto") match before tokenization.
+        if (translationConfig.TryResolveHeaderPhrase(rawHeader, out string phraseCanonical)
+            && activeIndicatorIds.Contains(NormalizeHeader(phraseCanonical)))
+        {
+            confidence = 1.0;
+            return true;
+        }
 
         foreach (string token in TokenizeFolded(rawHeader))
         {
@@ -810,6 +819,18 @@ public sealed class ModelBuilder
     /// </summary>
     private string ResolveColumnCanonicalName(string rawHeader, int columnIndex)
     {
+        // Whole-phrase lookup first: multi-word terms ("Product Type", "Tipo di prodotto") can
+        // never resolve token by token because their words are stop words or non-terms alone.
+        if (translationConfig.TryResolveHeaderPhrase(rawHeader, out string phraseCanonical))
+        {
+            string normalizedPhraseCanonical = NormalizeHeader(phraseCanonical);
+
+            if (SafeMergeCanonicals.Contains(normalizedPhraseCanonical))
+            {
+                return normalizedPhraseCanonical;
+            }
+        }
+
         string? singleCanonical = null;
         bool sawSignificantToken = false;
 

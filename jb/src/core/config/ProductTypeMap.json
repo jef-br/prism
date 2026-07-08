@@ -1,0 +1,119 @@
+{
+    "_comment": "Maps raw product-type evidence (Excel producttype/NGP column values, filename tokens, CLIP product-type-label values) to the canonical DetOrderRules productTypes slugs. Terms are compared alphanumeric-only, case- and diacritics-insensitive. First matching group wins, so keep terms unique across groups.",
+
+    "productTypes": {
+        "clothing-tops": [
+            "shirt", "tshirt", "tee", "top", "blouse", "sweater", "jumper", "pullover", "hoodie",
+            "cardigan", "polo", "camiseta", "camisa", "blusa", "jersey", "sudadera", "chemise",
+            "chemisier", "pull", "sweat", "hemd", "bluse", "camicia", "maglia", "maglietta",
+            "felpa", "trui", "overhemd", "camisola"
+        ],
+        "clothing-bottoms": [
+            "trousers", "pants", "jeans", "shorts", "leggings", "skirt", "falda", "jupe", "rock",
+            "gonna", "rok", "pantalon", "pantalones", "pantaloni", "hose", "broek", "calcas"
+        ],
+        "clothing-outerwear": [
+            "jacket", "coat", "blazer", "parka", "anorak", "gilet", "chaqueta", "abrigo", "veste",
+            "manteau", "jacke", "mantel", "giacca", "cappotto", "jas", "casaco"
+        ],
+        "clothing-dresses": [
+            "dress", "gown", "jumpsuit", "robe", "vestido", "kleid", "abito", "vestito", "jurk"
+        ],
+        "footwear": [
+            "shoe", "shoes", "sneaker", "sneakers", "trainer", "trainers", "boot", "boots",
+            "sandal", "sandals", "heels", "slipper", "slippers", "zapato", "zapatos", "zapatilla",
+            "zapatillas", "bota", "botas", "sandalia", "sandalias", "chaussure", "chaussures",
+            "basket", "baskets", "botte", "bottes", "schuh", "schuhe", "stiefel", "scarpa",
+            "scarpe", "stivali", "schoen", "schoenen", "laarzen", "sapato", "sapatos"
+        ],
+        "bags-accessories": [
+            "bag", "handbag", "backpack", "tote", "wallet", "purse", "belt", "scarf", "cap",
+            "gloves", "suitcase", "bolso", "mochila", "cartera", "cinturon", "bufanda", "gorro",
+            "sac", "sacoche", "portefeuille", "ceinture", "echarpe", "tasche", "rucksack",
+            "guertel", "borsa", "zaino", "portafoglio", "cintura", "sciarpa", "tas", "rugzak",
+            "riem", "sjaal", "mala", "bolsa"
+        ],
+        "fmcg-packaged-food": [
+            "food", "snack", "cereal", "pasta", "sauce", "chocolate", "coffee", "tea", "biscuit",
+            "cookie", "alimento", "comida", "cafe", "nourriture", "kaffee", "tee",
+            "lebensmittel", "cibo", "caffe", "voedsel", "koffie", "thee"
+        ],
+        "fmcg-personal-care": [
+            "shampoo", "soap", "toothpaste", "deodorant", "lotion", "jabon", "champu",
+            "dentifrico", "savon", "dentifrice", "seife", "zahnpasta", "sapone", "dentifricio",
+            "zeep", "tandpasta", "sabonete"
+        ],
+        "beauty-cosmetics": [
+            "makeup", "cosmetics", "lipstick", "mascara", "foundation", "perfume", "fragrance",
+            "eyeshadow", "nailpolish", "maquillaje", "pintalabios", "maquillage", "parfum",
+            "schminke", "lippenstift", "trucco", "rossetto", "profumo"
+        ],
+        "electronics-small": [
+            "headphone", "headphones", "earbuds", "phone", "smartphone", "tablet", "camera",
+            "smartwatch", "charger", "speaker", "keyboard", "auriculares", "telefono", "camara",
+            "cargador", "altavoz", "casque", "ecouteurs", "telephone", "chargeur", "enceinte",
+            "kopfhoerer", "ladegeraet", "lautsprecher", "cuffie", "caricatore", "koptelefoon",
+            "oordopjes", "telefoon", "oplader", "luidspreker", "celular"
+        ],
+        "electronics-large": [
+            "tv", "television", "monitor", "laptop", "refrigerator", "fridge", "washingmachine",
+            "dishwasher", "oven", "microwave", "televisor", "nevera", "lavadora", "horno",
+            "televiseur", "refrigerateur", "lavelinge", "four", "fernseher", "kuehlschrank",
+            "waschmaschine", "backofen", "televisione", "frigorifero", "lavatrice", "forno",
+            "televisie", "koelkast", "wasmachine", "geladeira"
+        ],
+        "homeware-soft": [
+            "bedding", "duvet", "pillow", "cushion", "blanket", "towel", "curtain", "rug",
+            "carpet", "sheets", "sabanas", "almohada", "cojin", "manta", "toalla", "cortina",
+            "alfombra", "couette", "oreiller", "coussin", "couverture", "serviette", "rideau",
+            "tapis", "bettwaesche", "kissen", "decke", "handtuch", "vorhang", "teppich",
+            "piumone", "cuscino", "coperta", "asciugamano", "tenda", "tappeto", "dekbed",
+            "kussen", "deken", "handdoek", "gordijn", "tapijt"
+        ],
+        "homeware-hard": [
+            "plate", "bowl", "mug", "cup", "glass", "cutlery", "pan", "pot", "vase", "lamp",
+            "clock", "mirror", "plato", "taza", "vaso", "cubiertos", "sarten", "olla", "jarron",
+            "lampara", "reloj", "espejo", "assiette", "tasse", "verre", "couverts", "poele",
+            "casserole", "lampe", "horloge", "miroir", "teller", "besteck", "pfanne", "topf",
+            "uhr", "spiegel", "piatto", "tazza", "bicchiere", "posate", "padella", "pentola",
+            "lampada", "orologio", "specchio", "bord", "mok", "bestek", "vaas", "klok"
+        ],
+        "toys-children": [
+            "toy", "toys", "doll", "puzzle", "lego", "plush", "teddy", "stroller", "juguete",
+            "muneca", "peluche", "juego", "jouet", "poupee", "jeu", "poussette", "spielzeug",
+            "puppe", "kuscheltier", "spiel", "giocattolo", "bambola", "gioco", "speelgoed",
+            "pop", "knuffel", "spel", "brinquedo"
+        ],
+        "diy-tools": [
+            "drill", "hammer", "screwdriver", "saw", "wrench", "toolbox", "tool", "tools",
+            "taladro", "martillo", "destornillador", "sierra", "herramienta", "perceuse",
+            "marteau", "tournevis", "scie", "outil", "bohrmaschine", "schraubenzieher", "saege",
+            "werkzeug", "trapano", "martello", "cacciavite", "sega", "utensile", "boormachine",
+            "hamer", "schroevendraaier", "zaag", "gereedschap", "ferramenta"
+        ],
+        "gardening": [
+            "plant", "planter", "lawnmower", "mower", "hose", "shovel", "rake", "seeds",
+            "garden", "planta", "cortacesped", "manguera", "rastrillo", "semillas", "jardin",
+            "plante", "tondeuse", "tuyau", "pelle", "rateau", "graines", "rasenmaeher",
+            "schlauch", "schaufel", "harke", "samen", "garten", "pianta", "tosaerba",
+            "rastrello", "semi", "giardino", "grasmaaier", "tuinslang", "schep", "hark",
+            "zaden", "tuin", "jardim"
+        ],
+        "sports-equipment": [
+            "ball", "racket", "bike", "bicycle", "dumbbell", "weights", "yogamat", "skis",
+            "snowboard", "helmet", "balon", "raqueta", "bicicleta", "mancuerna", "pesas",
+            "casco", "ballon", "raquette", "velo", "haltere", "fahrrad", "hantel", "helm",
+            "palla", "racchetta", "bici", "manubrio", "bal", "fiets", "bola", "raquete"
+        ],
+        "furniture": [
+            "sofa", "couch", "chair", "table", "desk", "bed", "wardrobe", "shelf", "bookcase",
+            "cabinet", "dresser", "stool", "bench", "silla", "mesa", "escritorio", "cama",
+            "armario", "estanteria", "comoda", "taburete", "banco", "canape", "chaise",
+            "bureau", "lit", "armoire", "etagere", "commode", "tabouret", "banc", "stuhl",
+            "tisch", "schreibtisch", "bett", "kleiderschrank", "regal", "schrank", "kommode",
+            "hocker", "divano", "sedia", "tavolo", "scrivania", "letto", "armadio", "scaffale",
+            "credenza", "sgabello", "panca", "stoel", "tafel", "kledingkast", "kast", "kruk",
+            "cadeira"
+        ]
+    }
+}

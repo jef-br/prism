@@ -68,7 +68,7 @@ internal static class ImageOrderer
         FamilyIDRecord? familyIDRecord,
         DetOrderConfig config)
     {
-        string productTypeId = ResolveProductType(familyIDRecord, config);
+        string productTypeId = ResolveProductType(images, familyIDRecord, config);
         IReadOnlyList<DetSlotRule> slots = config.GetSlots(productTypeId);
         int lastConfiguredSlot = slots.Count > 0 ? slots[^1].SlotIndex : -1;
 
@@ -95,14 +95,18 @@ internal static class ImageOrderer
         }
 
         // Images with no qualifying phenotype become overflow after the last configured slot.
-        // Overflow order uses real signal instead of raw list position: the earliest slot whose
-        // keyword stems match the filename first, then numeric-aware natural filename order —
-        // so 'Pareo_F1' precedes 'Pareo_F2' and 'img_2' precedes 'img_10'.
+        // Overflow order uses real signal instead of raw list position: filename-hinted images
+        // anchor at their hinted slot position, unhinted images anchor at the configured position
+        // between the main-view slots and the detail/label/material slots — so a 'detail'-hinted
+        // file can never jump ahead of the family's main shots. Within the same anchor, on-model
+        // images (hero-is-human TRUE) outrank packshots, then numeric-aware natural filename
+        // order — so 'Pareo_F1' precedes 'Pareo_F2' and 'img_2' precedes 'img_10'.
         int overflowSlot = lastConfiguredSlot + 1;
         foreach ((ImageRecord_LAMBDA img, int idx, int hintSlot) in images
             .Select((img, idx) => (img, idx, HintSlot: ResolveHintSlot(img.InitialFullName, slots, config)))
             .Where(x => !imageAssigned[x.idx])
-            .OrderBy(x => x.HintSlot)
+            .OrderBy(x => x.HintSlot == int.MaxValue ? config.OverflowUnhintedAnchor : x.HintSlot)
+            .ThenBy(x => OnModelRank(x.img, config))
             .ThenBy(x => x.img.InitialFullName, NaturalFilenameComparer)
             .ThenBy(x => x.idx))
         {
@@ -148,6 +152,18 @@ internal static class ImageOrderer
         }
 
         return int.MaxValue;
+    }
+
+    /// <summary>
+    /// Overflow rank for the on-model-before-packshot rule: a product shown on a human model
+    /// (hero-is-human TRUE) is more valuable than the same product as a packshot, so it sorts
+    /// first (0). Everything else — FALSE or UNKNOWN — ranks equal (1); UNKNOWN must not outrank
+    /// a known packshot. Disabled via DetOrderRules.json overflowPolicy.onModelFirst.
+    /// </summary>
+    private static int OnModelRank(ImageRecord_LAMBDA img, DetOrderConfig config)
+    {
+        if (!config.OverflowOnModelFirst) return 0;
+        return string.Equals(img.Features.GetValue("hero-is-human"), "TRUE", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
     }
 
     /// <summary>Numeric-aware ordinal filename comparer: digit runs compare as numbers, text ordinally.</summary>
@@ -260,12 +276,18 @@ internal static class ImageOrderer
     //  Product type resolution 
 
     /// <summary>
-    /// Resolves the product type id from the FamilyIDRecord's canonical properties.
-    /// Normalises each value to kebab-case and checks against known product type ids.
-    /// Returns "default" when no match is found.
+    /// Resolves the family's product type id. The refinement chain (Analyzer_ProductType) already
+    /// resolved it from the IEM producttype/ngp columns onto each image — the first validated id
+    /// wins. Fallback: sniff every canonical property value for a known product type id (legacy
+    /// path, to retire after real-batch validation — see the Analyzers jbtodo). Then "default".
     /// </summary>
-    private static string ResolveProductType(FamilyIDRecord? familyIDRecord, DetOrderConfig config)
+    private static string ResolveProductType(List<ImageRecord_LAMBDA> images, FamilyIDRecord? familyIDRecord, DetOrderConfig config)
     {
+        foreach (ImageRecord_LAMBDA image in images)
+        {
+            if (image.ProductTypeId is string resolved && config.HasProductType(resolved)) return resolved;
+        }
+
         if (familyIDRecord is null) return "default";
 
         foreach (string value in familyIDRecord.CanonicalProperties.Values)
