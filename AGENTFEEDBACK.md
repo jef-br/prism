@@ -11,16 +11,9 @@ Static reload memory. Not a ticket board. Accepted knowledge lives in `jb/docs/`
 
 ## Config Locations
 
-| File | Path |
-|---|---|
-| `Prism_Config.json` (incl. `Models` section: CLIP + Upscale paths) | `jb/src/core/config/` |
-| `ExcelConfig.json` | `jb/src/core/Excel/` |
-| `MatchingConfig.json` | `jb/src/core/Images/Match/` |
-| `ImageNGP.json` / `ImageRoles.json` | `jb/src/core/config/` |
-| `ClipPrompts.json` | `jb/src/core/Images/Classify/` |
-| `DetOrderRules.json` | `jb/src/core/Images/Order/` |
-| `HostRules.json` | `jb/src/core/IO/cfg/` |
-| `TranslationDictionary.json` | `jb/src/core/Images/Match/Translate/` |
+All runtime config JSON is centralized in `jb/src/core/config/` (copied to output via `Prism.Core.csproj` `Content`). This includes `Prism_Config.json` (with `Models`: CLIP/YOLO/Upscale paths), `ExcelConfig.json`, `MatchingConfig.json`, `TranslationDictionary.json`, `ImageNGP.json`, `ImageRoles.json`, `ClipPrompts.json`, `DetOrderRules.json`, `DetOrderKeywordStems.json`, `HostRules.json`, `analyzer_Config.json`, `ProductTypeMap.json`.
+
+**Restructure (2026-07-08):** `jb/src/core/` split into `Services/` (`Prism.Services.*`: Matching/Transform/Generate/Upscale) and `lib/` (`Prism.Lib.*`: Excel/Ingress/Export/Zip/ImageNGP); contract types are `Prism.Contracts`; orchestrator + `Services/` glue stay `Prism.Core`. Model assets resolve via source-tree walk: CLIP `Services/Matching/Classify/ONNX/`, YOLO `Services/Matching/Analyzers/ONNX/`, Real-ESRGAN `Services/Upscale/Engine/ONNX/`.
 
 ## Behavioral Memory
 

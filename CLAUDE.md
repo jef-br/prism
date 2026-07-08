@@ -45,17 +45,24 @@ Imported → Classified → Matched → Ordered → Renamed → Generated → Tr
 `Prism.cs` is the facade. It contains management code only — no inline logic. Each stage delegates to a dedicated class in a subfolder of `jb/src/core/`.
 
 ### Core modules (`jb/src/core/`)
-| Folder | Responsibility |
-|---|---|
-| `Excel/` | Parses Excel input, builds Internal Excel Model (IEM), deduplicates rows/columns |
-| `IO/` | Import (multipart, ZIP, URL, stream), export (ZIP or JSON manifest) |
-| `Images/Classify/` | ONNX runtime + CLIP model → ImageNGP feature tags per image |
-| `Images/Match/` | Three-strategy waterfall (NumericMatcher 55%, StringMatcher 15%, ImageLabelingMatcher 15%, semantic 15%) → resolves FamilyID |
-| `Images/Order/` | Orders images within a FamilyID → assigns `_det` indices |
-| `Images/Transform/` | Applies visual transformations per ImageNGP state |
-| `ImageNGP/` | Feature taxonomy (borders, human, head_visible, orientation, type_of_shot) |
-| `Models/` | All C# record definitions (`ImageRecord_INPUT/LAMBDA/OUTPUT/GENERATED`, `FamilyRecord`, `BatchManifest`) |
-| `Pipeline/` | `PipelineProgressEvent` — progress tracking via SSE |
+`jb/src/core/` is split into **`Services/`** (deployable services, namespace `Prism.Services.*`) and **`lib/`** (support libraries, not services, namespace `Prism.Lib.*`), plus the monolith orchestrator + shared types. Each `Services/<X>/` is self-contained (feature code + service wrapper); a separable-assembly engine lives in a `Services/<X>/Engine/` subfolder.
+
+| Folder | Namespace | Responsibility |
+|---|---|---|
+| `Services/Matching/` (`Match/`, `Order/`, `Classify/`, `Analyzers/`) | `Prism.Services.Matching` | Waterfall matcher → FamilyID, `_det` ordering, ONNX/CLIP classification, YOLO + per-feature analyzers |
+| `Services/Transform/` (+ `Engine/`) | `Prism.Services.Transform` | Applies visual transformations per ImageNGP state |
+| `Services/Generate/` | `Prism.Services.Generate` | Synthetic image generation |
+| `Services/Upscale/` (+ `Engine/`) | `Prism.Services.Upscale` | Real-ESRGAN GPU upscaling |
+| `lib/Excel/` | `Prism.Lib.Excel` | Parses Excel input, builds IEM, dedupes rows/columns |
+| `lib/Ingress/` | `Prism.Lib.Ingress` | Import (multipart, ZIP, URL, stream, fetchers) |
+| `lib/Export/` | `Prism.Lib.Export` | Export (ZIP or JSON manifest) + manifest models |
+| `lib/Zip/` | `Prism.Lib.Zip` | ZIP central-directory reader, member triage |
+| `lib/ImageNGP/` | `Prism.Lib.ImageNGP` | Feature taxonomy (borders, human, head_visible, orientation, type_of_shot) |
+| `Services/` (root) + `Services/Http/` | `Prism.Core` | Service composition glue: interfaces, HTTP clients, `PipelineServiceFactory`, Ingest wrapper |
+| `Models/` | `Prism.Contracts` | All C# record definitions (`ImageRecord_*`, `FamilyIDRecord`, `BatchManifest`) — the `Prism.Core.Contracts` assembly |
+| `Pipeline/` | `Prism.Core` / `Prism.Contracts` | `PipelineProgressEvent`, stage names — progress via SSE |
+
+Namespace shim: `GlobalUsings.cs` (or `<Using>` items in the explicit-include sub-projects) keeps call sites free of per-file `using` churn. Contract types are always `Prism.Contracts` regardless of source folder.
 
 ### API (`jb/src/api/`)
 ASP.NET Core 10 minimal API. Routes:
@@ -85,16 +92,17 @@ Both web and WPF are **decorators over `Prism.cs`** — they provide visibility 
 
 Every parameter lives in a JSON config file placed next to the code that uses it. No magic values inline. Key config files:
 
+All runtime config JSON is centralized in `jb/src/core/config/` and copied to output via `Prism.Core.csproj` `Content` items:
+
 | File | Location |
 |---|---|
-| `Prism_Config.json` | `jb/src/core/` |
-| `ExcelConfig.json` | `jb/src/core/Excel/` |
-| `MatchingConfig.json` | `jb/src/core/Images/Match/` |
-| `ImageNGP.json` / `ImageRoles.json` | `jb/src/core/ImageNGP/` |
-| `ClipPrompts.json` | `jb/src/core/Images/Classify/` |
-| `DetOrderRules.json` | `jb/src/core/Images/Order/` |
-| `HostRules.json` | `jb/src/core/IO/cfg/` |
-| `TranslationDictionary.json` | `jb/src/core/Images/Match/Translate/` |
+| `Prism_Config.json` (incl. `Models`: CLIP/YOLO/Upscale paths) | `jb/src/core/config/` |
+| `ExcelConfig.json`, `MatchingConfig.json`, `TranslationDictionary.json` | `jb/src/core/config/` |
+| `ImageNGP.json`, `ImageRoles.json`, `ClipPrompts.json` | `jb/src/core/config/` |
+| `DetOrderRules.json`, `DetOrderKeywordStems.json` | `jb/src/core/config/` |
+| `HostRules.json`, `analyzer_Config.json`, `ProductTypeMap.json` | `jb/src/core/config/` |
+
+Model assets (not copied to every bin) resolve via `PrismConfigLocator.FindModelAsset` against the source tree: CLIP at `Services/Matching/Classify/ONNX/`, YOLO at `Services/Matching/Analyzers/ONNX/`, Real-ESRGAN at `Services/Upscale/Engine/ONNX/`.
 
 On API startup, `PrismApiConfiguration.Load()` validates all config and model assets. Missing config or model files **fail fast and loud** — never silently.
 
