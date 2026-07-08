@@ -19,10 +19,10 @@
     <Compile Include="PrismJobResult.cs" />
     <Compile Include="MatchOnlyResult.cs" />
     <Compile Include="PrismProcessingParameters.cs" />
-    <Compile Include="..\Excel\FamilyIDRecord.cs" Link="FamilyIDRecord.cs" />
-    <Compile Include="..\IO\BatchManifest.cs" Link="BatchManifest.cs" />
-    <Compile Include="..\IO\BatchManifestSummary.cs" Link="BatchManifestSummary.cs" />
-    <Compile Include="..\IO\ManifestImageRow.cs" Link="ManifestImageRow.cs" />
+    <Compile Include="..\lib\Excel\FamilyIDRecord.cs" Link="FamilyIDRecord.cs" />
+    <Compile Include="..\lib\Export\BatchManifest.cs" Link="BatchManifest.cs" />
+    <Compile Include="..\lib\Export\BatchManifestSummary.cs" Link="BatchManifestSummary.cs" />
+    <Compile Include="..\lib\Export\ManifestImageRow.cs" Link="ManifestImageRow.cs" />
     <Compile Include="..\Pipeline\PipelineProgressEvent.cs" Link="PipelineProgressEvent.cs" />
     <Compile Include="..\Images\Classify\ClassificationToken.cs" Link="ClassificationToken.cs" />
     <Compile Include="..\Images\Classify\EdgeIntersectionResult.cs" Link="EdgeIntersectionResult.cs" />
