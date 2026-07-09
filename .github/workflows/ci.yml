@@ -25,8 +25,8 @@ jobs:
 
       - name: Unit tests (xUnit)
         shell: pwsh
-        # Runs the full suite, including PipelineIntegrationTests. These currently fail on the T-2800
-        # upscaler bug — that is intentional: CI reports the real failure rather than hiding it.
+        # Runs the full suite, including PipelineIntegrationTests. Those share their pipeline runs via
+        # PipelineFixture, so the suite completes in ~6 min rather than ~30.
         run: >
           dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj
           -c Release --no-build
