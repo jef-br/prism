@@ -26,7 +26,7 @@ public class PipelineIntegrationTests : IClassFixture<PipelineFixture> {
     /// Primary acceptance test: all 8 stages present in order, manifest non-empty.
     /// </summary>
     [Fact]
-    public void SPACINI29_TINY_EndToEnd_VerifiesAllEightStagesInOrder() {
+    public void CiMini_EndToEnd_VerifiesAllEightStagesInOrder() {
         Assert.True(Directory.Exists(fixture.ImagesPath), $"Test fixture directory not found: {fixture.ImagesPath}");
         Assert.True(File.Exists(fixture.ExcelPath), $"Test fixture Excel file not found: {fixture.ExcelPath}");
         Assert.NotEmpty(Directory.GetFiles(fixture.ImagesPath, "*.jpg", SearchOption.TopDirectoryOnly));
@@ -105,7 +105,7 @@ public class PipelineIntegrationTests : IClassFixture<PipelineFixture> {
     /// Every input image must appear in either OkImages or KoImages — no silent drops.
     /// </summary>
     [Fact]
-    public void SPACINI29_TINY_NoImagesSilentlyDropped() {
+    public void CiMini_NoImagesSilentlyDropped() {
         var result = fixture.Default;
 
         Assert.Equal("Completed", result.Status);
@@ -117,7 +117,7 @@ public class PipelineIntegrationTests : IClassFixture<PipelineFixture> {
     /// Vacuously satisfied when all images are KO'd; still guards regressions if matching starts producing OK images.
     /// </summary>
     [Fact]
-    public void SPACINI29_TINY_OkImages_HaveWellFormedFinalNames() {
+    public void CiMini_OkImages_HaveWellFormedFinalNames() {
         var result = fixture.Default;
 
         Assert.Equal("Completed", result.Status);
@@ -135,7 +135,7 @@ public class PipelineIntegrationTests : IClassFixture<PipelineFixture> {
     /// Every KO image must have a documented rejection reason code — undocumented rejections are a pipeline defect.
     /// </summary>
     [Fact]
-    public void SPACINI29_TINY_KoImages_HaveReasonCode() {
+    public void CiMini_KoImages_HaveReasonCode() {
         var result = fixture.Default;
 
         Assert.Equal("Completed", result.Status);
@@ -144,11 +144,11 @@ public class PipelineIntegrationTests : IClassFixture<PipelineFixture> {
     }
 
     /// <summary>
-    /// Images sharing the same source stem (e.g. 20213024_46_A and 20213024_46_B)
+    /// Images sharing the same source stem (e.g. 2021_3024_46_A and 2021_3024_46_B)
     /// must resolve to the same FamilyId when both are OK.
     /// </summary>
     [Fact]
-    public void SPACINI29_TINY_PairedImages_ShareFamily() {
+    public void CiMini_PairedImages_ShareFamily() {
         var result = fixture.Default;
 
         Assert.Equal("Completed", result.Status);
@@ -174,7 +174,7 @@ public class PipelineIntegrationTests : IClassFixture<PipelineFixture> {
     /// Requesting ZIP format must produce non-null, non-empty ZipBytes.
     /// </summary>
     [Fact]
-    public void SPACINI29_TINY_ZipFormat_ProducesNonEmptyBytes() {
+    public void CiMini_ZipFormat_ProducesNonEmptyBytes() {
         var result = fixture.Zip;
 
         Assert.Equal("Completed", result.Status);
@@ -188,11 +188,11 @@ public class PipelineIntegrationTests : IClassFixture<PipelineFixture> {
 
     /// <summary>
     /// Non-vacuous guard: real OK rows must exist and carry a FamilyID. This is the assertion the other
-    /// SPACINI29 tests lack — they are all satisfied when every image is KO. A classification (CLIP)
+    /// CiMini tests lack — they are all satisfied when every image is KO. A classification (CLIP)
     /// failure must never KO an image, so filename-token matching can still assign a FamilyID.
     /// </summary>
     [Fact]
-    public void SPACINI29_TINY_ImagesAreAssociatedToFamilyId() {
+    public void CiMini_ImagesAreAssociatedToFamilyId() {
         var result = fixture.Default;
 
         Assert.Equal("Completed", result.Status);
@@ -206,38 +206,4 @@ public class PipelineIntegrationTests : IClassFixture<PipelineFixture> {
         Assert.DoesNotContain(result.KoImages, r => r.KoReasonCode == "CLASSIFY_ERROR");
     }
 
-    // -------------------------------------------------------------------------
-    // SmallTest dataset tests
-    //
-    // BuildSmallTestJobRequest was byte-identical to BuildTinyJobRequest — same CiMini images, same
-    // ci-mini.xlsx, same parameters. Both therefore assert against the same shared Default run.
-    // If SmallTest ever points at its own dataset, give it a dedicated run on PipelineFixture.
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Smoke test: pipeline completes and produces a non-empty manifest for the SmallTest fixture.
-    /// </summary>
-    [Fact]
-    public void SmallTest_EndToEnd_CompletesWithManifest() {
-        Assert.True(Directory.Exists(fixture.ImagesPath), $"SmallTest images directory not found: {fixture.ImagesPath}");
-        Assert.True(File.Exists(fixture.ExcelPath), $"SmallTest Excel not found: {fixture.ExcelPath}");
-
-        var result = fixture.Default;
-
-        Assert.NotNull(result);
-        Assert.Equal("Completed", result.Status);
-        Assert.NotNull(result.Manifest);
-        Assert.True(result.Manifest.Summary.ImageCount > 0);
-    }
-
-    /// <summary>
-    /// Every input image must appear in OkImages or KoImages — no silent drops.
-    /// </summary>
-    [Fact]
-    public void SmallTest_NoImagesSilentlyDropped() {
-        var result = fixture.Default;
-
-        Assert.Equal("Completed", result.Status);
-        Assert.Equal(fixture.InputImageCount, result.OkImages.Count + result.KoImages.Count);
-    }
 }

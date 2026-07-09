@@ -29,7 +29,7 @@ public sealed class PipelineFixture : IAsyncLifetime {
     /// <summary>Count of loose input .jpg files fed to the Default and Zip runs.</summary>
     public int InputImageCount => Directory.GetFiles(ImagesPath, "*.jpg", SearchOption.TopDirectoryOnly).Length;
 
-    /// <summary>All CiMini images, JSON format, transform on. Shared by the SPACINI29_TINY and SmallTest tests.</summary>
+    /// <summary>All CiMini images, JSON format, transform on. Shared by most CiMini_* tests.</summary>
     public PrismJobResult Default { get; private set; } = null!;
 
     /// <summary>Same inputs as <see cref="Default"/> but requesting ZIP output, so ZipBytes is populated.</summary>
@@ -118,8 +118,9 @@ public sealed class PipelineFixture : IAsyncLifetime {
     /// <summary>
     /// Walks up from the test assembly to the repo's test/datasets folder, identified by the committed CiMini
     /// fixture. No hardcoded absolute path, so it resolves on any checkout (CI runner included).
+    /// Throws rather than returning null: CiMini is committed, so a missing fixture is a real failure.
     /// </summary>
-    private static string ResolveTestFixturePath() {
+    internal static string ResolveTestFixturePath() {
         string assemblyDir = new FileInfo(typeof(PipelineFixture).Assembly.Location).DirectoryName
             ?? throw new InvalidOperationException("Cannot determine assembly directory");
 

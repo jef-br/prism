@@ -14,11 +14,11 @@ public static class ImportSmokeTest
     /// </summary>
     /// <param name="imageFolder">
     /// Absolute path to a folder containing image files.
-    /// Example: <c>jb/testing/SmallTest/</c>
+    /// Example: <c>test/datasets/CiMini/</c>
     /// </param>
     /// <param name="excelFilePath">
     /// Absolute path to an Excel workbook.
-    /// Example: <c>jb/Testing/SPACINI29/SPACINI29-INPUTS.xlsx</c>
+    /// Example: <c>test/datasets/CiMini/ci-mini.xlsx</c>
     /// </param>
     /// <param name="configPath">
     /// Absolute path to <c>Prism_Config.json</c>. Pass null to use auto-detection.
