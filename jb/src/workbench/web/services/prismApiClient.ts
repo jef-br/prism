@@ -82,6 +82,22 @@ export interface PrismApiErrorPayload {
 export type PrismHealthResponse = Record<string, unknown>;
 export type PrismConfigResponse = Record<string, unknown>;
 
+/**
+ * Mirrors the C# record PrismJobSummary (jb/src/api/PrismJobCoordinator.cs).
+ * PascalCase because the API sets PropertyNamingPolicy = null (Program.cs).
+ */
+export interface PrismJobSummary {
+  JobID: string;
+  Status: string;
+  IsTerminal: boolean;
+  CreatedAt: string;
+  CompletedAt: string | null;
+  ProgressUrl: string;
+  ResultUrl: string;
+  OkImages: number;
+  KoImages: number;
+}
+
 export interface PrismJsonResultResponse {
   kind: "json";
   manifest?: unknown;
@@ -135,6 +151,10 @@ export class PrismApiClient {
 
   public async getConfig(): Promise<PrismConfigResponse> {
     return this.getJson<PrismConfigResponse>("/PRISM/config");
+  }
+
+  public async getJobs(): Promise<PrismJobSummary[]> {
+    return this.getJson<PrismJobSummary[]>("/PRISM/jobs");
   }
 
   public async submitProcessJob(input: PrismProcessJobInput): Promise<PrismJobStartEnvelope> {
