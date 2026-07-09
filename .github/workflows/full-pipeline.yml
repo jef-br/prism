@@ -38,7 +38,7 @@ jobs:
     if: needs.gate.outputs.run == 'true'
     runs-on: [self-hosted, windows]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build solution (Release)
         shell: pwsh
@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: full-pipeline-artifacts
           path: |

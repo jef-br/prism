@@ -17,7 +17,7 @@ jobs:
   build-test:
     runs-on: [self-hosted, windows]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build solution (Release)
         shell: pwsh
@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload test + CI artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ci-artifacts
           path: |
