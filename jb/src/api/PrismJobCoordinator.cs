@@ -107,6 +107,28 @@ internal sealed class PrismJobCoordinator
         return new PrismStoredJobResult(job.Status, job.Result, job.IsTerminal);
     }
 
+    /// <summary>
+    /// Lists all known jobs as summaries, newest first.
+    /// </summary>
+    public IReadOnlyList<PrismJobSummary> ListJobs()
+    {
+        RemoveExpiredJobs();
+
+        return jobs.Values
+            .OrderByDescending(job => job.CreatedAt)
+            .Select(job => new PrismJobSummary(
+                job.Request.JobID,
+                job.Status,
+                job.IsTerminal,
+                job.CreatedAt,
+                job.CompletedAt,
+                job.Urls.ProgressUrl,
+                job.Urls.ResultUrl,
+                job.Result?.OkImages.Count ?? 0,
+                job.Result?.KoImages.Count ?? 0))
+            .ToList();
+    }
+
     private async Task ProcessJobs()
     {
         await foreach (PrismApiJob job in queue.Reader.ReadAllAsync())
@@ -264,3 +286,17 @@ internal sealed record PrismProgressSubscription(ChannelReader<PipelineProgressE
 /// Stored result projection for result endpoint callers.
 /// </summary>
 internal sealed record PrismStoredJobResult(string Status, PrismJobResult? Result, bool IsTerminal);
+
+/// <summary>
+/// Compact per-job summary for the job-list endpoint.
+/// </summary>
+internal sealed record PrismJobSummary(
+    Guid JobID,
+    string Status,
+    bool IsTerminal,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? CompletedAt,
+    string ProgressUrl,
+    string ResultUrl,
+    int OkImages,
+    int KoImages);

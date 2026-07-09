@@ -183,6 +183,11 @@ app.MapGet("/PRISM/jobs/{jobID:guid}/result", (Guid jobID, PrismJobCoordinator c
     return Results.Json(new PrismJsonResultEnvelope(result));
 });
 
+app.MapGet("/PRISM/jobs", (PrismJobCoordinator coordinator) =>
+{
+    return Results.Ok(coordinator.ListJobs());
+});
+
 app.Run();
 
 static PrismJobUrls BuildJobUrls(HttpRequest request, PrismJobRequest coreRequest)
