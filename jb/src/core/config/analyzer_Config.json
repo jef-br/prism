@@ -20,7 +20,6 @@
 
     "Yolo": {
         "ConfidenceThreshold": 0.40,
-        "NmsIouThreshold": 0.60,
         "MaxDetections": 32,
         "HumanMinConfidence": 0.50,
         "AbsenceConfidence": 0.60,

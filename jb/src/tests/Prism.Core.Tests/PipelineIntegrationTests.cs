@@ -8,8 +8,7 @@ namespace PrismCoreTests;
 /// validating stage order, manifest shape, and real-data output quality
 /// against the test/datasets/CiMini committed fixture dataset.
 /// </summary>
-public class PipelineIntegrationTests
-{
+public class PipelineIntegrationTests {
     private static readonly string TestFixturePath = ResolveTestFixturePath();
 
     // -------------------------------------------------------------------------
@@ -20,8 +19,7 @@ public class PipelineIntegrationTests
     /// Primary acceptance test: all 8 stages present in order, manifest non-empty.
     /// </summary>
     [Fact]
-    public async Task SPACINI29_TINY_EndToEnd_VerifiesAllEightStagesInOrder()
-    {
+    public async Task SPACINI29_TINY_EndToEnd_VerifiesAllEightStagesInOrder() {
         string tinyImagesPath = Path.Combine(TestFixturePath, "CiMini");
         string excelPath = Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx");
 
@@ -47,8 +45,7 @@ public class PipelineIntegrationTests
         Assert.True(manifest.RouteSummaries.Count == 8,
             $"Expected 8 route summaries, got {manifest.RouteSummaries.Count}: {string.Join(", ", manifest.RouteSummaries)}");
 
-        for (int i = 0; i < expectedStages.Length; i++)
-        {
+        for (int i = 0; i < expectedStages.Length; i++) {
             Assert.Contains(expectedStages[i], manifest.RouteSummaries[i]);
         }
 
@@ -61,8 +58,7 @@ public class PipelineIntegrationTests
     /// Verifies the pipeline accepts minimal valid input without throwing.
     /// </summary>
     [Fact]
-    public async Task PrismJobRequest_WithMinimalInput_AcceptsJob()
-    {
+    public async Task PrismJobRequest_WithMinimalInput_AcceptsJob() {
         string tinyImagesPath = Path.Combine(TestFixturePath, "CiMini");
         string excelPath = CopyExcelToTemp(Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx"));
 
@@ -71,11 +67,10 @@ public class PipelineIntegrationTests
             .Select(f => new ImageRecord_INPUT { InitialFullName = Path.GetFileName(f), TempFilePath = f })
             .ToList();
 
-        var jobRequest = new PrismJobRequest
-        {
-            JobID          = Guid.NewGuid(),
-            ImageRecords   = singleImageRecord,
-            ExcelRecords   = [new InputExcelFileRecord { SourceReference = excelPath }],
+        var jobRequest = new PrismJobRequest {
+            JobID = Guid.NewGuid(),
+            ImageRecords = singleImageRecord,
+            ExcelRecords = [new InputExcelFileRecord { SourceReference = excelPath }],
             ZipFileRecords = [],
             PrismProcessingParameters = new PrismProcessingParameters { Format = "json" }
         };
@@ -90,8 +85,7 @@ public class PipelineIntegrationTests
     /// Verifies a completed job always has non-empty RouteSummaries.
     /// </summary>
     [Fact]
-    public async Task BatchManifest_AlwaysContainsRouteSummaries()
-    {
+    public async Task BatchManifest_AlwaysContainsRouteSummaries() {
         var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.NotNull(result.Manifest);
@@ -104,8 +98,7 @@ public class PipelineIntegrationTests
     /// Documents the definitive 8-stage order and validates its uniqueness.
     /// </summary>
     [Fact]
-    public void ValidateExpectedStageOrder()
-    {
+    public void ValidateExpectedStageOrder() {
         var expectedStageOrder = new[]
         {
             "Imported", "Classified", "Matched", "Ordered",
@@ -124,8 +117,7 @@ public class PipelineIntegrationTests
     /// Every input image must appear in either OkImages or KoImages — no silent drops.
     /// </summary>
     [Fact]
-    public async Task SPACINI29_TINY_NoImagesSilentlyDropped()
-    {
+    public async Task SPACINI29_TINY_NoImagesSilentlyDropped() {
         int inputCount = Directory.GetFiles(
             Path.Combine(TestFixturePath, "CiMini"), "*.jpg",
             SearchOption.TopDirectoryOnly).Length;
@@ -141,14 +133,12 @@ public class PipelineIntegrationTests
     /// Vacuously satisfied when all images are KO'd; still guards regressions if matching starts producing OK images.
     /// </summary>
     [Fact]
-    public async Task SPACINI29_TINY_OkImages_HaveWellFormedFinalNames()
-    {
+    public async Task SPACINI29_TINY_OkImages_HaveWellFormedFinalNames() {
         var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.Equal("Completed", result.Status);
 
-        Assert.All(result.OkImages, row =>
-        {
+        Assert.All(result.OkImages, row => {
             Assert.False(string.IsNullOrWhiteSpace(row.Output?.FinalFileName));
             Assert.Matches(@"_det\d+\.\w+$", row.Output!.FinalFileName!);
         });
@@ -161,8 +151,7 @@ public class PipelineIntegrationTests
     /// Every KO image must have a documented rejection reason code — undocumented rejections are a pipeline defect.
     /// </summary>
     [Fact]
-    public async Task SPACINI29_TINY_KoImages_HaveReasonCode()
-    {
+    public async Task SPACINI29_TINY_KoImages_HaveReasonCode() {
         var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.Equal("Completed", result.Status);
@@ -175,8 +164,7 @@ public class PipelineIntegrationTests
     /// must resolve to the same FamilyId when both are OK.
     /// </summary>
     [Fact]
-    public async Task SPACINI29_TINY_PairedImages_ShareFamily()
-    {
+    public async Task SPACINI29_TINY_PairedImages_ShareFamily() {
         var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.Equal("Completed", result.Status);
@@ -184,16 +172,14 @@ public class PipelineIntegrationTests
         // Group OkImages by stem = filename minus the trailing _A / _B / _C view suffix.
         var byStem = result.OkImages
             .Where(r => r.SourceReference.Contains('_'))
-            .GroupBy(r =>
-            {
+            .GroupBy(r => {
                 var stem = Path.GetFileNameWithoutExtension(r.SourceReference);
                 int last = stem.LastIndexOf('_');
                 return last > 0 ? stem[..last] : stem;
             })
             .Where(g => g.Count() > 1);
 
-        foreach (var group in byStem)
-        {
+        foreach (var group in byStem) {
             var families = group.Select(r => r.Output?.Family).Distinct().ToList();
             Assert.Single(families);
             Assert.False(string.IsNullOrWhiteSpace(families[0]));
@@ -204,13 +190,11 @@ public class PipelineIntegrationTests
     /// Requesting ZIP format must produce non-null, non-empty ZipBytes.
     /// </summary>
     [Fact]
-    public async Task SPACINI29_TINY_ZipFormat_ProducesNonEmptyBytes()
-    {
-        var request = BuildTinyJobRequest(new PrismProcessingParameters
-        {
-            Format               = "zip",
-            Transform            = true,
-            Generation           = false,
+    public async Task SPACINI29_TINY_ZipFormat_ProducesNonEmptyBytes() {
+        var request = BuildTinyJobRequest(new PrismProcessingParameters {
+            Format = "zip",
+            Transform = true,
+            Generation = false,
             ReturnOriginalImages = false
         });
 
@@ -231,8 +215,7 @@ public class PipelineIntegrationTests
     /// failure must never KO an image, so filename-token matching can still assign a FamilyID.
     /// </summary>
     [Fact]
-    public async Task SPACINI29_TINY_ImagesAreAssociatedToFamilyId()
-    {
+    public async Task SPACINI29_TINY_ImagesAreAssociatedToFamilyId() {
         var result = await new PrismService().Process(BuildTinyJobRequest());
 
         Assert.Equal("Completed", result.Status);
@@ -254,10 +237,9 @@ public class PipelineIntegrationTests
     /// Smoke test: pipeline completes and produces a non-empty manifest for the SmallTest fixture.
     /// </summary>
     [Fact]
-    public async Task SmallTest_EndToEnd_CompletesWithManifest()
-    {
+    public async Task SmallTest_EndToEnd_CompletesWithManifest() {
         string imagesPath = Path.Combine(TestFixturePath, "CiMini");
-        string excelPath  = Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx");
+        string excelPath = Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx");
 
         Assert.True(Directory.Exists(imagesPath), $"SmallTest images directory not found: {imagesPath}");
         Assert.True(File.Exists(excelPath), $"SmallTest Excel not found: {excelPath}");
@@ -274,8 +256,7 @@ public class PipelineIntegrationTests
     /// Every input image must appear in OkImages or KoImages — no silent drops.
     /// </summary>
     [Fact]
-    public async Task SmallTest_NoImagesSilentlyDropped()
-    {
+    public async Task SmallTest_NoImagesSilentlyDropped() {
         int inputCount = Directory.GetFiles(
             Path.Combine(TestFixturePath, "CiMini"), "*.jpg",
             SearchOption.TopDirectoryOnly).Length;
@@ -295,51 +276,45 @@ public class PipelineIntegrationTests
     /// TempFilePath carries the full disk path so the Importer can read each file;
     /// InitialFullName keeps the bare filename so token matching works on real names.
     /// </summary>
-    private static PrismJobRequest BuildTinyJobRequest(PrismProcessingParameters? parameters = null)
-    {
+    private static PrismJobRequest BuildTinyJobRequest( PrismProcessingParameters? parameters = null ) {
         string tinyImagesPath = Path.Combine(TestFixturePath, "CiMini");
-        string excelPath      = CopyExcelToTemp(Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx"));
+        string excelPath = CopyExcelToTemp(Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx"));
 
         var imageRecords = Directory.GetFiles(tinyImagesPath, "*.jpg", SearchOption.TopDirectoryOnly)
             .Select(f => new ImageRecord_INPUT { InitialFullName = Path.GetFileName(f), TempFilePath = f })
             .ToList();
 
-        return new PrismJobRequest
-        {
-            JobID              = Guid.NewGuid(),
-            ImageRecords       = imageRecords,
-            ExcelRecords       = [new InputExcelFileRecord { SourceReference = excelPath, ByteLength = new FileInfo(excelPath).Length }],
-            ZipFileRecords     = [],
-            PrismProcessingParameters = parameters ?? new PrismProcessingParameters
-            {
-                Format               = "json",
-                Transform            = true,
-                Generation           = false,
+        return new PrismJobRequest {
+            JobID = Guid.NewGuid(),
+            ImageRecords = imageRecords,
+            ExcelRecords = [new InputExcelFileRecord { SourceReference = excelPath, ByteLength = new FileInfo(excelPath).Length }],
+            ZipFileRecords = [],
+            PrismProcessingParameters = parameters ?? new PrismProcessingParameters {
+                Format = "json",
+                Transform = true,
+                Generation = false,
                 ReturnOriginalImages = false
             }
         };
     }
 
-    private static PrismJobRequest BuildSmallTestJobRequest(PrismProcessingParameters? parameters = null)
-    {
+    private static PrismJobRequest BuildSmallTestJobRequest( PrismProcessingParameters? parameters = null ) {
         string imagesPath = Path.Combine(TestFixturePath, "CiMini");
-        string excelPath  = CopyExcelToTemp(Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx"));
+        string excelPath = CopyExcelToTemp(Path.Combine(TestFixturePath, "CiMini", "ci-mini.xlsx"));
 
         var imageRecords = Directory.GetFiles(imagesPath, "*.jpg", SearchOption.TopDirectoryOnly)
             .Select(f => new ImageRecord_INPUT { InitialFullName = Path.GetFileName(f), TempFilePath = f })
             .ToList();
 
-        return new PrismJobRequest
-        {
-            JobID              = Guid.NewGuid(),
-            ImageRecords       = imageRecords,
-            ExcelRecords       = [new InputExcelFileRecord { SourceReference = excelPath, ByteLength = new FileInfo(excelPath).Length }],
-            ZipFileRecords     = [],
-            PrismProcessingParameters = parameters ?? new PrismProcessingParameters
-            {
-                Format               = "json",
-                Transform            = true,
-                Generation           = false,
+        return new PrismJobRequest {
+            JobID = Guid.NewGuid(),
+            ImageRecords = imageRecords,
+            ExcelRecords = [new InputExcelFileRecord { SourceReference = excelPath, ByteLength = new FileInfo(excelPath).Length }],
+            ZipFileRecords = [],
+            PrismProcessingParameters = parameters ?? new PrismProcessingParameters {
+                Format = "json",
+                Transform = true,
+                Generation = false,
                 ReturnOriginalImages = false
             }
         };
@@ -349,8 +324,7 @@ public class PipelineIntegrationTests
     /// Copies the fixture Excel to a unique temp file so the importer can read it even when the
     /// original is held open elsewhere (e.g. opened in Excel). The Importer reads from SourceReference.
     /// </summary>
-    private static string CopyExcelToTemp(string excelPath)
-    {
+    private static string CopyExcelToTemp( string excelPath ) {
         string tempPath = Path.Combine(Path.GetTempPath(), $"PRISM-TEST-{Guid.NewGuid():N}.xlsx");
         File.Copy(excelPath, tempPath, overwrite: true);
         return tempPath;
@@ -359,16 +333,14 @@ public class PipelineIntegrationTests
     /// <summary>
     /// Resolves the test fixture path by walking up from the assembly location.
     /// </summary>
-    private static string ResolveTestFixturePath()
-    {
+    private static string ResolveTestFixturePath() {
         var assemblyDir = new FileInfo(typeof(PipelineIntegrationTests).Assembly.Location).DirectoryName
             ?? throw new InvalidOperationException("Cannot determine assembly directory");
 
         // Walk up from the test assembly to the repo's test/datasets folder, identified by the committed
         // CiMini fixture. No hardcoded absolute path, so it resolves on any checkout (CI runner included).
         var current = new DirectoryInfo(assemblyDir);
-        while (current != null)
-        {
+        while (current != null) {
             var candidate = Path.Combine(current.FullName, "test", "datasets");
             if (Directory.Exists(Path.Combine(candidate, "CiMini")))
                 return candidate;

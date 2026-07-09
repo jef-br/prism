@@ -59,7 +59,6 @@ public sealed class AnalyzerConfig
         if (IsIllustration.ColorBinsPerChannel < 2) problems.Add("IsIllustration.ColorBinsPerChannel must be >= 2");
         if (IsIllustration.MaxColorClusters < 1) problems.Add("IsIllustration.MaxColorClusters must be >= 1");
         if (Yolo.ConfidenceThreshold is <= 0f or >= 1f) problems.Add("Yolo.ConfidenceThreshold must be in (0,1)");
-        if (Yolo.NmsIouThreshold is <= 0f or >= 1f) problems.Add("Yolo.NmsIouThreshold must be in (0,1)");
         if (Yolo.MaxDetections < 1) problems.Add("Yolo.MaxDetections must be >= 1");
         if (Yolo.HumanMinConfidence is <= 0f or >= 1f) problems.Add("Yolo.HumanMinConfidence must be in (0,1)");
         if (Yolo.AbsenceConfidence is <= 0f or > 1f) problems.Add("Yolo.AbsenceConfidence must be in (0,1]");

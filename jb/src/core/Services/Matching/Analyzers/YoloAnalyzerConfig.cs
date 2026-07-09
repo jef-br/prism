@@ -9,9 +9,6 @@ public sealed class YoloAnalyzerConfig
     /// <summary>Minimum class score for a raw detection to survive.</summary>
     public float ConfidenceThreshold { get; init; } = 0.40f;
 
-    /// <summary>IoU above which two same-class boxes are considered duplicates during NMS.</summary>
-    public float NmsIouThreshold { get; init; } = 0.60f;
-
     /// <summary>Maximum detections kept per image after NMS.</summary>
     public int MaxDetections { get; init; } = 32;
 

@@ -15,10 +15,8 @@ namespace Prism.Services.Matching;
 /// <summary>
 /// Names the background color of solid-background images via the configured palette.
 /// </summary>
-internal static class Analyzer_BackgroundColor
-{
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot, ColorAnalyzerConfig cfg)
-    {
+internal static class Analyzer_BackgroundColor {
+    public static void Analyze( Image<Rgba32> image, ImageFeatureSnapshot snapshot, ColorAnalyzerConfig cfg ) {
         if (!string.Equals(snapshot.GetValue("background-type"), "SOLIDCOLOR", StringComparison.OrdinalIgnoreCase)) return;
 
         (float r, float g, float b) = AnalyzerMath.EstimateBackgroundColor(image);
