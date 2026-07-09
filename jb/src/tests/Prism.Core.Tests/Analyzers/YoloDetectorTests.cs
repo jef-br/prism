@@ -6,25 +6,24 @@ using Xunit;
 namespace Prism.Core.Tests.Analyzers;
 
 /// <summary>
-/// Smoke tests for the YOLO26 detector boundary: the bundled model must load from the source
-/// tree and produce parseable, normalized detections without throwing.
+/// Smoke tests for the YOLO26 detector boundary: the model must load from its deployed location
+/// (resolved by PrismConfigLocator) and produce parseable, normalized detections without throwing.
 /// </summary>
 public class YoloDetectorTests
 {
-    private static string? FindModelInSourceTree()
+    // Resolve the model exactly as production does: beside Prism_Config.json, then the
+    // PRISM_ONNX_MODEL_DIR override (how CI deploys it), then the git-ignored source-tree copy
+    // (dev convenience). Source-tree-only resolution fails on a fresh CI checkout, where the
+    // 37 MB model is not committed.
+    private static string? FindModel()
     {
-        for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-        {
-            string candidate = Path.Combine(dir.FullName, "jb", "src", "core", "Services", "Matching", "Analyzers", "ONNX", "yolo26s.onnx");
-            if (File.Exists(candidate)) return candidate;
-        }
-        return null;
+        return PrismConfigLocator.FindModelAsset("Services/Matching/Analyzers/ONNX/yolo26s.onnx");
     }
 
     [Fact]
     public void Initialize_WithBundledModel_IsReady()
     {
-        string? modelPath = FindModelInSourceTree();
+        string? modelPath = FindModel();
         Assert.NotNull(modelPath);
 
         using var detector = new YoloDetector();
@@ -35,7 +34,7 @@ public class YoloDetectorTests
     [Fact]
     public void Detect_OnSyntheticImage_ReturnsWithoutThrowing()
     {
-        string? modelPath = FindModelInSourceTree();
+        string? modelPath = FindModel();
         Assert.NotNull(modelPath);
 
         using var detector = new YoloDetector();
