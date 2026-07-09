@@ -1,18 +1,14 @@
 # Daily Brief
 
 ##### Changed
-- T-2800 fixed and merged (PR #4): GPU upscaler was never built on the in-process path (only the API path constructed it) — `PipelineServiceFactory` now wires it in-process; `Upscaler_g_p_u.cs` gains tiled inference for large images; `Upscaler_g_p_uTests.cs` added. `Invoke-CiPipeline.ps1` now surfaces the real pipeline failure reason instead of a generic error.
-- Transform todos closed (saliency anchor, headcut thresholds, Tx_DetailCropper): `PRISM-transform-generate.md` corrected — Transform stage is fully active, no `ImageProcessorAvailable()=false` gate; `Tx_DetailCropper` ships the full 0–4 edge-intersection decision tree; headcut Algorithm B (Haar `frontalface`, cut at 75% face height) is live. Only `Tx_util_HeadCutter` Algorithm A remains open.
-- Classify analyzers deleted (`Analyzer_Interior.cs`, `Analyzer_IsIllustration.cs`) and `.csproj` repointed; Classify jbtodo trimmed to two FROZEN items.
-- T-2800/T-2810 archived to `AGENT-TICKET-ARCHIVE.md`.
-- Two new Ready tickets block trusting a golden manifest: T-2820 (det-slot for tied images changes every run — CiMini families 94613033 and 90861083 flip-flop; needs a deterministic secondary tie-break) and T-2830 (det numbering starts at det8, not documented zero-based det0).
+- None. No new commits since the 07/07 brief (HEAD still b9de2d0 on origin/main), working tree clean. Prior brief's shipped work (det-order compaction, model-wide empty-column prune, re-blessed CiMini golden, standalone upscaler test client) already captured.
 
 ##### Todo updates
-- Transform `Tx_util_HeadCutter` Algorithm A (`jb/src/core/Images/Transform/jbtodo.md`) — filled the empty answer bullet by deriving the Haar search band from the accepted 1:4–1:8 head:body ratio plus the already-shipped Algorithm B Haar path: restrict `DetectMultiScale` to the top ~25% of the lambda BoundingBox (widest 1:4 case), ~75% fewer pixels scanned and torso/hand false positives fall outside the region; cap the scale sweep at minSize≈H/8, maxSize≈H/4. Derivation from existing data, no new constant; still flags the crown-offset as the one open point before wiring in.
-- Everything else unimproved: Services test-suites triage already recorded last pass and untouched by this week's diffs; Classify/Generate todos FROZEN; HeadCutter spec (landmark model, thresholds) needs product decisions; root job-expectation log (MMERO26/HEROAUT2/HEROAUT3 still `???` from 01/07) needs real runs. Nothing else improvable without guessing.
+- Transform/jbtodo.md (second HeadCutter item, "spec + implement"): filled the empty answer from existing code only. The class it calls "to be created" already exists at `Tx_util_HeadCutter.cs` (not the `processingtools/` path listed); Algorithm B ships as internal `Analyze(lambda, Mat)`. Recorded what the shipped code de facto answers — no landmark model (Haar face-box + fixed `cutY = faceBox.Y + 0.75*height`, so nose-to-lips is an assumed 75%-of-box constant not a measured line), straight full-width crop, cut applied by mutating `ProcessedBytes`/`BoundingBox` in place, lowest-centroid face pick — and kept the real product calls open (family-aware mode + min-clear-face threshold unimplemented, webservice `Process()` signature unimplemented, landmark-vs-heuristic still your decision). Left explicitly non-final.
+- Everything else unimprovable without guessing: root-jbtodo CiMini table + MEPAL4 already landed as shipped code (captured last brief); Order/T-2830 answer (a) already implemented; Services test-split residual is a user overhead call; Classify + Generate items FROZEN; HeadCutter Algorithm A crown-offset still blocked on the anatomical-ratio deepdive; jb/src/jbtodo.md's MMERO26/HEROAUT2/HEROAUT3 `???` entries need actual job runs, no output on disk to read.
 
 ##### Next steps
-- Sequence T-2820 → T-2830 → recapture golden: land a deterministic tie-break (filename or original-index secondary key) in `ImageOrderer`/`Order` before pinning any `expected-manifest.json`.
-- T-2830 first needs the intent call: is the det8 start a real off-by-N indexing bug or an undocumented convention — resolve against `PRISM-order-rename.md` before touching code or CLAUDE.md.
-- Approve or reject the Services per-service `.csproj` split (still pending from last pass — mechanical work, only the multi-project overhead-vs-defer call is open).
-- Run MMERO26/HEROAUT2/HEROAUT3 to close the three `???` entries in the root job-expectation log.
+- Run MMERO26/HEROAUT2/HEROAUT3 to close the three `???` entries (01/07) in `jb/src/jbtodo.md` — HEROAUT2 is expected fast-KO (no familyID); record OK-rate/KO-timing.
+- Run `Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` 5x back-to-back to confirm byte-identical det0-based assignment, then close T-2820/T-2830 and pin `expected-manifest.json`.
+- `dotnet test jb/src/PRISM.sln` to confirm the compaction + empty-column-prune tests are green before trusting the golden.
+- Decide the Services per-service `.csproj` split (mechanical; only multi-project-overhead-vs-defer is open) as the single test project keeps accreting stage tests.

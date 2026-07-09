@@ -20,4 +20,14 @@
     - Straight horizontal crop or slight curve / soft mask?
     - How is the derived cut position passed to the Tx_ caller (pixel Y-coordinate or ratio of image height)?
   - Signature: `Process(byte[] arr, int stride, float upscale_factor)` for webservice (per-image mode); family-aware mode is PRISM-internal and receives the Lambda collection.
-  - Answer:
+  - Answer: (not final — observed current-implementation state only, product decisions below still open)
+    - File-path correction: the class already exists at `jb/src/core/Images/Transform/Tx_util_HeadCutter.cs` (not the `processingtools/` path listed above). It ships the per-image Algorithm B path as an internal `Analyze(ImageRecord_LAMBDA lambda, Mat colorMat)`, reusing the BGR Mat from ImagePreProcessor (no second decode).
+    - Open questions the shipped code has *de facto* answered (read off the code, not a decision):
+      - Landmark model: none. Pipeline is Haar face-box → fixed proportion, not landmarks. `CascadeClassifier` on `haarcascade_frontalface_default.xml` (`DetectMultiScale` over the full gray frame) yields a face rect; the nose-to-lips cut is approximated as `cutY = faceBox.Y + 0.75*faceBox.Height`. So "nose-to-lips" is an assumed 75%-of-face-box constant, not measured — accuracy rides entirely on how consistently Haar frames the face, and there is no landmark evidence to place the actual nose/lip line.
+      - Crop shape: straight full-width horizontal cut (`SubMat(0, cutY, cols, rows-cutY)`), re-encoded to JPEG. No curve, no soft mask.
+      - Cut delivery: not returned as a Y-coordinate or height ratio. The utility mutates `lambda.ProcessedBytes` and shifts `lambda.BoundingBox` up by `cutY` in place — PRISM-internal collection path only.
+      - Multi-face pick: qualifies only faces whose centroid sits in the top half (`f.Y + f.Height/2 < imageHeight/2`), then picks the one furthest from the top edge (lowest centroid Y).
+    - Still genuinely open (unchanged, needs your call — the code does NOT settle these):
+      - Family-aware mode is not implemented. Only per-image detection exists; no shared cut line derived across a family, so the "minimum clear-face images / fallback threshold" question is untouched.
+      - The webservice `Process(byte[], int, float)` per-image signature is not implemented — only the internal `Analyze` path exists.
+      - Whether to replace the 0.75-of-face-box heuristic with a real landmark model for the true nose-to-lips line (ties into Algorithm A's crown-offset deepdive above).
