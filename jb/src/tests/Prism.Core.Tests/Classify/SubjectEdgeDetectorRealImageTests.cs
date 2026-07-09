@@ -5,32 +5,30 @@ using Xunit;
 namespace PrismCoreTests.Classify;
 
 /// <summary>
-/// Integration tests for <see cref="SubjectEdgeDetector"/> against real camera JPEG files
-/// from the jb/testing/ fixture directory. Tests are skipped gracefully when the fixture
-/// directory is not present (e.g., CI without test assets).
+/// Integration tests for <see cref="SubjectEdgeDetector"/> against the real camera JPEGs committed in
+/// test/datasets/CiMini. The fixture is committed, so these tests always run — including on CI. They must
+/// never skip: a missing fixture is a real failure, not a reason to pass green.
+///
+/// The CiMini JPEGs carry an embedded EXIF (IFD1) thumbnail, so these exercise the fast path where the main
+/// image is never decoded.
 /// </summary>
 public sealed class SubjectEdgeDetectorRealImageTests
 {
-    // Representative fixture images: product shots with full background and clean edges.
-    private static readonly string[] FixtureRelPaths =
+    // Representative CiMini images: product shots with full background and clean edges.
+    private static readonly string[] FixtureImageNames =
     [
-        @"jb\Testing\SPACINI29\RAW IMAGES\20213024_46_A.jpg",
-        @"jb\Testing\SPACINI29\RAW IMAGES\20213024_46_B.jpg",
-        @"jb\Testing\SPACINI29\RAW IMAGES\23211008_02_A.jpg",
-        @"jb\Testing\SPACINI29\RAW IMAGES\23231096_35_A.jpg",
+        "2021_3024_46_A.jpg",
+        "2021_3024_46_B.jpg",
+        "23211008_02_A.jpg",
+        "23211008_02_B.jpg",
     ];
 
-    //  EXIF fast-path 
+    //  EXIF fast-path
 
     [Fact]
     public void ExifFastPath_RealCameraJpeg_ExtractsThumbnail()
     {
-        string? path = FindFixture(FixtureRelPaths[0]);
-        if (path is null)
-        {
-            // Fixture images not present in this environment — skip silently.
-            return;
-        }
+        string path = FixtureImage(FixtureImageNames[0]);
 
         byte[]? thumb = SubjectEdgeDetector.TryExtractJpegExifThumbnail(path);
 
@@ -45,30 +43,25 @@ public sealed class SubjectEdgeDetectorRealImageTests
     [Fact]
     public void ExifFastPath_AllFixtureImages_EachExtractsThumbnail()
     {
-        string? root = FindRepoRoot();
-        if (root is null) return;
-
-        foreach (string rel in FixtureRelPaths)
+        foreach (string name in FixtureImageNames)
         {
-            string path = Path.Combine(root, rel);
-            if (!File.Exists(path)) continue;
+            string path = FixtureImage(name);
 
             byte[]? thumb = SubjectEdgeDetector.TryExtractJpegExifThumbnail(path);
-            Assert.NotNull(thumb);
+            Assert.True(thumb is not null, $"No EXIF thumbnail extracted from {name}.");
 
             using var ms = new MemoryStream(thumb);
             using var img = Image.Load<Rgba32>(ms);
-            Assert.True(img.Width > 0 && img.Height > 0, $"Thumbnail from {rel} decoded to zero dimensions.");
+            Assert.True(img.Width > 0 && img.Height > 0, $"Thumbnail from {name} decoded to zero dimensions.");
         }
     }
 
-    //  Result validity 
+    //  Result validity
 
     [Fact]
     public void Detect_RealCameraJpeg_ReturnsValidResult()
     {
-        string? path = FindFixture(FixtureRelPaths[0]);
-        if (path is null) return;
+        string path = FixtureImage(FixtureImageNames[0]);
 
         EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
 
@@ -76,13 +69,12 @@ public sealed class SubjectEdgeDetectorRealImageTests
         Assert.Equal(r.FullyInFrame, r.IntersectionCount == 0);
     }
 
-    //  Determinism on real images 
+    //  Determinism on real images
 
     [Fact]
     public void Detect_RealCameraJpeg_CalledTwice_SameResult()
     {
-        string? path = FindFixture(FixtureRelPaths[0]);
-        if (path is null) return;
+        string path = FixtureImage(FixtureImageNames[0]);
 
         EdgeIntersectionResult r1 = SubjectEdgeDetector.Detect(path);
         EdgeIntersectionResult r2 = SubjectEdgeDetector.Detect(path);
@@ -90,29 +82,16 @@ public sealed class SubjectEdgeDetectorRealImageTests
         Assert.Equal(r1, r2);
     }
 
-    //  Helpers 
-
-    private static string? FindFixture(string repoRelativePath)
-    {
-        string? root = FindRepoRoot();
-        if (root is null) return null;
-        string full = Path.Combine(root, repoRelativePath);
-        return File.Exists(full) ? full : null;
-    }
+    //  Helpers
 
     /// <summary>
-    /// Walks up from the test binary output directory until it finds the repo root
-    /// (identified by AGENT-TICKETS.md). Returns null when not found.
+    /// Resolves a committed CiMini image. Fails the test when absent — CiMini is in git, so a missing file
+    /// means a broken checkout or a renamed fixture, both of which must be loud.
     /// </summary>
-    private static string? FindRepoRoot()
+    private static string FixtureImage( string fileName )
     {
-        var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-        while (dir is not null)
-        {
-            if (File.Exists(Path.Combine(dir.FullName, "AGENT-TICKETS.md")))
-                return dir.FullName;
-            dir = dir.Parent;
-        }
-        return null;
+        string path = Path.Combine(PipelineFixture.ResolveTestFixturePath(), "CiMini", fileName);
+        Assert.True(File.Exists(path), $"Committed CiMini fixture image not found: {path}");
+        return path;
     }
 }
