@@ -22,7 +22,14 @@ npm run dev          # localhost:3000
 npm run build
 npm run typecheck    # tsc --noEmit
 ```
-There is no automated test suite yet. For now, validation is done by running the pipeline.
+
+### Tests (xUnit, one project, per-service suites by namespace)
+```
+dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj                    # everything, incl. pipeline integration
+dotnet test ... --filter "FullyQualifiedName~PrismCoreTests.<Suite>"                 # one service suite
+dotnet test ... --filter "FullyQualifiedName!~PipelineIntegrationTests"              # unit tests only
+```
+Suites: `Ingest`, `Excel`, `Classify`, `Analyzers`, `Match`, `Order`, `Rename`, `ImageNGP`, `Generate`, `Transform`, `Upscale`, `Export`, `Services` (service glue: artifact store, contract serialization). Root namespace `PrismCoreTests` holds the end-to-end suite (`PipelineIntegrationTests` + shared `PipelineFixture`). Deliberately one `.csproj` — do not split per service until services actually deploy independently (see T-3300). End-to-end validation additionally runs via `pwsh test/ci/Invoke-CiPipeline.ps1`.
 
 ## Architecture
 

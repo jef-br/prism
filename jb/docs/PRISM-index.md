@@ -19,6 +19,7 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | `PRISM-workbench.md` | Web workbench behavior, upload/layout, progress visualization, no-hidden-behavior rule |
 | `PRISM-models.md` | All C# record field definitions: IRI/IRL/IRO/IRG, FR, BM/BMS/MIR, ME, ITR, PPE |
 | `PRISM-knowledge-base.md` | Consolidated reference: architecture, all CFG values, data model hierarchy, API summary, design principles |
+| `PRISM-testing.md` | Test-suite layout, per-service suite filters, one-csproj decision, test conventions |
 | `ImageNGP/imagePhenotypes.md` | 26 INGP phenotype definitions |
 | `ImageNGP/ImageFeatures.md` | 40 IF catalog: datatypes, values, difficulty, confidence |
 | `ImageNGP/NGP-architecture.md` | Mapping model (deliverable 6), detection architecture (7), workbench concept (8) |
@@ -39,5 +40,6 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | Working on API controllers, SSE | `PRISM-api.md` + `PRISM-pipeline-core.md` |
 | Working on web workbench | `PRISM-workbench.md` + `PRISM-api.md` |
 | Defining/updating any C# model/record | `PRISM-models.md` |
+| Writing or running tests | `PRISM-testing.md` |
 | General orientation | `PRISM-overview.md` + `PRISM-pipeline-core.md` |
 | INGP phenotypes / DO assignment | `ImageNGP/imagePhenotypes.md` + `ImageNGP/ImageFeatures.md` |
