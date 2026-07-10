@@ -2,7 +2,7 @@ namespace Prism.Services.Matching;
 
 /// <summary>
 /// Sets the <c>has-human</c>, <c>human-count</c>, and <c>hero-is-human</c> ImageFeatures from
-/// YOLOv8n person detections. Replaces the retired HSV skin-ratio heuristic: a person detection
+/// yolo26s person detections. Replaces the retired HSV skin-ratio heuristic: a person detection
 /// is direct evidence, robust on any background and unaffected by skin-colored products.
 /// hero-is-human is derived from dominance — a person box covering enough of the frame means the
 /// human wearing the product is the hero; no person at all means the hero cannot be human.

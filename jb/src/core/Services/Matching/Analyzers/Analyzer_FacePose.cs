@@ -12,7 +12,7 @@ namespace Prism.Services.Matching;
    - body-visible (full / three-quarter / half / bust): ratio of the person box to the frame
      and which borders it intersects.
    - pose-type (standing / sitting / crouching / lying): person box aspect ratio as a first
-     cut; a lightweight pose ONNX (e.g. yolov8n-pose) if aspect alone proves too coarse.
+     cut; a lightweight pose ONNX (e.g. yolo26s-pose) if aspect alone proves too coarse.
  Gated on a person detection, so the cascades never run on product-only images.
 */
 

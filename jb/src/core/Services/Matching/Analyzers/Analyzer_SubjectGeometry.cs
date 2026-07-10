@@ -16,7 +16,7 @@ namespace Prism.Services.Matching;
  From the box: salient-bbox, image-occupancy (box area fraction), crop-tightness
  (largest box side fraction), product-aspect-ratio (box pixel aspect), vertical/horizontal
  centering (1 at dead center, 0 at the edge), and product-coverage-ratio — a box-area
- approximation until a segmentation model (yolov8n-seg) provides pixel masks.
+ approximation until a segmentation model (yolo26s-seg) provides pixel masks.
 */
 
 /// <summary>

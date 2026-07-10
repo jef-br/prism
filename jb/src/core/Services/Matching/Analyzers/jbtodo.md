@@ -38,3 +38,14 @@ still has open work (implementation for stubs, calibration for implemented ones)
 - [ ] Segmentation model (yolo26s-seg): true product-coverage-ratio pixel masks; retires SubjectGeometry's color-distance fallback.
 - [ ] Analyzer_Symmetry was consciously DROPPED (no phenotype rule consumes symmetry-score; only plausible use was FRONT-orientation support). Revisit only if an orientation rule ever wants it.
 - [ ] CLIP-vs-analyzer write precedence: standardize the "only overwrite when higher confidence" convention (FilenameEvidence has it; FacePose will need it).
+
+
+## OPEN
+- [ ] centralize all `*config.cs` inside `jb\src\core\Services\Matching\Analyzers\` into a single config file with nested objects: `AnalyzerConfig.cs` structured like this:
+    - Analyzer.Mannequin
+    - Analyzer.Color
+    - Analyzer.Exposure
+    - Analyzer.HasHuman
+      - Analyzer.HasHuman.AbsenceConfidence
+    - 
+    - Analyzer.Mannequin

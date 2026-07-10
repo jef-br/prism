@@ -8,3 +8,9 @@ Samples inside the subject box, excluding background-like pixels (distance to bo
 ## Hard cases (calibrate on real batches)
 - [ ] White product on white background: exclusion eats everything, so UNKNOWN by design. Verify MinSampleFraction does this reliably without killing pale products.
 - [ ] Skin-colored product on a human (tan bathing suit on tanned model): skin exclusion may eat the product. Consider restricting skin exclusion to person-box pixels once FacePose lands.
+
+
+
+## Refinements
+    - [ ] If complete image histogram is heavily centered around one color
+      - [ ] apply local-contrast adjustments and micro-contrast adjustments to the edge-areas of local-contrast-enhanced-areas prior to define areas from which to get dominant-colors. When defined, get the dominant colors from the original image using the just calculated coordinates
