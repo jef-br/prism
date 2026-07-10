@@ -123,7 +123,7 @@ M5 gate condition: all Classify decisions answered; ONNX session migrated to sin
 
 
 ### T-3200 · Close Services test coverage gaps: `IIngestService` IO/import path + `IArtifactStore`
-**Status:** Ready | **Profile:** P1-feature-worker
+**Status:** Done | **Profile:** P1-feature-worker
 **Tracks:** `jb/src/core/Services/jbtodo.md` (per-service test suite todo, triaged 2026-07-07).
 
 **Problem:** Existing test folders already mirror stage boundaries by namespace (`PrismCoreTests.Transform`, `.Match`, `.Classify`, etc.), so per-stage isolation already works today via `dotnet test --filter "FullyQualifiedName~PrismCoreTests.<Stage>"` — no restructuring needed for that. But two service interfaces have no real coverage:
