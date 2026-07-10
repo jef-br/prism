@@ -15,6 +15,9 @@ body {
   min-height: 100vh;
   margin: 0;
 }
+h1 {
+  margin-left:6px;
+}
 
 button,
 input,
@@ -53,7 +56,6 @@ button:disabled {
 
 .workbench-header h1,
 .section-panel h2 {
-  margin: 0;
   color: var(--prism-color-ink);
   font-family: var(--prism-font-display);
   font-weight: 700;
