@@ -121,6 +121,18 @@ export interface PrismProcessJobInput {
   clientRequestToken: string;
 }
 
+export interface PrismMatchRequestInput {
+  files: File[];
+  urls: string[];
+  clientRequestToken: string;
+}
+
+/**
+ * Mirrors MatchOnlyResult.FileNameMap (jb/src/core/Models/MatchOnlyResult.cs) — the API's match routes
+ * return this dictionary directly as the response body, not the full MatchOnlyResult record.
+ */
+export type PrismMatchFileNameMap = Record<string, string | null>;
+
 export interface ProgressSubscriptionHandlers {
   onProgress: (event: PrismProgressEvent) => void;
   onError: (error: Error) => void;
@@ -181,6 +193,47 @@ export class PrismApiClient {
     });
 
     return this.readJsonResponse<PrismJobStartEnvelope>(response);
+  }
+
+  public async submitMatch(input: PrismMatchRequestInput): Promise<PrismMatchFileNameMap> {
+    const formData = new FormData();
+    const request: PrismProcessRequest = {
+      ClientRequestToken: input.clientRequestToken,
+      rename: false,
+      transform: false,
+      generation: false,
+      format: "json",
+      ReturnOriginalImages: false,
+      Input: input.urls
+    };
+
+    formData.append("request", new Blob([JSON.stringify(request)], { type: "application/json" }));
+
+    for (const file of input.files) {
+      formData.append("input", file, file.name);
+    }
+
+    const response = await fetch(this.resolveUrl("/PRISM/match"), {
+      method: "POST",
+      body: formData
+    });
+
+    return this.readJsonResponse<PrismMatchFileNameMap>(response);
+  }
+
+  public async submitMatchLite(files: File[]): Promise<PrismMatchFileNameMap> {
+    const formData = new FormData();
+
+    for (const file of files) {
+      formData.append("input", file, file.name);
+    }
+
+    const response = await fetch(this.resolveUrl("/PRISM/match/lite"), {
+      method: "POST",
+      body: formData
+    });
+
+    return this.readJsonResponse<PrismMatchFileNameMap>(response);
   }
 
   public subscribeToProgress(
@@ -283,16 +336,27 @@ export class PrismApiClient {
     return response.json() as Promise<TResponse>;
   }
 
-  private resolveUrl(pathOrUrl: string): string {
+  /**
+   * Resolves a PRISM API path to the absolute URL fetch()/links use. Host comes from
+   * NEXT_PUBLIC_PRISM_API_BASE_URL when configured, falling back to the page's own origin — never
+   * hardcoded, so this doubles as the URL shown for "check this route" links in the UI.
+   */
+  public resolveUrl(pathOrUrl: string): string {
     if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
       return pathOrUrl;
     }
 
-    if (this.baseUrl.length === 0) {
+    const base = this.baseUrl.length > 0
+      ? this.baseUrl
+      : typeof window !== "undefined"
+        ? window.location.origin
+        : "";
+
+    if (base.length === 0) {
       return pathOrUrl;
     }
 
-    return new URL(pathOrUrl, ensureTrailingSlash(this.baseUrl)).toString();
+    return new URL(pathOrUrl, ensureTrailingSlash(base)).toString();
   }
 }
 

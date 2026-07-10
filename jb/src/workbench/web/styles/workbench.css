@@ -479,6 +479,20 @@ button:disabled {
 
 }
 
+.boundary-url {
+  display: block;
+  margin-top: 6px;
+  font-size: .66em;
+  font-family: var(--prism-font-mono, monospace);
+  overflow-wrap: anywhere;
+  color: var(--prism-color-accent);
+}
+
+.boundary-url-template {
+  color: var(--prism-color-muted);
+  font-style: italic;
+}
+
 .fact-list {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
