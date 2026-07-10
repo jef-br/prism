@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace PrismCoreTests;
+namespace PrismCoreTests.Upscale;
 
 /// <summary>
 /// Unit tests for the pure blend-weight math used by Upscaler_g_p_u.RunTiled to stitch tile outputs

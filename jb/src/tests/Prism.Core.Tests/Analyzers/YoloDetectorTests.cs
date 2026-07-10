@@ -3,7 +3,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
-namespace Prism.Core.Tests.Analyzers;
+namespace PrismCoreTests.Analyzers;
 
 /// <summary>
 /// Smoke tests for the YOLO26 detector boundary: the model must load from its deployed location

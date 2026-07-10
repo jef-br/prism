@@ -3,7 +3,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
-namespace Prism.Core.Tests.Analyzers;
+namespace PrismCoreTests.Analyzers;
 
 /// <summary>
 /// Synthetic-image tests for the wave-3 visual analyzers: subject geometry from the

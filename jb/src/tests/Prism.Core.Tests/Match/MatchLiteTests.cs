@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace PrismCoreTests;
+namespace PrismCoreTests.Match;
 
 /// <summary>
 /// Tests for <see cref="PrismService.MatchLite"/> — the filename-only matching route with no image

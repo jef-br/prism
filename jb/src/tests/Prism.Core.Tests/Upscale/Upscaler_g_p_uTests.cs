@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace PrismCoreTests;
+namespace PrismCoreTests.Upscale;
 
 /// <summary>
 /// Unit tests for Upscaler_g_p_u's non-throwing, idempotent Initialize contract (T-2800).

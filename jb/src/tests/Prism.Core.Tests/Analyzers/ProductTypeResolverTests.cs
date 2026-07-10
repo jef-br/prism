@@ -1,7 +1,7 @@
 using Prism.Core;
 using Xunit;
 
-namespace Prism.Core.Tests.Analyzers;
+namespace PrismCoreTests.Analyzers;
 
 /// <summary>
 /// Tests for ProductTypeResolver value/token mapping and the producttype-over-ngp precedence,
