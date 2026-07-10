@@ -26,15 +26,14 @@ There is no automated test suite yet. For now, validation is done by running the
 
 ## Architecture
 
-PRISM is a C#/.NET image processing pipeline with a dual-frontend workbench (web + WPF).
+PRISM is a C#/.NET image processing pipeline with a web workbench.
 
-**Solution:** `jb/src/PRISM.sln` — 7 projects:
+**Solution:** `jb/src/PRISM.sln` — main projects:
 - `Prism.Core.Contracts` — model records
 - `Prism.Core` — main pipeline facade + all submodules
 - `Prism.Core.Images.Classify` — ONNX/CLIP classification
 - `Prism.Core.Images.Transform` — image transformation
 - `Prism.Api` — ASP.NET Core 10 minimal API
-- `Prism.Workbench.Wpf` — .NET 8 WPF desktop
 - Web workbench is npm-based (`jb/src/workbench/web/`), not in `.sln`
 
 ### Pipeline (stage order is immutable)
@@ -73,7 +72,7 @@ ASP.NET Core 10 minimal API. Routes:
 - `GET /PRISM/jobs/{jobID}/result` — JSON or ZIP
 
 ### Workbench
-Both web and WPF are **decorators over `Prism.cs`** — they provide visibility into pipeline stages, manifests, and progress. No hidden pipeline behavior exists in either workbench. WPF can call `Prism.cs` in-process; web calls the API.
+The web workbench is a **decorator over `Prism.cs`** — it provides visibility into pipeline stages, manifests, and progress. No hidden pipeline behavior exists in the workbench. The web workbench calls the API.
 
 ## Domain vocabulary
 
