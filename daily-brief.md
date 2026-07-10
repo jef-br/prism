@@ -16,5 +16,5 @@
 ##### Next steps
 - `dotnet build jb/src/PRISM.sln` + `dotnet test` to confirm the restructure/YOLO26 swap compiles clean and the 6.1-min fixture suite is green before trusting anything downstream.
 - Run `Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` 5x back-to-back to confirm byte-identical det0-based assignment, then close T-2820/T-2830 and pin `expected-manifest.json`.
-- Decide the Services per-service `.csproj` split (mechanical; only multi-project-overhead-vs-defer is open) before the single test project accretes more stage tests.
+- Decide the Services per-service `.csproj` split (mechanical; only multi-project-overhead-vs-defer is open) before the single test project accretes more stage tests. 
 - Triage the two new root-jbtodo asks: web-workbench refinement (darkmode, less scrolling, import/export feedback) and Import↔Match fusion to kill double image I/O — both want your scope before an agent picks them up.
