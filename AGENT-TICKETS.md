@@ -173,6 +173,115 @@ None of this is validated end-to-end, and one known bug would break it in produc
 ---
 
 
+### T-3400 · Web workbench: dark mode, layout compaction, import/export feedback
+**Status:** Ready | **Profile:** P1-feature-worker
+**Tracks:** root `jbtodo.md` — web-workbench refinement, triaged 2026-07-10.
+
+**Problem:** Three-part complaint, confirmed against current code:
+1. No dark theme — `PRISM-theme.css` (`jb/src/workbench/web/styles/PRISM-theme.css`) defines only one warm/beige palette (`--prism-color-page: #f3f1eb`, `--prism-color-surface-strong: #f7eadc`), no dark variant.
+2. Page-level scrolling drowns the output — `WorkbenchShell.tsx` stacks `UploadSection` → `RouteSection` → `ResultSection` in one vertical column (`workbench-main-column`); the ZIP download button in `ResultSection` sits below the full progress/route detail, so users must scroll past everything to reach it.
+3. Import/export stage feedback is generic — `StatusPanel.tsx` shows fixed dev-facing chips ("Empty input", "Loading", "Progress placeholder", "Result placeholder") rather than the real per-stage Import/Export state (accepted/rejected counts, blocked-vs-running) that `PRISM-workbench.md`'s Shared Behavior section already mandates ("image collection/import state", "output preview", "KO records").
+
+Also confirmed: no Upscale control exists in `JobParameterPanel.tsx` today (only rename/transform/generation/ReturnOriginalImages) — the todo's "Upscaling currently not explicitly mentioned is a good thing" is **confirming that omission is intentional**, not requesting it be added. Do not add an Upscale toggle as part of this ticket.
+
+**Scope decision (2026-07-10):** tighten the existing single-column layout — do not restructure into tabs/stepper (bigger rework, more regression surface with no automated test suite). Dark mode: auto (`prefers-color-scheme`) + a manual header toggle that overrides and persists.
+
+**What to do:**
+1. Add a dark variable set to `PRISM-theme.css` gated by `@media (prefers-color-scheme: dark)`, plus a `[data-theme="dark"]`/`[data-theme="light"]` override pair driven by a manual toggle. Reuse the existing CSS variable names (`--prism-color-page`, `-surface`, `-surface-strong`, `-ink`, `-muted`, `-line`, etc.) so component CSS doesn't need touching.
+2. Add a small theme toggle in `WorkbenchShell.tsx`'s header, persisting the user's explicit choice to `localStorage` and defaulting to `prefers-color-scheme` when no explicit choice is stored.
+3. Reorder/compact `WorkbenchShell.tsx`'s main column so Upload + Result (with the download link) are reachable without scrolling past full route detail — e.g. move `ResultSection` above `RouteSection`, or collapse `RouteSection`'s live event list into a fixed-height internally-scrolling panel (workbench.css already uses this pattern — see the `max-height: 240px; overflow: auto;` rule around line 348) rather than letting it grow the page.
+4. Replace `StatusPanel.tsx`'s generic "Progress placeholder"/"Result placeholder" chips with real Import/Export-stage-labeled state sourced from the SSE progress events, per `PRISM-workbench.md`'s No-Hidden-Behavior Rule — show whether the job is actively importing/exporting vs. blocked, using the actual stage name from the progress event, not a synthetic label.
+
+**Acceptance:**
+- `npm run typecheck` and `npm run build` green in `jb/src/workbench/web`.
+- Manual verification: toggle dark mode, confirm all sections legible in both themes; run a job and confirm the download link is reachable without scrolling past the full route/progress detail; confirm `StatusPanel` reflects real stage state during Import/Export, not placeholder text.
+
+**Files:** `jb/src/workbench/web/styles/PRISM-theme.css`, `jb/src/workbench/web/styles/workbench.css`, `jb/src/workbench/web/sections/WorkbenchShell.tsx`, `jb/src/workbench/web/components/StatusPanel.tsx`, `jb/src/workbench/web/sections/ResultSection.tsx`, `jb/src/workbench/web/sections/RouteSection.tsx`.
+
+---
+
+
+### T-3500 · Fuse Import→Match in-process handoff to remove redundant image decode
+**Status:** Ready | **Profile:** P1-feature-worker
+**Tracks:** root `jbtodo.md` — Import/Match fusion, triaged 2026-07-10.
+
+**Problem:** `Importer.cs` normalizes each source image and writes it to disk once (`NormalizedJpgPath`, job temp folder). When Matching runs in the same process (today's default in-process mode), `MatchingService.PrepareLambda` (`jb/src/core/Services/Matching/MatchingService.cs:256`) re-reads that same file with `Image.Load<Rgba32>(source.NormalizedJpgPath)` — a second full decode of bytes Import already held in memory moments earlier, for every OK image in the batch.
+
+**Scope decision (2026-07-10):** in-process decode reuse only. `NormalizedJpgPath` stays on disk unchanged — Exporter, KO handling, and the cross-process HTTP contract all still depend on it (see [[T-3600]] for that separate gap). This ticket only removes the redundant decode when Import and Match run in the same process/call.
+
+**What to do:**
+1. Extend the Import→Match handoff so the decoded normalized image (or raw normalized bytes) survives past `Importer.cs` into `IngestResult`/`ImageRecord_INPUT` for the in-process path, instead of being decoded, used, and discarded.
+2. Update `MatchingService.PrepareLambda` to use the carried-forward image/bytes when present, falling back to `Image.Load(NormalizedJpgPath)` only when absent (i.e., when Matching is invoked without a preceding in-process Import — `HttpMatchingService`/`Prism.ServiceHost`, or any future direct-to-Matching entry point).
+3. Confirm the fast-path already-conforming-JPEG case in `Importer.cs` (metadata-only `Image.Identify` + file copy, no full decode) still behaves correctly — that path has no decoded in-memory image to hand forward, so Match still decodes once there, same as today (no regression, just no double-decode to remove).
+4. Verify no change to `NormalizedJpgPath`, `NormalizedWidth`/`NormalizedHeight`, or any disk artifact Exporter/KO handling reads — this is an in-memory-only optimization.
+
+**Acceptance:**
+- `dotnet build jb/src/PRISM.sln` 0/0.
+- `pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` produces an identical `expected-manifest.json` to a pre-change run (no behavioral change, only I/O reduction).
+- Spot-check (debug counter or log) confirms decode calls against `NormalizedJpgPath` drop from 2 to 1 per image on the in-process path.
+
+**Files:** `jb/src/core/lib/Ingress/Importer.cs`, `jb/src/core/Models/ImageRecord_INPUT.cs`, `jb/src/core/Services/Matching/MatchingService.cs`, `jb/src/core/Services/IngestResult.cs`.
+
+---
+
+
+### T-3600 · Matching's HTTP contract silently assumes a shared filesystem with Import
+**Status:** Ready | **Profile:** P4-critical-architecture
+**Found by:** Import↔Match fusion scoping ([[T-3500]]), 2026-07-10.
+
+**Problem:** `HttpMatchingService.MatchAsync` (`jb/src/core/Services/Http/HttpMatchingService.cs`) POSTs the full `IngestResult` as JSON to a remote Matching host. `IngestResult`'s per-image records carry `NormalizedJpgPath` as an absolute file path string (`jb/src/core/Models/ImageRecord_INPUT.cs:35`) — not bytes. A genuinely separate/public Matching deployment (per the root `jbtodo.md`'s "keep the matching service open to the public" goal) has no way to read that path unless it happens to share a mounted filesystem with whatever Import instance produced it. This is undocumented today — `PRISM-io-import.md` describes the local-temp-folder lifecycle but doesn't flag that the Matching HTTP client/host pair depends on it being shared with Ingest.
+
+**What to do:**
+1. Confirm the gap: check whether `Prism.ServiceHost` (`PRISM_SERVICE=matching`) is ever run against a different machine/container than Ingest in any existing deployment path, or whether it's simply untested today (per [[T-3300]], which already flags no CI job runs the services as truly separate processes).
+2. Decide and document the fix: either (a) ship normalized image bytes over the wire in the Match request (bigger payload, but makes Matching truly standalone/public), or (b) formally document and enforce a shared-volume requirement between Ingest and Matching deployables (smaller, but contradicts "open to the public" unless the public entry point is different from the internal Ingest→Match handoff).
+3. If (a): update `IngestResult`/`ImageRecord_INPUT` serialization, `HttpIngestService`/`HttpMatchingService`, and `PRISM-io-import.md`'s Zip/temp-folder section to describe the new contract.
+4. If (b): document the shared-volume requirement explicitly in `PRISM-io-import.md` and `AGENTFEEDBACK.md`, and add a startup check or clear failure mode when `NormalizedJpgPath` isn't readable from the Matching host.
+
+**Acceptance:**
+- A documented, deliberate answer to "can Matching run as a truly independent/public service without sharing a filesystem with Ingest" exists in `jb/docs/`.
+- Whichever fix is chosen is implemented and covered by [[T-3300]]'s planned real-HTTP-roundtrip tests.
+
+**Files:** `jb/src/core/Services/Http/HttpIngestService.cs`, `jb/src/core/Services/Http/HttpMatchingService.cs`, `jb/src/core/Models/ImageRecord_INPUT.cs`, `jb/docs/PRISM-io-import.md`, `AGENTFEEDBACK.md`.
+
+---
+
+
+### T-3700 · Align project/assembly names, solution structure, and test namespaces with the Services/ restructure
+**Status:** Ready | **Profile:** P4-critical-architecture
+**Found by:** namespacing audit, 2026-07-10.
+
+**Problem:** The 2026-07-08 core restructure renamed folders and C# namespaces to `Services/`/`Prism.Services.*` + `lib/`/`Prism.Lib.*`, but several identifiers were never updated, so the same project now answers to 2-3 different names depending on where you look. Confirmed by direct inspection of every `namespace` declaration, every `.csproj`, and `PRISM.sln`:
+
+1. **Test namespace break — a real bug, not cosmetic.** Every other test subfolder follows `PrismCoreTests.<Folder>` (`PrismCoreTests.Export`, `.Order`, `.Match`, `.Transform`, `.Excel`, `.Classify`, `.Generate`, `.ImageNGP`, `.Rename`, `.Services`) — but `jb/src/tests/Prism.Core.Tests/Analyzers/*.cs` (`YoloDetectorTests.cs`, `VisualAnalyzerTests.cs`, `ProductTypeResolverTests.cs`) declare `namespace Prism.Core.Tests.Analyzers;` instead. T-3200's documented per-stage isolation command — `dotnet test --filter "FullyQualifiedName~PrismCoreTests.<Stage>"` — silently matches zero tests for Analyzers today.
+2. **Project/assembly identity mismatch.** `Prism.Core.Images.Classify.csproj`, `Prism.Core.Images.Transform.csproj`, `Prism.Core.Images.Upscale.csproj` never had their file name/assembly name updated. Each now has three different names for the same project: assembly `Prism.Core.Images.Transform.dll`, namespace `Prism.Services.Transform`, folder `Services/Transform/Engine/` (same pattern for Classify → `Prism.Services.Matching`, Upscale → `Prism.Services.Upscale`). Neither `<AssemblyName>` nor `<RootNamespace>` is set explicitly in any of the three, so both default to the stale file name.
+3. **Stale solution-folder hierarchy.** `PRISM.sln` still nests these three projects under solution folder `core > Images > Transform` / `core > Images > Classify` — a Visual Studio artifact left over from the pre-restructure `jb/src/core/Images/` layout, not the real `Services/` layout.
+4. **Upscale invisible in the solution.** `Prism.Core.Images.Upscale.csproj` has no `Project(...)` entry in `PRISM.sln` at all — it only builds because `Prism.Core.csproj` references it directly via `<ProjectReference>`. Its sibling engine projects (Classify, Transform) do have solution entries; Upscale doesn't, for no documented reason.
+5. **CLAUDE.md's project list is stale.** The "Solution: 7 projects" list in CLAUDE.md's Architecture section names Contracts/Core/Images.Classify/Images.Transform/Api/Workbench.Wpf, but omits `Prism.Core.Images.Upscale`, `Prism.Core.Tests`, and `Prism.ServiceHost` — all three real and already part of the tree (Tests and ServiceHost even have `PRISM.sln` entries). `jb/docs/PRISM-transform-generate.md` also has one stale example path (`Images/Upscale/ONNX/...` instead of the actual `Services/Upscale/Engine/ONNX/...` used by `Prism_Config.json` and `PrismConfigLocator`).
+
+**Confirmed blast radius:** exactly 6 files repo-wide contain the literal string `Prism.Core.Images` — `Prism.Core.csproj` (3 `<ProjectReference>` paths), `PRISM.sln`, `CLAUDE.md`, `jb/docs/PRISM-transform-generate.md`, plus 2 doc-comments in `Tx_DetailCropper.cs`/`CropTransformSettings.cs` that reference the project name descriptively. No CI workflow, PowerShell script, or test infra hardcodes these names (checked `.github/workflows/*.yml`, `test/ci/`). Model-asset resolution (`PrismConfigLocator.FindModelAsset`, `Prism_Config.json`'s `Models` section, `PrismConfiguration.cs`, `FeatureAnalysisService.cs`) already uses the correct `Services/...` paths — not part of this bug, already fixed in the original restructure. This is a build-graph/text rename with no runtime behavior change.
+
+**What to do:**
+1. Fix the test-namespace bug first (smallest, highest-value fix): change `namespace Prism.Core.Tests.Analyzers;` → `namespace PrismCoreTests.Analyzers;` in the 3 files listed above.
+2. Rename the three engine `.csproj` files to match their real namespace: `Prism.Core.Images.Classify.csproj` → `Prism.Services.Matching.Classify.csproj`, `Prism.Core.Images.Transform.csproj` → `Prism.Services.Transform.csproj`, `Prism.Core.Images.Upscale.csproj` → `Prism.Services.Upscale.csproj`. Update the 3 `<ProjectReference>` paths in `Prism.Core.csproj` accordingly.
+3. Update `PRISM.sln`: rename the 3 project entries to their new names/paths, add the missing Upscale project entry, and replace the stale `Images` solution folder with one that mirrors the real `Services/` layout.
+4. Update the 2 doc-comment mentions in `Tx_DetailCropper.cs`/`CropTransformSettings.cs` to the new project name.
+5. Update CLAUDE.md's Architecture/Solution project list to name every project actually in the tree (add Upscale, Tests, ServiceHost), and fix the one stale path example in `PRISM-transform-generate.md`.
+6. Do **not** touch `Prism.Contracts`-namespaced files that live outside `Models/` (e.g. `OrderEvidence.cs`, `MatchEvidence.cs`, `ImageFeatureSnapshot.cs`) — that cross-folder namespace is deliberate (`Prism.Core.Contracts.csproj` cherry-picks files by relative path regardless of physical location). Don't "fix" these into folder-matching namespaces.
+
+**Verification:**
+- `dotnet build jb/src/PRISM.sln` → 0 errors / 0 warnings, same as before the rename.
+- `dotnet sln jb/src/PRISM.sln list` shows all real projects, including the 3 renamed ones and the previously-missing Upscale entry.
+- Reproduce the bug before fixing it, then confirm the fix: `dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj --filter "FullyQualifiedName~PrismCoreTests.Analyzers"` matches 0 tests beforehand and the full Analyzer suite afterward.
+- Full existing suite (`dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj`) has the same pass count before and after — pure identity rename, nothing should newly pass or fail.
+- `git grep -n "Prism.Core.Images"` returns zero hits repo-wide.
+- Open `PRISM.sln` (Visual Studio or `dotnet sln list`) and confirm the solution-folder hierarchy matches the physical `Services/`/`lib/` layout — no leftover `Images` grouping.
+- `pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` still produces the existing `expected-manifest.json` unchanged (proves the rename didn't alter runtime behavior).
+
+**Files:** `jb/src/core/Services/Matching/Classify/Prism.Core.Images.Classify.csproj`, `jb/src/core/Services/Transform/Engine/Prism.Core.Images.Transform.csproj`, `jb/src/core/Services/Upscale/Engine/Prism.Core.Images.Upscale.csproj`, `jb/src/core/Prism.Core.csproj`, `jb/src/PRISM.sln`, `jb/src/tests/Prism.Core.Tests/Analyzers/YoloDetectorTests.cs`, `jb/src/tests/Prism.Core.Tests/Analyzers/VisualAnalyzerTests.cs`, `jb/src/tests/Prism.Core.Tests/Analyzers/ProductTypeResolverTests.cs`, `jb/src/core/Services/Transform/Engine/Tx_DetailCropper.cs`, `jb/src/core/Services/Transform/Engine/CropTransformSettings.cs`, `CLAUDE.md`, `jb/docs/PRISM-transform-generate.md`.
+
+---
+
+
 ## Verification Rules
 
 - After project/solution setup: `dotnet build jb/src/PRISM.sln`, API/WPF run smoke, web `npm run typecheck` + `npm run build`.
