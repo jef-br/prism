@@ -100,7 +100,7 @@ public class MatcherUpgradeTests
 
         Assert.Null(matcher.TryMatchBracket1(record, [famA, famB, famC], Rules)); // both tokens tie alone
 
-        MatchEvidence? evidence = matcher.TryMatchByTokenIntersection(record, [famA, famB, famC], Rules);
+        (MatchEvidence? evidence, _) = matcher.TryMatchByTokenIntersection(record, [famA, famB, famC], Rules);
 
         Assert.NotNull(evidence);
         Assert.Equal("98226704", evidence!.FinalFamilyId);
@@ -117,7 +117,7 @@ public class MatcherUpgradeTests
         FamilyIDRecord famB = MakeFamily("94671121", ("EAN", "8435747805700", ExcelColumnClassification.Numerical));
 
         MatchingRule eanRule = RefCoRule with { ExcelField = "EAN" };
-        MatchEvidence? evidence = matcher.TryMatchBySubstringRescue(
+        (MatchEvidence? evidence, _) = matcher.TryMatchBySubstringRescue(
             MakeLambda("46271023.jpg"), [famA, famB], [FamilyIdRule, eanRule]);
 
         Assert.NotNull(evidence);
@@ -132,7 +132,7 @@ public class MatcherUpgradeTests
         FamilyIDRecord family = MakeFamily("94671120", ("EAN", "8446271023117", ExcelColumnClassification.Numerical));
 
         MatchingRule eanRule = RefCoRule with { ExcelField = "EAN" };
-        Assert.Null(matcher.TryMatchBySubstringRescue(MakeLambda("46271023.jpg"), [family], [FamilyIdRule, eanRule]));
+        Assert.Null(matcher.TryMatchBySubstringRescue(MakeLambda("46271023.jpg"), [family], [FamilyIdRule, eanRule]).Evidence);
     }
 
     //  M2: Excel bigrams + filename boundary split (HEROAUT3 glued color)

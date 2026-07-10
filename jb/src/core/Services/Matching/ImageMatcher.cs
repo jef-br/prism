@@ -106,7 +106,7 @@ internal sealed class ImageMatcher {
         unmatched = RunBracket2(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
 
         // Bracket 2-Intersect: per-token candidate sets intersect to exactly one FamilyID
-        unmatched = RunBracket2Intersect(unmatched, families, numericRules, rejectedNearTies);
+        unmatched = RunBracket2Intersect(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
 
         // Bracket 3: string tokens, exactly-1-FamilyID
         unmatched = RunBracket3(unmatched, allRecords, families, rejectedNearTies, crossBracketCandidates);
@@ -120,14 +120,14 @@ internal sealed class ImageMatcher {
         // MatchingConfig.json, re-verify this gate's safety.
         bool hasClassificationSignal = allRecords.Any(r => r.Tags.Influential.Length > 0);
         unmatched = hasClassificationSignal
-            ? RunBracket4(unmatched, allRecords, families, numericRules, labelRules, rejectedNearTies)
+            ? RunBracket4(unmatched, allRecords, families, numericRules, labelRules, rejectedNearTies, crossBracketCandidates)
             : unmatched;
 
         // Bracket 5: image filename named verbatim in an Excel cell (exact, unique)
-        unmatched = RunBracket5FilenameToCell(unmatched, families, rejectedNearTies);
+        unmatched = RunBracket5FilenameToCell(unmatched, families, rejectedNearTies, crossBracketCandidates);
 
         // Substring rescue: unique family whose digit target contains a long filename token
-        unmatched = RunSubstringRescue(unmatched, families, numericRules, rejectedNearTies);
+        unmatched = RunSubstringRescue(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
 
         // Sibling propagation: inherit the FamilyID of the unique matched sibling image
         if (matchingConfig.EnableSiblingPropagation)
@@ -240,13 +240,18 @@ internal sealed class ImageMatcher {
         List<ImageRecord_LAMBDA> candidates,
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules,
-        Dictionary<string, List<CandidateSummary>> rejectedNearTies ) {
+        Dictionary<string, List<CandidateSummary>> rejectedNearTies,
+        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
         double numericWeight = numericRules.Count > 0 ? numericRules[0].Weight : 1.0;
 
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
-            MatchEvidence? evidence = numericMatcher.TryMatchByTokenIntersection(record, families, numericRules);
+            (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) =
+                numericMatcher.TryMatchByTokenIntersection(record, families, numericRules);
+
+            if (tiedCandidates.Count > 1)
+                AccumulateCandidates(crossBracketCandidates, key, tiedCandidates);
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {
@@ -279,12 +284,17 @@ internal sealed class ImageMatcher {
         Dictionary<string, HashSet<string>> crossBracketCandidates ) {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
 
+        // (FamilyId, Phenotype) -> count of already-matched, non-KO records with that phenotype in
+        // that family. Seeded once from allRecords, then incremented as this bracket accepts matches,
+        // so each candidate's duplicate check is an O(1) lookup instead of an O(allRecords) scan.
+        Dictionary<(string FamilyId, string Phenotype), int> phenotypeCounts = BuildPhenotypeCounts(allRecords);
+
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
             MatchEvidence? evidence = stringMatcher.TryMatch(record, families);
 
             if (evidence is not null && HasDuplicatePhenotypeInFamily(
-                    evidence.FinalFamilyId, record.SelectedPhenotype, record, allRecords)) {
+                    evidence.FinalFamilyId, record.SelectedPhenotype, phenotypeCounts)) {
                 if (evidence.FinalFamilyId is not null)
                     AccumulateCandidates(crossBracketCandidates, key, evidence.FinalFamilyId);
                 evidence = null;
@@ -296,6 +306,9 @@ internal sealed class ImageMatcher {
                     RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
                     MatcherWeights = [new MatcherContribution("StringMatcher.Bracket3", 1.0, evidence.FinalScore)]
                 };
+
+                if (evidence.FinalFamilyId is not null && record.SelectedPhenotype is not null)
+                    IncrementPhenotypeCount(phenotypeCounts, evidence.FinalFamilyId, record.SelectedPhenotype);
             }
             else {
                 stillUnmatched.Add(record);
@@ -306,23 +319,37 @@ internal sealed class ImageMatcher {
     }
 
     /// <summary>
-    /// Returns true when <paramref name="familyId"/> already has a non-KO matched record (other
-    /// than <paramref name="self"/>) with the same non-null <paramref name="phenotype"/>.
+    /// Builds the initial (FamilyId, Phenotype) → count map from every already-matched, non-KO record
+    /// with a non-null <see cref="ImageRecord_LAMBDA.SelectedPhenotype"/>. Keys are upper-invariant to
+    /// preserve the original case-insensitive comparison semantics.
+    /// </summary>
+    private static Dictionary<(string FamilyId, string Phenotype), int> BuildPhenotypeCounts(List<ImageRecord_LAMBDA> allRecords) {
+        Dictionary<(string, string), int> counts = [];
+        foreach (ImageRecord_LAMBDA r in allRecords) {
+            if (r.IsKo || r.MatchEvidence?.FinalFamilyId is not string familyId || r.SelectedPhenotype is not string phenotype)
+                continue;
+            IncrementPhenotypeCount(counts, familyId, phenotype);
+        }
+        return counts;
+    }
+
+    private static void IncrementPhenotypeCount(Dictionary<(string FamilyId, string Phenotype), int> counts, string familyId, string phenotype) {
+        (string, string) countKey = (familyId.ToUpperInvariant(), phenotype.ToUpperInvariant());
+        counts[countKey] = counts.GetValueOrDefault(countKey) + 1;
+    }
+
+    /// <summary>
+    /// Returns true when <paramref name="familyId"/> already has a matched record with the same
+    /// non-null <paramref name="phenotype"/>, per <paramref name="phenotypeCounts"/>.
     /// </summary>
     private static bool HasDuplicatePhenotypeInFamily(
         string? familyId,
         string? phenotype,
-        ImageRecord_LAMBDA self,
-        List<ImageRecord_LAMBDA> allRecords ) {
+        Dictionary<(string FamilyId, string Phenotype), int> phenotypeCounts ) {
         if (familyId is null || phenotype is null)
             return false;
 
-        return allRecords.Any(r =>
-            !ReferenceEquals(r, self)
-            && !r.IsKo
-            && r.MatchEvidence?.FinalFamilyId is not null
-            && string.Equals(r.MatchEvidence.FinalFamilyId, familyId, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(r.SelectedPhenotype, phenotype, StringComparison.OrdinalIgnoreCase));
+        return phenotypeCounts.GetValueOrDefault((familyId.ToUpperInvariant(), phenotype.ToUpperInvariant())) > 0;
     }
 
     //  Bracket 4: semantic combined 
@@ -337,7 +364,8 @@ internal sealed class ImageMatcher {
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules,
         IReadOnlyList<MatchingRule> labelRules,
-        Dictionary<string, List<CandidateSummary>> rejectedNearTies ) {
+        Dictionary<string, List<CandidateSummary>> rejectedNearTies,
+        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
         HashSet<string> assignedFamilyIds = allRecords
             .Where(r => !r.IsKo && r.MatchEvidence?.FinalFamilyId is not null)
             .Select(r => r.MatchEvidence!.FinalFamilyId!)
@@ -354,8 +382,11 @@ internal sealed class ImageMatcher {
 
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
-            MatchEvidence? evidence = semanticMatcher.TryMatch(
+            (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) = semanticMatcher.TryMatch(
                 record, unassignedFamilies, numericRules, labelRules);
+
+            if (tiedCandidates.Count > 1)
+                AccumulateCandidates(crossBracketCandidates, key, tiedCandidates);
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {
@@ -385,12 +416,16 @@ internal sealed class ImageMatcher {
     private List<ImageRecord_LAMBDA> RunBracket5FilenameToCell(
         List<ImageRecord_LAMBDA> candidates,
         IReadOnlyList<FamilyIDRecord> families,
-        Dictionary<string, List<CandidateSummary>> rejectedNearTies ) {
+        Dictionary<string, List<CandidateSummary>> rejectedNearTies,
+        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
 
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
-            MatchEvidence? evidence = filenameToCellMatcher.TryMatch(record, families);
+            (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) = filenameToCellMatcher.TryMatch(record, families);
+
+            if (tiedCandidates.Count > 1)
+                AccumulateCandidates(crossBracketCandidates, key, tiedCandidates);
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {
@@ -417,12 +452,17 @@ internal sealed class ImageMatcher {
         List<ImageRecord_LAMBDA> candidates,
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules,
-        Dictionary<string, List<CandidateSummary>> rejectedNearTies ) {
+        Dictionary<string, List<CandidateSummary>> rejectedNearTies,
+        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
 
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
-            MatchEvidence? evidence = numericMatcher.TryMatchBySubstringRescue(record, families, numericRules);
+            (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) =
+                numericMatcher.TryMatchBySubstringRescue(record, families, numericRules);
+
+            if (tiedCandidates.Count > 1)
+                AccumulateCandidates(crossBracketCandidates, key, tiedCandidates);
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {

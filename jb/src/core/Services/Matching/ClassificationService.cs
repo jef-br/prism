@@ -150,7 +150,12 @@ public sealed class ClassificationService : IClassificationService
         return ClipPromptCatalog.Load(clipPromptsPath);
     }
 
-    internal static void InitializeClassifier(ImageClassifier classifier, PrismConfiguration configuration)
+    /// <summary>
+    /// Resolves and validates the CLIP model/tokenizer asset paths. Fails fast when any asset is
+    /// missing — called before <see cref="ImageClassifier.GetShared"/> so a missing deployment asset
+    /// is caught even on a call that finds the shared classifier already initialized.
+    /// </summary>
+    internal static (string ModelPath, string VocabPath, string MergesPath) ResolveClassifierPaths(PrismConfiguration configuration)
     {
         string pathRoot = configuration.ClipModelDir;
 
@@ -165,6 +170,6 @@ public sealed class ClassificationService : IClassificationService
                 "CLIP ONNX assets not found. Deploy Images/Classify/ONNX/clip-vit-b32-uint8/ next to " +
                 "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
 
-        classifier.Initialize(modelPath, vocabPath, mergesPath);
+        return (modelPath, vocabPath, mergesPath);
     }
 }

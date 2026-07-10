@@ -33,15 +33,19 @@ internal sealed class FilenameToCellMatcher
     /// <summary>
     /// Attempts to match by locating the image's own filename inside any Excel cell of exactly one family.
     /// </summary>
-    /// <returns>Accepted MatchEvidence when exactly one family names the file; null otherwise.</returns>
-    internal MatchEvidence? TryMatch(ImageRecord_LAMBDA record, IReadOnlyList<FamilyIDRecord> families)
+    /// <returns>
+    /// Accepted MatchEvidence when exactly one family names the file (tied candidates empty). When
+    /// two or more families name the same file, evidence is null and tied candidates holds every
+    /// matched family, for cross-bracket MATCHES_MULTIPLE_FAMILYIDS attribution.
+    /// </returns>
+    internal (MatchEvidence? Evidence, List<CandidateSummary> TiedCandidates) TryMatch(ImageRecord_LAMBDA record, IReadOnlyList<FamilyIDRecord> families)
     {
         Dictionary<string, HashSet<string>> index = GetOrBuildIndex(families);
 
         string sourceFilename = record.InitialFullName ?? string.Empty;
         string basenameKey = Basename(sourceFilename).Trim().ToLowerInvariant();
         if (basenameKey.Length == 0)
-            return null;
+            return (null, []);
 
         string stemKey = StripExtension(basenameKey);
         string collapsedKey = CollapseStem(stemKey);
@@ -52,14 +56,23 @@ internal sealed class FilenameToCellMatcher
             : collapsedKey.Length > 0 && indexByCollapsedKey!.TryGetValue(collapsedKey, out HashSet<string>? byCollapsed) ? byCollapsed
             : null;
 
-        if (matchedFamilies is null || matchedFamilies.Count != 1)
-            return null; // zero → no match; two+ → ambiguous, leave for KO
+        if (matchedFamilies is null || matchedFamilies.Count == 0)
+            return (null, []); // no match
+
+        const string matcherName = "FilenameToCellMatcher";
+
+        if (matchedFamilies.Count != 1)
+        {
+            List<CandidateSummary> tied = matchedFamilies
+                .Select(f => new CandidateSummary(f, 1.0, matcherName))
+                .ToList();
+            return (null, tied); // ambiguous, leave for KO
+        }
 
         string familyId = matchedFamilies.First();
         string imageId  = Path.GetFileNameWithoutExtension(sourceFilename);
-        string matcherName = "FilenameToCellMatcher";
 
-        return new MatchEvidence
+        return (new MatchEvidence
         {
             ImageId             = imageId,
             SourceFilename      = sourceFilename,
@@ -70,7 +83,7 @@ internal sealed class FilenameToCellMatcher
             TopCandidates       = [new CandidateSummary(familyId, 1.0, matcherName)],
             ImageNgpSummary     = record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}",
             SafeExplanation     = $"FilenameToCell: image filename '{Basename(sourceFilename).Trim()}' is named in an Excel cell of family {familyId}."
-        };
+        }, []);
     }
 
     /// <summary>

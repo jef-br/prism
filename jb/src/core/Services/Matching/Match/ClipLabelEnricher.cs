@@ -21,22 +21,32 @@ internal sealed class ClipLabelEnricher {
 
         List<LabelEvidenceItem> evidence = [];
 
-        foreach (ClassificationToken tag in influentialTags) {
-            string matchToken = MatchableToken(tag);
-            if (matchToken.Length == 0) continue;
+        foreach (MatchingRule rule in labelRules) {
+            List<(ClassificationToken Tag, string MatchToken)> qualifyingTags = influentialTags
+                .Where(tag => rule.AppliesToFeature(tag.Feature))
+                .Select(tag => (Tag: tag, MatchToken: MatchableToken(tag)))
+                .Where(t => t.MatchToken.Length > 0)
+                .ToList();
 
-            foreach (MatchingRule rule in labelRules) {
-                if (!rule.AppliesToFeature(tag.Feature)) continue;
+            if (qualifyingTags.Count == 0) continue;
 
-                bool isAllLabels = rule.ExcelField.Equals("ALL", StringComparison.OrdinalIgnoreCase);
+            bool isAllLabels = rule.ExcelField.Equals("ALL", StringComparison.OrdinalIgnoreCase);
 
-                foreach (FamilyIDRecord family in families) {
-                    if (isAllLabels) {
-                        if (HasTokenOverlapInAnyStringColumn(matchToken, family)) {
-                            evidence.Add(new LabelEvidenceItem(matchToken, "ALL", family.FamilyID, rule.Weight, tag.Confidence));
-                        }
-                    }
-                    else if (family.NormalizedTokens.TryGetValue(rule.ExcelField, out IReadOnlyList<string>? fieldTokens)) {
+            foreach (FamilyIDRecord family in families) {
+                if (isAllLabels) {
+                    // Require at least rule.Overlap distinct qualifying tags to overlap this family's
+                    // string columns before trusting the "ALL" signal (MatchingConfig.json's Overlap).
+                    List<(ClassificationToken Tag, string MatchToken)> overlapping = qualifyingTags
+                        .Where(t => HasTokenOverlapInAnyStringColumn(t.MatchToken, family))
+                        .ToList();
+
+                    if (overlapping.Count < Math.Max(1, rule.Overlap)) continue;
+
+                    foreach ((ClassificationToken tag, string matchToken) in overlapping)
+                        evidence.Add(new LabelEvidenceItem(matchToken, "ALL", family.FamilyID, rule.Weight, tag.Confidence));
+                }
+                else if (family.NormalizedTokens.TryGetValue(rule.ExcelField, out IReadOnlyList<string>? fieldTokens)) {
+                    foreach ((ClassificationToken tag, string matchToken) in qualifyingTags) {
                         bool hasMatch = fieldTokens.Any(ft => ft.Equals(matchToken, StringComparison.OrdinalIgnoreCase));
 
                         if (hasMatch) {

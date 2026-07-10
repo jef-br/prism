@@ -15,6 +15,11 @@ namespace Prism.Services.Matching;
 /// (<see cref="ClassificationService"/>) softmaxes these within each mutually-exclusive feature group to
 /// obtain calibrated 0–1 probabilities — the correct CLIP zero-shot computation.
 ///
+/// One shared, process-wide instance (the session is expensive to load) — see <see cref="GetShared"/>.
+/// Every <see cref="InferenceSession.Run"/> call is serialized by an internal lock so concurrent jobs
+/// (see PrismJobCoordinator's MaxConcurrentJobs) can share the session safely; callers do not need to
+/// synchronize access themselves.
+///
 /// Degrades gracefully: when the model or tokenizer files are absent, <see cref="IsReady"/> is false
 /// and <see cref="ClassifyImage"/> returns an empty array.
 /// </summary>
@@ -43,11 +48,37 @@ public sealed class ImageClassifier : IDisposable
     private bool disposed;
 
     // Tokenized prompt tensors cached by prompt-array reference — the prompt catalogue is static per
-    // process, so tokenization runs once instead of once per image. Callers serialize access via the
-    // MatchingService CLIP lock, so no synchronisation is needed here.
+    // process, so tokenization runs once instead of once per image. Only touched from within RunLock
+    // (both callers of GetPromptTensors hold it), so no separate synchronisation is needed here.
     private string[]? cachedPrompts;
     private DenseTensor<long>? cachedInputIds;
     private DenseTensor<long>? cachedAttentionMask;
+
+    private static ImageClassifier? shared;
+    private static readonly object SharedLock = new();
+
+    // Guards every session.Run() call (and the prompt-tensor cache above) — the DML execution
+    // provider does not support concurrent InferenceSession.Run calls on the same session.
+    private static readonly object RunLock = new();
+
+    /// <summary>
+    /// Returns the process-wide shared classifier, initializing it from the supplied model/tokenizer
+    /// paths on first use. Later calls ignore the paths and return the same instance.
+    /// </summary>
+    public static ImageClassifier GetShared(string modelPath, string vocabPath, string mergesPath)
+    {
+        if (shared is not null) return shared;
+        lock (SharedLock)
+        {
+            if (shared is null)
+            {
+                ImageClassifier classifier = new();
+                classifier.Initialize(modelPath, vocabPath, mergesPath);
+                shared = classifier;
+            }
+        }
+        return shared;
+    }
 
     /// <summary>
     /// True when the ONNX session is loaded and text encoding is available,
@@ -121,26 +152,30 @@ public sealed class ImageClassifier : IDisposable
 
         // The graph is entangled: one Run must carry the image AND all prompts together.
         DenseTensor<float> pixelValues = PreprocessImage(image);
-        (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = GetPromptTensors(prompts);
 
-        var inputs = new List<NamedOnnxValue>
+        lock (RunLock)
         {
-            NamedOnnxValue.CreateFromTensor(TensorPixelValues,   pixelValues),
-            NamedOnnxValue.CreateFromTensor(TensorInputIds,      inputIds),
-            NamedOnnxValue.CreateFromTensor(TensorAttentionMask, attentionMask)
-        };
+            (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = GetPromptTensors(prompts);
 
-        using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
-            session!.Run(inputs, [TensorLogitsPerImage]);
+            var inputs = new List<NamedOnnxValue>
+            {
+                NamedOnnxValue.CreateFromTensor(TensorPixelValues,   pixelValues),
+                NamedOnnxValue.CreateFromTensor(TensorInputIds,      inputIds),
+                NamedOnnxValue.CreateFromTensor(TensorAttentionMask, attentionMask)
+            };
 
-        // logits_per_image is [1, N] — row 0 holds the image-vs-each-prompt logit.
-        Tensor<float> logits = outputs.First(o => o.Name == TensorLogitsPerImage).AsTensor<float>();
+            using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
+                session!.Run(inputs, [TensorLogitsPerImage]);
 
-        var tokens = new ClassificationToken[prompts.Length];
-        for (int i = 0; i < prompts.Length; i++)
-            tokens[i] = new ClassificationToken { Label = prompts[i], Confidence = logits[0, i] };
+            // logits_per_image is [1, N] — row 0 holds the image-vs-each-prompt logit.
+            Tensor<float> logits = outputs.First(o => o.Name == TensorLogitsPerImage).AsTensor<float>();
 
-        return tokens;
+            var tokens = new ClassificationToken[prompts.Length];
+            for (int i = 0; i < prompts.Length; i++)
+                tokens[i] = new ClassificationToken { Label = prompts[i], Confidence = logits[0, i] };
+
+            return tokens;
+        }
     }
 
     /// <summary>
@@ -163,30 +198,33 @@ public sealed class ImageClassifier : IDisposable
         for (int b = 0; b < images.Count; b++)
             PreprocessImageInto(images[b], pixelValues, b);
 
-        (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = GetPromptTensors(prompts);
-
-        var inputs = new List<NamedOnnxValue>
+        lock (RunLock)
         {
-            NamedOnnxValue.CreateFromTensor(TensorPixelValues,   pixelValues),
-            NamedOnnxValue.CreateFromTensor(TensorInputIds,      inputIds),
-            NamedOnnxValue.CreateFromTensor(TensorAttentionMask, attentionMask)
-        };
+            (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = GetPromptTensors(prompts);
 
-        using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
-            session!.Run(inputs, [TensorLogitsPerImage]);
+            var inputs = new List<NamedOnnxValue>
+            {
+                NamedOnnxValue.CreateFromTensor(TensorPixelValues,   pixelValues),
+                NamedOnnxValue.CreateFromTensor(TensorInputIds,      inputIds),
+                NamedOnnxValue.CreateFromTensor(TensorAttentionMask, attentionMask)
+            };
 
-        Tensor<float> logits = outputs.First(o => o.Name == TensorLogitsPerImage).AsTensor<float>();
+            using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
+                session!.Run(inputs, [TensorLogitsPerImage]);
 
-        var results = new ClassificationToken[images.Count][];
-        for (int b = 0; b < images.Count; b++)
-        {
-            var tokens = new ClassificationToken[prompts.Length];
-            for (int i = 0; i < prompts.Length; i++)
-                tokens[i] = new ClassificationToken { Label = prompts[i], Confidence = logits[b, i] };
-            results[b] = tokens;
+            Tensor<float> logits = outputs.First(o => o.Name == TensorLogitsPerImage).AsTensor<float>();
+
+            var results = new ClassificationToken[images.Count][];
+            for (int b = 0; b < images.Count; b++)
+            {
+                var tokens = new ClassificationToken[prompts.Length];
+                for (int i = 0; i < prompts.Length; i++)
+                    tokens[i] = new ClassificationToken { Label = prompts[i], Confidence = logits[b, i] };
+                results[b] = tokens;
+            }
+
+            return results;
         }
-
-        return results;
     }
 
     //  Image encoding

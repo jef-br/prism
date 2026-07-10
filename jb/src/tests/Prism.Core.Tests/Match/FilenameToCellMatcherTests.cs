@@ -15,7 +15,7 @@ public class FilenameToCellMatcherTests
         FamilyIDRecord family = FamilyWithProperty("92836758", "imagepath", "/medias (3)/92836758_det815.jpg");
         ImageRecord_LAMBDA record = MakeLambda("92836758_det815.jpg");
 
-        MatchEvidence? evidence = matcher.TryMatch(record, [family]);
+        (MatchEvidence? evidence, _) = matcher.TryMatch(record, [family]);
 
         Assert.NotNull(evidence);
         Assert.Equal("92836758", evidence!.FinalFamilyId);
@@ -31,7 +31,7 @@ public class FilenameToCellMatcherTests
         FamilyIDRecord family = FamilyWithProperty("11112222", "productimage1", "WB113068-BEIGE32_(1).jpg");
         ImageRecord_LAMBDA record = MakeLambda("WB113068-BEIGE32_(1).jpg");
 
-        MatchEvidence? evidence = matcher.TryMatch(record, [family]);
+        (MatchEvidence? evidence, _) = matcher.TryMatch(record, [family]);
 
         Assert.NotNull(evidence);
         Assert.Equal("11112222", evidence!.FinalFamilyId);
@@ -44,7 +44,7 @@ public class FilenameToCellMatcherTests
         FamilyIDRecord family = FamilyWithProperty("33334444", "url", "https://cdn.example.com/x/AB12.jpg");
         ImageRecord_LAMBDA record = MakeLambda("AB12.jpg");
 
-        MatchEvidence? evidence = matcher.TryMatch(record, [family]);
+        (MatchEvidence? evidence, _) = matcher.TryMatch(record, [family]);
 
         Assert.NotNull(evidence);
         Assert.Equal("33334444", evidence!.FinalFamilyId);
@@ -58,9 +58,10 @@ public class FilenameToCellMatcherTests
         FamilyIDRecord famB = FamilyWithProperty("10000002", "imagepath", "/b/AB12.jpg");
         ImageRecord_LAMBDA record = MakeLambda("AB12.jpg");
 
-        MatchEvidence? evidence = matcher.TryMatch(record, [famA, famB]);
+        (MatchEvidence? evidence, List<CandidateSummary> tied) = matcher.TryMatch(record, [famA, famB]);
 
         Assert.Null(evidence); // ambiguous: same filename in two families
+        Assert.Equal(2, tied.Count);
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class FilenameToCellMatcherTests
         FamilyIDRecord family = FamilyWithProperty("20000001", "imagepath", "/medias/XY99.jpg");
         ImageRecord_LAMBDA record = MakeLambda("AB12.jpg");
 
-        Assert.Null(matcher.TryMatch(record, [family]));
+        Assert.Null(matcher.TryMatch(record, [family]).Evidence);
     }
 
     [Fact]
@@ -81,7 +82,7 @@ public class FilenameToCellMatcherTests
         FamilyIDRecord family = FamilyWithProperty("20000002", "sku", "AB12");
         ImageRecord_LAMBDA record = MakeLambda("AB12.jpg");
 
-        Assert.Null(matcher.TryMatch(record, [family]));
+        Assert.Null(matcher.TryMatch(record, [family]).Evidence);
     }
 
     //  Helpers

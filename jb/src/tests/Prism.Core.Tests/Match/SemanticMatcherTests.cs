@@ -19,7 +19,7 @@ public class SemanticMatcherTests
         FamilyIDRecord famB = FamilyWithProperty("FAM002", "ProductType", "backpack", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record = MakeLambda("bag-photo.jpg", influentialLabel: "tote");
 
-        MatchEvidence? evidence = matcher.TryMatch(record, [famA, famB], NoNumericRules, ProductTypeLabelRule);
+        (MatchEvidence? evidence, _) = matcher.TryMatch(record, [famA, famB], NoNumericRules, ProductTypeLabelRule);
 
         Assert.NotNull(evidence);
         Assert.Equal("FAM001", evidence!.FinalFamilyId);
@@ -40,7 +40,7 @@ public class SemanticMatcherTests
         FamilyIDRecord family = FamilyWithProperty("FAM001", "ProductType", "tote", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record = MakeLambda("bag-photo.jpg"); // Tags.Influential stays empty
 
-        MatchEvidence? evidence = matcher.TryMatch(record, [family], NoNumericRules, ProductTypeLabelRule);
+        (MatchEvidence? evidence, _) = matcher.TryMatch(record, [family], NoNumericRules, ProductTypeLabelRule);
 
         Assert.Null(evidence);
     }
@@ -58,9 +58,10 @@ public class SemanticMatcherTests
         FamilyIDRecord famB = FamilyWithProperty("FAM_B", "color", "ivory", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record = MakeLambda("ivory-dress.jpg");
 
-        MatchEvidence? evidence = matcher.TryMatch(record, [famA, famB], NoNumericRules, NoLabelRules);
+        (MatchEvidence? evidence, List<CandidateSummary> tied) = matcher.TryMatch(record, [famA, famB], NoNumericRules, NoLabelRules);
 
         Assert.Null(evidence);
+        Assert.Equal(2, tied.Count);
     }
 
     //  Below semantic threshold
@@ -76,7 +77,7 @@ public class SemanticMatcherTests
         FamilyIDRecord famB = FamilyWithProperty("FAM002", "ProductType", "backpack", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record = MakeLambda("bag-photo.jpg", influentialLabel: "tote");
 
-        MatchEvidence? evidence = matcher.TryMatch(record, [famA, famB], NoNumericRules, ProductTypeLabelRule);
+        (MatchEvidence? evidence, _) = matcher.TryMatch(record, [famA, famB], NoNumericRules, ProductTypeLabelRule);
 
         Assert.Null(evidence);
     }
@@ -103,7 +104,7 @@ public class SemanticMatcherTests
 
         ImageRecord_LAMBDA record = MakeLambda("tote-leather-bag.jpg", influentialLabel: "tote");
 
-        MatchEvidence? evidence = matcher.TryMatch(record, [famA, famB, famC], NoNumericRules, ProductTypeLabelRule);
+        (MatchEvidence? evidence, _) = matcher.TryMatch(record, [famA, famB, famC], NoNumericRules, ProductTypeLabelRule);
 
         Assert.NotNull(evidence);
         Assert.Equal("FAM_A", evidence!.FinalFamilyId);

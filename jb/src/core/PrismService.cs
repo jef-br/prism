@@ -126,6 +126,7 @@ public sealed class PrismService : IDisposable
 
         ImageMatcher.Run(lambdas, built.FamilyRecords);
         ImageOrderer.Run(lambdas, built.FamilyRecords);
+        ImageRenamer.Run(lambdas);
 
         // Mirror the export-time det-gap policy so MatchLite filenames match the full pipeline.
         if (!configuration.DetOrderGapsAllowed)

@@ -17,6 +17,11 @@ public sealed class PipelineFixture : IAsyncLifetime {
     private readonly List<string> tempExcelCopies = [];
     private PrismService? prism;
 
+    /// <summary>The shared PrismService instance — reuse this in other test classes (e.g. MatchLite
+    /// tests) via <see cref="Xunit.IClassFixture{TFixture}"/> instead of constructing a fresh one,
+    /// which would reload the 146 MB CLIP and 37 MB YOLO models.</summary>
+    public PrismService Prism => prism!;
+
     /// <summary>Absolute path to test/datasets, resolved by walking up from the test assembly.</summary>
     public string FixturePath { get; } = ResolveTestFixturePath();
 
@@ -107,8 +112,9 @@ public sealed class PipelineFixture : IAsyncLifetime {
     /// <summary>
     /// Copies the fixture Excel to a unique temp file so the importer can read it even when the original is
     /// held open elsewhere (e.g. opened in Excel). The Importer reads from SourceReference.
+    /// Public so other test classes sharing this fixture (e.g. MatchLite tests) can request their own copy.
     /// </summary>
-    private string CopyExcelToTemp() {
+    public string CopyExcelToTemp() {
         string tempPath = Path.Combine(Path.GetTempPath(), $"PRISM-TEST-{Guid.NewGuid():N}.xlsx");
         File.Copy(ExcelPath, tempPath, overwrite: true);
         tempExcelCopies.Add(tempPath);

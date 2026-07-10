@@ -15,17 +15,18 @@ public sealed class MatchingService : IMatchingService, IDisposable
     private readonly PrismConfiguration configuration;
     private readonly ImageClassifier _sharedClassifier;
     private readonly ClipPromptCatalog _sharedPromptCatalog;
-    private readonly object _clipLock = new();
     private bool _disposed;
 
     /// <summary>Creates the service with the validated PRISM configuration (thresholds, dedup policy).
-    /// Initializes the shared CLIP ONNX session once for the app lifetime.</summary>
+    /// Resolves the process-wide shared CLIP ONNX session (see <see cref="ImageClassifier.GetShared"/>) —
+    /// loaded once per process regardless of how many MatchingService instances are constructed.</summary>
     public MatchingService(PrismConfiguration configuration)
     {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _sharedPromptCatalog = ClassificationService.LoadPromptCatalog();
-        _sharedClassifier    = new ImageClassifier();
-        ClassificationService.InitializeClassifier(_sharedClassifier, configuration);
+
+        (string modelPath, string vocabPath, string mergesPath) = ClassificationService.ResolveClassifierPaths(configuration);
+        _sharedClassifier = ImageClassifier.GetShared(modelPath, vocabPath, mergesPath);
     }
 
     /// <inheritdoc/>
@@ -55,11 +56,11 @@ public sealed class MatchingService : IMatchingService, IDisposable
             new ClassificationService(_sharedClassifier, _sharedPromptCatalog, configuration);
 
         // Chunked fan-out/fan-in: decode + hash + feature analysis run CPU-parallel per chunk, then
-        // the whole chunk classifies in one batched CLIP Run under the global lock (the DML execution
-        // provider does not support concurrent InferenceSession.Run calls), then phenotypes evaluate
-        // and the chunk's images are disposed. Batching amortizes the prompt text branch across the
-        // chunk; a fixed-batch model export transparently degrades to one Run per image inside
-        // ApplyClipTagsBatch.
+        // the whole chunk classifies in one batched CLIP Run (ImageClassifier serializes Run() calls
+        // internally — safe across concurrent chunks/jobs sharing the process-wide session), then
+        // phenotypes evaluate and the chunk's images are disposed. Batching amortizes the prompt text
+        // branch across the chunk; a fixed-batch model export transparently degrades to one Run per
+        // image inside ApplyClipTagsBatch.
         var results = new (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, UInt128 Hash)[okImages.Count];
         int classifyKo        = 0;
         int classifyDegraded  = 0;
@@ -97,12 +98,11 @@ public sealed class MatchingService : IMatchingService, IDisposable
                 {
                     try
                     {
-                        lock (_clipLock)
-                        {
-                            classification.ApplyClipTagsBatch(alive,
-                                configuration.ThresholdForInfluentialTags,
-                                configuration.ThresholdForDiscardingClassificationTags);
-                        }
+                        // ImageClassifier serializes its own Run() calls internally (RunLock), so no
+                        // external lock is needed here even across concurrent MatchingService jobs.
+                        classification.ApplyClipTagsBatch(alive,
+                            configuration.ThresholdForInfluentialTags,
+                            configuration.ThresholdForDiscardingClassificationTags);
                     }
                     catch
                     {
@@ -147,7 +147,8 @@ public sealed class MatchingService : IMatchingService, IDisposable
 
         //  Refine: post-match analyzer chain — now that the family (IEM) is known, narrow each
         //  image's phenotype pool with IEM/filename/detector evidence and finalize the phenotype.
-        phenotypeAssigned = RefinePhenotypes(results, ingest.FamilyRecords, featureAnalysis, ruleSet);
+        int refinementFailed;
+        (phenotypeAssigned, refinementFailed) = RefinePhenotypes(results, ingest.FamilyRecords, featureAnalysis, ruleSet);
 
         //  Ordered: assign det slots within each family
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Ordered, cancellationToken);
@@ -167,7 +168,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
             KoRecordCount          = classifyKo + duplicatesRemoved + matchKo + renameKo,
             DuplicatesRemoved      = duplicatesRemoved,
             PhenotypeAssignedCount = phenotypeAssigned,
-            Warnings               = BuildWarnings(classifyDegraded)
+            Warnings               = BuildWarnings(classifyDegraded, refinementFailed)
         };
     }
 
@@ -215,13 +216,20 @@ public sealed class MatchingService : IMatchingService, IDisposable
     }
 
     /// <summary>
-    /// Surfaces classification degradation as one aggregated, non-silent manifest warning.
-    /// Empty when every image classified cleanly.
+    /// Surfaces classification degradation and refinement failures as aggregated, non-silent manifest
+    /// warnings. Empty when every image classified and refined cleanly.
     /// </summary>
-    private static IReadOnlyList<string> BuildWarnings(int classifyDegraded)
+    private static IReadOnlyList<string> BuildWarnings(int classifyDegraded, int refinementFailed)
     {
-        if (classifyDegraded == 0) return [];
-        return [$"CLIP classification unavailable for {classifyDegraded} image(s); matched on filename tokens only."];
+        List<string> warnings = [];
+
+        if (classifyDegraded > 0)
+            warnings.Add($"CLIP classification unavailable for {classifyDegraded} image(s); matched on filename tokens only.");
+
+        if (refinementFailed > 0)
+            warnings.Add($"Phenotype refinement failed for {refinementFailed} image(s); provisional phenotype kept.");
+
+        return warnings;
     }
 
     //  Per-image preparation (fan-out: decode + hash + FeatureAnalysis; CLIP and ImageNGP run per chunk)
@@ -292,7 +300,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
     /// refined phenotype-assigned count. A refinement failure keeps the provisional phenotype —
     /// refinement improves evidence, it never KOs an image.
     /// </summary>
-    private static int RefinePhenotypes(
+    private static (int Assigned, int RefinementFailed) RefinePhenotypes(
         (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, UInt128 Hash)[] results,
         IReadOnlyList<FamilyIDRecord> families,
         IFeatureAnalysisService featureAnalysis,
@@ -302,6 +310,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
         foreach (FamilyIDRecord family in families) familyById.TryAdd(family.FamilyID, family);
 
         int assigned = 0;
+        int refinementFailed = 0;
         foreach (var (lambda, source, _) in results)
         {
             if (lambda.IsKo) continue;
@@ -309,12 +318,17 @@ public sealed class MatchingService : IMatchingService, IDisposable
             FamilyIDRecord? family = lambda.MatchEvidence?.FinalFamilyId is string familyId
                 && familyById.TryGetValue(familyId, out FamilyIDRecord? match) ? match : null;
 
+            // Refinement never KOs an image — a systemic failure (bad model asset, corrupt image, the
+            // shared YOLO/CLIP session under contention) must stay non-fatal, but it must not be silent
+            // either: refinementFailed surfaces as a MatchingResult.Warnings entry (BuildWarnings), the
+            // same non-fatal-degradation pattern this file already uses for classifyDegraded — this repo
+            // has no logging framework to write to instead.
             try { featureAnalysis.Refine(lambda, family, source.NormalizedJpgPath, ruleSet); }
-            catch { /* keep the provisional phenotype — refinement never KOs an image */ }
+            catch { refinementFailed++; }
 
             if (lambda.SelectedPhenotype is not null) assigned++;
         }
-        return assigned;
+        return (assigned, refinementFailed);
     }
 
     //  Post-classification visual deduplication
@@ -361,8 +375,12 @@ public sealed class MatchingService : IMatchingService, IDisposable
         return removed;
     }
 
-    /// <inheritdoc/>
-    public void Dispose() { if (_disposed) return; _disposed = true; _sharedClassifier.Dispose(); }
+    /// <summary>
+    /// Does not dispose <see cref="_sharedClassifier"/> — it is a process-wide shared resource (see
+    /// <see cref="ImageClassifier.GetShared"/>) that outlives any individual MatchingService instance,
+    /// exactly like nothing disposes YoloDetector's process-wide shared instance.
+    /// </summary>
+    public void Dispose() { _disposed = true; }
 
     //  Helpers
 

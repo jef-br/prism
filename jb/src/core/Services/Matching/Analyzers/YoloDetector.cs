@@ -10,8 +10,9 @@ namespace Prism.Services.Matching;
 /// YOLO26 ONNX boundary: sole class permitted to access the detector InferenceSession.
 /// Detects the 80 COCO object classes in a product image and returns normalized boxes —
 /// the subject box, person detections, and object counts feeding the analyzer chain.
-/// One shared instance per process (the session is expensive); Run calls are serialized
-/// by the sequential refinement loop.
+/// One shared, process-wide instance (the session is expensive to load); every
+/// <see cref="InferenceSession.Run"/> call is serialized by <see cref="RunLock"/> so
+/// concurrent jobs (see PrismJobCoordinator's MaxConcurrentJobs) can share the session safely.
 /// </summary>
 public sealed class YoloDetector : IDisposable
 {
@@ -31,6 +32,10 @@ public sealed class YoloDetector : IDisposable
 
     private static YoloDetector? shared;
     private static readonly object SharedLock = new();
+
+    // Guards every session.Run() call — the DML execution provider does not support
+    // concurrent InferenceSession.Run calls on the same session.
+    private static readonly object RunLock = new();
 
     /// <summary>True when the ONNX session is loaded and detection is available.</summary>
     public bool IsReady => session is not null;
@@ -86,11 +91,14 @@ public sealed class YoloDetector : IDisposable
         DenseTensor<float> input = PreprocessImage(image);
         var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor(inputName, input) };
 
-        using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
-            session!.Run(inputs, [outputName]);
+        lock (RunLock)
+        {
+            using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
+                session!.Run(inputs, [outputName]);
 
-        Tensor<float> prediction = outputs.First(o => o.Name == outputName).AsTensor<float>();
-        return Postprocess(prediction, cfg);
+            Tensor<float> prediction = outputs.First(o => o.Name == outputName).AsTensor<float>();
+            return Postprocess(prediction, cfg);
+        }
     }
 
     // Resizes to 640×640 (RGB, /255) and lays pixels out CHW. The source image is not mutated.

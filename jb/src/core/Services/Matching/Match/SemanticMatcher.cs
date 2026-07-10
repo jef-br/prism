@@ -32,8 +32,13 @@ internal sealed class SemanticMatcher
     /// Attempts Bracket 4 semantic matching for a single unmatched image against a pre-filtered
     /// list of FamilyIDRecords that have received zero images in earlier brackets.
     /// </summary>
-    /// <returns>Accepted MatchEvidence when exactly one candidate survives; null otherwise.</returns>
-    internal MatchEvidence? TryMatch(
+    /// <returns>
+    /// Accepted MatchEvidence when exactly one candidate survives (tied candidates empty). When a
+    /// string-score tie or an unresolved multi-candidate pool blocks acceptance, evidence is null and
+    /// tied candidates holds the contending families, for cross-bracket MATCHES_MULTIPLE_FAMILYIDS
+    /// attribution. Candidates eliminated outright by a hard filter are not ties (empty tied list).
+    /// </returns>
+    internal (MatchEvidence? Evidence, List<CandidateSummary> TiedCandidates) TryMatch(
         ImageRecord_LAMBDA          record,
         IReadOnlyList<FamilyIDRecord> unassignedFamilies,
         IReadOnlyList<MatchingRule>   numericRules,
@@ -46,11 +51,11 @@ internal sealed class SemanticMatcher
 
         // Step 1: CLIP ProductType hard filter
         (candidates, bool typeFilterApplied) = FilterByClipProductType(record, candidates, labelRules);
-        if (candidates.Count == 0) return null;
+        if (candidates.Count == 0) return (null, []);
 
         // Step 2: CLIP ProductColor hard filter (conditional — only when some candidates carry color)
         (candidates, bool colorFilterApplied) = FilterByClipProductColor(record, candidates, labelRules);
-        if (candidates.Count == 0) return null;
+        if (candidates.Count == 0) return (null, []);
 
         // With per-dimension gating, "survived the CLIP filters" only means something when a filter
         // actually ran — track it so an unfiltered sole survivor is not mistaken for CLIP evidence.
@@ -61,7 +66,7 @@ internal sealed class SemanticMatcher
         candidates = [..numericMatcher.ReduceCandidatesByNumericTokens(filename, candidates, numericRules)];
         bool numericReduced = hadMultipleBeforeNumeric && candidates.Count == 1;
 
-        if (candidates.Count == 0) return null;
+        if (candidates.Count == 0) return (null, []);
 
         // Step 4: String token scoring — keep only the candidate(s) with the most matching tokens.
         // indexScope is unassignedFamilies (the stable superset for this whole Bracket 4 run), so the
@@ -77,7 +82,13 @@ internal sealed class SemanticMatcher
             int topCount = scored[0].MatchCount;
             var topCandidates = scored.Where(s => s.MatchCount == topCount).ToList();
 
-            if (topCandidates.Count > 1) return null; // string tie → no assignment
+            if (topCandidates.Count > 1)
+            {
+                List<CandidateSummary> tied = topCandidates
+                    .Select(c => new CandidateSummary(c.Family.FamilyID, c.MatchCount, "SemanticMatcher.Bracket4"))
+                    .ToList();
+                return (null, tied); // string tie → no assignment
+            }
 
             (winner, _, stringEvidence) = topCandidates[0];
             totalImageTokens = stringEvidence.Select(e => e.FilenameToken).Distinct(StringComparer.OrdinalIgnoreCase).Count()
@@ -88,7 +99,7 @@ internal sealed class SemanticMatcher
             // A sole survivor is only acceptable when some signal actually narrowed the pool —
             // an image with no CLIP tags and no numeric reduction has no evidence tying it to the
             // last unassigned family, however alone that family is.
-            if (!clipApplied && !numericReduced) return null;
+            if (!clipApplied && !numericReduced) return (null, []);
 
             winner        = candidates[0];
             stringEvidence = [];
@@ -96,7 +107,11 @@ internal sealed class SemanticMatcher
         }
         else
         {
-            return null; // multiple candidates, no string signal to break the tie
+            // multiple candidates, no string signal to break the tie
+            List<CandidateSummary> tied = candidates
+                .Select(f => new CandidateSummary(f.FamilyID, 0.0, "SemanticMatcher.Bracket4"))
+                .ToList();
+            return (null, tied);
         }
 
         // Step 5: Compute combined score and check threshold
@@ -108,14 +123,14 @@ internal sealed class SemanticMatcher
 
         double combinedScore = (clipSignal + numericSignal + stringSignal) / 3.0;
 
-        if (combinedScore < semanticThreshold) return null;
+        if (combinedScore < semanticThreshold) return (null, []);
 
         double finalScore = combinedScore * semanticWeight;
 
         IReadOnlyList<LabelEvidenceItem> clipEvidence =
             clipLabelEnricher.BuildEvidence(record, [winner], labelRules);
 
-        return new MatchEvidence
+        return (new MatchEvidence
         {
             ImageId                    = imageId,
             SourceFilename             = filename,
@@ -128,7 +143,7 @@ internal sealed class SemanticMatcher
             ClassificationLabelEvidence = clipEvidence,
             ImageNgpSummary            = record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}",
             SafeExplanation            = $"Bracket4: semantic signals (CLIP+numeric+string) narrowed to family {winner.FamilyID} (score={combinedScore:F3})."
-        };
+        }, []);
     }
 
     //  CLIP filters 

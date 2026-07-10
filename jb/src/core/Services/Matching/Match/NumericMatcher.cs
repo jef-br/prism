@@ -319,7 +319,7 @@ internal sealed class NumericMatcher
     /// in-order concatenations; at least two non-empty hit sets are required.
     /// </summary>
     /// <returns>Accepted MatchEvidence when the intersection is exactly one FamilyID; null otherwise.</returns>
-    internal MatchEvidence? TryMatchByTokenIntersection(
+    internal (MatchEvidence? Evidence, List<CandidateSummary> TiedCandidates) TryMatchByTokenIntersection(
         ImageRecord_LAMBDA record,
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
@@ -351,14 +351,20 @@ internal sealed class NumericMatcher
         }
 
         if (hitSets.Count < 2)
-            return null; // a single evidence source is Bracket 1/2 territory, not intersection
+            return (null, []); // a single evidence source is Bracket 1/2 territory, not intersection
 
         HashSet<string> intersection = new(hitSets[0].Families, StringComparer.OrdinalIgnoreCase);
         foreach ((_, HashSet<string> hitFamilies) in hitSets.Skip(1))
             intersection.IntersectWith(hitFamilies);
 
         if (intersection.Count != 1)
-            return null;
+        {
+            string tieMatcherName = "NumericMatcher.Bracket2-Intersect";
+            List<CandidateSummary> tied = intersection
+                .Select(f => new CandidateSummary(f, 1.0, tieMatcherName))
+                .ToList();
+            return (null, tied);
+        }
 
         string familyId = intersection.First();
         string matcherName = "NumericMatcher.Bracket2-Intersect";
@@ -367,7 +373,7 @@ internal sealed class NumericMatcher
             .Select(hit => new TokenEvidenceItem(hit.Token, hit.Token, FindPostingField(index, hit.Token, familyId), familyId, 1.0))
             .ToList();
 
-        return new MatchEvidence
+        return (new MatchEvidence
         {
             ImageId              = stem,
             SourceFilename       = filename,
@@ -379,7 +385,7 @@ internal sealed class NumericMatcher
             NumericTokenEvidence = tokenEvidence,
             ImageNgpSummary      = BuildNgpSummary(record),
             SafeExplanation      = $"Bracket2-Intersect: tokens [{string.Join(", ", hitSets.Select(h => h.Token))}] jointly narrowed to family {familyId}."
-        };
+        }, []);
     }
 
     /// <summary>Appends the family hit set for <paramref name="token"/> when the index knows it.</summary>
@@ -413,14 +419,19 @@ internal sealed class NumericMatcher
     /// long filename token (e.g. token "46271023" inside EAN "8446271023117"). Runs only for tokens
     /// (or the monotoken) of at least MinSubstringRescueLength digits; disabled when that is 0.
     /// </summary>
-    /// <returns>Accepted MatchEvidence when exactly one family contains the token; null otherwise.</returns>
-    internal MatchEvidence? TryMatchBySubstringRescue(
+    /// <returns>
+    /// Accepted MatchEvidence when exactly one family contains a rescue token (tied candidates empty
+    /// in that case). When no token rescues the image, evidence is null and tied candidates holds the
+    /// union of every family set that ambiguously (2+) matched some rescue token, for cross-bracket
+    /// MATCHES_MULTIPLE_FAMILYIDS attribution.
+    /// </returns>
+    internal (MatchEvidence? Evidence, List<CandidateSummary> TiedCandidates) TryMatchBySubstringRescue(
         ImageRecord_LAMBDA record,
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
         if (substringRescueLength <= 0)
-            return null;
+            return (null, []);
 
         string   filename = record.MatchingName;
         string   stem     = Path.GetFileNameWithoutExtension(filename);
@@ -434,9 +445,11 @@ internal sealed class NumericMatcher
             .ToArray();
 
         if (rescueTokens.Length == 0)
-            return null;
+            return (null, []);
 
         Dictionary<string, List<DigitPosting>> index = GetOrBuildDigitIndex(families, numericRules);
+        const string matcherName = "NumericMatcher.SubstringRescue";
+        HashSet<string> ambiguousFamilies = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (string token in rescueTokens)
         {
@@ -457,13 +470,15 @@ internal sealed class NumericMatcher
                 }
             }
 
+            if (containingFamilies.Count >= 2)
+                ambiguousFamilies.UnionWith(containingFamilies);
+
             if (containingFamilies.Count != 1)
                 continue; // 0 → try the next token; 2+ → ambiguous, not rescuable by this token
 
             string familyId = containingFamilies.First();
-            string matcherName = "NumericMatcher.SubstringRescue";
 
-            return new MatchEvidence
+            return (new MatchEvidence
             {
                 ImageId              = stem,
                 SourceFilename       = filename,
@@ -475,10 +490,13 @@ internal sealed class NumericMatcher
                 NumericTokenEvidence = [new TokenEvidenceItem(token, matchedTarget!, matchedField!, familyId, 0.9)],
                 ImageNgpSummary      = BuildNgpSummary(record),
                 SafeExplanation      = $"SubstringRescue: token '{token}' is contained in target '{matchedTarget}' of family {familyId}."
-            };
+            }, []);
         }
 
-        return null;
+        List<CandidateSummary> tied = ambiguousFamilies
+            .Select(f => new CandidateSummary(f, 0.9, matcherName))
+            .ToList();
+        return (null, tied);
     }
 
     //  Bracket 4 support
