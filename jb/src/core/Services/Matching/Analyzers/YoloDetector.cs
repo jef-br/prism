@@ -10,23 +10,21 @@ namespace Prism.Services.Matching;
 /// YOLO26 ONNX boundary: sole class permitted to access the detector InferenceSession.
 /// Detects the 80 COCO object classes in a product image and returns normalized boxes —
 /// the subject box, person detections, and object counts feeding the analyzer chain.
-/// One shared, process-wide instance (the session is expensive to load); every
-/// <see cref="InferenceSession.Run"/> call is serialized by <see cref="RunLock"/> so
-/// concurrent jobs (see PrismJobCoordinator's MaxConcurrentJobs) can share the session safely.
+/// One shared, process-wide instance (bc expensive to load); every <see cref="InferenceSession.Run"/> call is serialized by <see cref="RunLock"/>
+/// Concurrent jobs (see PrismJobCoordinator's MaxConcurrentJobs) can share the session safely.
 /// </summary>
-public sealed class YoloDetector : IDisposable
-{
+public sealed class YoloDetector : IDisposable {
     // Tensor names for the ultralytics YOLO26 end-to-end ONNX export.
-    private const string TensorImages  = "images";
+    private const string TensorImages = "images";
     private const string TensorOutput0 = "output0";
 
     // YOLO26 preprocessing — 640×640 CHW, RGB, pixel/255 normalization, no letterboxing
     // (plain resize; boxes are normalized back against the resized frame so aspect distortion cancels).
-    private const int InputWidth  = 640;
+    private const int InputWidth = 640;
     private const int InputHeight = 640;
 
     private InferenceSession? session;
-    private string inputName  = TensorImages;
+    private string inputName = TensorImages;
     private string outputName = TensorOutput0;
     private bool disposed;
 
@@ -44,13 +42,10 @@ public sealed class YoloDetector : IDisposable
     /// Returns the process-wide shared detector, initializing it from <paramref name="modelPath"/>
     /// on first use. Later calls ignore the path.
     /// </summary>
-    public static YoloDetector GetShared(string modelPath)
-    {
+    public static YoloDetector GetShared( string modelPath ) {
         if (shared is not null) return shared;
-        lock (SharedLock)
-        {
-            if (shared is null)
-            {
+        lock (SharedLock) {
+            if (shared is null) {
                 YoloDetector detector = new();
                 detector.Initialize(modelPath);
                 shared = detector;
@@ -63,18 +58,14 @@ public sealed class YoloDetector : IDisposable
     /// Loads the YOLO26 ONNX model. Does not throw on a missing file — sets
     /// <see cref="IsReady"/> to false instead; startup validation guarantees presence in production.
     /// </summary>
-    public void Initialize(string modelPath)
-    {
+    public void Initialize( string modelPath ) {
         if (!File.Exists(modelPath)) return;
 
-        try
-        {
+        try {
             session = new InferenceSession(modelPath);
-            inputName  = session.InputMetadata.Keys.FirstOrDefault() ?? TensorImages;
+            inputName = session.InputMetadata.Keys.FirstOrDefault() ?? TensorImages;
             outputName = session.OutputMetadata.Keys.FirstOrDefault() ?? TensorOutput0;
-        }
-        catch
-        {
+        } catch {
             session?.Dispose();
             session = null;
         }
@@ -84,15 +75,13 @@ public sealed class YoloDetector : IDisposable
     /// Runs detection on the pre-loaded image and returns NMS-filtered detections with
     /// normalized [0,1] boxes, strongest first. Empty when the session is unavailable.
     /// </summary>
-    public IReadOnlyList<YoloDetection> Detect(Image<Rgba32> image, YoloAnalyzerConfig cfg)
-    {
+    public IReadOnlyList<YoloDetection> Detect( Image<Rgba32> image, YoloAnalyzerConfig cfg ) {
         if (!IsReady) return [];
 
         DenseTensor<float> input = PreprocessImage(image);
         var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor(inputName, input) };
 
-        lock (RunLock)
-        {
+        lock (RunLock) {
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
                 session!.Run(inputs, [outputName]);
 
@@ -102,18 +91,14 @@ public sealed class YoloDetector : IDisposable
     }
 
     // Resizes to 640×640 (RGB, /255) and lays pixels out CHW. The source image is not mutated.
-    private static DenseTensor<float> PreprocessImage(Image<Rgba32> image)
-    {
+    private static DenseTensor<float> PreprocessImage( Image<Rgba32> image ) {
         var tensor = new DenseTensor<float>([1, 3, InputHeight, InputWidth]);
 
         using Image<Rgba32> resized = image.Clone(ctx => ctx.Resize(InputWidth, InputHeight));
-        resized.ProcessPixelRows(accessor =>
-        {
-            for (int y = 0; y < InputHeight; y++)
-            {
+        resized.ProcessPixelRows(accessor => {
+            for (int y = 0; y < InputHeight; y++) {
                 Span<Rgba32> row = accessor.GetRowSpan(y);
-                for (int x = 0; x < InputWidth; x++)
-                {
+                for (int x = 0; x < InputWidth; x++) {
                     Rgba32 p = row[x];
                     tensor[0, 0, y, x] = p.R / 255f;
                     tensor[0, 1, y, x] = p.G / 255f;
@@ -128,19 +113,16 @@ public sealed class YoloDetector : IDisposable
     // YOLO26 exports an end-to-end (NMS-free) head: output is [1, 300, 6], each row
     // [x1, y1, x2, y2, score, classId] with box coords in 640-input pixel space and detections
     // already NMS-filtered and ranked. Unused slots are zero-padded (score 0). We threshold on
-    // confidence, normalize boxes to [0,1] of the resized frame, and cap at MaxDetections —
-    // no argmax or NMS needed (contrast the retired YOLOv8n [1, 84, 8400] raw head).
-    private static IReadOnlyList<YoloDetection> Postprocess(Tensor<float> prediction, YoloAnalyzerConfig cfg)
-    {
+    // confidence, normalize boxes to [0,1] of the resized frame, and cap at MaxDetections.
+    private static IReadOnlyList<YoloDetection> Postprocess( Tensor<float> prediction, YoloAnalyzerConfig cfg ) {
         int detections = prediction.Dimensions[1];
 
         List<YoloDetection> kept = [];
-        for (int d = 0; d < detections; d++)
-        {
+        for (int d = 0; d < detections; d++) {
             float score = prediction[0, d, 4];
             if (score < cfg.ConfidenceThreshold) continue;
 
-            int classId = (int)prediction[0, d, 5];
+            int classId = (int) prediction[0, d, 5];
 
             // Box coords are x1,y1,x2,y2 in 640-space; normalize to [0,1] of the resized frame.
             float x1 = prediction[0, d, 0] / InputWidth;
@@ -158,8 +140,7 @@ public sealed class YoloDetector : IDisposable
     }
 
     /// <inheritdoc/>
-    public void Dispose()
-    {
+    public void Dispose() {
         if (disposed) return;
         disposed = true;
         session?.Dispose();

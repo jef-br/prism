@@ -1,7 +1,7 @@
 namespace Prism.Services.Matching;
 
 /// <summary>
-/// Thresholds for the YOLOv8n detector and the analyzers built on its detections,
+/// Thresholds for the yolo26s detector and the analyzers built on its detections,
 /// bound from the "Yolo" section of analyzer_Config.json.
 /// </summary>
 public sealed class YoloAnalyzerConfig

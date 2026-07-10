@@ -20,7 +20,7 @@ still has open work (implementation for stubs, calibration for implemented ones)
 
 ## Stubs — implementation open
 
-- [ ] [Analyzer_FacePose](Analyzer_FacePose.md) — Haar cascades or yolov8n-pose in the person box; highest-value stub (6 features, unblocks most on-model phenotypes)
+- [ ] [Analyzer_FacePose](Analyzer_FacePose.md) — Haar cascades or yolo26s-pose in the person box; highest-value stub (6 features, unblocks most on-model phenotypes)
 - [ ] [Analyzer_TextPresent](Analyzer_TextPresent.md) — SWT/MSER heuristic or EAST/DBNet ONNX; unblocks size-chart
 - [ ] [Analyzer_Mannequin](Analyzer_Mannequin.md) — person box + no skin + no face; depends on FacePose
 - [ ] [Analyzer_LogoPresent](Analyzer_LogoPresent.md) — compact high-contrast component heuristic
@@ -35,6 +35,6 @@ still has open work (implementation for stubs, calibration for implemented ones)
 
 - [ ] Retire ImageOrderer.ResolveProductType value-sniffing fallback once Analyzer_ProductType is validated on real batches (the refined ProductTypeId path already wins when set).
 - [ ] Unify ProductTypeMap.json vocabulary with TranslationDictionary.json synonymGroups (domain productType) — or document why they stay separate (project reference direction blocks Classify → TranslationConfig).
-- [ ] Segmentation model (yolov8n-seg): true product-coverage-ratio pixel masks; retires SubjectGeometry's color-distance fallback.
+- [ ] Segmentation model (yolo26s-seg): true product-coverage-ratio pixel masks; retires SubjectGeometry's color-distance fallback.
 - [ ] Analyzer_Symmetry was consciously DROPPED (no phenotype rule consumes symmetry-score; only plausible use was FRONT-orientation support). Revisit only if an orientation rule ever wants it.
 - [ ] CLIP-vs-analyzer write precedence: standardize the "only overwrite when higher confidence" convention (FilenameEvidence has it; FacePose will need it).
