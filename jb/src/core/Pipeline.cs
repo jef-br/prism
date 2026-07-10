@@ -18,7 +18,7 @@ internal sealed class Pipeline : IDisposable
 
     /// <summary>
     /// Creates a Pipeline by discovering its services from the environment: in-process by default, or HTTP
-    /// clients to remote hosts when their URL variables are set. WPF and the API share this path.
+    /// clients to remote hosts when their URL variables are set. The API uses this path.
     /// </summary>
     /// <param name="configuration">Validated PRISM configuration loaded at startup.</param>
     /// <param name="modelBuilder">Pre-loaded Excel model builder from ExcelConfig.json.</param>

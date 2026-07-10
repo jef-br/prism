@@ -3,8 +3,8 @@ namespace Prism.Core;
 /// <summary>
 /// Builds the <see cref="PipelineServices"/> set. Defaults to in-process implementations; when a remote
 /// host URL is configured for a service (via environment variable), that service is swapped for its HTTP
-/// client automatically — no pipeline or orchestrator change required. This is how WPF (no URLs → all
-/// in-process) and a distributed deployment (URLs set → HTTP clients) share one code path.
+/// client automatically — no pipeline or orchestrator change required. This is how a monolith deployment
+/// (no URLs → all in-process) and a distributed deployment (URLs set → HTTP clients) share one code path.
 /// Discovery is environment-only and local-filesystem-friendly: every host shares the same job temp folder.
 /// </summary>
 public static class PipelineServiceFactory

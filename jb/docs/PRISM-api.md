@@ -36,7 +36,7 @@ Accepts `multipart/form-data`.
 
 **Minimum:** ≥1 accepted image representation + ≥1 accepted `.xlsx` after import.
 
-**Before `Prism.Process`:** API ingress + `Importer.cs` resolve/download/open all inputs, validate, convert to descriptors, then build PJR. PJR must not expose raw multipart objects, API types, WPF objects, or platform link objects.
+**Before `Prism.Process`:** API ingress + `Importer.cs` resolve/download/open all inputs, validate, convert to descriptors, then build PJR. PJR must not expose raw multipart objects, API types, or platform link objects.
 
 ---
 
@@ -58,8 +58,6 @@ Only the client that started the job may access this endpoint.
 **Each PPE includes:** `JobID`, route stage name, current item (when available), completed/total counts (when known), severity, safe message, timestamp.
 
 Queue/running/completion/failure job-status events may appear around route-stage events. Events are **monotonic** for one job. SSE is live-only — no replay for late subscribers or reconnects. After terminal state: endpoint no longer acts as replay source.
-
-WPF: subscribes directly to shared core PPE stream — does not use SSE.
 
 ---
 

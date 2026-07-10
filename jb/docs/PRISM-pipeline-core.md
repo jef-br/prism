@@ -53,7 +53,7 @@ C# PODO. Structured job contract passed into `Prism.Process`. All inputs normali
 - `PPP PrismProcessingParameters`
 
 **Rules:**
-- Must not expose raw frontend upload objects, API types, WPF objects, or platform link objects.
+- Must not expose raw frontend upload objects, API types, or platform link objects.
 - `Prism.Process` rejects before pipeline if: no accepted image records, no accepted Excel records, missing PPP, or invalid input record structure.
 - User-file failures during import remain attached to input records for inclusion in BM.
 - No cancellation path. Every accepted request runs start to finish.
@@ -114,6 +114,5 @@ C# PODO. Client-facing result from `Prism.Process`.
 | `jb/src/core` | Pipeline behavior, model contracts, image processing, import/export, zip, runtime config |
 | `jb/src/api` | HTTP contracts, request/response models, API validation, health/config endpoints, SSE |
 | `jb/src/workbench/web` | Browser upload, API client, layout, progress, validation |
-| `jb/src/workbench/wpf` | Desktop file selection, direct core invocation, WPF parity |
 | `jb/docs` | Accepted project knowledge |
 | `jbtodo.md` (folder-local) | Temporary working notes for unresolved/pending decisions |

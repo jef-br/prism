@@ -16,7 +16,7 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | `PRISM-order-rename.md` | `_det` suffix, ordering rules, output filename stem, unmatched naming |
 | `PRISM-transform-generate.md` | Transformation decisions, background extension, generation logic |
 | `PRISM-api.md` | HTTP contracts, request/response shapes, SSE, health/config endpoints, error payloads, URL validation, request size |
-| `PRISM-workbench.md` | Shared web+WPF behavior, web upload/layout, WPF direct invocation, allowed differences, no-hidden-behavior rule |
+| `PRISM-workbench.md` | Web workbench behavior, upload/layout, progress visualization, no-hidden-behavior rule |
 | `PRISM-models.md` | All C# record field definitions: IRI/IRL/IRO/IRG, FR, BM/BMS/MIR, ME, ITR, PPE |
 | `PRISM-knowledge-base.md` | Consolidated reference: architecture, all CFG values, data model hierarchy, API summary, design principles |
 | `ImageNGP/imagePhenotypes.md` | 26 INGP phenotype definitions |
@@ -38,7 +38,6 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | Working on generation logic | `PRISM-transform-generate.md` |
 | Working on API controllers, SSE | `PRISM-api.md` + `PRISM-pipeline-core.md` |
 | Working on web workbench | `PRISM-workbench.md` + `PRISM-api.md` |
-| Working on WPF workbench | `PRISM-workbench.md` + `PRISM-pipeline-core.md` |
 | Defining/updating any C# model/record | `PRISM-models.md` |
 | General orientation | `PRISM-overview.md` + `PRISM-pipeline-core.md` |
 | INGP phenotypes / DO assignment | `ImageNGP/imagePhenotypes.md` + `ImageNGP/ImageFeatures.md` |

@@ -1,16 +1,11 @@
-# PRISM — Workbench (Web & WPF)
+# PRISM — Workbench (Web)
 *Abbreviations: `GLOSSARY.md`*
 
-## Allowed Differences Between Web and WPF
-
-- **Web only:** sends uploads/URLs via API; receives progress via SSE; limited to jobs started by that client/session.
-- **WPF only:** passes local file/folder/stream/Excel/zip descriptors directly to `Prism.Process`; subscribes directly to shared core PPE stream.
-
-**Must NOT differ:** PJR meaning, PPP availability (one UI location, binary params grouped), validation semantics, definitive route order, KO grouping, BM interpretation, evidence display, output preview.
+The web workbench is the only workbench frontend. It sends uploads/URLs via the API, receives progress via SSE, and is limited to jobs started by that client/session.
 
 ---
 
-## Shared Behavior — Both Must Show
+## Required Display — The Workbench Must Show
 
 Per-image route (Imported → … → Exported), Excel model summary, image collection/import state, bounded matching/classification evidence, ordering/rename decisions, generation state, transformation summaries, KO records, output preview, PPP in one location (binary params grouped).
 
@@ -29,7 +24,7 @@ Display PRISM-owned route, evidence, status, score, and KO data from IRL, ME, IT
 
 ## Diagnostic Display
 
-Route-based, using IRL and BM. `manifest.json` is the only retained diagnostic snapshot artifact. Workbenches label displayed values by source stage and link to manifest rows.
+Route-based, using IRL and BM. `manifest.json` is the only retained diagnostic snapshot artifact. The workbench labels displayed values by source stage and links to manifest rows.
 
 ---
 
@@ -102,25 +97,3 @@ Live SSE from IRL. Shows: stage name, current item, counts, severity, safe messa
 - Route files thin; feature sections isolated.
 - Reusable UI primitives in predictable shared locations.
 - Design tokens: `PRISM-theme.css`. Reusable layout/state classes: one workbench CSS file. Component-specific styles near components. All colors/fonts in `PRISM-theme.css`.
-
----
-
-## WPF Workbench
-
-- Renders definitive route order from shared core PPE and IRL.
-- Shows same progress fields and evidence groupings as web.
-- Shows route-based BM diagnostics per stage.
-- Does not keep unbounded image histories in memory; uses `manifest.json` as retained diagnostic record.
-
-**Project layout:** Feature-oriented like `jb/src/workbench/web`. WPF-native folders: `Views`, `ViewModels`, `Controls`, `Services`, `Styles`. Core adapter isolated in `Services`.
-
-**Local file selection:** local image files, local folders, local Excel, local zips, memory-backed streams.
-
-**Direct invocation rules:**
-- Passes local file/folder/stream/Excel/zip descriptors directly (not as API upload objects).
-- Exposes all PPP in one job-request UI location, binary params grouped.
-- Receives same PJRes as API callers.
-- Subscribes to shared PPE stream (not WPF-only progress).
-- Exposes only jobs started by that WPF session.
-- `Queued`/`Running` = job-status events around definitive route.
-- Must preserve parity: validation semantics, stage order, KO grouping, BM interpretation, diagnostics, output preview.

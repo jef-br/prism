@@ -199,7 +199,7 @@ Manifest rows project selected safe fields from the embedded bounded summary.
 
 ## PPE — `PipelineProgressEvent.cs`
 
-Shared progress contract consumed by API SSE, WPF direct invocation, and workbench route visualization.
+Shared progress contract consumed by API SSE and workbench route visualization.
 
 | Field | Notes |
 |---|---|

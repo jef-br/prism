@@ -55,7 +55,7 @@ Both run on `runs-on: [self-hosted, windows]`.
    `jb/src/core/` (a dev convenience — the models are gitignored, so this last hop never resolves on a
    fresh CI checkout).
 
-4. **Toolchain**: install **.NET 9 SDK** (tests target `net9.0`), **.NET 10 SDK** (API/ServiceHost/WPF),
+4. **Toolchain**: install **.NET 9 SDK** (tests target `net9.0`), **.NET 10 SDK** (API/ServiceHost),
    and **Node 24+**. Verify: `dotnet --list-sdks`, `node -v`.
 
 > **Availability**: CI only runs while the machine + runner service are up. The 10:30 slot assumes the

@@ -14,10 +14,4 @@
 * Web upload keeps `Start Prism Job` disabled until at least one valid Excel source and one valid image source are present.
 * Web grouped drop errors show category-level messages for Excel, zip, and media. URL errors show safe per-URL detail.
 
-* The web folder contains a web-based frontend of the workbench
-* the wpf folder contains a WPF frontend of the workbench
-* both web and wpf are to be updated simultaneously and should always be identical both in terms of interface and behavior.
-
-* The only permitted differences between web and wpf:
-  *  web should perform all operations "online" (hosted on localhost)
-  *  wpf is allowed to bypass uploading and downloading
+* The web folder contains the web-based frontend of the workbench — the only workbench frontend. All operations run "online" against the hosted API (localhost in dev).
