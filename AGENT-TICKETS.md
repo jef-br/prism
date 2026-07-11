@@ -20,7 +20,8 @@ Main thread is the orchestrator: owns ticket status, final integration, conflict
 
 ## Orchestrator Handoff Protocol
 
-- Satisfactory → mark `Done`.
+- `P1-feature-worker` / `P4-critical-architecture` tickets: spawn the reviewer agent on the completed diff and record its verdict on the ticket block as `**Review:** Approve|Request Changes (YYYY-MM-DD)`. Only `Approve` makes the ticket eligible for `Done` — /ticket-finish enforces this and will refuse without it.
+- `P0`/`P2`/`P3` tickets: orchestrator judgment suffices → mark `Done`.
 - Incomplete but salvageable → correction to same agent or follow-up ticket.
 - Missing product intent → ask user, then unblock agent.
 - Milestone gates are authoritative: later tickets stay blocked until the gate passes.
@@ -28,6 +29,7 @@ Main thread is the orchestrator: owns ticket status, final integration, conflict
 ## Ticket Format
 
 Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, or orchestrator.
+P1/P4 tickets carry a `**Review:** <verdict> (YYYY-MM-DD)` line once reviewed; `Approve` is required before Done.
 Done tickets are moved to `AGENT-TICKETS-archive.md` (via /ticket-finish) — this file holds open tickets only.
 
 ## Runtime Profiles
