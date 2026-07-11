@@ -110,5 +110,12 @@ Done tickets — result only. Full specs lived in AGENT-TICKETS.md before archiv
 
 ---
 
+### T-3200 · Close Services test coverage gaps: `IIngestService` IO/import path + `IArtifactStore`
+**Done.** Added `jb/src/tests/Prism.Core.Tests/Ingest/` (`ImporterFixture.cs`, `ImporterDirectImageTests.cs`, `ImporterZipTests.cs`, `ImporterExcelRoutingTests.cs`, `LoopbackHttpServer.cs`, `FetcherTests.cs`) covering multipart/ZIP/URL/stream ingestion, and `Services/LocalArtifactStoreTests.cs` for direct `IArtifactStore` coverage. Closed the per-service test-suite `jbtodo.md`.
+
+**Files:** `jb/src/tests/Prism.Core.Tests/Ingest/*.cs`, `jb/src/tests/Prism.Core.Tests/Services/LocalArtifactStoreTests.cs`
+
+---
+
 ### ONNX Singleton (M5 gate item)
 **Done (2026-06-29).** `InferenceSession` hoisted from per-job to application-scoped singleton on `MatchingService`. `ClassificationService` now borrows the shared `ImageClassifier` (no longer owns/disposes it). `_clipLock` on `MatchingService` serializes all `Run()` calls (required for DML). Disposal chain: `MatchingService` → `Pipeline` → `PrismService` (all now implement `IDisposable`). PRISM-classify.md updated. Verified: two TinyTest jobs, CLIP tags in Lambda documents, probe fired once at startup.
