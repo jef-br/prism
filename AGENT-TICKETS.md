@@ -346,6 +346,23 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 ---
 
 
+### T-4200 · Transform engine config retrofit: extract Tx_* empirical tunables to transform_Config.json
+**Status:** Active | **Profile:** P1-feature-worker
+**Found by:** 2026-07-11 config-rule audit (review-gap discussion) — Transform never got the config extraction the Analyzers got.
+
+**Problem:** Every empirical tunable in `Services/Transform/Engine/` is a `private const` and no transform config file exists in `jb/src/core/config/`, violating the config-driven design rule. Known inventory: `Tx_ProblemImageProcessor` (MinInputPx=570, MinOutputPx=800, MaxUpscale=1.42), `Tx_util_BgStretch` (Tier1MaxRatio=1.25, Tier2MaxRatio=1.42, Tier4MinRatio=2.50, FeatherPx=16), `Tx_DetailCropper` (adjacentCropCap=0.14), `Tx_LowContrastEnhancement` (ClipLimit=2.0, TileSize=8), `Tx_util_HeadCutter` (0.75 face-height cut factor); sweep `Tx_CenterAndStretch` and `Tx_CropSquare` for the rest.
+
+**What to do:** Mirror the `AnalyzerConfig` pattern exactly: `transform_Config.json` in `jb/src/core/config/` (one section per Tx class) + typed config classes (one type per file), fail-loud `Load`, `Validate` with range checks, defaults mirroring the current constants. Wire loading the same way `AnalyzerConfig` is loaded; add the file to API startup validation so a missing/invalid file fails fast.
+
+**Scope boundary:** Purely mechanical extraction — zero behavior change (defaults mirror constants exactly). Structural math constants (byte midpoints, loop bounds) stay inline; only empirical tunables move. Do NOT resolve any HeadCutter `jbtodo.md` product decisions. Do NOT touch Analyzers config (T-4000 item 4 covers centralization there).
+
+**Acceptance:** `dotnet build jb/src/PRISM.sln` green; Transform suite green (`--filter "FullyQualifiedName~PrismCoreTests.Transform"`); a transform_Config load/validation test exists; API startup validation covers the new file.
+
+**Files:** `jb/src/core/Services/Transform/Engine/Tx_*.cs`, `jb/src/core/config/transform_Config.json` (new), typed config classes (new), config-loading wiring, `jb/src/api/PrismApiConfiguration.cs`, `jb/src/tests/Prism.Core.Tests/` (Transform suite).
+
+---
+
+
 ## Verification Rules
 
 - After project/solution setup: `dotnet build jb/src/PRISM.sln`, API run smoke, web `npm run typecheck` + `npm run build`.
