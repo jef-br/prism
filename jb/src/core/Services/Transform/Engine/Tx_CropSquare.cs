@@ -58,7 +58,7 @@ public class Tx_CropSquare : IImageTransformation
         // Scale the square output when the caller requests a different size.
         if (upscale_factor != 0f && upscale_factor != 1f)
         {
-            int scaledSide = (int)Math.Round(crop.Width * upscale_factor);
+            int scaledSide = (int)Math.Ceiling(crop.Width * upscale_factor);
             img.Mutate(x => x.Resize(scaledSide, scaledSide, KnownResamplers.Lanczos3));
         }
 

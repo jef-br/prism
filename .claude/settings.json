@@ -8,5 +8,32 @@
       "Bash(curl -s http://localhost:5000/PRISM/jobs/*)",
       "Bash(curl -s \"http://localhost:5000/PRISM/jobs/*)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/scripts/check-cs-conventions.ps1\"",
+            "shell": "powershell"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if (git status --porcelain -- '*.cs' '*.ts' '*.tsx') { graphify update . *> $null }",
+            "shell": "powershell",
+            "async": true
+          }
+        ]
+      }
+    ]
   }
 }

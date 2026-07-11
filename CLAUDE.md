@@ -3,7 +3,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Session start
 On the first prompt of every session, read these files before doing anything else:
-1. `AGENT-TICKETS.md` — best record of current project/solution work
+1. `AGENT-TICKETS.md` — open tickets only (Done tickets live in `AGENT-TICKETS-archive.md`; read that only when history is needed)
 2. `jb/docs/PRISM-index.md` — source of truth; maps tasks to documentation files
 3. `AGENTFEEDBACK.md` — static reload memory: project constraints, config locations, behavioral gotchas. Not a ticket board.
 
@@ -35,13 +35,16 @@ Suites: `Ingest`, `Excel`, `Classify`, `Analyzers`, `Match`, `Order`, `Rename`, 
 
 PRISM is a C#/.NET image processing pipeline with a web workbench.
 
-**Solution:** `jb/src/PRISM.sln` — main projects:
-- `Prism.Core.Contracts` — model records
-- `Prism.Core` — main pipeline facade + all submodules
-- `Prism.Core.Images.Classify` — ONNX/CLIP classification
-- `Prism.Core.Images.Transform` — image transformation
-- `Prism.Api` — ASP.NET Core 10 minimal API
-- Web workbench is npm-based (`jb/src/workbench/web/`), not in `.sln`
+**Solution:** `jb/src/PRISM.sln` — 7 projects:
+- `Prism.Core.Contracts` (`core/Models/`) — model records
+- `Prism.Core` — pipeline orchestrator + all `Services/`/`lib/` submodules
+- `Prism.Core.Images.Classify` (`core/Services/Matching/Classify/`) — ONNX/CLIP engine (rename pending, T-3700)
+- `Prism.Core.Images.Transform` (`core/Services/Transform/Engine/`) — transform engine (rename pending, T-3700)
+- `Prism.Api` (`api/`) — ASP.NET Core 10 minimal API
+- `Prism.ServiceHost` (`services/`) — standalone per-service HTTP host (`PRISM_SERVICE=ingest|matching|generate|transform|upscale`)
+- `Prism.Core.Tests` (`tests/`) — xUnit suite
+
+Not in the `.sln`: `Prism.Core.Images.Upscale` (builds via `Prism.Core` ProjectReference only — T-3700) and the npm-based web workbench (`jb/src/workbench/web/`).
 
 ### Pipeline (stage order is immutable)
 ```
@@ -117,7 +120,6 @@ On API startup, `PrismApiConfiguration.Load()` validates all config and model as
 - **One type per file.** Every class, record, enum, interface, struct, and delegate lives in its own `.cs` file named after the type (e.g. `ImageRole` → `ImageRole.cs`). Never define a second type inside an existing file.
 - **Readable over brief.** Main flow reads like a recipe: `Initialize()` sets up resources, `Process()` / `Run()` expresses the workflow, named helper methods perform each step.
 - Helper methods are defined below the method that calls them within the same class.
-- **XML doc comments** (`/// <summary>`) on every public and internal method.
 - Typed config object per subfolder (e.g. `Classify_Config`). No scattered constructor parameters.
 - Every external resource (`InferenceSession`, `Mat`) is initialized in a dedicated `Initialize()` method, released in `Dispose()`, and held by a class that implements `IDisposable`.
 - Processing lifecycle: validate → initialize → `try/catch/finally` pipeline → release → return structured result object.
@@ -125,7 +127,7 @@ On API startup, `PrismApiConfiguration.Load()` validates all config and model as
 - OpenCV: every `Mat` has a name reflecting its state. State color space (BGR/RGB) at every image boundary. Release intermediate `Mat` objects with `using` or explicit `.Dispose()`.
 - K&R braces: opening brace on same line as declaration/statement
 - Method parameters on a single line, never split across lines
-- No XML doc comments on methods; class-level summary only
+- **Comments: class-level `/// <summary>` only — no XML doc comments on methods or properties.** Inline comments only for constraints the code cannot express (ONNX quirks, empirical thresholds, why a workaround exists). Goal: token-lean files that a human can still read and understand.
 - No defensive null-coalescing on internal/known-non-null values
 - Collapse boolean conditions: prefer `!= 1` over separate `== 0` / `> 1` checks
 - Short, practical variable names (fnTokens, famID, me, tei)
@@ -148,142 +150,12 @@ All accepted project knowledge is in `jb/docs/`. The index at `jb/docs/PRISM-ind
 Folder-local `jbtodo.md` files hold unresolved decisions. Once a todo answer is accepted, its decision moves to `jb/docs/` and the todo block is removed. See `AGENTS.md` for the full todo lifecycle protocol.
 
 <!-- rtk-instructions v2 -->
-# RTK (Rust Token Killer) - Token-Optimized Commands
+# RTK (Rust Token Killer)
 
-## Golden Rule
-
-**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
-
-**Important**: Even in command chains with `&&`, use `rtk`:
-```bash
-# ❌ Wrong
-git add . && git commit -m "msg" && git push
-
-# ✅ Correct
-rtk git add . && rtk git commit -m "msg" && rtk git push
-```
-
-## RTK Commands by Workflow
-
-### Build & Compile (80-90% savings)
-```bash
-rtk cargo build         # Cargo build output
-rtk cargo check         # Cargo check output
-rtk cargo clippy        # Clippy warnings grouped by file (80%)
-rtk tsc                 # TypeScript errors grouped by file/code (83%)
-rtk lint                # ESLint/Biome violations grouped (84%)
-rtk prettier --check    # Files needing format only (70%)
-rtk next build          # Next.js build with route metrics (87%)
-```
-
-### Test (60-99% savings)
-```bash
-rtk cargo test          # Cargo test failures only (90%)
-rtk go test             # Go test failures only (90%)
-rtk jest                # Jest failures only (99.5%)
-rtk vitest              # Vitest failures only (99.5%)
-rtk playwright test     # Playwright failures only (94%)
-rtk pytest              # Python test failures only (90%)
-rtk rake test           # Ruby test failures only (90%)
-rtk rspec               # RSpec test failures only (60%)
-rtk test <cmd>          # Generic test wrapper - failures only
-```
-
-### Git (59-80% savings)
-```bash
-rtk git status          # Compact status
-rtk git log             # Compact log (works with all git flags)
-rtk git diff            # Compact diff (80%)
-rtk git show            # Compact show (80%)
-rtk git add             # Ultra-compact confirmations (59%)
-rtk git commit          # Ultra-compact confirmations (59%)
-rtk git push            # Ultra-compact confirmations
-rtk git pull            # Ultra-compact confirmations
-rtk git branch          # Compact branch list
-rtk git fetch           # Compact fetch
-rtk git stash           # Compact stash
-rtk git worktree        # Compact worktree
-```
-
-Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
-
-### GitHub (26-87% savings)
-```bash
-rtk gh pr view <num>    # Compact PR view (87%)
-rtk gh pr checks        # Compact PR checks (79%)
-rtk gh run list         # Compact workflow runs (82%)
-rtk gh issue list       # Compact issue list (80%)
-rtk gh api              # Compact API responses (26%)
-```
-
-### JavaScript/TypeScript Tooling (70-90% savings)
-```bash
-rtk pnpm list           # Compact dependency tree (70%)
-rtk pnpm outdated       # Compact outdated packages (80%)
-rtk pnpm install        # Compact install output (90%)
-rtk npm run <script>    # Compact npm script output
-rtk npx <cmd>           # Compact npx command output
-rtk prisma              # Prisma without ASCII art (88%)
-```
-
-### Files & Search (60-75% savings)
-```bash
-rtk ls <path>           # Tree format, compact (65%)
-rtk read <file>         # Code reading with filtering (60%)
-rtk grep <pattern>      # Search grouped by file (75%). Format flags (-c, -l, -L, -o, -Z) run raw.
-rtk find <pattern>      # Find grouped by directory (70%)
-```
-
-### Analysis & Debug (70-90% savings)
-```bash
-rtk err <cmd>           # Filter errors only from any command
-rtk log <file>          # Deduplicated logs with counts
-rtk json <file>         # JSON structure without values
-rtk deps                # Dependency overview
-rtk env                 # Environment variables compact
-rtk summary <cmd>       # Smart summary of command output
-rtk diff                # Ultra-compact diffs
-```
-
-### Infrastructure (85% savings)
-```bash
-rtk docker ps           # Compact container list
-rtk docker images       # Compact image list
-rtk docker logs <c>     # Deduplicated logs
-rtk kubectl get         # Compact resource list
-rtk kubectl logs        # Deduplicated pod logs
-```
-
-### Network (65-70% savings)
-```bash
-rtk curl <url>          # Compact HTTP responses (70%)
-rtk wget <url>          # Compact download output (65%)
-```
-
-### Meta Commands
-```bash
-rtk gain                # View token savings statistics
-rtk gain --history      # View command history with savings
-rtk discover            # Analyze Claude Code sessions for missed RTK usage
-rtk proxy <cmd>         # Run command without filtering (for debugging)
-rtk init                # Add RTK instructions to CLAUDE.md
-rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
-```
-
-## Token Savings Overview
-
-| Category | Commands | Typical Savings |
-|----------|----------|-----------------|
-| Tests | vitest, playwright, cargo test | 90-99% |
-| Build | next, tsc, lint, prettier | 70-87% |
-| Git | status, log, diff, add, commit | 59-80% |
-| GitHub | gh pr, gh run, gh issue | 26-87% |
-| Package Managers | pnpm, npm, npx | 70-90% |
-| Files | ls, read, grep, find | 60-75% |
-| Infrastructure | docker, kubectl | 85% |
-| Network | curl, wget | 65-70% |
-
-Overall average: **60-90% token reduction** on common development operations.
+Token-optimizing CLI proxy — filters command output before it reaches the model (60-90% savings).
+**Prefix every shell command with `rtk`**, including inside `&&` chains. Commands without a dedicated
+filter pass through unchanged, so `rtk` is always safe. Filters are trusted in this repo (`rtk trust` done).
+Meta commands: `rtk gain` (savings stats), `rtk discover` (missed opportunities), `rtk proxy <cmd>` (bypass filter).
 <!-- /rtk-instructions -->
 
 ## graphify
