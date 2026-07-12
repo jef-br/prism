@@ -31,9 +31,11 @@
     <Compile Include="..\Services\Matching\Match\MatchEvidence.cs" Link="MatchEvidence.cs" />
     <Compile Include="..\Services\Matching\Match\MatcherContribution.cs" Link="MatcherContribution.cs" />
     <Compile Include="..\Services\Matching\Order\OrderEvidence.cs" Link="OrderEvidence.cs" />
-    <Compile Include="..\Services\Transform\Engine\BackgroundType.cs" Link="BackgroundType.cs" />
     <Compile Include="BoundingBox.cs" />
     <Compile Include="..\Services\Transform\Engine\ImageTransformationResult.cs" Link="ImageTransformationResult.cs" />
-    <Compile Include="..\Services\Transform\Engine\TransformationStatus.cs" Link="TransformationStatus.cs" />
+    <Compile Include="..\Services\Transform\Enum\TransformationStatus.cs" Link="TransformationStatus.cs" />
+    <Compile Include="..\config\ConfigLoader.cs" Link="ConfigLoader.cs" />
+    <Compile Include="..\config\IValidatableConfig.cs" Link="IValidatableConfig.cs" />
+    <Compile Include="..\config\ModelAssetLocator.cs" Link="ModelAssetLocator.cs" />
   </ItemGroup>
 </Project>

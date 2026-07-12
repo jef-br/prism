@@ -84,7 +84,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable
     }
 
     [Fact]
-    public void Analyze_SolidBackground_BackgroundTypeSolidColor()
+    public void Analyze_SolidBackground_ReportsSolidColor()
     {
         // Low corner variance → SOLIDCOLOR.
         string path = CreateJpeg("solid", W, H, White);
