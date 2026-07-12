@@ -7,8 +7,8 @@ namespace Prism.Services.Matching;
 public sealed class MultipleProductsAnalyzerConfig
 {
     /// <summary>IoU above which two non-person detections count as overlapping.</summary>
-    public float OverlapIou { get; init; } = 0.10f;
+    public required float OverlapIou { get; init; }
 
     /// <summary>Confidence written on multiple-products/overlap-count.</summary>
-    public float Confidence { get; init; } = 0.70f;
+    public required float Confidence { get; init; }
 }

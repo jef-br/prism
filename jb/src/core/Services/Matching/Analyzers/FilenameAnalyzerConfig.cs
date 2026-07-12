@@ -10,5 +10,5 @@ public sealed class FilenameAnalyzerConfig
     /// Confidence written on hero-orientation when a filename token names the orientation.
     /// A stronger existing measurement (e.g. CLIP) is never overwritten.
     /// </summary>
-    public float OrientationConfidence { get; init; } = 0.75f;
+    public required float OrientationConfidence { get; init; }
 }

@@ -7,17 +7,17 @@ namespace Prism.Services.Matching;
 public sealed class YoloAnalyzerConfig
 {
     /// <summary>Minimum class score for a raw detection to survive.</summary>
-    public float ConfidenceThreshold { get; init; } = 0.40f;
+    public required float ConfidenceThreshold { get; init; }
 
     /// <summary>Maximum detections kept per image after NMS.</summary>
-    public int MaxDetections { get; init; } = 32;
+    public required int MaxDetections { get; init; }
 
     /// <summary>Minimum person-class confidence for has-human to flip true.</summary>
-    public float HumanMinConfidence { get; init; } = 0.50f;
+    public required float HumanMinConfidence { get; init; }
 
     /// <summary>Confidence recorded on has-human=false when no person is detected (absence of evidence is weaker than presence).</summary>
-    public float AbsenceConfidence { get; init; } = 0.60f;
+    public required float AbsenceConfidence { get; init; }
 
     /// <summary>Minimum person-box area (fraction of the frame) for the person to count as the hero (hero-is-human=TRUE).</summary>
-    public float HeroPersonMinArea { get; init; } = 0.15f;
+    public required float HeroPersonMinArea { get; init; }
 }

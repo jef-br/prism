@@ -12,6 +12,56 @@ namespace PrismCoreTests.Analyzers;
 /// </summary>
 public class VisualAnalyzerTests
 {
+    // Mirrors the shipped analyzer_Config.json sections exercised below.
+    private static readonly SubjectGeometryAnalyzerConfig SubjectGeometryCfg = new()
+    {
+        ForegroundColorDistance = 0.15f,
+        MinForegroundFraction = 0.005f,
+        FallbackConfidence = 0.60f
+    };
+
+    private static readonly ColorAnalyzerConfig ColorsCfg = new()
+    {
+        BucketCount = 4,
+        BinsPerChannel = 8,
+        MinBucketShare = 0.02f,
+        BackgroundDistance = 0.12f,
+        MinSampleFraction = 0.02f,
+        DominantColorsConfidence = 0.70f,
+        ProductColorConfidence = 0.80f,
+        BackgroundColorConfidence = 0.85f,
+        Palette = new Dictionary<string, string>
+        {
+            ["black"] = "#000000", ["white"] = "#ffffff", ["grey"] = "#808080",
+            ["red"] = "#cc0000", ["blue"] = "#0044cc", ["green"] = "#00aa44",
+            ["yellow"] = "#ffdd00", ["orange"] = "#ff8800", ["pink"] = "#ff66aa",
+            ["purple"] = "#7733aa", ["brown"] = "#8b5a2b", ["beige"] = "#d9c7a7"
+        }
+    };
+
+    private static readonly ExposureAnalyzerConfig ExposureCfg = new()
+    {
+        HighLuminance = 0.98f,
+        LowLuminance = 0.02f,
+        FlaggedFraction = 0.25f,
+        Confidence = 0.70f
+    };
+
+    private static readonly MultipleProductsAnalyzerConfig MultipleProductsCfg = new()
+    {
+        OverlapIou = 0.10f,
+        Confidence = 0.70f
+    };
+
+    private static readonly YoloAnalyzerConfig YoloCfg = new()
+    {
+        ConfidenceThreshold = 0.40f,
+        MaxDetections = 32,
+        HumanMinConfidence = 0.50f,
+        AbsenceConfidence = 0.60f,
+        HeroPersonMinArea = 0.15f
+    };
+
     // A 200×200 white canvas with a centered 100×100 solid square of the given color.
     private static Image<Rgba32> CenteredSquare(Rgba32 color)
     {
@@ -33,7 +83,7 @@ public class VisualAnalyzerTests
         using Image<Rgba32> image = CenteredSquare(new Rgba32(200, 40, 40));
         var snapshot = new ImageFeatureSnapshot();
 
-        SubjectBox? subject = Analyzer_SubjectGeometry.Analyze(image, [], snapshot, new SubjectGeometryAnalyzerConfig());
+        SubjectBox? subject = Analyzer_SubjectGeometry.Analyze(image, [], snapshot, SubjectGeometryCfg);
 
         Assert.NotNull(subject);
         Assert.Equal("foreground", subject!.Source);
@@ -51,7 +101,7 @@ public class VisualAnalyzerTests
         var snapshot = new ImageFeatureSnapshot();
         var detection = new YoloDetection(39, "bottle", 0.9f, 0.1f, 0.1f, 0.6f, 0.9f);
 
-        SubjectBox? subject = Analyzer_SubjectGeometry.Analyze(image, [detection], snapshot, new SubjectGeometryAnalyzerConfig());
+        SubjectBox? subject = Analyzer_SubjectGeometry.Analyze(image, [detection], snapshot, SubjectGeometryCfg);
 
         Assert.NotNull(subject);
         Assert.Equal("yolo", subject!.Source);
@@ -62,7 +112,7 @@ public class VisualAnalyzerTests
     {
         using Image<Rgba32> image = CenteredSquare(new Rgba32(200, 40, 40));
         var snapshot = new ImageFeatureSnapshot();
-        var cfg = new ColorAnalyzerConfig();
+        var cfg = ColorsCfg;
         SubjectBox subject = new(0.25f, 0.25f, 0.75f, 0.75f, 0.9f, "foreground");
 
         IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, snapshot, cfg);
@@ -83,7 +133,7 @@ public class VisualAnalyzerTests
         var snapshot = new ImageFeatureSnapshot();
         SubjectBox subject = new(0.25f, 0.25f, 0.75f, 0.75f, 0.6f, "foreground");
 
-        IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, snapshot, new ColorAnalyzerConfig());
+        IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, snapshot, ColorsCfg);
 
         Assert.Empty(buckets);
         Assert.Equal("UNKNOWN", snapshot.GetValue("dominant-colors"));
@@ -96,7 +146,7 @@ public class VisualAnalyzerTests
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("background-type", "SOLIDCOLOR", 0.9, "imagesharp");
 
-        Analyzer_BackgroundColor.Analyze(image, snapshot, new ColorAnalyzerConfig());
+        Analyzer_BackgroundColor.Analyze(image, snapshot, ColorsCfg);
 
         Assert.Equal("white", snapshot.GetValue("background-color"));
     }
@@ -108,7 +158,7 @@ public class VisualAnalyzerTests
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("background-type", "REALLIFE", 0.9, "imagesharp");
 
-        Analyzer_BackgroundColor.Analyze(image, snapshot, new ColorAnalyzerConfig());
+        Analyzer_BackgroundColor.Analyze(image, snapshot, ColorsCfg);
 
         Assert.Equal("UNKNOWN", snapshot.GetValue("background-color"));
     }
@@ -119,7 +169,7 @@ public class VisualAnalyzerTests
         using var image = new Image<Rgba32>(100, 100, new Rgba32(2, 2, 2));
         var snapshot = new ImageFeatureSnapshot();
 
-        Analyzer_Exposure.Analyze(image, snapshot, new ExposureAnalyzerConfig(), new ColorAnalyzerConfig());
+        Analyzer_Exposure.Analyze(image, snapshot, ExposureCfg, ColorsCfg);
 
         Assert.Equal("true", snapshot.GetValue("underexposed"));
         Assert.Equal("false", snapshot.GetValue("overexposed"));
@@ -133,7 +183,7 @@ public class VisualAnalyzerTests
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("background-type", "SOLIDCOLOR", 0.9, "imagesharp");
 
-        Analyzer_Exposure.Analyze(image, snapshot, new ExposureAnalyzerConfig(), new ColorAnalyzerConfig());
+        Analyzer_Exposure.Analyze(image, snapshot, ExposureCfg, ColorsCfg);
 
         Assert.Equal("false", snapshot.GetValue("overexposed"));
     }
@@ -145,7 +195,7 @@ public class VisualAnalyzerTests
         var a = new YoloDetection(39, "bottle", 0.8f, 0.1f, 0.1f, 0.5f, 0.9f);
         var b = new YoloDetection(41, "cup", 0.7f, 0.3f, 0.2f, 0.7f, 0.8f);
 
-        Analyzer_MultipleProducts.Analyze([a, b], snapshot, new MultipleProductsAnalyzerConfig());
+        Analyzer_MultipleProducts.Analyze([a, b], snapshot, MultipleProductsCfg);
 
         Assert.Equal("true", snapshot.GetValue("multiple-products"));
         Assert.Equal("1", snapshot.GetValue("overlap-count"));
@@ -157,7 +207,7 @@ public class VisualAnalyzerTests
         var snapshot = new ImageFeatureSnapshot();
         var person = new YoloDetection(0, "person", 0.9f, 0.2f, 0.0f, 0.8f, 1.0f); // 60% of frame
 
-        Analyzer_HasHuman.Analyze([person], snapshot, new YoloAnalyzerConfig());
+        Analyzer_HasHuman.Analyze([person], snapshot, YoloCfg);
 
         Assert.Equal("true", snapshot.GetValue("has-human"));
         Assert.Equal("TRUE", snapshot.GetValue("hero-is-human"));
@@ -168,7 +218,7 @@ public class VisualAnalyzerTests
     {
         var snapshot = new ImageFeatureSnapshot();
 
-        Analyzer_HasHuman.Analyze([], snapshot, new YoloAnalyzerConfig());
+        Analyzer_HasHuman.Analyze([], snapshot, YoloCfg);
 
         Assert.Equal("false", snapshot.GetValue("has-human"));
         Assert.Equal("FALSE", snapshot.GetValue("hero-is-human"));
@@ -181,7 +231,7 @@ public class VisualAnalyzerTests
         var snapshot = new ImageFeatureSnapshot();
         var person = new YoloDetection(0, "person", 0.9f, 0.45f, 0.45f, 0.55f, 0.55f); // 1% of frame
 
-        Analyzer_HasHuman.Analyze([person], snapshot, new YoloAnalyzerConfig());
+        Analyzer_HasHuman.Analyze([person], snapshot, YoloCfg);
 
         Assert.Equal("true", snapshot.GetValue("has-human"));
         Assert.Equal("UNKNOWN", snapshot.GetValue("hero-is-human"));
@@ -193,7 +243,7 @@ public class VisualAnalyzerTests
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("hero-is-human", "TRUE", 0.95, "clip");
 
-        Analyzer_HasHuman.Analyze([], snapshot, new YoloAnalyzerConfig());
+        Analyzer_HasHuman.Analyze([], snapshot, YoloCfg);
 
         Assert.Equal("TRUE", snapshot.GetValue("hero-is-human"));
     }
@@ -203,7 +253,7 @@ public class VisualAnalyzerTests
     {
         var snapshot = new ImageFeatureSnapshot();
 
-        Analyzer_MultipleProducts.Analyze([], snapshot, new MultipleProductsAnalyzerConfig());
+        Analyzer_MultipleProducts.Analyze([], snapshot, MultipleProductsCfg);
 
         Assert.Equal("UNKNOWN", snapshot.GetValue("multiple-products"));
     }

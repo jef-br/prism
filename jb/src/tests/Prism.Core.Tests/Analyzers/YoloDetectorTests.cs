@@ -11,6 +11,16 @@ namespace PrismCoreTests.Analyzers;
 /// </summary>
 public class YoloDetectorTests
 {
+    // Mirrors the shipped analyzer_Config.json Yolo section.
+    private static readonly YoloAnalyzerConfig YoloCfg = new()
+    {
+        ConfidenceThreshold = 0.40f,
+        MaxDetections = 32,
+        HumanMinConfidence = 0.50f,
+        AbsenceConfidence = 0.60f,
+        HeroPersonMinArea = 0.15f
+    };
+
     // Resolve the model exactly as production does: beside Prism_Config.json, then the
     // PRISM_ONNX_MODEL_DIR override (how CI deploys it), then the git-ignored source-tree copy
     // (dev convenience). Source-tree-only resolution fails on a fresh CI checkout, where the
@@ -41,7 +51,7 @@ public class YoloDetectorTests
         detector.Initialize(modelPath!);
 
         using var image = new Image<Rgba32>(320, 480, new Rgba32(200, 60, 60));
-        IReadOnlyList<YoloDetection> detections = detector.Detect(image, new YoloAnalyzerConfig());
+        IReadOnlyList<YoloDetection> detections = detector.Detect(image, YoloCfg);
 
         // A flat synthetic image should produce few or no detections — the assertion is that the
         // output tensor parsed and every surviving box is normalized and ordered.
@@ -63,6 +73,6 @@ public class YoloDetectorTests
         Assert.False(detector.IsReady);
 
         using var image = new Image<Rgba32>(64, 64);
-        Assert.Empty(detector.Detect(image, new YoloAnalyzerConfig()));
+        Assert.Empty(detector.Detect(image, YoloCfg));
     }
 }

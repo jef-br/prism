@@ -9,6 +9,9 @@ namespace PrismCoreTests.Analyzers;
 /// </summary>
 public class ProductTypeResolverTests
 {
+    // Mirrors the shipped analyzer_Config.json Filename section.
+    private static readonly FilenameAnalyzerConfig FilenameCfg = new() { OrientationConfidence = 0.75f };
+
     private static ProductTypeResolver LoadResolver()
     {
         for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
@@ -93,7 +96,7 @@ public class ProductTypeResolverTests
     {
         var lambda = new ImageRecord_LAMBDA { InitialFullName = "headphone_4435345_A_FRONT.jpg" };
 
-        Analyzer_FilenameEvidence.Analyze(lambda, LoadResolver(), new FilenameAnalyzerConfig());
+        Analyzer_FilenameEvidence.Analyze(lambda, LoadResolver(), FilenameCfg);
 
         Assert.Equal("electronics-small", lambda.ProductTypeId);
         Assert.Equal("FRONT", lambda.Features.GetValue("hero-orientation"));
@@ -105,7 +108,7 @@ public class ProductTypeResolverTests
         var lambda = new ImageRecord_LAMBDA { InitialFullName = "shirt_123_BACK.jpg" };
         lambda.Features.Set("hero-orientation", "FRONT", 0.95, "onnx");
 
-        Analyzer_FilenameEvidence.Analyze(lambda, LoadResolver(), new FilenameAnalyzerConfig());
+        Analyzer_FilenameEvidence.Analyze(lambda, LoadResolver(), FilenameCfg);
 
         Assert.Equal("FRONT", lambda.Features.GetValue("hero-orientation"));
     }
@@ -115,7 +118,7 @@ public class ProductTypeResolverTests
     {
         var lambda = new ImageRecord_LAMBDA { InitialFullName = "headphone_1.jpg", ProductTypeId = "clothing-tops" };
 
-        Analyzer_FilenameEvidence.Analyze(lambda, LoadResolver(), new FilenameAnalyzerConfig());
+        Analyzer_FilenameEvidence.Analyze(lambda, LoadResolver(), FilenameCfg);
 
         Assert.Equal("clothing-tops", lambda.ProductTypeId);
     }

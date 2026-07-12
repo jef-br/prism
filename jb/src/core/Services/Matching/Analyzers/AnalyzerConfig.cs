@@ -9,14 +9,14 @@ namespace Prism.Services.Matching;
 /// </summary>
 public sealed class AnalyzerConfig
 {
-    public InteriorAnalyzerConfig Interior { get; init; } = new();
-    public IllustrationAnalyzerConfig IsIllustration { get; init; } = new();
-    public YoloAnalyzerConfig Yolo { get; init; } = new();
-    public FilenameAnalyzerConfig Filename { get; init; } = new();
-    public SubjectGeometryAnalyzerConfig SubjectGeometry { get; init; } = new();
-    public ColorAnalyzerConfig Colors { get; init; } = new();
-    public ExposureAnalyzerConfig Exposure { get; init; } = new();
-    public MultipleProductsAnalyzerConfig MultipleProducts { get; init; } = new();
+    public required InteriorAnalyzerConfig Interior { get; init; }
+    public required IllustrationAnalyzerConfig IsIllustration { get; init; }
+    public required YoloAnalyzerConfig Yolo { get; init; }
+    public required FilenameAnalyzerConfig Filename { get; init; }
+    public required SubjectGeometryAnalyzerConfig SubjectGeometry { get; init; }
+    public required ColorAnalyzerConfig Colors { get; init; }
+    public required ExposureAnalyzerConfig Exposure { get; init; }
+    public required MultipleProductsAnalyzerConfig MultipleProducts { get; init; }
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {

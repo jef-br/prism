@@ -382,7 +382,19 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable
     {
         var snap = new ImageFeatureSnapshot();
         using var image = Image.Load<Rgba32>(imagePath);
-        ImageFeatureAnalyzer.Analyze(image, snap, new AnalyzerConfig());
+        ImageFeatureAnalyzer.Analyze(image, snap, LoadAnalyzerConfig());
         return snap;
+    }
+
+    // AnalyzerConfig's leaf values are all `required` (no in-code defaults) — load the real shipped
+    // config from the source tree rather than hand-populating every section here.
+    private static AnalyzerConfig LoadAnalyzerConfig()
+    {
+        for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            string candidate = Path.Combine(dir.FullName, "jb", "src", "core", "config", "analyzer_Config.json");
+            if (File.Exists(candidate)) return AnalyzerConfig.Load(candidate);
+        }
+        throw new InvalidOperationException("analyzer_Config.json not found in source tree.");
     }
 }
