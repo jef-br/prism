@@ -367,7 +367,8 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 
 
 ### T-4300 · Strip shadow defaults from Analyzer config classes: required keys, analyzer_Config.json is the only source
-**Status:** Ready | **Profile:** P1-feature-worker
+**Status:** Review | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-12) — strip complete (verified by grep), analyzer_Config.json untouched, test values match JSON exactly; awaiting combined final test run before Done
 **Found by:** [[T-4200]] shadow-defaults policy decision (2026-07-12).
 
 **Problem:** The Analyzer config classes carry in-code property initializers ("defaults mirror the previously hard-coded constants"). A missing or misspelled key in `analyzer_Config.json` silently falls back to the in-code value — two sources of truth, and the losing one wins silently. The shadow-defaults core rule (CLAUDE.md, Configuration-driven design) now forbids this for Transform and Analyzers.
