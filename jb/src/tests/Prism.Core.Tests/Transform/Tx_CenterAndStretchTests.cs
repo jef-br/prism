@@ -13,6 +13,10 @@ public class Tx_CenterAndStretchTests
 {
     private const double Margin = 0.042;
 
+    // Mirrors the shipped transform_Config.json BgStretch/HeadCutter sections.
+    private static readonly BgStretchConfig BgStretchCfg = new() { Tier1MaxRatio = 1.25f, Tier2MaxRatio = 1.42f, Tier4MinRatio = 2.50f, FeatherPx = 16 };
+    private static readonly HeadCutterConfig HeadCutterCfg = new() { FaceHeightCutFactor = 0.75 };
+
     [Fact]
     public void Transform_WorkedExample_MatchesExactCanvasSize()
     {
@@ -22,7 +26,7 @@ public class Tx_CenterAndStretchTests
         BoundingBox bbox = MakeBox(400, 100, 400, 1800);
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox);
 
-        Tx_CenterAndStretch tx = new(Margin, headcut: false, colorMat: null);
+        Tx_CenterAndStretch tx = new(Margin, headcut: false, colorMat: null, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         tx.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -45,7 +49,7 @@ public class Tx_CenterAndStretchTests
         BoundingBox bbox = MakeBox(2600, 2200, 400, 1800);   // far from the frame's own center
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox);
 
-        Tx_CenterAndStretch tx = new(Margin, headcut: false, colorMat: null);
+        Tx_CenterAndStretch tx = new(Margin, headcut: false, colorMat: null, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         var exception = Record.Exception(() => tx.Transform(lambda));
 
         Assert.Null(exception);
@@ -64,7 +68,7 @@ public class Tx_CenterAndStretchTests
         BoundingBox bbox = MakeBox(400, 100, 400, 1800);
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox);
 
-        Tx_CenterAndStretch tx = new(Margin, headcut: false, colorMat: null);
+        Tx_CenterAndStretch tx = new(Margin, headcut: false, colorMat: null, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         tx.Transform(lambda);
 
         Assert.Equal("downscale", lambda.TransformationResult!.ResizeMode);

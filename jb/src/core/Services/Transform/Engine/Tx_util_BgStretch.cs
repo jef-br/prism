@@ -4,28 +4,41 @@ namespace Prism.Services.Transform;
 
 /// <summary>
 /// Tiered background-fill helper. Not an <see cref="IImageTransformation"/> implementor.
-/// Called as a sub-step from <see cref="Tx_CenterAndStretch"/> and <see cref="Tx_DetailCropper"/>.
-/// All work is in-memory — no disk writes.
+/// Called as a sub-step from <see cref="Tx_CenterAndStretch"/> and <see cref="Tx_DetailCropper"/>,
+/// which pass their own constructor-resolved <see cref="BgStretchConfig"/> into <see cref="Stretch"/>.
+/// The fixed-signature <see cref="Process"/> webservice entry point has no room for a config
+/// parameter and instead reads the config set once via <see cref="Configure"/> — call it before
+/// any <see cref="Process"/> use. All work is in-memory — no disk writes.
 /// </summary>
 public static class Tx_util_BgStretch {
 
-    private const float Tier1MaxRatio = 1.25f;
-    private const float Tier2MaxRatio = 1.42f;
-    private const float Tier4MinRatio = 2.50f;
-    private const int   FeatherPx     = 16;      // linear-blend seam width (tiers 1 and 2 only)
+    private static BgStretchConfig? _webserviceCfg;
+
+    /// <summary>Sets the config used by the fixed-signature <see cref="Process"/> webservice path.</summary>
+    public static void Configure( BgStretchConfig cfg ) {
+        _webserviceCfg = cfg;
+    }
+
+    // Test hook: clears the webservice config so the Configure-gate tests are order-independent.
+    internal static void ResetConfigureForTests() {
+        _webserviceCfg = null;
+    }
 
     /// <summary>
     /// Webservice form: uniformly expands the source JPEG by <paramref name="upscale_factor"/>
     /// in both dimensions, centering the source, and fills the new border.
-    /// Extension ratio = upscale_factor².
+    /// Extension ratio = upscale_factor². Requires <see cref="Configure"/> to have been called.
     /// </summary>
     public static byte[] Process( byte[] arr, int stride, float upscale_factor ) {
+        BgStretchConfig cfg = _webserviceCfg
+            ?? throw new InvalidOperationException("Tx_util_BgStretch.Configure must be called before Process().");
+
         using Mat src = Cv2.ImDecode(arr, ImreadModes.Color);
         if (src.Empty()) return arr;
 
         int tW = Math.Max(1, (int)Math.Round(src.Cols * upscale_factor));
         int tH = Math.Max(1, (int)Math.Round(src.Rows * upscale_factor));
-        using Mat result = StretchMat(src, tW, tH, (tW - src.Cols) / 2, (tH - src.Rows) / 2);
+        using Mat result = StretchMat(src, tW, tH, (tW - src.Cols) / 2, (tH - src.Rows) / 2, cfg);
         Cv2.ImEncode(".jpg", result, out byte[] encoded);
         return encoded;
     }
@@ -35,42 +48,42 @@ public static class Tx_util_BgStretch {
     /// <paramref name="srcY"/>) on a (<paramref name="canvasW"/>×<paramref name="canvasH"/>) canvas
     /// and fills uncovered edges using the appropriate tier.
     /// </summary>
-    internal static byte[] Stretch( byte[] sourceJpeg, int canvasW, int canvasH, int srcX, int srcY ) {
+    internal static byte[] Stretch( byte[] sourceJpeg, int canvasW, int canvasH, int srcX, int srcY, BgStretchConfig cfg ) {
         using Mat src = Cv2.ImDecode(sourceJpeg, ImreadModes.Color);
         if (src.Empty()) return sourceJpeg;
-        using Mat result = StretchMat(src, canvasW, canvasH, srcX, srcY);
+        using Mat result = StretchMat(src, canvasW, canvasH, srcX, srcY, cfg);
         Cv2.ImEncode(".jpg", result, out byte[] encoded);
         return encoded;
     }
 
-    private static Mat StretchMat( Mat src, int canvasW, int canvasH, int srcX, int srcY ) {
+    private static Mat StretchMat( Mat src, int canvasW, int canvasH, int srcX, int srcY, BgStretchConfig cfg ) {
         float ratio = (long)canvasW * canvasH / (float)((long)src.Cols * src.Rows);
 
-        if (ratio > Tier4MinRatio) return WhiteFill(src, canvasW, canvasH, srcX, srcY);
-        if (ratio > Tier2MaxRatio) return InpaintFill(src, canvasW, canvasH, srcX, srcY);
-        if (ratio > Tier1MaxRatio) return ContentAwareFill(src, canvasW, canvasH, srcX, srcY);
-        return EdgeExtendFill(src, canvasW, canvasH, srcX, srcY);
+        if (ratio > cfg.Tier4MinRatio) return WhiteFill(src, canvasW, canvasH, srcX, srcY);
+        if (ratio > cfg.Tier2MaxRatio) return InpaintFill(src, canvasW, canvasH, srcX, srcY);
+        if (ratio > cfg.Tier1MaxRatio) return ContentAwareFill(src, canvasW, canvasH, srcX, srcY, cfg.FeatherPx);
+        return EdgeExtendFill(src, canvasW, canvasH, srcX, srcY, cfg.FeatherPx);
     }
 
     // Tier 1 (≤125%) — reflect-101 border pixels outward; feather the seam
-    private static Mat EdgeExtendFill( Mat src, int canvasW, int canvasH, int srcX, int srcY ) {
+    private static Mat EdgeExtendFill( Mat src, int canvasW, int canvasH, int srcX, int srcY, int featherPx ) {
         Mat canvas = new Mat();
         Cv2.CopyMakeBorder(src, canvas,
             srcY, canvasH - src.Rows - srcY,
             srcX, canvasW - src.Cols - srcX,
             BorderTypes.Reflect101);
-        FeatherSeam(canvas, srcX, srcY, src.Cols, src.Rows);
+        FeatherSeam(canvas, srcX, srcY, src.Cols, src.Rows, featherPx);
         return canvas;
     }
 
     // Tier 2 (≤142%) — reflect border (slightly wider pattern than 101); feather the seam
-    private static Mat ContentAwareFill( Mat src, int canvasW, int canvasH, int srcX, int srcY ) {
+    private static Mat ContentAwareFill( Mat src, int canvasW, int canvasH, int srcX, int srcY, int featherPx ) {
         Mat canvas = new Mat();
         Cv2.CopyMakeBorder(src, canvas,
             srcY, canvasH - src.Rows - srcY,
             srcX, canvasW - src.Cols - srcX,
             BorderTypes.Reflect);
-        FeatherSeam(canvas, srcX, srcY, src.Cols, src.Rows);
+        FeatherSeam(canvas, srcX, srcY, src.Cols, src.Rows, featherPx);
         return canvas;
     }
 
@@ -97,13 +110,13 @@ public static class Tx_util_BgStretch {
     // For each seam side: alpha = 1 adjacent to source → 0 at outermost filled pixel.
     // Row-based for top/bottom (contiguous memory); pixel-loop for left/right (non-contiguous columns).
     // No Gaussian blur used anywhere.
-    private static void FeatherSeam( Mat canvas, int sx, int sy, int sw, int sh ) {
+    private static void FeatherSeam( Mat canvas, int sx, int sy, int sw, int sh, int featherPx ) {
         int canvasW = canvas.Cols, canvasH = canvas.Rows;
         int padL = sx, padT = sy;
         int padR = canvasW - sx - sw, padB = canvasH - sy - sh;
 
         // Top/bottom seams — rows are contiguous, use AddWeighted on row submatrices
-        int fwT = Math.Min(FeatherPx, padT);
+        int fwT = Math.Min(featherPx, padT);
         for (int d = 0; d < fwT; d++) {
             float alpha = (float)(fwT - d) / fwT;
             using Mat srcRow    = canvas[new Rect(sx, sy,          sw, 1)];
@@ -113,7 +126,7 @@ public static class Tx_util_BgStretch {
             blended.CopyTo(filledRow);
         }
 
-        int fwB = Math.Min(FeatherPx, padB);
+        int fwB = Math.Min(featherPx, padB);
         for (int d = 0; d < fwB; d++) {
             float alpha = (float)(fwB - d) / fwB;
             using Mat srcRow    = canvas[new Rect(sx, sy + sh - 1,  sw, 1)];
@@ -124,8 +137,8 @@ public static class Tx_util_BgStretch {
         }
 
         // Left/right seams — columns are non-contiguous; blend pixel by pixel
-        int fwL = Math.Min(FeatherPx, padL);
-        int fwR = Math.Min(FeatherPx, padR);
+        int fwL = Math.Min(featherPx, padL);
+        int fwR = Math.Min(featherPx, padR);
 
         for (int row = sy; row < sy + sh; row++) {
             for (int d = 0; d < fwL; d++) {

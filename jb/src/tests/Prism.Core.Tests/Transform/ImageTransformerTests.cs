@@ -18,6 +18,17 @@ public class ImageTransformerTests
     private static readonly CropTransformSettings Settings = new(
         WhiteSpaceMargin: 0.042, CropCoverage: 0.8, CropExtensionOneSided: 0.14, CropExtensionBiDirectional: 0.25);
 
+    // Mirrors the shipped transform_Config.json — routing tests below construct Tx_ classes
+    // through ImageTransformer directly and need a real (required-members-populated) config.
+    private static readonly TransformConfig Config = new()
+    {
+        ProblemImageProcessor = new() { MinInputPx = 570, MinOutputPx = 800, MaxUpscale = 1.42 },
+        BgStretch = new() { Tier1MaxRatio = 1.25f, Tier2MaxRatio = 1.42f, Tier4MinRatio = 2.50f, FeatherPx = 16 },
+        DetailCropper = new() { AdjacentCropCap = 0.14 },
+        LowContrastEnhancement = new() { ClipLimit = 2.0, TileSize = 8 },
+        HeadCutter = new() { FaceHeightCutFactor = 0.75 }
+    };
+
     //  Routing — problem processor
 
     [Fact]
@@ -26,7 +37,7 @@ public class ImageTransformerTests
         // No salient-bbox set → bbox guard fires regardless of phenotype.
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null);
 
-        ImageTransformer.TransformImage(lambda, null, Settings, false);
+        ImageTransformer.TransformImage(lambda, null, Settings, false, Config);
 
         Assert.Equal(nameof(Tx_ProblemImageProcessor), lambda.TransformationResult?.TransformerType);
     }
@@ -36,7 +47,7 @@ public class ImageTransformerTests
     {
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null);
 
-        ImageTransformer.TransformImage(lambda, null, Settings, false);
+        ImageTransformer.TransformImage(lambda, null, Settings, false, Config);
 
         Assert.NotEmpty(lambda.TransformationResult?.Warnings ?? []);
     }
@@ -49,7 +60,7 @@ public class ImageTransformerTests
         // Gate on: DetailCropper is unreachable; closeup + intersect falls back to the square crop.
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "closeup-image", hasBbox: true, intersects: true);
 
-        ImageTransformer.TransformImage(lambda, null, Settings, false);
+        ImageTransformer.TransformImage(lambda, null, Settings, false, Config);
 
         Assert.Equal(nameof(Tx_CropSquare), lambda.TransformationResult?.TransformerType);
     }
@@ -59,7 +70,7 @@ public class ImageTransformerTests
     {
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null, hasBbox: true, intersects: true);
 
-        ImageTransformer.TransformImage(lambda, null, Settings, false);
+        ImageTransformer.TransformImage(lambda, null, Settings, false, Config);
 
         Assert.Equal(nameof(Tx_CropSquare), lambda.TransformationResult?.TransformerType);
     }
@@ -72,7 +83,7 @@ public class ImageTransformerTests
         // Phenotype is irrelevant while bypassing; bbox present + no edge intersect → CenterAndStretch.
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null, hasBbox: true);
 
-        ImageTransformer.TransformImage(lambda, null, Settings, false);
+        ImageTransformer.TransformImage(lambda, null, Settings, false, Config);
 
         Assert.Equal(nameof(Tx_CenterAndStretch), lambda.TransformationResult?.TransformerType);
     }
@@ -84,8 +95,8 @@ public class ImageTransformerTests
         ImageRecord_LAMBDA closeup = MakeLambda("a.jpg", phenotype: "closeup-image",  hasBbox: true);
         ImageRecord_LAMBDA generic = MakeLambda("b.jpg", phenotype: "packshot-front", hasBbox: true);
 
-        ImageTransformer.TransformImage(closeup, null, Settings, false);
-        ImageTransformer.TransformImage(generic, null, Settings, false);
+        ImageTransformer.TransformImage(closeup, null, Settings, false, Config);
+        ImageTransformer.TransformImage(generic, null, Settings, false, Config);
 
         Assert.Equal(nameof(Tx_CenterAndStretch), closeup.TransformationResult?.TransformerType);
         Assert.Equal(nameof(Tx_CenterAndStretch), generic.TransformationResult?.TransformerType);
@@ -96,7 +107,7 @@ public class ImageTransformerTests
     {
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null);
 
-        ImageRecord_LAMBDA returned = ImageTransformer.TransformImage(lambda, null, Settings, false);
+        ImageRecord_LAMBDA returned = ImageTransformer.TransformImage(lambda, null, Settings, false, Config);
 
         Assert.Same(lambda, returned);
         Assert.NotNull(lambda.TransformationResult);
@@ -109,7 +120,7 @@ public class ImageTransformerTests
     {
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "packshot-front", width: 1200, height: 1600);
 
-        ImageTransformer.TransformImage(lambda, null, Settings, false);
+        ImageTransformer.TransformImage(lambda, null, Settings, false, Config);
 
         Assert.Equal(1200, lambda.TransformationResult?.InputWidth);
         Assert.Equal(1600, lambda.TransformationResult?.InputHeight);

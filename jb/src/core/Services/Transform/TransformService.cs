@@ -48,6 +48,19 @@ public sealed class TransformService : ITransformService
             prismConfig.CropExtensionOneSided,
             prismConfig.CropExtensionBiDirectional);
 
+        string? transformConfigPath = PrismConfigLocator.FindFolderLocalConfig("transform_Config.json");
+        if (transformConfigPath is null)
+            throw new PrismConfigurationException(
+                "transform_Config.json not found. Ensure transform_Config.json is present in the config directory next to Prism_Config.json.");
+
+        TransformConfig transformConfig = ConfigCache.GetOrLoad(
+            () => TransformConfig.Load(transformConfigPath), transformConfigPath);
+
+        // Static utility Tx_ classes have a fixed-signature webservice Process() method with no
+        // room for a config parameter — they read the config set here once per stage run instead.
+        Tx_util_BgStretch.Configure(transformConfig.BgStretch);
+        Tx_LowContrastEnhancement.Configure(transformConfig.LowContrastEnhancement);
+
         Dictionary<string, ImageRecord_INPUT> inputByName = matched.Ingest.NormalizedImages
             .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
 
@@ -69,7 +82,7 @@ public sealed class TransformService : ITransformService
 
                 using (colorMat)
                 {
-                    ImageTransformer.TransformImage(lambda, colorMat, cropSettings, headcut);
+                    ImageTransformer.TransformImage(lambda, colorMat, cropSettings, headcut, transformConfig);
                 }
 
                 Interlocked.Increment(ref okTransformed);

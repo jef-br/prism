@@ -44,6 +44,12 @@ internal sealed record PrismApiConfiguration {
 
         PrismConfiguration core = PrismConfiguration.LoadPrismConfig(configPath);
 
+        // transform_Config.json sits beside Prism_Config.json; TransformConfig.Load fails loud
+        // (missing file, invalid JSON, or an out-of-range value) — same fail-fast contract as
+        // PrismConfiguration.LoadPrismConfig above.
+        string transformConfigPath = Path.Combine(Path.GetDirectoryName(configPath) ?? string.Empty, "transform_Config.json");
+        TransformConfig.Load(transformConfigPath);
+
         if (!Directory.Exists(Path.GetTempPath())) {
             throw new PrismConfigurationException(
                 $"Temp storage is not available at: {Path.GetTempPath()}");

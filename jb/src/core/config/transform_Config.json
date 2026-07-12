@@ -1,0 +1,29 @@
+{
+    "_comment": "Transform engine empirical tunables. One section per Tx_ class in jb/src/core/Services/Transform/Engine/. Every key here is required — a missing or misspelled key fails the job loudly at startup rather than falling back silently. Crop margin/coverage/extension budgets stay in Prism_Config.json (Transformation.*), threaded in via CropTransformSettings — not duplicated here.",
+
+    "ProblemImageProcessor": {
+        "MinInputPx": 570,
+        "MinOutputPx": 800,
+        "MaxUpscale": 1.42
+    },
+
+    "BgStretch": {
+        "Tier1MaxRatio": 1.25,
+        "Tier2MaxRatio": 1.42,
+        "Tier4MinRatio": 2.50,
+        "FeatherPx": 16
+    },
+
+    "DetailCropper": {
+        "AdjacentCropCap": 0.14
+    },
+
+    "LowContrastEnhancement": {
+        "ClipLimit": 2.0,
+        "TileSize": 8
+    },
+
+    "HeadCutter": {
+        "FaceHeightCutFactor": 0.75
+    }
+}

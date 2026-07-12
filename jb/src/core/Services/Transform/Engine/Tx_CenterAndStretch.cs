@@ -11,20 +11,24 @@ public class Tx_CenterAndStretch : IImageTransformation
     private readonly double _margin;
     private readonly bool   _headcut;
     private readonly Mat?   _colorMat;
+    private readonly BgStretchConfig _bgStretch;
+    private readonly HeadCutterConfig _headCutter;
 
-    /// <summary>Creates the transformer with margin fraction, headcut flag, and pre-decoded BGR Mat.</summary>
-    public Tx_CenterAndStretch(double margin, bool headcut, Mat? colorMat)
+    /// <summary>Creates the transformer with margin fraction, headcut flag, pre-decoded BGR Mat, and config sections.</summary>
+    public Tx_CenterAndStretch(double margin, bool headcut, Mat? colorMat, BgStretchConfig bgStretch, HeadCutterConfig headCutter)
     {
-        _margin   = margin;
-        _headcut  = headcut;
-        _colorMat = colorMat;
+        _margin     = margin;
+        _headcut    = headcut;
+        _colorMat   = colorMat;
+        _bgStretch  = bgStretch;
+        _headCutter = headCutter;
     }
 
     /// <inheritdoc/>
     public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage)
     {
         if (_headcut && _colorMat is not null)
-            Tx_util_HeadCutter.Analyze(InputImage, _colorMat);
+            Tx_util_HeadCutter.Analyze(InputImage, _colorMat, _headCutter);
 
         byte[]?     bytes = InputImage.ProcessedBytes;
         BoundingBox bbox  = InputImage.BoundingBox!.Value;   // null-bbox routed to Tx_ProblemImageProcessor
@@ -43,7 +47,7 @@ public class Tx_CenterAndStretch : IImageTransformation
             return InputImage;
         }
 
-        (byte[] result, int canvasSize, double scaleFactor) = CropResizeAndStretch(bytes, bbox, _margin);
+        (byte[] result, int canvasSize, double scaleFactor) = CropResizeAndStretch(bytes, bbox, _margin, _bgStretch);
         InputImage.ProcessedBytes = result;
 
         var warnings = new System.Collections.Generic.List<string>();
@@ -72,7 +76,7 @@ public class Tx_CenterAndStretch : IImageTransformation
     {
         BoundingBox bbox = FullImageBounds(arr);
 
-        (byte[] result, int canvasSize, _) = CropResizeAndStretch(arr, bbox, _margin);
+        (byte[] result, int canvasSize, _) = CropResizeAndStretch(arr, bbox, _margin, _bgStretch);
 
         if (upscale_factor is not 0f and not 1f)
         {
@@ -101,7 +105,7 @@ public class Tx_CenterAndStretch : IImageTransformation
     // worked example (bbox longest side 1800, margin 0.042 -> canvasSize 1948).
 
     private static (byte[] result, int canvasSize, double scaleFactor) CropResizeAndStretch(
-        byte[] sourceJpeg, BoundingBox bbox, double margin)
+        byte[] sourceJpeg, BoundingBox bbox, double margin, BgStretchConfig bgStretch)
     {
         using Mat decoded = Cv2.ImDecode(sourceJpeg, ImreadModes.Color);
         using Mat cropped = decoded.SubMat(new Rect(bbox.X, bbox.Y, bbox.Width, bbox.Height));
@@ -124,7 +128,7 @@ public class Tx_CenterAndStretch : IImageTransformation
         int srcY = (canvasSize - resizedH) / 2;
 
         Cv2.ImEncode(".jpg", resized, out byte[] resizedJpeg);
-        byte[] result = Tx_util_BgStretch.Stretch(resizedJpeg, canvasSize, canvasSize, srcX, srcY);
+        byte[] result = Tx_util_BgStretch.Stretch(resizedJpeg, canvasSize, canvasSize, srcX, srcY, bgStretch);
 
         return (result, canvasSize, scaleFactor);
     }

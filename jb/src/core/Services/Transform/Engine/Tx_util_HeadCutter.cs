@@ -16,7 +16,7 @@ internal static class Tx_util_HeadCutter
     /// When has-human is true, Algorithm A (anatomy-guided — pending deepdive, see Transform jbtodo.md)
     /// is used; otherwise Algorithm B searches the full top half.
     /// </summary>
-    public static void Analyze(ImageRecord_LAMBDA lambda, Mat colorMat)
+    public static void Analyze(ImageRecord_LAMBDA lambda, Mat colorMat, HeadCutterConfig cfg)
     {
         BoundingBox bbox = lambda.BoundingBox!.Value;
 
@@ -36,7 +36,7 @@ internal static class Tx_util_HeadCutter
             if (f.Y + f.Height / 2 > bestFace.Y + bestFace.Height / 2)
                 bestFace = f;
 
-        int cutY = bestFace.Y + (int)(bestFace.Height * 0.75);
+        int cutY = bestFace.Y + (int)(bestFace.Height * cfg.FaceHeightCutFactor);
         if (cutY <= 0 || cutY >= colorMat.Rows) return;
 
         // Crop from cutY downward and re-encode.

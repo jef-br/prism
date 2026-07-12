@@ -16,14 +16,17 @@ namespace Prism.Services.Transform;
 /// </summary>
 public class Tx_ProblemImageProcessor : IImageTransformation
 {
-    private const int    MinInputPx  = 570;
-    private const int    MinOutputPx = 800;
-    private const double MaxUpscale  = 1.42;
+    private readonly ProblemImageProcessorConfig _cfg;
+
+    public Tx_ProblemImageProcessor(ProblemImageProcessorConfig cfg)
+    {
+        _cfg = cfg;
+    }
 
     /// <inheritdoc/>
     public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage)
     {
-        if (IsKoBySize(InputImage, out string koReason))
+        if (IsKoBySize(InputImage, _cfg, out string koReason))
         {
             InputImage.IsKo          = true;
             InputImage.KoReasonCode  = "TRANSFORM_TOO_SMALL";
@@ -47,7 +50,7 @@ public class Tx_ProblemImageProcessor : IImageTransformation
 
         // Compute expected output dimensions for the metadata record.
         // Actual pixel resize is performed by Process() when the image bytes are available.
-        ComputeSafeResizeTarget(InputImage.Width, InputImage.Height,
+        ComputeSafeResizeTarget(InputImage.Width, InputImage.Height, _cfg,
             out int outW, out int outH, out string resizeMode, out double scaleFactor);
 
         int warnCount = unknownFeatures.Length > 0 ? 2 : 1;
@@ -77,9 +80,9 @@ public class Tx_ProblemImageProcessor : IImageTransformation
     /// <remarks>
     /// Stateless webservice entry point. Applies a proportional Lanczos3 resize using
     /// <paramref name="upscale_factor"/> when non-zero; otherwise applies the safe resize
-    /// logic (scale shorter dimension toward <see cref="MinOutputPx"/>, cap at <see cref="MaxUpscale"/>).
-    /// Throws <see cref="InvalidOperationException"/> when the image is below <see cref="MinInputPx"/>
-    /// in any dimension and the required upscale exceeds <see cref="MaxUpscale"/>.
+    /// logic (scale shorter dimension toward <c>MinOutputPx</c>, cap at <c>MaxUpscale</c>).
+    /// Throws <see cref="InvalidOperationException"/> when the image is below <c>MinInputPx</c>
+    /// in any dimension and the required upscale exceeds <c>MaxUpscale</c>.
     /// <paramref name="stride"/> is reserved for caller-side alignment and is not used in resize logic.
     /// Input bytes: format auto-detected. Output: JPEG at quality 90.
     /// </remarks>
@@ -92,12 +95,12 @@ public class Tx_ProblemImageProcessor : IImageTransformation
         int inH    = img.Height;
         int minDim = Math.Min(inW, inH);
 
-        if (minDim < MinInputPx)
+        if (minDim < _cfg.MinInputPx)
         {
-            double requiredScale = (double)MinOutputPx / minDim;
-            if (requiredScale > MaxUpscale)
+            double requiredScale = (double)_cfg.MinOutputPx / minDim;
+            if (requiredScale > _cfg.MaxUpscale)
                 throw new InvalidOperationException(
-                    $"Image too small ({inW}×{inH} px); required upscale {requiredScale:F2}× exceeds maximum {MaxUpscale}×.");
+                    $"Image too small ({inW}×{inH} px); required upscale {requiredScale:F2}× exceeds maximum {_cfg.MaxUpscale}×.");
         }
 
         int outW;
@@ -112,7 +115,7 @@ public class Tx_ProblemImageProcessor : IImageTransformation
         else
         {
             // Auto-scale toward MinOutputPx when the image is below spec.
-            ComputeSafeResizeTarget(inW, inH, out outW, out outH, out _, out _);
+            ComputeSafeResizeTarget(inW, inH, _cfg, out outW, out outH, out _, out _);
         }
 
         if (outW != inW || outH != inH)
@@ -129,16 +132,16 @@ public class Tx_ProblemImageProcessor : IImageTransformation
     /// Returns true when the image dimensions are too small and the required upscale to reach
     /// the minimum output size would exceed the configured maximum.
     /// </summary>
-    private static bool IsKoBySize(ImageRecord_LAMBDA lambda, out string reason)
+    private static bool IsKoBySize(ImageRecord_LAMBDA lambda, ProblemImageProcessorConfig cfg, out string reason)
     {
         int minDim = Math.Min(lambda.Width, lambda.Height);
-        if (minDim < MinInputPx)
+        if (minDim < cfg.MinInputPx)
         {
-            double requiredScale = (double)MinOutputPx / minDim;
-            if (requiredScale > MaxUpscale)
+            double requiredScale = (double)cfg.MinOutputPx / minDim;
+            if (requiredScale > cfg.MaxUpscale)
             {
                 reason = $"Image too small ({lambda.Width}×{lambda.Height} px); "
-                       + $"required upscale {requiredScale:F2}× exceeds maximum {MaxUpscale}×.";
+                       + $"required upscale {requiredScale:F2}× exceeds maximum {cfg.MaxUpscale}×.";
                 return true;
             }
         }
@@ -165,15 +168,15 @@ public class Tx_ProblemImageProcessor : IImageTransformation
 
     /// <summary>
     /// Computes the safe proportional resize target from the given input dimensions.
-    /// Scales toward <see cref="MinOutputPx"/> on the longest axis when below spec,
-    /// capped at <see cref="MaxUpscale"/>. No crop, no fill.
+    /// Scales toward <c>MinOutputPx</c> on the longest axis when below spec, capped at
+    /// <c>MaxUpscale</c>. No crop, no fill.
     /// </summary>
-    private static void ComputeSafeResizeTarget(int inW, int inH, out int outW, out int outH, out string resizeMode, out double scaleFactor)
+    private static void ComputeSafeResizeTarget(int inW, int inH, ProblemImageProcessorConfig cfg, out int outW, out int outH, out string resizeMode, out double scaleFactor)
     {
         int maxDim = Math.Max(inW, inH);
-        if (maxDim < MinOutputPx)
+        if (maxDim < cfg.MinOutputPx)
         {
-            scaleFactor = Math.Min((double)MinOutputPx / maxDim, MaxUpscale);
+            scaleFactor = Math.Min((double)cfg.MinOutputPx / maxDim, cfg.MaxUpscale);
             resizeMode  = "upscale";
         }
         else

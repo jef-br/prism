@@ -52,5 +52,6 @@
     <Content Include="config\ClipPrompts.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\analyzer_Config.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="config\ProductTypeMap.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="config\transform_Config.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

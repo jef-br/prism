@@ -17,22 +17,28 @@ public class Tx_DetailCropper : IImageTransformation
     private readonly double _extensionBiDirectional;
     private readonly bool   _headcut;
     private readonly Mat?   _colorMat;
+    private readonly DetailCropperConfig _detailCropper;
+    private readonly BgStretchConfig _bgStretch;
+    private readonly HeadCutterConfig _headCutter;
 
-    /// <summary>Creates the transformer with crop-sizing budgets, headcut flag, and pre-decoded BGR Mat.</summary>
-    public Tx_DetailCropper(double coverage, double extensionOneSided, double extensionBiDirectional, bool headcut, Mat? colorMat)
+    /// <summary>Creates the transformer with crop-sizing budgets, headcut flag, pre-decoded BGR Mat, and config sections.</summary>
+    public Tx_DetailCropper(double coverage, double extensionOneSided, double extensionBiDirectional, bool headcut, Mat? colorMat, DetailCropperConfig detailCropper, BgStretchConfig bgStretch, HeadCutterConfig headCutter)
     {
         _coverage               = coverage;
         _extensionOneSided      = extensionOneSided;
         _extensionBiDirectional = extensionBiDirectional;
         _headcut                = headcut;
         _colorMat               = colorMat;
+        _detailCropper          = detailCropper;
+        _bgStretch              = bgStretch;
+        _headCutter             = headCutter;
     }
 
     /// <inheritdoc/>
     public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage)
     {
         if (_headcut && _colorMat is not null)
-            Tx_util_HeadCutter.Analyze(InputImage, _colorMat);
+            Tx_util_HeadCutter.Analyze(InputImage, _colorMat, _headCutter);
 
         byte[]? bytes = InputImage.ProcessedBytes;
         if (bytes is null)
@@ -223,7 +229,7 @@ public class Tx_DetailCropper : IImageTransformation
         int clampedOffset = Math.Clamp(idealOffset, 0, maxOffset);
         int srcX = verticalTouch ? clampedOffset : 0;
         int srcY = verticalTouch ? 0 : clampedOffset;
-        byte[] extendedBytes = Tx_util_BgStretch.Stretch(preCropped, side, side, srcX, srcY);
+        byte[] extendedBytes = Tx_util_BgStretch.Stretch(preCropped, side, side, srcX, srcY, _bgStretch);
         string touchedEdge = intersects.Top ? "top" : intersects.Bottom ? "bottom" : intersects.Left ? "left" : "right";
         return (extendedBytes, side, true, $"1-edge extension applied to the free axis opposite the pinned {touchedEdge} edge (uncapped, not explicitly specified).");
     }
@@ -253,7 +259,7 @@ public class Tx_DetailCropper : IImageTransformation
             int offset = (pinnedSide - currentFreeSide) / 2;
             int srcX = verticalPinned ? 0 : offset;
             int srcY = verticalPinned ? offset : 0;
-            byte[] extendedBytes = Tx_util_BgStretch.Stretch(sourceJpeg, pinnedSide, pinnedSide, srcX, srcY);
+            byte[] extendedBytes = Tx_util_BgStretch.Stretch(sourceJpeg, pinnedSide, pinnedSide, srcX, srcY, _bgStretch);
             return (extendedBytes, pinnedSide, true, $"2-opposing bidirectional extension applied ({(double)delta / currentFreeSide:P1} of {_extensionBiDirectional:P0} budget).");
         }
 
@@ -269,7 +275,7 @@ public class Tx_DetailCropper : IImageTransformation
     // fall back to a corner-anchored local square crop if still not square.
     private (byte[], int, bool, string) TwoAdjacent(byte[] sourceJpeg, BoundingBox bbox, int imgW, int imgH, EdgeIntersects intersects)
     {
-        const double adjacentCropCap = 0.14;
+        double adjacentCropCap = _detailCropper.AdjacentCropCap;
         bool anchorTop = intersects.Top;
         bool anchorLeft = intersects.Left;
 
@@ -296,7 +302,7 @@ public class Tx_DetailCropper : IImageTransformation
         int side = Math.Max(curW, curH);
         int srcX = anchorLeft ? 0 : side - curW;
         int srcY = anchorTop ? 0 : side - curH;
-        byte[] step2Bytes = Tx_util_BgStretch.Stretch(step1Bytes, side, side, srcX, srcY);
+        byte[] step2Bytes = Tx_util_BgStretch.Stretch(step1Bytes, side, side, srcX, srcY, _bgStretch);
 
         using Mat verify = Cv2.ImDecode(step2Bytes, ImreadModes.Color);
         if (verify.Cols == verify.Rows)
@@ -340,7 +346,7 @@ public class Tx_DetailCropper : IImageTransformation
             // edges, and new pixels appear only on the open side.
             int srcX = openLeft ? pinnedSide - currentOpenSide : 0;   // Left open → push right, grow left
             int srcY = openTop ? pinnedSide - currentOpenSide : 0;    // Top open → push down, grow up
-            byte[] extendedBytes = Tx_util_BgStretch.Stretch(sourceJpeg, pinnedSide, pinnedSide, srcX, srcY);
+            byte[] extendedBytes = Tx_util_BgStretch.Stretch(sourceJpeg, pinnedSide, pinnedSide, srcX, srcY, _bgStretch);
             string openEdgeName = openTop ? "top" : openBottom ? "bottom" : openLeft ? "left" : "right";
             return (extendedBytes, pinnedSide, true, $"3-edge one-sided extension applied to the {openEdgeName} edge ({(double)delta / currentOpenSide:P1} of {_extensionOneSided:P0} budget).");
         }

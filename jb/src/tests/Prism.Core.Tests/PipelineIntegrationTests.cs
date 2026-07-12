@@ -11,6 +11,10 @@ namespace PrismCoreTests;
 /// The pipeline runs live in <see cref="PipelineFixture"/> — three runs shared across every test here.
 /// Assertions read cached results; nothing in this class starts a pipeline.
 /// </summary>
+// Shares a collection with TxConfigureGateTests: the fixture's pipeline run calls
+// Tx_util_BgStretch.Configure/Tx_LowContrastEnhancement.Configure on shared static state,
+// which would race the gate tests' reset-then-assert-throws sequence if run in parallel.
+[Collection("TxStaticConfig")]
 public class PipelineIntegrationTests : IClassFixture<PipelineFixture> {
     private readonly PipelineFixture fixture;
 

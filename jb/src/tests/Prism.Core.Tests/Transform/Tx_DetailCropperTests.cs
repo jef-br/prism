@@ -16,6 +16,11 @@ public class Tx_DetailCropperTests
     private const double OneSided      = 0.14;
     private const double BiDirectional = 0.25;
 
+    // Mirrors the shipped transform_Config.json DetailCropper/BgStretch/HeadCutter sections.
+    private static readonly DetailCropperConfig DetailCropperCfg = new() { AdjacentCropCap = 0.14 };
+    private static readonly BgStretchConfig BgStretchCfg = new() { Tier1MaxRatio = 1.25f, Tier2MaxRatio = 1.42f, Tier4MinRatio = 2.50f, FeatherPx = 16 };
+    private static readonly HeadCutterConfig HeadCutterCfg = new() { FaceHeightCutFactor = 0.75 };
+
     //  0 edges — greedy crop, Coverage floor
 
     [Fact]
@@ -25,7 +30,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(350, 350, 300, 300);   // centered, no edge touched
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         // side = ceil(sqrt(1,000,000 * 0.8)) = 895 (tight bbox square of 300 removes more than
@@ -50,7 +55,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(250, 0, 200, 300);     // Y=0 touches top only
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -85,7 +90,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(800, 200, 200, 300);   // X=[800,1000) touches right; Y-center=350
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -121,7 +126,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(600, 0, 100, 300);
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         var exception = Record.Exception(() => cropper.Transform(lambda));
 
         Assert.Null(exception);
@@ -172,7 +177,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(300, 0, 400, 850);     // spans full height: touches top+bottom
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -194,7 +199,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(300, 0, 400, 500);
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -217,7 +222,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(0, 0, 300, 300);       // touches top and left only
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, left: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -239,7 +244,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(0, 0, 1000, 400);      // spans full width, open at the bottom
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, left: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -261,7 +266,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(0, 0, 1000, 200);
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, left: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -282,7 +287,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(0, 0, 1000, 800);      // fills the whole frame
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true, left: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -302,7 +307,7 @@ public class Tx_DetailCropperTests
         ImageRecord_LAMBDA lambda = new() { InitialFullName = "img.jpg", Width = 1000, Height = 1000 };
         lambda.BoundingBox = MakeBox(0, 0, 500, 500);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ko, lambda.TransformationResult!.Status);
@@ -319,7 +324,7 @@ public class Tx_DetailCropperTests
         // using the same Coverage-floor math as the lambda-driven test above.
         byte[] jpeg = MakeJpeg(1000, 1000);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         byte[] result = cropper.Process(jpeg, stride: 0, upscale_factor: 0f, lambda: null);
 
         // idealSide = max(1000,1000) = 1000 (full-frame bbox); tight square already retains
@@ -336,7 +341,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(350, 350, 300, 300);
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         byte[] result = cropper.Process(jpeg, stride: 0, upscale_factor: 0f, lambda: lambda);
 
         AssertSquareJpeg(result, 895);
@@ -363,7 +368,7 @@ public class Tx_DetailCropperTests
         lambda.Features.Set("has-human", "true", 1.0, "test");
 
         using Mat colorMat = Cv2.ImDecode(jpeg, ImreadModes.Color);
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: true, colorMat: colorMat);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: true, colorMat: colorMat, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
 
         var ex = Assert.Throws<FileNotFoundException>(() => cropper.Transform(lambda));
         Assert.Contains("haarcascade", ex.Message, StringComparison.OrdinalIgnoreCase);
@@ -380,7 +385,7 @@ public class Tx_DetailCropperTests
         lambda.Features.Set("has-human", "true", 1.0, "test");
 
         using Mat colorMat = Cv2.ImDecode(jpeg, ImreadModes.Color);
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: colorMat);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: colorMat, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -399,7 +404,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(250, 700, 200, 300); // Y=[700,1000) touches bottom only
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -420,7 +425,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(0, 250, 300, 200);  // X=[0,300) touches left only
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, left: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -442,7 +447,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(500, 0, 300, 300);  // touches top and right only
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -462,7 +467,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(0, 700, 300, 300);  // touches bottom and left only
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true, left: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -482,7 +487,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(500, 700, 300, 300); // touches bottom and right only
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -503,7 +508,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(800, 0, 200, 100);  // touches top and right only
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         // After crop (Step 1): frame goes from 1000x700 to target=860x700, cropped from the left
@@ -525,7 +530,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(0, 500, 1000, 400); // spans full width, open at the top
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true, left: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -545,7 +550,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(400, 0, 400, 1000); // spans full height, open at the left
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -565,7 +570,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(0, 0, 400, 1000);  // spans full height, open at the right
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true, left: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -587,7 +592,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(100, 0, 400, 1000);
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -611,7 +616,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(0, 100, 1000, 400); // open at the top, ideal side = 1000 (tight)
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true, left: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
@@ -631,7 +636,7 @@ public class Tx_DetailCropperTests
         BoundingBox bbox = MakeBox(0, 300, 1000, 400); // spans full width, touches top+bottom
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null);
+        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
