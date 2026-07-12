@@ -16,7 +16,7 @@
     <Compile Include="FeatureCondition.cs" />
     <Compile Include="..\Analyzers\AnalyzerMath.cs" />
     <Compile Include="..\Analyzers\PhenotypePool.cs" />
-    <Compile Include="..\Analyzers\AnalyzerConfig.cs" />
+    <Compile Include="..\Analyzers\AnalyzerParameters.cs" />
     <Compile Include="..\Analyzers\InteriorAnalyzerConfig.cs" />
     <Compile Include="..\Analyzers\IllustrationAnalyzerConfig.cs" />
     <Compile Include="..\Analyzers\Analyzer_Interior.cs" />

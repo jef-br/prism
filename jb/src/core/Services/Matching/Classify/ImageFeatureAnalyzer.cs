@@ -28,15 +28,15 @@ public static class ImageFeatureAnalyzer
     /// feature values into <paramref name="snapshot"/>.
     /// Features that cannot be determined are recorded as UNKNOWN.
     /// </summary>
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot, AnalyzerConfig config)
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot, AnalyzerParameters parameters)
     {
         AnalyzeGeometry(image, snapshot);
         AnalyzeBackground(image, snapshot, out _, out _, out _);
         WriteEdgeIntersections(SubjectEdgeDetector.Detect(image), snapshot);
         DeriveOcclusionLevel(snapshot);
         AnalyzeSkinTone(image, snapshot);
-        AnalyzeInterior(image, snapshot, config.Interior);
-        AnalyzeIllustration(image, snapshot, config.IsIllustration);
+        AnalyzeInterior(image, snapshot, parameters.Interior);
+        AnalyzeIllustration(image, snapshot, parameters.IsIllustration);
         RecordUnknownFeatures(snapshot);
     }
 
@@ -47,14 +47,14 @@ public static class ImageFeatureAnalyzer
     /// qualifies for every phenotype; each wave eliminates those with strong contra-evidence.
     /// The final assignment overwrites the provisional phenotype set at the Classified stage.
     /// </summary>
-    public static void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet, AnalyzerConfig config, string? yoloModelPath, ProductTypeResolver productTypes)
+    public static void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet, AnalyzerParameters parameters, string? yoloModelPath, ProductTypeResolver productTypes)
     {
         PhenotypePool pool = new(ruleSet);
 
         // Wave 1 — IEM + filename evidence. Phase-1 measurements (background, edge intersections)
         // already sit in the snapshot, so this first elimination is also the big intersection cut.
         Analyzer_ProductType.Analyze(lambda, family, productTypes);
-        Analyzer_FilenameEvidence.Analyze(lambda, productTypes, config.Filename);
+        Analyzer_FilenameEvidence.Analyze(lambda, productTypes, parameters.Filename);
         pool.Eliminate(lambda.Features);
 
         if (imagePath is not null && File.Exists(imagePath))
@@ -64,20 +64,20 @@ public static class ImageFeatureAnalyzer
             // Wave 2 — human/face evidence: YOLO person detections, then face/pose refinement.
             IReadOnlyList<YoloDetection> detections = yoloModelPath is null
                 ? []
-                : YoloDetector.GetShared(yoloModelPath).Detect(image, config.Yolo);
-            Analyzer_HasHuman.Analyze(detections, lambda.Features, config.Yolo);
+                : YoloDetector.GetShared(yoloModelPath).Detect(image, parameters.Yolo);
+            Analyzer_HasHuman.Analyze(detections, lambda.Features, parameters.Yolo);
             Analyzer_FacePose.Analyze(image, detections, lambda.Features);
             Analyzer_Mannequin.Analyze(image, detections, lambda.Features);
             pool.Eliminate(lambda.Features);
 
             // Wave 3 — remaining visual analyzers: geometry from the shared subject box, then
             // colors sampling the same box, exposure, detection-count features, and the stubs.
-            SubjectBox? subject = Analyzer_SubjectGeometry.Analyze(image, detections, lambda.Features, config.SubjectGeometry);
-            IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, lambda.Features, config.Colors);
-            Analyzer_ProductColor.Analyze(buckets, lambda.Features, config.Colors);
-            Analyzer_BackgroundColor.Analyze(image, lambda.Features, config.Colors);
-            Analyzer_Exposure.Analyze(image, lambda.Features, config.Exposure, config.Colors);
-            Analyzer_MultipleProducts.Analyze(detections, lambda.Features, config.MultipleProducts);
+            SubjectBox? subject = Analyzer_SubjectGeometry.Analyze(image, detections, lambda.Features, parameters.SubjectGeometry);
+            IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, lambda.Features, parameters.Colors);
+            Analyzer_ProductColor.Analyze(buckets, lambda.Features, parameters.Colors);
+            Analyzer_BackgroundColor.Analyze(image, lambda.Features, parameters.Colors);
+            Analyzer_Exposure.Analyze(image, lambda.Features, parameters.Exposure, parameters.Colors);
+            Analyzer_MultipleProducts.Analyze(detections, lambda.Features, parameters.MultipleProducts);
             Analyzer_TextPresent.Analyze(image, lambda.Features);
             Analyzer_LogoPresent.Analyze(image, lambda.Features);
             Analyzer_CameraAngle.Analyze(image, lambda.Features);

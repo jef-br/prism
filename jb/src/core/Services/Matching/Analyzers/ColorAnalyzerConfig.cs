@@ -1,10 +1,13 @@
+using Prism.Config;
+
 namespace Prism.Services.Matching;
 
 /// <summary>
 /// Thresholds and the named palette for Analyzer_DominantColors, Analyzer_ProductColor, and
-/// Analyzer_BackgroundColor, bound from the "Colors" section of analyzer_Config.json.
+/// Analyzer_BackgroundColor, bound from the "Colors" section of analyzer_Config.json. No defaults —
+/// every value must be present in the JSON or deserialization fails loud.
 /// </summary>
-public sealed class ColorAnalyzerConfig
+public sealed class ColorAnalyzerConfig : IValidatableConfig
 {
     /// <summary>Number of dominant color buckets reported (user decision: 4).</summary>
     public required int BucketCount { get; init; }
@@ -32,4 +35,15 @@ public sealed class ColorAnalyzerConfig
 
     /// <summary>Named palette (name → #rrggbb); measured colors map to the nearest entry.</summary>
     public required Dictionary<string, string> Palette { get; init; }
+
+    public void Validate()
+    {
+        List<string> problems = [];
+
+        if (BucketCount < 1) problems.Add("Colors.BucketCount must be >= 1");
+        if (BinsPerChannel < 2) problems.Add("Colors.BinsPerChannel must be >= 2");
+        if (Palette.Count == 0) problems.Add("Colors.Palette must define at least one named color");
+
+        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+    }
 }

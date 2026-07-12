@@ -44,10 +44,12 @@ internal sealed record PrismApiConfiguration {
 
         PrismConfiguration core = PrismConfiguration.LoadPrismConfig(configPath);
 
-        // Every transform_Config.json section, loaded through the same ConfigLoader the Transform
-        // stage uses. A missing file, a misspelled key, or an out-of-range value throws here —
-        // same fail-fast contract as PrismConfiguration.LoadPrismConfig above.
+        // Every transform_Config.json and analyzer_Config.json section, loaded through the same
+        // ConfigLoader the Transform and Matching stages use. A missing file, a misspelled key, or an
+        // out-of-range value throws here — same fail-fast contract as PrismConfiguration.LoadPrismConfig
+        // above.
         TransformParameters.FromConfig();
+        AnalyzerParameters.FromConfig();
 
         if (!Directory.Exists(Path.GetTempPath())) {
             throw new PrismConfigurationException(

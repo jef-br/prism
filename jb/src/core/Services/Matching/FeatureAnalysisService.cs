@@ -5,25 +5,20 @@ namespace Prism.Services.Matching;
 
 /// <summary>
 /// In-process FeatureAnalysis implementation. Delegates to <see cref="ImageFeatureAnalyzer"/> — CPU-only,
-/// no model assets. Loads the analyzer chain configuration once (cached process-wide); a missing
-/// analyzer_Config.json fails the job loudly instead of degrading. Internal to Matching.
+/// no model assets. Composes the analyzer chain's parameter bundle once at construction, so a missing
+/// or invalid analyzer_Config.json fails the host at startup instead of degrading. Internal to Matching.
 /// </summary>
 public sealed class FeatureAnalysisService : IFeatureAnalysisService
 {
     private const string YoloModelRelativePath = "Services/Matching/Analyzers/ONNX/yolo26s.onnx";
 
-    private readonly AnalyzerConfig analyzerConfig;
+    private readonly AnalyzerParameters analyzerParameters;
     private readonly ProductTypeResolver productTypes;
     private readonly string? yoloModelPath;
 
     public FeatureAnalysisService()
     {
-        string? cfgPath = PrismConfigLocator.FindFolderLocalConfig("analyzer_Config.json");
-        if (cfgPath is null)
-            throw new PrismConfigurationException(
-                "analyzer_Config.json not found. Ensure analyzer_Config.json is present in the config directory next to Prism_Config.json.");
-
-        analyzerConfig = ConfigCache.GetOrLoad(() => AnalyzerConfig.Load(cfgPath), cfgPath);
+        analyzerParameters = AnalyzerParameters.FromConfig();
 
         string? mapPath = PrismConfigLocator.FindFolderLocalConfig("ProductTypeMap.json");
         if (mapPath is null)
@@ -43,9 +38,9 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService
 
     /// <inheritdoc/>
     public void Analyze(Image<Rgba32> image, ImageFeatureSnapshot target)
-        => ImageFeatureAnalyzer.Analyze(image, target, analyzerConfig);
+        => ImageFeatureAnalyzer.Analyze(image, target, analyzerParameters);
 
     /// <inheritdoc/>
     public void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet)
-        => ImageFeatureAnalyzer.Refine(lambda, family, imagePath, ruleSet, analyzerConfig, yoloModelPath, productTypes);
+        => ImageFeatureAnalyzer.Refine(lambda, family, imagePath, ruleSet, analyzerParameters, yoloModelPath, productTypes);
 }
