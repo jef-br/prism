@@ -117,22 +117,18 @@ Imported → Classified → Matched → Ordered → Renamed → Generated → Tr
 | Generation Maximum Size | `Generation.InputImages.MAXIMUM_SIZE_IN_PIXELS` |
 | Generation Maximum Width | `Generation.InputImages.MAXIMUM_SIZE_IN_PIXELS.width` |
 | Generation Maximum Height | `Generation.InputImages.MAXIMUM_SIZE_IN_PIXELS.height` |
-| Transformation | `Transformation` |
-| Positioning | `Transformation.Positioning` |
-| Center | `Transformation.Positioning.Center` |
-| Margin | `Transformation.Positioning.Margin` |
-| Both Axis | `Transformation.Positioning.BothAxis` |
-| Cropping | `Transformation.Cropping` |
-| Coverage | `Transformation.Cropping.Coverage` |
-| Extension | `Transformation.Cropping.Extension` |
-| One-Sided Extension | `Transformation.Cropping.Extension.OneSided` |
-| Bi-Directional Extension | `Transformation.Cropping.Extension.BiDirectional` |
 | Pipeline | `Pipeline` |
 | Job Retries | `Pipeline.JobRetries` |
 | Jobs | `Jobs` |
 | Job Retention Period | `Jobs.JobRetentionPeriodInHours` |
 ```
 
+**Transform keys are not here.** T-4530 (2026-07-12) moved the crop/positioning budgets out of
+`Prism_Config.json` — the whole `Transformation.*` block is gone. They now live in the `Crop` section
+of `jb/src/core/config/transform_Config.json` (`WhiteSpaceMargin`, `CropCoverage`,
+`CropExtensionOneSided`, `CropExtensionBiDirectional`), alongside one section per Tx_ class. Every
+transform section loads through `ConfigLoader.Section<T>` and is composed into `TransformParameters`;
+`analyzer_Config.json` works the same way via `AnalyzerParameters` (T-4540).
 
 ---
 

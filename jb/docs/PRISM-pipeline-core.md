@@ -94,6 +94,38 @@ C# PODO. Client-facing result from `Prism.Process`.
 - No mutable config reads mid-stage. Each job uses the effective config at acceptance time.
 - Effective config snapshot available for manifest and diagnostics.
 
+### Loading is two phases: load, then bundle (accepted 2026-07-12, T-4500 / T-4530 / T-4540)
+
+A config area is **one JSON file with named top-level sections** (`transform_Config.json`,
+`analyzer_Config.json`). There is no root config class per area — a root class fuses three jobs
+(deserialization target, validator, parameter bundle) and only the third is worth keeping.
+
+**Phase 1 — load.** `ConfigLoader.Section<T>(file, section)` reads and deserializes one section
+independently. Every section class is `required`-props with **no in-code initializers**, and
+self-validates by implementing `IValidatableConfig` — `ConfigLoader` calls `Validate()` immediately
+after deserialization. A missing file, a missing/misspelled key, or an out-of-range value throws,
+naming the file, the section, and the key. Sections are cached per (type, path, section, file
+timestamp).
+
+**Phase 2 — bundle.** The loaded sections are composed into a plain parameter object —
+`TransformParameters`, `AnalyzerParameters` — via its `FromConfig()`. These are **not** config
+loaders and **not** deserialization targets: they own no parsing and no validation, and every section
+stays independently loadable without them (what per-section service hosts need). `FromConfig()` is
+called once at a well-defined point — host startup (`PrismApiConfiguration.Load()`), service
+construction (`FeatureAnalysisService`), or stage entry (`TransformService`) — never per image.
+
+**Consequences, deliberately:**
+- Config is **injected, not fetched**. Consumers receive their parameters; they do not reach for the
+  filesystem. `ConfigLoader.Section<T>` costs two syscalls per call even when cached (path probe +
+  timestamp), so a self-load inside a per-image `Parallel.ForEach` is an anti-pattern — rejected by name.
+- **The one exception:** the fixed-signature webservice entry points `Process(byte[], int, float)` on
+  `Tx_util_BgStretch` and `Tx_LowContrastEnhancement`. They have no parameter to receive config
+  through, so they load their own section in the body of `Process()` itself — never in a shared
+  helper that an in-pipeline path might also call. This is what replaced the old static
+  `Configure()` push-in.
+- Engine assemblies can do this because `ConfigLoader` compiles into `Prism.Core.Contracts`, which
+  they already reference.
+
 ---
 
 ## V1 Job Queue
