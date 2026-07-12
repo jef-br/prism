@@ -99,7 +99,11 @@ The web workbench is a **decorator over `Prism.cs`** — it provides visibility 
 
 ## Configuration-driven design
 
-Every parameter lives in a JSON config file placed next to the code that uses it. No magic values inline. Key config files:
+Every parameter lives in a JSON config file placed next to the code that uses it. No magic values inline.
+
+**No shadow defaults in Transform/Analyzers (core rule, 2026-07-12):** config classes under `Services/Transform/` and `Services/Matching/Analyzers/` carry **no in-code property initializers** — every property is declared `required` and loads from exactly ONE JSON file per area (`transform_Config.json`, `analyzer_Config.json`). A missing or misspelled key fails loud at load time, never silently falls back.
+
+Key config files:
 
 All runtime config JSON is centralized in `jb/src/core/config/` and copied to output via `Prism.Core.csproj` `Content` items:
 
