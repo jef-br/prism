@@ -348,42 +348,6 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 ---
 
 
-### T-4200 · Transform engine config retrofit: extract Tx_* empirical tunables to transform_Config.json
-**Status:** Active | **Profile:** P1-feature-worker
-**Review:** Request Changes (2026-07-12) — missing tests for new Configure()/throw failure mode; Tx_DetailCropper.cs unrelated reformat; rework in progress
-**Found by:** 2026-07-11 config-rule audit (review-gap discussion) — Transform never got the config extraction the Analyzers got.
-
-**Problem:** Every empirical tunable in `Services/Transform/Engine/` is a `private const` and no transform config file exists in `jb/src/core/config/`, violating the config-driven design rule. Known inventory: `Tx_ProblemImageProcessor` (MinInputPx=570, MinOutputPx=800, MaxUpscale=1.42), `Tx_util_BgStretch` (Tier1MaxRatio=1.25, Tier2MaxRatio=1.42, Tier4MinRatio=2.50, FeatherPx=16), `Tx_DetailCropper` (adjacentCropCap=0.14), `Tx_LowContrastEnhancement` (ClipLimit=2.0, TileSize=8), `Tx_util_HeadCutter` (0.75 face-height cut factor); sweep `Tx_CenterAndStretch` and `Tx_CropSquare` for the rest.
-
-**What to do:** Follow the `AnalyzerConfig` pattern for Load/Validate but per the shadow-defaults core rule (2026-07-12): `transform_Config.json` in `jb/src/core/config/` (one section per Tx class) + typed config classes (one type per file) with **no in-code property initializers** — every property `required`, so a missing/misspelled key throws at deserialization. The old constant values live ONLY in the JSON. Fail-loud `Load`, `Validate` with range checks. Wire loading the same way `AnalyzerConfig` is loaded; add the file to API startup validation so a missing/invalid file fails fast.
-
-**Scope boundary:** Purely mechanical extraction — zero behavior change (values move to JSON byte-for-byte). Structural math constants (byte midpoints, loop bounds) stay inline; only empirical tunables move. Do NOT resolve any HeadCutter `jbtodo.md` product decisions. Do NOT touch Analyzers config ([[T-4300]] strips its shadow defaults; T-4000 item 4 covers centralization).
-
-**Acceptance:** `dotnet build jb/src/PRISM.sln` green; Transform suite green (`--filter "FullyQualifiedName~PrismCoreTests.Transform"`); a transform_Config load/validation test exists; API startup validation covers the new file.
-
-**Files:** `jb/src/core/Services/Transform/Engine/Tx_*.cs`, `jb/src/core/config/transform_Config.json` (new), typed config classes (new), config-loading wiring, `jb/src/api/PrismApiConfiguration.cs`, `jb/src/tests/Prism.Core.Tests/` (Transform suite).
-
----
-
-
-### T-4300 · Strip shadow defaults from Analyzer config classes: required keys, analyzer_Config.json is the only source
-**Status:** Review | **Profile:** P1-feature-worker
-**Review:** Approve (2026-07-12) — strip complete (verified by grep), analyzer_Config.json untouched, test values match JSON exactly; awaiting combined final test run before Done
-**Found by:** [[T-4200]] shadow-defaults policy decision (2026-07-12).
-
-**Problem:** The Analyzer config classes carry in-code property initializers ("defaults mirror the previously hard-coded constants"). A missing or misspelled key in `analyzer_Config.json` silently falls back to the in-code value — two sources of truth, and the losing one wins silently. The shadow-defaults core rule (CLAUDE.md, Configuration-driven design) now forbids this for Transform and Analyzers.
-
-**What to do:** In every `jb/src/core/Services/Matching/Analyzers/*Config.cs` (including root `AnalyzerConfig.cs` section properties): remove all property initializers and declare every property `required`, so System.Text.Json throws on a missing key. Verify `analyzer_Config.json` carries every key (it does today — confirm nothing relies on an absent key). Add a fail-loud test to the Analyzers suite: deserializing JSON missing one key throws.
-
-**Scope boundary:** Mechanical strip only. Do NOT centralize the per-analyzer `*Config.cs` files into one file (T-4000 item 4 owns that). Do NOT change any threshold value.
-
-**Acceptance:** `dotnet build jb/src/PRISM.sln` green; Analyzers suite green (`--filter "FullyQualifiedName~PrismCoreTests.Analyzers"`); missing-key test throws; zero property initializers remain in Analyzer config classes (the `config-shadow-default` hook category reports none).
-
-**Files:** `jb/src/core/Services/Matching/Analyzers/*Config.cs`, `jb/src/core/Services/Matching/Analyzers/AnalyzerConfig.cs`, `jb/src/core/config/analyzer_Config.json`, `jb/src/tests/Prism.Core.Tests/` (Analyzers suite).
-
----
-
-
 ## Verification Rules
 
 - After project/solution setup: `dotnet build jb/src/PRISM.sln`, API run smoke, web `npm run typecheck` + `npm run build`.
