@@ -87,7 +87,7 @@ The `salient-bbox` computed by `ImagePreProcessor` is the sole saliency anchor f
 
 ## Background Identification
 
-Emits: dominant background color + background type from `jb/src/core/Images/Transform/BackgroundType.cs`.
+Emits: dominant background color + background type, measured by `ImageFeatureAnalyzer.AnalyzeBackground` and recorded as the `"background-type"` feature-snapshot string (`jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`).
 
 | Type | Meaning |
 |---|---|
