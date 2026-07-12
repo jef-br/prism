@@ -372,6 +372,115 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 ---
 
 
+### T-4500 · Master: generic ConfigLoader + Transform cleanup (waves T-4510…T-4560)
+**Status:** Ready | **Profile:** P4-critical-architecture
+
+Master/index ticket for the approved 2026-07-12 plan (source: user goal.md, now captured here): replace the per-config `Load()` pattern AND `PrismConfigLocator` with one generic section-aware **ConfigLoader**, clean up the Transform folder layout, delete `BackgroundType`, and fold `ImageTransformationResult` into the record lifecycle (`Base → INPUT → LAMBDA → OUTPUT`). Decisions locked with the user:
+1. **Loader home:** contracts + config plumbing share one assembly — ConfigLoader compiles into `Prism.Core.Contracts` via `<Compile Link>` (FamilyIDRecord precedent), file at `jb/src/core/config/ConfigLoader.cs`, namespace `Prism.Config`. This makes the loader engine-reachable (`Prism.Core → Engine → Contracts`), dissolving the `Tx_util_BgStretch`/`Tx_LowContrastEnhancement` static `Configure()` push-in and its temporal-coupling landmine. Assembly rename (→ Prism.Admin/Prism.Shared) folds into [[T-3700]].
+2. **ImageTransformationResult** fields fold into `ImageRecord_OUTPUT`; Transform creates/attaches the OutputRecord, Export enriches it.
+3. **Rollout in parallel waves** — tickets inside a wave touch disjoint files; a wave starts when the previous wave is Done:
+   - Wave 1: [[T-4510]] ConfigLoader core ∥ [[T-4520]] Transform layout + dead code
+   - Wave 2: [[T-4530]] Transform adoption ∥ [[T-4540]] Analyzers adoption
+   - Wave 3: [[T-4550]] OUTPUT record merge
+   - Wave 4: [[T-4560]] rest-of-PRISM migration + retire PrismConfigLocator/ConfigCache
+
+Done when all six child tickets are Done. Master-level gate: full suite green, API startup fail-loud check, and a prism-evidence-report transform run confirming real (non-vacuous) transformed output.
+
+**Files:** index only — see child tickets.
+
+---
+
+
+### T-4510 · ConfigLoader core: section-aware JSON loading in the shared Contracts assembly
+**Status:** Ready | **Profile:** P4-critical-architecture
+**Found by:** [[T-4500]] (Wave 1, parallel with [[T-4520]]).
+
+Create, in `jb/src/core/config/` (one type per file), namespace `Prism.Config`, compiled into `Prism.Core.Contracts.csproj` via `<Compile Link>`:
+- **ConfigLoader.cs** — `T Section<T>(string configFileName, string sectionName)` (parses file once, deserializes ONLY that top-level section; missing section throws naming file + section + the sections that DO exist), `T Root<T>(string configFileName)`, `string RequireFile(string configFileName)` (discovery; throws listing every searched path). Discovery order ports `PrismConfigLocator`: `AppContext.BaseDirectory/config`, `AppContext.BaseDirectory`, cwd variants, source-tree walk-up to `jb/src/core/config/`. Serializer: `PropertyNameCaseInsensitive`, `ReadCommentHandling.Skip`, `required`-member enforcement (no-shadow-defaults core rule). Internal cache keyed `(type, path, section, LastWriteTimeUtc)` — absorbs `ConfigCache` semantics.
+- **IValidatableConfig.cs** — `void Validate();` called by the loader after deserialize when implemented.
+- **ModelAssetLocator.cs** — ports `FindModelAsset` (beside-config → `PRISM_ONNX_MODEL_DIR` → source-tree walk-up).
+
+**Scope boundary:** NO adoption — no existing call site changes in this ticket. Replace the empty untracked `ConfigLoader.cs` placeholder with the real implementation.
+
+**Acceptance:** new `ConfigLoaderTests` suite (`PrismCoreTests.Services`) covering: missing file lists searched paths; missing section names existing sections; misspelled key throws; comments + case-insensitivity accepted; unchanged file returns cached instance; touched timestamp re-parses; source-tree walk-up works; `IValidatableConfig.Validate` invoked and failures propagate. Build + full suite green.
+
+**Files:** `jb/src/core/config/ConfigLoader.cs`, `jb/src/core/config/IValidatableConfig.cs`, `jb/src/core/config/ModelAssetLocator.cs`, `jb/src/core/Models/Prism.Core.Contracts.csproj`, `jb/src/tests/Prism.Core.Tests/Services/ConfigLoaderTests.cs`.
+
+---
+
+
+### T-4520 · Transform layout cleanup + delete dead BackgroundType
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-4500]] (Wave 1, parallel with [[T-4510]]).
+
+- Move `Engine/TransformationStatus.cs` → `Transform/Enum/TransformationStatus.cs` (fix its `<Compile Link>` in `Prism.Core.Contracts.csproj`).
+- Move `Engine/processingtools/Tx_LowContrastEnhancement.cs` → `Engine/Utils/` (fix `Prism.Core.Images.Transform.csproj`; delete empty `processingtools/`).
+- `Tx_CenterAndStretch`/`Tx_CropSquare`/`Tx_DetailCropper`/`Tx_ProblemImageProcessor`/`Tx_util_BgStretch`/`Tx_util_HeadCutter` stay in `Engine/` (key human-developer files).
+- Delete `Engine/BackgroundType.cs` + its Contracts csproj link. Verified dead: only references are the enum, the csproj link, and a test *method name*; runtime background typing already flows as the `"background-type"` feature-snapshot string (`ImageFeatureAnalyzer.AnalyzeBackground` → `Analyzer_Exposure`). Pure deletion, no rewiring needed.
+- Delete `Services/Transform/DUMMY FOLDER/` — its goal.md content is captured in [[T-4500]].
+
+**Acceptance:** build + full suite green; `git grep BackgroundType` returns only the unrelated test method name (rename it while there); no orphan csproj links.
+
+**Files:** `jb/src/core/Services/Transform/Engine/TransformationStatus.cs`, `jb/src/core/Services/Transform/Engine/processingtools/Tx_LowContrastEnhancement.cs`, `jb/src/core/Services/Transform/Engine/BackgroundType.cs`, `jb/src/core/Models/Prism.Core.Contracts.csproj`, `jb/src/core/Services/Transform/Engine/Prism.Core.Images.Transform.csproj`.
+
+---
+
+
+### T-4530 · Transform adopts ConfigLoader; delete Configure() push-in; migrate CropTransformSettings
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** [[T-4510]] (Wave 2, parallel with [[T-4540]]).
+
+- `TransformService` drops `PrismConfigLocator`/`ConfigCache`/`TransformConfig.Load`; consumers get sections via `ConfigLoader.Section<T>("transform_Config.json", "…")`.
+- `Tx_util_BgStretch` / `Tx_LowContrastEnhancement` self-load their section lazily inside the engine (now reachable) → delete `Configure()`, `ResetConfigureForTests()`, `TxConfigureGateTests` (current form), `[Collection("TxStaticConfig")]` on `PipelineIntegrationTests`, and the temporal-coupling landmine note in `Engine/jbtodo.md`.
+- **CropTransformSettings migration:** its 4 values move from `Prism_Config.json` (`Transformation.Positioning/Cropping`) into a new `"Crop"` section of `transform_Config.json`; `CropTransformSettings` becomes a `required`-props section class implementing `IValidatableConfig` (ranges from `PrismConfiguration.cs:265-268`); remove the 4 properties + parsing + asserts from `PrismConfiguration.cs` and the keys from `Prism_Config.json`.
+- Root `TransformConfig.cs` dissolves (sections load independently; its per-section `Validate` checks move into each section class); `PrismApiConfiguration.Load()` validates each transform section explicitly (fail-fast preserved).
+
+**Acceptance:** build + full suite green (no `[Collection]` serialization needed); startup fail-loud check — misspell a key in `transform_Config.json`, `PrismApiConfiguration.Load()` throws naming it, restore; prism-evidence-report transform run shows real transformed output, not vacuous KOs.
+
+**Files:** `jb/src/core/Services/Transform/TransformService.cs`, `jb/src/core/Services/Transform/ImageTransformer.cs`, `jb/src/core/Services/Transform/Engine/*.cs`, `jb/src/core/config/transform_Config.json`, `jb/src/core/config/Prism_Config.json`, `jb/src/core/config/PrismConfiguration.cs`, `jb/src/api/PrismApiConfiguration.cs`, `jb/src/tests/Prism.Core.Tests/Transform/*`.
+
+---
+
+
+### T-4540 · Analyzers adopt ConfigLoader; root AnalyzerConfig dissolves
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** [[T-4510]] (Wave 2, parallel with [[T-4530]]).
+
+`FeatureAnalysisService` loads `analyzer_Config.json` sections via `ConfigLoader.Section<T>` instead of `AnalyzerConfig.Load` + `PrismConfigLocator`/`ConfigCache`. Per-section validation moves from `AnalyzerConfig.Validate` into the 9 section `*Config.cs` classes as `IValidatableConfig`; root `AnalyzerConfig.cs` dissolves; `PrismApiConfiguration.Load()` startup validation updated likewise. `analyzer_Config.json` content unchanged.
+
+**Acceptance:** build + full suite green (incl. `AnalyzerConfigTests` reworked to per-section loading); startup fail-loud check on a misspelled analyzer key.
+
+**Files:** `jb/src/core/Services/Matching/FeatureAnalysisService.cs`, `jb/src/core/Services/Matching/Analyzers/*Config.cs`, `jb/src/core/Services/Matching/Analyzers/AnalyzerConfig.cs`, `jb/src/api/PrismApiConfiguration.cs`, `jb/src/tests/Prism.Core.Tests/Analyzers/*`.
+
+---
+
+
+### T-4550 · Fold ImageTransformationResult into ImageRecord_OUTPUT (Base→INPUT→LAMBDA→OUTPUT)
+**Status:** Blocked | **Profile:** P4-critical-architecture
+**Blocked-by:** [[T-4530]] (Wave 3 — touches TransformService).
+
+Per the record lifecycle (an image starts as Base, enters as INPUT, moves through PRISM as LAMBDA, leaves as OUTPUT): extend `ImageRecord_OUTPUT` with the transform-outcome fields (Status, TransformerType, In/Out dimensions, CropRectangle, ResizeMode, ScaleFactor, BackgroundFillMethod, Warnings, FailureReason, SafeSummaryText). Transform stage constructs/attaches `lambda.OutputRecord` with those fields; `Exporter.BuildOutputRecords` enriches the existing record (FinalFileName, ArtifactPath, ByteLength, ExportStatus) instead of creating it. Delete `Engine/ImageTransformationResult.cs` (+ Contracts csproj link) and `ImageRecord_LAMBDA.TransformationResult`; update `ManifestImageRow`, `Exporter`, `Tx_*` return paths, and Transform/Export tests.
+
+**Acceptance:** build + full suite green; prism-evidence-report run confirms manifest rows carry the OUTPUT-record transform fields end-to-end.
+
+**Files:** `jb/src/core/Models/ImageRecord_OUTPUT.cs`, `jb/src/core/Models/ImageRecord_LAMBDA.cs`, `jb/src/core/Services/Transform/Engine/ImageTransformationResult.cs`, `jb/src/core/Services/Transform/TransformService.cs`, `jb/src/core/lib/Export/Exporter.cs`, `jb/src/core/lib/Export/ManifestImageRow.cs`, `jb/src/core/Models/Prism.Core.Contracts.csproj`, `jb/src/tests/Prism.Core.Tests/Transform/*`, `jb/src/tests/Prism.Core.Tests/Export/*`.
+
+---
+
+
+### T-4560 · Migrate remaining PRISM to ConfigLoader; retire PrismConfigLocator + ConfigCache
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** [[T-4530]], [[T-4540]], [[T-4550]] (Wave 4).
+
+Migrate every remaining `PrismConfigLocator`/`ConfigCache` call site to `ConfigLoader`/`ModelAssetLocator`: `ImageMatcher`, `ImageOrderer`, `MatchingService`, `ClassificationService`, `FetchDispatcher`, `UpscaleService`, `PrismService`, `ImageGenerator`, ServiceHost `Program.cs`, `PrismApiConfiguration`, `ImporterFixture`, `YoloDetectorTests`, `ImportSmokeTest`. `Prism_Config.json` keeps loading through `PrismConfiguration` but via `ConfigLoader.Root<T>`/`RequireFile` — the 25K-line class's internal restructure is explicitly OUT of scope. Then delete `PrismConfigLocator.cs` and `ConfigCache.cs`.
+
+**Acceptance:** `git grep -l "PrismConfigLocator\|ConfigCache"` returns zero source hits; build + full suite green; `pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` unchanged vs pre-change manifest.
+
+**Files:** `jb/src/core/config/PrismConfigLocator.cs`, `jb/src/core/config/ConfigCache.cs`, call sites listed above.
+
+---
+
+
 ## Verification Rules
 
 - After project/solution setup: `dotnet build jb/src/PRISM.sln`, API run smoke, web `npm run typecheck` + `npm run build`.
