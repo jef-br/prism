@@ -1,4 +1,5 @@
 using OpenCvSharp;
+using Prism.Config;
 
 namespace Prism.Services.Transform;
 
@@ -8,24 +9,11 @@ namespace Prism.Services.Transform;
 /// This is a pre-processing step for bbox accuracy — not a visual export enhancement.
 /// <para>
 /// CLAHE is applied to the L-channel of the LAB colour space so that colour information
-/// is preserved while only luminance contrast is sharpened. Clip limit and tile size are set
-/// once via <see cref="Configure"/> (transform_Config.json, "LowContrastEnhancement" section) —
-/// call it before <see cref="Process"/> or <see cref="Enhance"/>.
+/// is preserved while only luminance contrast is sharpened. Clip limit and tile size come from the
+/// "LowContrastEnhancement" section of transform_Config.json, loaded on use.
 /// </para>
 /// </summary>
 public static class Tx_LowContrastEnhancement {
-
-    private static LowContrastEnhancementConfig? _cfg;
-
-    /// <summary>Sets the CLAHE parameters used by <see cref="Process"/> and <see cref="Enhance"/>.</summary>
-    public static void Configure(LowContrastEnhancementConfig cfg) {
-        _cfg = cfg;
-    }
-
-    // Test hook: clears the config so the Configure-gate tests are order-independent.
-    internal static void ResetConfigureForTests() {
-        _cfg = null;
-    }
 
     /// <summary>
     /// Webservice form: decodes <paramref name="arr"/> (JPEG, BGR), applies CLAHE,
@@ -62,8 +50,7 @@ public static class Tx_LowContrastEnhancement {
 
     // Converts BGR → LAB, applies CLAHE to the L-channel, merges, converts back to BGR.
     private static Mat ApplyClahe(Mat bgrSrc) {
-        LowContrastEnhancementConfig cfg = _cfg
-            ?? throw new InvalidOperationException("Tx_LowContrastEnhancement.Configure must be called before use.");
+        LowContrastEnhancementConfig cfg = ConfigLoader.Section<LowContrastEnhancementConfig>(TransformParameters.ConfigFile, "LowContrastEnhancement");
 
         // Convert to LAB so CLAHE operates on luminance only; colour channels are unchanged.
         using Mat labSrc = new Mat();

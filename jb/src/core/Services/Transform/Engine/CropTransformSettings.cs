@@ -1,15 +1,30 @@
+using Prism.Config;
+
 namespace Prism.Services.Transform;
 
 /// <summary>
-/// Crop-sizing and positioning values consumed by <see cref="ImageTransformer"/> when selecting
-/// and constructing a transform strategy. Mirrors fields already loaded onto <c>PrismConfiguration</c>
-/// (<c>Transformation.Positioning.Margin</c> and <c>Transformation.Cropping.*</c>), passed as a small
-/// typed value here rather than the whole config object because <c>PrismConfiguration</c> lives in
-/// <c>Prism.Core</c>, a project that itself depends on <c>Prism.Core.Images.Transform</c> — the
-/// dependency cannot run the other way without a circular project reference.
+/// Crop-sizing and positioning budgets consumed by <see cref="ImageTransformer"/> when constructing a
+/// transform strategy, bound from the "Crop" section of transform_Config.json. No defaults — every
+/// value must be present in the JSON or deserialization fails loud.
 /// </summary>
-public readonly record struct CropTransformSettings(
-    double WhiteSpaceMargin,
-    double CropCoverage,
-    double CropExtensionOneSided,
-    double CropExtensionBiDirectional);
+public sealed class CropTransformSettings : IValidatableConfig
+{
+    public required double WhiteSpaceMargin { get; init; }
+    public required double CropCoverage { get; init; }
+    public required double CropExtensionOneSided { get; init; }
+    public required double CropExtensionBiDirectional { get; init; }
+
+    public void Validate()
+    {
+        List<string> problems = [];
+
+        // Margin's upper bound is 0.49, not 1.0: Tx_CenterAndStretch divides by (1 - 2*margin) to size
+        // the resized product, which collapses to zero (margin=0.5) or goes negative (margin>0.5).
+        if (WhiteSpaceMargin is < 0.0 or > 0.49) problems.Add("Crop.WhiteSpaceMargin must be in [0,0.49]");
+        if (CropCoverage is < 0.0 or > 1.0) problems.Add("Crop.CropCoverage must be in [0,1]");
+        if (CropExtensionOneSided is < 0.0 or > 1.0) problems.Add("Crop.CropExtensionOneSided must be in [0,1]");
+        if (CropExtensionBiDirectional is < 0.0 or > 1.0) problems.Add("Crop.CropExtensionBiDirectional must be in [0,1]");
+
+        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+    }
+}

@@ -66,10 +66,6 @@ public sealed class PrismConfiguration {
     public double MaxDownScaleFactor { get; private set; }
     public int MinGeneratedImgWidth { get; private set; }
     public int MinGeneratedImgWidthHeight { get; private set; }
-    public double WhiteSpaceMargin { get; private set; }
-    public double CropCoverage { get; private set; }
-    public double CropExtensionOneSided { get; private set; }
-    public double CropExtensionBiDirectional { get; private set; }
 
     // --- Pipeline / job settings 
 
@@ -195,11 +191,6 @@ public sealed class PrismConfiguration {
             MinGeneratedImgWidth = RequireInt32(root, cfgPath, "Generation", "InputImages", "MINIMUM_SIZE_IN_PIXELS", "width"),
             MinGeneratedImgWidthHeight = RequireInt32(root, cfgPath, "Generation", "InputImages", "MINIMUM_SIZE_IN_PIXELS", "height"),
 
-            WhiteSpaceMargin = RequireDouble(root, cfgPath, "Transformation", "Positioning", "Margin"),
-            CropCoverage = RequireDouble(root, cfgPath, "Transformation", "Cropping", "Coverage"),
-            CropExtensionOneSided = RequireDouble(root, cfgPath, "Transformation", "Cropping", "Extension", "OneSided"),
-            CropExtensionBiDirectional = RequireDouble(root, cfgPath, "Transformation", "Cropping", "Extension", "BiDirectional"),
-
             JobRetries = RequireInt32(root, cfgPath, "Pipeline", "JobRetries"),
             JobRetentionPeriodInHours = RequireInt32(root, cfgPath, "Jobs", "JobRetentionPeriodInHours"),
             MaxQueuedJobs = RequireInt32(root, cfgPath, "Jobs", "MaxQueuedJobs"),
@@ -260,12 +251,6 @@ public sealed class PrismConfiguration {
         AssertPositive(MaxDownScaleFactor, cfgPath, "Output.Images.Resize.MAXIMUM_DownScale");
         AssertPositive(MinGeneratedImgWidth, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.width");
         AssertPositive(MinGeneratedImgWidthHeight, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.height");
-        // Upper bound is 0.49, not 1.0: Tx_CenterAndStretch divides by (1 - 2*margin) to size the
-        // resized product, which collapses to zero (margin=0.5) or goes negative (margin>0.5).
-        AssertInRange(WhiteSpaceMargin, 0.0, 0.49, cfgPath, "Transformation.Positioning.Margin");
-        AssertInRange(CropCoverage, 0.0, 1.0, cfgPath, "Transformation.Cropping.Coverage");
-        AssertInRange(CropExtensionOneSided, 0.0, 1.0, cfgPath, "Transformation.Cropping.Extension.OneSided");
-        AssertInRange(CropExtensionBiDirectional, 0.0, 1.0, cfgPath, "Transformation.Cropping.Extension.BiDirectional");
 
         if (JobRetries < 0) {throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Pipeline.JobRetries must be >= 0 but was {JobRetries}.");}
         if (JobRetentionPeriodInHours <= 0) throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Jobs.JobRetentionPeriodInHours must be > 0 but was {JobRetentionPeriodInHours}.");

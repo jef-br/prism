@@ -1,5 +1,12 @@
 {
-    "_comment": "Transform engine empirical tunables. One section per Tx_ class in jb/src/core/Services/Transform/Engine/. Every key here is required — a missing or misspelled key fails the job loudly at startup rather than falling back silently. Crop margin/coverage/extension budgets stay in Prism_Config.json (Transformation.*), threaded in via CropTransformSettings — not duplicated here.",
+    "_comment": "Transform engine empirical tunables. One section per Tx_ class in jb/src/core/Services/Transform/Engine/, plus the Crop budgets shared by the crop/stretch strategies. Every key here is required — a missing or misspelled key fails the job loudly at startup rather than falling back silently. Sections are loaded independently through ConfigLoader.Section<T>; there is no root config object.",
+
+    "Crop": {
+        "WhiteSpaceMargin": 0.042,
+        "CropCoverage": 0.8,
+        "CropExtensionOneSided": 0.14,
+        "CropExtensionBiDirectional": 0.25
+    },
 
     "ProblemImageProcessor": {
         "MinInputPx": 570,

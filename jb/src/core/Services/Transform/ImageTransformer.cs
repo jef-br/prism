@@ -34,19 +34,17 @@ public static class ImageTransformer {
     /// Selects and applies the transform strategy for <paramref name="lambda"/>, records the
     /// outcome in <see cref="ImageRecord_LAMBDA.TransformationResult"/>, and returns the record.
     /// </summary>
-    public static ImageRecord_LAMBDA TransformImage(
-        ImageRecord_LAMBDA lambda, Mat? colorMat, CropTransformSettings settings, bool headcut, TransformConfig config ) {
-        IImageTransformation transformer = SelectTransformer(lambda, colorMat, settings, headcut, config);
+    public static ImageRecord_LAMBDA TransformImage( ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters ) {
+        IImageTransformation transformer = SelectTransformer(lambda, colorMat, headcut, parameters);
         return transformer.Transform(lambda);
     }
 
     //  Strategy selection
 
-    private static IImageTransformation SelectTransformer(
-        ImageRecord_LAMBDA lambda, Mat? colorMat, CropTransformSettings settings, bool headcut, TransformConfig config ) {
+    private static IImageTransformation SelectTransformer( ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters ) {
         // Step 1 — prerequisites missing: route to conservative processor.
         // The phenotype-null guard is suppressed while phenotypes are bypassed.
-        if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null)) return new Tx_ProblemImageProcessor(config.ProblemImageProcessor);
+        if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null)) return new Tx_ProblemImageProcessor(parameters.ProblemImageProcessor);
 
         // Step 2 — object touches at least one image edge.
         if (hasEdgeIntersect(lambda.Features)) {
@@ -54,13 +52,14 @@ public static class ImageTransformer {
             if (BypassPhenotypes) return new Tx_CropSquare();
 
             bool isCloseupPhenotype = lambda.SelectedPhenotype is "closeup-image" or "model-detail-closeup";
-            return isCloseupPhenotype && !IsDetailCropperDetSlotExcluded(lambda)
-                ? new Tx_DetailCropper(settings.CropCoverage, settings.CropExtensionOneSided, settings.CropExtensionBiDirectional, headcut, colorMat, config.DetailCropper, config.BgStretch, config.HeadCutter)
-                : new Tx_CropSquare();
+            if (!isCloseupPhenotype || IsDetailCropperDetSlotExcluded(lambda)) return new Tx_CropSquare();
+
+            CropTransformSettings crop = parameters.Crop;
+            return new Tx_DetailCropper(crop.CropCoverage, crop.CropExtensionOneSided, crop.CropExtensionBiDirectional, headcut, colorMat, parameters.DetailCropper, parameters.BgStretch, parameters.HeadCutter);
         }
 
         // Step 3 — object fully in frame: center on canvas and fill.
-        return new Tx_CenterAndStretch(settings.WhiteSpaceMargin, headcut, colorMat, config.BgStretch, config.HeadCutter);
+        return new Tx_CenterAndStretch(parameters.Crop.WhiteSpaceMargin, headcut, colorMat, parameters.BgStretch, parameters.HeadCutter);
     }
 
     /// <summary>

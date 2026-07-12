@@ -42,24 +42,10 @@ public sealed class TransformService : ITransformService
 
         PrismConfiguration prismConfig = ConfigCache.GetOrLoad(
             () => PrismConfiguration.LoadPrismConfig(prismConfigPath), prismConfigPath);
-        CropTransformSettings cropSettings = new(
-            prismConfig.WhiteSpaceMargin,
-            prismConfig.CropCoverage,
-            prismConfig.CropExtensionOneSided,
-            prismConfig.CropExtensionBiDirectional);
 
-        string? transformConfigPath = PrismConfigLocator.FindFolderLocalConfig("transform_Config.json");
-        if (transformConfigPath is null)
-            throw new PrismConfigurationException(
-                "transform_Config.json not found. Ensure transform_Config.json is present in the config directory next to Prism_Config.json.");
-
-        TransformConfig transformConfig = ConfigCache.GetOrLoad(
-            () => TransformConfig.Load(transformConfigPath), transformConfigPath);
-
-        // Static utility Tx_ classes have a fixed-signature webservice Process() method with no
-        // room for a config parameter — they read the config set here once per stage run instead.
-        Tx_util_BgStretch.Configure(transformConfig.BgStretch);
-        Tx_LowContrastEnhancement.Configure(transformConfig.LowContrastEnhancement);
+        // Load + validate every transform_Config.json section once per stage run, then hand the bundle
+        // to each per-image transform — no config lookup inside the parallel loop below.
+        TransformParameters parameters = TransformParameters.FromConfig();
 
         Dictionary<string, ImageRecord_INPUT> inputByName = matched.Ingest.NormalizedImages
             .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
@@ -82,7 +68,7 @@ public sealed class TransformService : ITransformService
 
                 using (colorMat)
                 {
-                    ImageTransformer.TransformImage(lambda, colorMat, cropSettings, headcut, transformConfig);
+                    ImageTransformer.TransformImage(lambda, colorMat, headcut, parameters);
                 }
 
                 Interlocked.Increment(ref okTransformed);

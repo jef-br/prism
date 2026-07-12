@@ -1,4 +1,5 @@
 using OpenCvSharp;
+using Prism.Config;
 
 namespace Prism.Services.Transform;
 
@@ -7,31 +8,17 @@ namespace Prism.Services.Transform;
 /// Called as a sub-step from <see cref="Tx_CenterAndStretch"/> and <see cref="Tx_DetailCropper"/>,
 /// which pass their own constructor-resolved <see cref="BgStretchConfig"/> into <see cref="Stretch"/>.
 /// The fixed-signature <see cref="Process"/> webservice entry point has no room for a config
-/// parameter and instead reads the config set once via <see cref="Configure"/> — call it before
-/// any <see cref="Process"/> use. All work is in-memory — no disk writes.
+/// parameter and loads the "BgStretch" section itself. All work is in-memory — no disk writes.
 /// </summary>
 public static class Tx_util_BgStretch {
-
-    private static BgStretchConfig? _webserviceCfg;
-
-    /// <summary>Sets the config used by the fixed-signature <see cref="Process"/> webservice path.</summary>
-    public static void Configure( BgStretchConfig cfg ) {
-        _webserviceCfg = cfg;
-    }
-
-    // Test hook: clears the webservice config so the Configure-gate tests are order-independent.
-    internal static void ResetConfigureForTests() {
-        _webserviceCfg = null;
-    }
 
     /// <summary>
     /// Webservice form: uniformly expands the source JPEG by <paramref name="upscale_factor"/>
     /// in both dimensions, centering the source, and fills the new border.
-    /// Extension ratio = upscale_factor². Requires <see cref="Configure"/> to have been called.
+    /// Extension ratio = upscale_factor².
     /// </summary>
     public static byte[] Process( byte[] arr, int stride, float upscale_factor ) {
-        BgStretchConfig cfg = _webserviceCfg
-            ?? throw new InvalidOperationException("Tx_util_BgStretch.Configure must be called before Process().");
+        BgStretchConfig cfg = ConfigLoader.Section<BgStretchConfig>(TransformParameters.ConfigFile, "BgStretch");
 
         using Mat src = Cv2.ImDecode(arr, ImreadModes.Color);
         if (src.Empty()) return arr;

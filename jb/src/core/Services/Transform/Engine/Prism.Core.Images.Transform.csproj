@@ -19,7 +19,7 @@
     <Compile Include="Tx_util_BgStretch.cs" />
     <Compile Include="Tx_util_HeadCutter.cs" />
     <Compile Include="Utils\Tx_LowContrastEnhancement.cs" />
-    <Compile Include="TransformConfig.cs" />
+    <Compile Include="TransformParameters.cs" />
     <Compile Include="ProblemImageProcessorConfig.cs" />
     <Compile Include="BgStretchConfig.cs" />
     <Compile Include="DetailCropperConfig.cs" />

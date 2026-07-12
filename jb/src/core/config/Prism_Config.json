@@ -130,18 +130,6 @@
             }
         }
     },
-    "Transformation": {
-        "Positioning": {
-            "Margin": 0.042
-        },
-        "Cropping": {
-            "Coverage": 0.8,
-            "Extension": {
-                "OneSided": 0.14,
-                "BiDirectional": 0.25
-            }
-        }
-    },
     "Models": {
         "Clip": {
             "Dir": "Services/Matching/Classify/ONNX/clip-vit-b32-uint8",
