@@ -284,25 +284,6 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 ---
 
 
-### T-3900 · Order: `DetermineTieBreaker` rescan can mislabel the deciding tiebreaker
-**Status:** Ready | **Profile:** P1-feature-worker
-**Tracks:** `jb/src/core/Services/Matching/Order/jbtodo.md` (triaged 2026-07-11).
-
-**Problem:** After a winning image is assigned a det slot, `ImageOrderer.DetermineTieBreaker` rescans the *entire* candidate list for the family to find competitors (same slot, same phenotype rank) and reports the first tiebreaker level where *any* competitor differs from the winner. With 3+ competitors losing for different reasons, this can name the wrong tiebreaker as the deciding one — e.g. it reports "ngp-confidence" because a clearly-losing competitor differs on confidence, when the real closest competitor actually lost on the filename-hint tiebreaker instead. Does not affect the actual `DetOrder` assigned — only the `OrderEvidence.TieBreakerWon` diagnostic text, so this is a manifest-readability/debugging issue, not an output-correctness bug.
-
-**What to do:**
-1. The candidate list is already sorted by slot then phenotype rank (`CompareCandidates`), so same-slot+phenotype-rank candidates sit in one contiguous block. Group the sorted list into these blocks once per family instead of rescanning the full family list per winner.
-2. Compare the winner only against its immediate runner-up within that block (the next candidate not already claimed elsewhere), not against every competitor — fixes the mislabeling and removes the full-list rescan as a side effect.
-
-**Acceptance:**
-- `OrderEvidence.TieBreakerWon` names the tiebreaker that actually decided against the true closest competitor, verified against the counter-example in the source `jbtodo.md` (winner NgpConfidence=5/HintScore=1 vs. a tied-confidence/lower-hint true competitor plus an unrelated lower-confidence non-competitor).
-- `DetOrder` output unchanged (this is a diagnostic-only fix) — confirm via existing `ImageOrdererTests.cs`.
-
-**Files:** `jb/src/core/Services/Matching/ImageOrderer.cs`, `jb/src/core/Services/Matching/Order/jbtodo.md`, `jb/src/tests/Prism.Core.Tests/Order/ImageOrdererTests.cs`.
-
----
-
-
 ### T-4000 · Per-feature Analyzer TOC: calibration + stub implementation backlog
 **Status:** Ready | **Profile:** P0-orchestrator
 **Tracks:** `jb/src/core/Services/Matching/Analyzers/jbtodo.md` (triaged 2026-07-11) — a TOC of ~27 items across 3 sections, none previously represented on the ticket board.
