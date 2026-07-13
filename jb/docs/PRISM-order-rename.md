@@ -68,9 +68,16 @@ IF from CLIP and analyzers derive INGPs:
 When multiple images in one Family compete for same DO position and INGP priority rank, break ties:
 1. Selected INGP confidence (evidence-count-based for tie-breaks; individual ML confidence not yet used as weighting).
 2. Compatible filename ordering hint.
-3. Stable import/source index (first image opened = source index assigned during import).
+3. Filename ordinal — a total order that does not depend on list position, so upstream reordering cannot change the outcome (T-2820).
+4. Stable import/source index (first image opened = source index assigned during import). Reached only when two images carry the same filename — a ZIP holding `folderA/img.jpg` and `folderB/img.jpg` keeps only the leaf name.
 
-DO assignment evidence must record which tie-breaker won.
+**Which tie-breaker the evidence names.** DO assignment evidence records the winning tie-breaker in `OrderEvidence.TieBreakerWon` (`ngp-confidence` | `filename-hint` | `filename-ordinal` | `source-index` | `none`). The winner is compared **only against its closest rival** — the next still-unassigned candidate at the same DO position and INGP rank — never against every competitor in the family:
+
+- Comparing against *any* competitor names the wrong level. A far-behind image that lost on INGP confidence would make the evidence report `ngp-confidence` even when the winner actually beat its real rival on the filename hint, hiding the signal that decided the close call.
+- An image that already holds an **earlier** DO position is not a rival for a later one — it left the race when it was assigned. A position nothing else was still contesting reports `none`, as does one whose only remaining contenders sit at a worse INGP rank — rank is part of the ranking, not a tie-breaker, so no tie-breaker fired.
+- The comparison levels mirror the candidate sort exactly, so the recorded tie-breaker can never contradict the order the sort produced.
+
+Overflow images (no qualifying INGP) never run this chain; they report how their position was derived instead: `overflow-filename-hint` or `overflow-natural-order`.
 
 ---
 

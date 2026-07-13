@@ -18,7 +18,8 @@ public sealed record OrderEvidence
     /// <summary>Number of non-UNKNOWN features in the image's feature snapshot. Used for NGP confidence tie-breaking.</summary>
     public int NgpConfidenceCount { get; init; }
 
-    /// <summary>Which tie-breaker determined the winner: "ngp-confidence", "filename-hint", "source-index", or "none".</summary>
+    /// <summary>Tie-breaker that beat the winner's closest rival: "ngp-confidence", "filename-hint", "filename-ordinal",
+    /// "source-index", or "none". Overflow images instead report "overflow-filename-hint" or "overflow-natural-order".</summary>
     public string TieBreakerWon { get; init; } = "none";
 
     /// <summary>True when the image had no qualifying phenotype for any configured slot and was assigned as overflow.</summary>

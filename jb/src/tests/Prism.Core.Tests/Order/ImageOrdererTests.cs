@@ -165,10 +165,10 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void Run_TieBreakerBySourceIndex_LowerIndexWinsOnAllTie()
-    {
-        // Two front-packshot images, same NGP confidence, no filename hint.
-        // Lower source index (index 0) should win det0; the other becomes overflow.
+    public void Run_TieBreakerByFilenameOrdinal_LowerOrdinalWinsWhenConfidenceAndHintTie() {
+        // Two front-packshot images, same NGP confidence, neither filename-hinted: the sort settles it on
+        // filename ordinal ("img1" before "img2") and never reaches the source index, so the evidence must
+        // name the level that actually decided rather than the one below it.
         ImageRecord_LAMBDA imageA = MakeLambda("img1.jpg", "front-packshot", "FAM001");
         SetFeatureCount(imageA, 2);
 
@@ -179,12 +179,111 @@ public class ImageOrdererTests
 
         ImageOrderer.Run(records, [MakeFamily("FAM001")]);
 
-        Assert.Equal(0, records[0].DetOrder);
-        Assert.False(records[0].OrderEvidence!.IsOverflow);
-        Assert.Equal("source-index", records[0].OrderEvidence!.TieBreakerWon);
+        Assert.Equal(0, imageA.DetOrder);
+        Assert.False(imageA.OrderEvidence!.IsOverflow);
+        Assert.Equal("filename-ordinal", imageA.OrderEvidence!.TieBreakerWon);
 
-        Assert.True(records[1].OrderEvidence!.IsOverflow,
+        Assert.True(imageB.OrderEvidence!.IsOverflow,
             "Losing front-packshot image should be overflow since front-packshot does not qualify for det1.");
+    }
+
+    [Fact]
+    public void Run_TieBreakerBySourceIndex_IdenticalFilenamesFallBackToImportOrder() {
+        // Two images can genuinely share a filename — a ZIP holding folderA/img.jpg and folderB/img.jpg keeps
+        // only the leaf name — and that is the one case where the sort exhausts every signal and lands on
+        // import order.
+        ImageRecord_LAMBDA first = MakeLambda("img.jpg", "front-packshot", "FAM001");
+        SetFeatureCount(first, 2);
+
+        ImageRecord_LAMBDA second = MakeLambda("img.jpg", "front-packshot", "FAM001");
+        SetFeatureCount(second, 2);
+
+        List<ImageRecord_LAMBDA> records = [first, second];
+
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
+
+        Assert.Equal(0, first.DetOrder);
+        Assert.False(first.OrderEvidence!.IsOverflow);
+        Assert.Equal("source-index", first.OrderEvidence!.TieBreakerWon);
+
+        Assert.True(second.OrderEvidence!.IsOverflow);
+    }
+
+    [Fact]
+    public void Run_TieBreaker_NamesTheLevelThatBeatTheClosestRival_NotAFarBehindCompetitor() {
+        // T-3900 counter-example. Three front-packshot images compete for det0:
+        //   winner    — 5 known features, filename hint "front"
+        //   closest   — 5 known features, no hint → the real rival; only the hint separates it from winner
+        //   farBehind — 2 known features, no hint → lost on confidence, never threatened anyone
+        // Reporting "ngp-confidence" (because farBehind's confidence differs from the winner's) would name a
+        // level the close race never reached — the filename hint is what actually won det0.
+        ImageRecord_LAMBDA winner = MakeLambda("product_front.jpg", "front-packshot", "FAM001");
+        SetFeatureCount(winner, 5);
+
+        ImageRecord_LAMBDA closest = MakeLambda("product_shot.jpg", "front-packshot", "FAM001");
+        SetFeatureCount(closest, 5);
+
+        ImageRecord_LAMBDA farBehind = MakeLambda("product_extra.jpg", "front-packshot", "FAM001");
+        SetFeatureCount(farBehind, 2);
+
+        List<ImageRecord_LAMBDA> records = [winner, closest, farBehind];
+
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
+
+        Assert.Equal(0, winner.DetOrder);
+        Assert.False(winner.OrderEvidence!.IsOverflow);
+        Assert.Equal("filename-hint", winner.OrderEvidence!.TieBreakerWon);
+    }
+
+    [Fact]
+    public void Run_TieBreaker_ImageHoldingAnEarlierSlot_IsNotARivalForALaterSlot() {
+        // closeup-image qualifies for both det3 and det7 in the default rules, so both images produce a det7
+        // candidate too. strong wins det3 on confidence, which takes it out of the det7 race — but the old
+        // full-list rescan still reported it as the competitor weak beat there. Its det7 candidate outranks
+        // weak's and so sorts ahead of it: scanning forward from the winner never reaches it. Nothing was
+        // still contesting det7 → "none".
+        ImageRecord_LAMBDA strong = MakeLambda("shot_a.jpg", "closeup-image", "FAM001");
+        SetFeatureCount(strong, 3);
+
+        ImageRecord_LAMBDA weak = MakeLambda("shot_b.jpg", "closeup-image", "FAM001");
+        SetFeatureCount(weak, 1);
+
+        List<ImageRecord_LAMBDA> records = [strong, weak];
+
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
+
+        Assert.Equal(3, strong.DetOrder);
+        Assert.Equal("ngp-confidence", strong.OrderEvidence!.TieBreakerWon);
+
+        Assert.Equal(7, weak.DetOrder);
+        Assert.False(weak.OrderEvidence!.IsOverflow);
+        Assert.Equal("none", weak.OrderEvidence!.TieBreakerWon);
+    }
+
+    [Fact]
+    public void Run_TieBreaker_AlreadyAssignedRivalInsideTheBlock_IsSkippedNotReported() {
+        // The other half of that rule — here the forward scan really does reach the stale rival, so only the
+        // already-assigned guard can exclude it. Hints are per-slot: detailShot is hinted for det3 ("detail"),
+        // labelShot for det7 ("label"), and confidence is tied, so each wins its own slot on its own hint. In
+        // the det7 block labelShot therefore sorts first with detailShot right behind it — inside the scan's
+        // reach, but already holding det3. Reporting "filename-hint" for det7 would name a race that never
+        // happened: detailShot left it the moment it took det3.
+        ImageRecord_LAMBDA detailShot = MakeLambda("x_detail.jpg", "closeup-image", "FAM001");
+        SetFeatureCount(detailShot, 2);
+
+        ImageRecord_LAMBDA labelShot = MakeLambda("y_label.jpg", "closeup-image", "FAM001");
+        SetFeatureCount(labelShot, 2);
+
+        List<ImageRecord_LAMBDA> records = [detailShot, labelShot];
+
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
+
+        Assert.Equal(3, detailShot.DetOrder);
+        Assert.Equal("filename-hint", detailShot.OrderEvidence!.TieBreakerWon);
+
+        Assert.Equal(7, labelShot.DetOrder);
+        Assert.False(labelShot.OrderEvidence!.IsOverflow);
+        Assert.Equal("none", labelShot.OrderEvidence!.TieBreakerWon);
     }
 
     //  Overflow and edge cases 

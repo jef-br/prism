@@ -80,12 +80,12 @@ internal static class ImageOrderer
         Dictionary<int, AssignmentRecord> assignments = [];
 
         // Assign each candidate in sorted order (best slot/phenotype first).
-        foreach (CandidateDetOrder c in candidates)
-        {
+        for (int i = 0; i < candidates.Count; i++) {
+            CandidateDetOrder c = candidates[i];
             if (imageAssigned[c.ImageIndex]) continue;
             if (slotClaimed.Contains(c.DetSlot)) continue;
 
-            string tieBreakerWon = DetermineTieBreaker(c, candidates);
+            string tieBreakerWon = DetermineTieBreaker(candidates, i, imageAssigned);
 
             imageAssigned[c.ImageIndex] = true;
             slotClaimed.Add(c.DetSlot);
@@ -256,21 +256,30 @@ internal static class ImageOrderer
 
     //  Tie-breaker labelling 
 
-    /// <summary>
-    /// Returns which tie-breaker determined the winner over competitors at the same slot and phenotype rank.
-    /// Returns "none" when there were no competitors.
-    /// </summary>
-    private static string DetermineTieBreaker(CandidateDetOrder winner, List<CandidateDetOrder> all)
-    {
-        List<CandidateDetOrder> competitors = all.Where(c =>
-            !ReferenceEquals(c, winner) &&
-            c.DetSlot == winner.DetSlot &&
-            c.PhenotypeRank == winner.PhenotypeRank).ToList();
+    // Names the tie-breaker that decided the winner against its *closest* rival — the next still-unassigned
+    // candidate sharing its det slot and phenotype rank — rather than against any competitor anywhere in the
+    // family. Only the closest rival can name the deciding level: a far-behind candidate that lost on
+    // confidence must not mask the filename hint that actually settled a confidence-tied race.
+    // CompareCandidates sorts by slot then phenotype rank first, so tied candidates form one contiguous
+    // block and the rival is one forward scan away — no rescan of the family's full candidate list.
+    // Scanning forward only is safe: the slot was still free, so every candidate *before* the winner in its
+    // block can only have been skipped for holding an earlier slot already — never a rival for this one.
+    // The levels below mirror CompareCandidates exactly, so the label can never contradict the sort.
+    private static string DetermineTieBreaker(List<CandidateDetOrder> candidates, int winnerIndex, bool[] imageAssigned) {
+        CandidateDetOrder winner = candidates[winnerIndex];
 
-        if (competitors.Count == 0) return "none";
-        if (competitors.Any(c => c.NgpConfidence != winner.NgpConfidence)) return "ngp-confidence";
-        if (competitors.Any(c => c.HintScore     != winner.HintScore))     return "filename-hint";
-        return "source-index";
+        for (int i = winnerIndex + 1; i < candidates.Count; i++) {
+            CandidateDetOrder rival = candidates[i];
+            if (rival.DetSlot != winner.DetSlot || rival.PhenotypeRank != winner.PhenotypeRank) break;
+            if (imageAssigned[rival.ImageIndex]) continue;
+
+            if (rival.NgpConfidence != winner.NgpConfidence) return "ngp-confidence";
+            if (rival.HintScore != winner.HintScore) return "filename-hint";
+            if (string.CompareOrdinal(winner.Filename, rival.Filename) != 0) return "filename-ordinal";
+            return "source-index";
+        }
+
+        return "none";
     }
 
     //  Product type resolution 
