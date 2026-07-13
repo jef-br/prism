@@ -83,9 +83,18 @@ const defaultParameters: PrismProcessingParameters = {
   format: "zip"
 };
 
+type ThemePreference = "light" | "dark" | "auto";
+const THEME_PREFERENCE_STORAGE_KEY = "prism-theme-preference";
+
 export function WorkbenchShell() {
   const apiClient = useMemo(() => new PrismApiClient(), []);
   const unsubscribeFromProgressRef = useRef<(() => void) | undefined>(undefined);
+  const [theme, setTheme] = useState<ThemePreference>(() => {
+    if (typeof window === "undefined") return "auto";
+    const stored = window.localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY);
+    return stored === "light" || stored === "dark" ? stored : "auto";
+  });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [urlText, setUrlText] = useState("");
   const [parameters, setParameters] = useState<PrismProcessingParameters>(defaultParameters);
@@ -154,6 +163,28 @@ export function WorkbenchShell() {
   }, [apiClient]);
 
   useEffect(() => {
+    if (theme === "auto") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+
+    window.localStorage.setItem(THEME_PREFERENCE_STORAGE_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const darkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    setSystemPrefersDark(darkMediaQuery.matches);
+
+    function handleSystemThemeChange(event: MediaQueryListEvent) {
+      setSystemPrefersDark(event.matches);
+    }
+
+    darkMediaQuery.addEventListener("change", handleSystemThemeChange);
+    return () => darkMediaQuery.removeEventListener("change", handleSystemThemeChange);
+  }, []);
+
+  useEffect(() => {
     function handleDragOver(event: DragEvent) {
       event.preventDefault();
       setIsDragging(true);
@@ -188,6 +219,13 @@ export function WorkbenchShell() {
       unsubscribeFromProgressRef.current?.();
     };
   }, []);
+
+  function toggleTheme() {
+    setTheme((current) => {
+      const isDarkActive = current === "dark" || (current === "auto" && systemPrefersDark);
+      return isDarkActive ? "light" : "dark";
+    });
+  }
 
   function addFiles(incomingFiles: File[]) {
     setFiles((currentFiles) => mergeFileSelections(currentFiles, incomingFiles));
@@ -289,17 +327,29 @@ export function WorkbenchShell() {
     }
   }
 
+  const isDarkActive = theme === "dark" || (theme === "auto" && systemPrefersDark);
+
   return (
     <main className={isDragging ? "workbench-shell workbench-shell-dragging" : "workbench-shell"}>
       <header className="workbench-header">
         <div>
           <p className="eyebrow">PRISM web workbench</p>
-          <h1>Pipeline inspection </h1>
         </div>
-        <p>
-          Uploads and URLs are submitted to the API. Route facts appear only when progress or result
-          payloads provide source-stage data.
-        </p>
+        <div className="header-right">
+          <p className="header-description">
+            Uploads and URLs are submitted to the API. Route facts appear only when progress or
+            result payloads provide source-stage data.
+          </p>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            title="Toggle dark mode"
+            aria-label="Toggle dark mode"
+          >
+            {isDarkActive ? "☀️" : "🌙"}
+          </button>
+        </div>
       </header>
 
       <StatusPanel
@@ -308,10 +358,7 @@ export function WorkbenchShell() {
         hasAnyInput={sourceSummary.hasAnyInput}
         apiErrorMessage={apiErrorMessage}
         apiErrorPayload={apiErrorPayload}
-        health={health}
-        config={config}
-        job={job}
-        progressEventCount={progressEvents.length}
+        progressEvents={progressEvents}
         hasResult={Boolean(result)}
       />
 
@@ -329,8 +376,8 @@ export function WorkbenchShell() {
             onUrlTextChanged={setUrlText}
             onStartJob={startJob}
           />
-          <RouteSection events={progressEvents} />
           <ResultSection result={result} />
+          <RouteSection events={progressEvents} />
         </div>
 
         <aside className="workbench-side-column">

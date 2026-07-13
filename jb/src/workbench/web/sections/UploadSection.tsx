@@ -33,12 +33,18 @@ export function UploadSection({
           <p className="eyebrow">Upload surface</p>
           <h2 id="upload-heading">Images, Excel, zip, and URLs</h2>
         </div>
-        <button className="primary-button" disabled={!canStartJob || isSubmitting} onClick={onStartJob}>
-          {isSubmitting ? "Starting..." : "Start Prism Job"}
-        </button>
       </div>
 
-      <FileDropZone isDragging={isDragging} onFilesSelected={onFilesSelected} />
+      <div className="upload-inputs">
+        <FileDropZone isDragging={isDragging} onFilesSelected={onFilesSelected} />
+
+        <div className="source-grid">
+          <SourceBucket title="Images" count={sourceSummary.imageFiles.length + sourceSummary.imageUrls.length} />
+          <SourceBucket title="Excel" count={sourceSummary.excelFiles.length + sourceSummary.excelUrls.length} />
+          <SourceBucket title="Zip" count={sourceSummary.zipFiles.length + sourceSummary.zipUrls.length} />
+          <SourceBucket title="Other URLs" count={sourceSummary.remoteUrls.length} />
+        </div>
+      </div>
 
       <label className="field-label" htmlFor="url-input">
         URL text
@@ -51,28 +57,29 @@ export function UploadSection({
         placeholder="One or more http/https sources separated by spaces, commas, or new lines."
       />
 
-      <div className="source-grid">
-        <SourceBucket title="Images" count={sourceSummary.imageFiles.length + sourceSummary.imageUrls.length} />
-        <SourceBucket title="Excel" count={sourceSummary.excelFiles.length + sourceSummary.excelUrls.length} />
-        <SourceBucket title="Zip" count={sourceSummary.zipFiles.length + sourceSummary.zipUrls.length} />
-        <SourceBucket title="Other URLs" count={sourceSummary.remoteUrls.length} />
+      <div className="start-job-container">
+        <button
+          className="primary-button primary-button-large"
+          disabled={!canStartJob || isSubmitting}
+          onClick={onStartJob}
+          title={
+            !sourceSummary.hasMinimumStartSources
+              ? "Start stays disabled until local input includes at least one image source and one Excel source."
+              : undefined
+          }
+        >
+          {isSubmitting ? "Starting..." : "Start Prism Job"}
+        </button>
       </div>
 
-      {!sourceSummary.hasAnyInput ? (
+      <GroupedValidationMessages sourceSummary={sourceSummary} />
+
+      {sourceSummary.hasAnyInput && !sourceSummary.hasMinimumStartSources ? (
         <div className="placeholder-box">
-          <strong>Empty input state.</strong>
-          <p>Select local files or add URL text before starting a PRISM job.</p>
+          <strong>Additional input needed.</strong>
+          <p>Select at least one image source and one Excel source to start a PRISM job.</p>
         </div>
       ) : null}
-
-      {!sourceSummary.hasMinimumStartSources ? (
-        <p className="validation-note">
-          Start stays disabled until local input includes at least one image source and one Excel
-          source. Server validation remains authoritative.
-        </p>
-      ) : null}
-
-      <GroupedValidationMessages sourceSummary={sourceSummary} />
 
       {files.length > 0 ? (
         <ul className="file-list" aria-label="Selected local files">

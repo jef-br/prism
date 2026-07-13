@@ -1,8 +1,9 @@
-import type {
-  PrismApiErrorPayload,
-  PrismConfigResponse,
-  PrismHealthResponse,
-  PrismJobStartEnvelope
+import {
+  getProgressStage,
+  readNumberField,
+  readStringField,
+  type PrismApiErrorPayload,
+  type PrismProgressEvent
 } from "../services/prismApiClient";
 
 interface StatusPanelProps {
@@ -11,11 +12,15 @@ interface StatusPanelProps {
   hasAnyInput: boolean;
   apiErrorMessage?: string;
   apiErrorPayload?: PrismApiErrorPayload;
-  health?: PrismHealthResponse;
-  config?: PrismConfigResponse;
-  job?: PrismJobStartEnvelope;
-  progressEventCount: number;
+  progressEvents: PrismProgressEvent[];
   hasResult: boolean;
+}
+
+interface LatestStageInfo {
+  stageName: string;
+  completed?: number;
+  total?: number;
+  safeMessage?: string;
 }
 
 export function StatusPanel({
@@ -24,59 +29,33 @@ export function StatusPanel({
   hasAnyInput,
   apiErrorMessage,
   apiErrorPayload,
-  health,
-  config,
-  job,
-  progressEventCount,
+  progressEvents,
   hasResult
 }: StatusPanelProps) {
-  const loadingText = getLoadingText(isApiLoading, isJobLoading);
+  const latestStage = getLatestStageInfo(progressEvents);
+  const isLoading = isApiLoading || isJobLoading;
 
   return (
     <section className="state-panel" aria-label="Workbench visible states">
-      <div className={hasAnyInput ? "state-chip" : "state-chip state-chip-active"}>
-        <strong>Empty input</strong>
-        <span>{hasAnyInput ? "Sources selected" : "Waiting for files or URLs"}</span>
-      </div>
-
-      <div className={loadingText ? "state-chip state-chip-active" : "state-chip"}>
-        <strong>Loading</strong>
-        <span>{loadingText ?? "Idle"}</span>
-      </div>
-
-      <div className={apiErrorMessage ? "state-chip state-chip-error" : "state-chip"}>
-        <strong>API error</strong>
-        <span>{apiErrorMessage ?? "None"}</span>
-      </div>
-
-      <div className={progressEventCount === 0 ? "state-chip state-chip-active" : "state-chip"}>
-        <strong>Progress placeholder</strong>
-        <span>
-          {progressEventCount === 0
-            ? "No SSE events yet"
-            : `${progressEventCount} progress event(s)`}
-        </span>
-      </div>
-
-      <div className={hasResult ? "state-chip" : "state-chip state-chip-active"}>
-        <strong>Result placeholder</strong>
-        <span>{hasResult ? "Result loaded" : "Waiting for resultUrl"}</span>
-      </div>
-
-      <div className="api-summary">
-        <div>
-          <strong>Health</strong>
-          <span>{health ? "Loaded from /PRISM/health" : "Not loaded"}</span>
+      {apiErrorMessage ? (
+        <div className="state-chip state-chip-error">
+          <strong>API error</strong>
+          <span>{apiErrorMessage}</span>
         </div>
-        <div>
-          <strong>Config</strong>
-          <span>{config ? "Loaded from /PRISM/config" : "Not loaded"}</span>
+      ) : latestStage ? (
+        <StageProgress stage={latestStage} />
+      ) : isLoading ? (
+        <LoadingChip
+          text={isJobLoading ? "Submitting or retrieving a PRISM job" : "Checking health and config"}
+        />
+      ) : !hasAnyInput ? (
+        <LoadingChip label="Empty input" text="Waiting for files or URLs" />
+      ) : hasResult ? (
+        <div className="state-chip">
+          <strong>Done</strong>
+          <span>Result loaded — see Output below</span>
         </div>
-        <div>
-          <strong>Job</strong>
-          <span>{getJobLabel(job)}</span>
-        </div>
-      </div>
+      ) : null}
 
       {apiErrorPayload ? (
         <div className="error-detail" role="alert">
@@ -97,22 +76,52 @@ export function StatusPanel({
   );
 }
 
-function getLoadingText(isApiLoading: boolean, isJobLoading: boolean): string | undefined {
-  if (isJobLoading) {
-    return "Submitting or retrieving a PRISM job";
-  }
+function StageProgress({ stage }: { stage: LatestStageInfo }) {
+  const percent =
+    stage.total !== undefined && stage.total > 0
+      ? Math.round(((stage.completed ?? 0) / stage.total) * 100)
+      : undefined;
 
-  if (isApiLoading) {
-    return "Checking health and config";
+  return (
+    <div className="state-chip state-chip-active">
+      <strong>{stage.stageName}</strong>
+      <span>
+        {stage.completed !== undefined && stage.total !== undefined
+          ? `${stage.completed} / ${stage.total}`
+          : (stage.safeMessage ?? "In progress")}
+      </span>
+      <div className="progress-indicator">
+        <div
+          className={percent === undefined ? "progress-bar progress-bar-indeterminate" : "progress-bar"}
+          style={percent === undefined ? undefined : { width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function LoadingChip({ label = "Loading", text }: { label?: string; text: string }) {
+  return (
+    <div className="state-chip state-chip-active">
+      <strong>{label}</strong>
+      <span>{text}</span>
+      <span className="empty-state-loader" aria-hidden="true" />
+    </div>
+  );
+}
+
+function getLatestStageInfo(events: PrismProgressEvent[]): LatestStageInfo | undefined {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const stage = getProgressStage(events[i]);
+    if (!stage) continue;
+
+    return {
+      stageName: stage,
+      completed: readNumberField(events[i], ["completedCount", "CompletedCount"]),
+      total: readNumberField(events[i], ["totalCount", "TotalCount"]),
+      safeMessage: readStringField(events[i], ["safeMessage", "SafeMessage", "message", "Message"])
+    };
   }
 
   return undefined;
-}
-
-function getJobLabel(job?: PrismJobStartEnvelope): string {
-  if (!job) {
-    return "No job started";
-  }
-
-  return job.JobID ?? job.JobId ?? job.jobID ?? job.jobId ?? "Job acknowledged";
 }

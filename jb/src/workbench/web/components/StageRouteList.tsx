@@ -23,68 +23,56 @@ export function StageRouteList({ events }: StageRouteListProps) {
   }
 
   return (
-    <ol className="route-list" aria-label="PRISM pipeline stages">
-      {PRISM_ROUTE_STAGES.map((stage) => {
-        const event = latestEventByStage.get(stage);
-        const completedCount = event
-          ? readNumberField(event, ["completedCount", "CompletedCount"])
-          : undefined;
-        const totalCount = event ? readNumberField(event, ["totalCount", "TotalCount"]) : undefined;
-        const currentItem = event ? readStringField(event, ["currentItem", "CurrentItem"]) : undefined;
-        const severity = event ? readStringField(event, ["severity", "Severity"]) : undefined;
-        const safeMessage = event
-          ? readStringField(event, ["safeMessage", "SafeMessage", "message", "Message"])
-          : undefined;
-        const timestamp = event ? readStringField(event, ["timestamp", "Timestamp"]) : undefined;
+    <table className="route-table" aria-label="PRISM pipeline stages">
+      <thead>
+        <tr>
+          <th>Stage</th>
+          <th>Progress</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {PRISM_ROUTE_STAGES.map((stage) => {
+          const event = latestEventByStage.get(stage);
+          const completedCount = event
+            ? readNumberField(event, ["completedCount", "CompletedCount"])
+            : undefined;
+          const totalCount = event ? readNumberField(event, ["totalCount", "TotalCount"]) : undefined;
+          const severity = event ? readStringField(event, ["severity", "Severity"]) : undefined;
+          const safeMessage = event
+            ? readStringField(event, ["safeMessage", "SafeMessage", "message", "Message"])
+            : undefined;
+          const percent =
+            completedCount !== undefined && totalCount !== undefined && totalCount > 0
+              ? Math.round((completedCount / totalCount) * 100)
+              : undefined;
 
-        return (
-          <li className={event ? "route-stage route-stage-live" : "route-stage"} key={stage}>
-            <div className="route-stage-header">
-              <span className="route-stage-name">{stage}</span>
-              {event && <small className="route-stage-badge">received</small>}
-            </div>
-
-            {event ? (
-              <dl className="fact-list">
-                {(completedCount !== undefined || totalCount !== undefined) && (
-                  <div>
-                    <dt>Progress</dt>
-                    <dd>
-                      {completedCount ?? "?"} / {totalCount ?? "?"}
-                    </dd>
+          return (
+            <tr key={stage} className={event ? "route-row-live" : "route-row-pending"}>
+              <td className="route-stage-name">{stage}</td>
+              <td>
+                {event ? (
+                  <div className="progress-cell">
+                    {percent !== undefined ? (
+                      <div className="progress-bg" style={{ width: `${percent}%` }} />
+                    ) : null}
+                    <span className="progress-text">
+                      {completedCount !== undefined && totalCount !== undefined
+                        ? `${completedCount} / ${totalCount}`
+                        : (safeMessage ?? "received")}
+                    </span>
                   </div>
+                ) : (
+                  <span className="placeholder-text">Waiting for progress data.</span>
                 )}
-                {currentItem && (
-                  <div>
-                    <dt>Current item</dt>
-                    <dd>{currentItem}</dd>
-                  </div>
-                )}
-                {severity && (
-                  <div>
-                    <dt>Severity</dt>
-                    <dd>{severity}</dd>
-                  </div>
-                )}
-                {safeMessage && (
-                  <div>
-                    <dt>Message</dt>
-                    <dd>{safeMessage}</dd>
-                  </div>
-                )}
-                {timestamp && (
-                  <div>
-                    <dt>Timestamp</dt>
-                    <dd>{timestamp}</dd>
-                  </div>
-                )}
-              </dl>
-            ) : (
-              <p className="placeholder-text">Waiting for progress data.</p>
-            )}
-          </li>
-        );
-      })}
-    </ol>
+              </td>
+              <td className="route-status">
+                {event ? <small>{severity ?? "running"}</small> : <small className="pending">Waiting</small>}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }

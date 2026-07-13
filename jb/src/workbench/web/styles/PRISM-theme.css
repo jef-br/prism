@@ -1,6 +1,89 @@
 :root {
   --prism-font-display: "Bahnschrift", "Aptos Display", "Trebuchet MS", sans-serif;
   --prism-font-body: "Aptos", "Trebuchet MS", "Segoe UI", sans-serif;
+
+  /* Raw color palette. Theme-agnostic scale — semantic --prism-color-* tokens below map into it. */
+  --color-main-grey-50: #f7f7f8;
+  --color-main-grey-100: #eeeef0;
+  --color-main-grey-200: #e0e0e3;
+  --color-main-grey-300: #c8c8cd;
+  --color-main-grey-400: #a3a3ab;
+  --color-main-grey-500: #7a7a84;
+  --color-main-grey-600: #5c5c66;
+  --color-main-grey-700: #45454d;
+  --color-main-grey-800: #2e2e34;
+  --color-main-grey-900: #1a1a1f;
+
+  --color-main-pink-50: #fdf0f4;
+  --color-main-pink-100: #fbdce7;
+  --color-main-pink-200: #f6b9d0;
+  --color-main-pink-300: #f091b7;
+  --color-main-pink-400: #ec5a94;
+  --color-main-pink-500: #d43d78;
+  --color-main-pink-600: #b12f61;
+  --color-main-pink-700: #8a2450;
+  --color-main-pink-800: #631a3a;
+  --color-main-pink-900: #3d0f24;
+
+  --color-main-blue-50: #eef5fb;
+  --color-main-blue-100: #d6e9f5;
+  --color-main-blue-200: #aed3eb;
+  --color-main-blue-300: #7fb8de;
+  --color-main-blue-400: #4f9bd0;
+  --color-main-blue-500: #2f7fb8;
+  --color-main-blue-600: #24628f;
+  --color-main-blue-700: #1c4a6d;
+  --color-main-blue-800: #14344c;
+  --color-main-blue-900: #0c1f2d;
+
+  --color-main-green-50: #eaf6ee;
+  --color-main-green-100: #cdebd8;
+  --color-main-green-200: #9ad6b3;
+  --color-main-green-300: #63bd8b;
+  --color-main-green-400: #3fa46e;
+  --color-main-green-500: #2f8757;
+  --color-main-green-600: #256b45;
+  --color-main-green-700: #1c5236;
+  --color-main-green-800: #133a26;
+  --color-main-green-900: #0b2318;
+
+  --color-main-orange-50: #fdf3ea;
+  --color-main-orange-100: #fbe1c6;
+  --color-main-orange-200: #f6c58c;
+  --color-main-orange-300: #eea256;
+  --color-main-orange-400: #dd8332;
+  --color-main-orange-500: #b8621f;
+  --color-main-orange-600: #954e19;
+  --color-main-orange-700: #713b14;
+  --color-main-orange-800: #4f290e;
+  --color-main-orange-900: #301909;
+
+  --color-main-red-50: #fbebe9;
+  --color-main-red-100: #f5cdc8;
+  --color-main-red-200: #e9a099;
+  --color-main-red-300: #db7167;
+  --color-main-red-400: #c9483c;
+  --color-main-red-500: #a93632;
+  --color-main-red-600: #872a28;
+  --color-main-red-700: #661f1e;
+  --color-main-red-800: #451513;
+  --color-main-red-900: #260b0a;
+
+  --color-main-darkblue-50: #e8ebf0;
+  --color-main-darkblue-100: #c4ccd9;
+  --color-main-darkblue-200: #97a3bb;
+  --color-main-darkblue-300: #6a7999;
+  --color-main-darkblue-400: #48597e;
+  --color-main-darkblue-500: #324066;
+  --color-main-darkblue-600: #26314f;
+  --color-main-darkblue-700: #1d2540;
+  --color-main-darkblue-800: #141a2e;
+  --color-main-darkblue-900: #0b0e1a;
+
+  --color-neutral-black: #000000;
+  --color-neutral-white: #ffffff;
+
+  /* Semantic tokens — light theme (default). */
   --prism-color-page: #f3f1eb;
   --prism-color-surface: #fffdf8;
   --prism-color-surface-strong: #f7eadc;
@@ -17,4 +100,63 @@
   --prism-color-error-soft: #f8dfd9;
   --prism-shadow-soft: 0 18px 50px rgba(45, 38, 30, 0.12);
   --prism-radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --prism-color-page: var(--color-main-grey-900);
+    --prism-color-surface: var(--color-main-grey-800);
+    --prism-color-surface-strong: var(--color-main-grey-700);
+    --prism-color-ink: var(--color-main-grey-50);
+    --prism-color-muted: var(--color-main-grey-300);
+    --prism-color-line: var(--color-main-grey-600);
+    --prism-color-accent: var(--color-main-pink-400);
+    --prism-color-accent-strong: var(--color-main-pink-300);
+    --prism-color-warm: var(--color-main-orange-300);
+    --prism-color-cool: var(--color-main-blue-300);
+    --prism-color-ok: var(--color-main-green-300);
+    --prism-color-warning: var(--color-main-orange-300);
+    --prism-color-error: var(--color-main-red-300);
+    --prism-color-error-soft: var(--color-main-red-900);
+    --prism-shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* Manual override pair — WorkbenchShell's theme toggle sets data-theme on <html> to force a mode
+   regardless of prefers-color-scheme. Absent data-theme, the media query above (or the light
+   defaults) governs. */
+:root[data-theme="dark"] {
+  --prism-color-page: var(--color-main-grey-900);
+  --prism-color-surface: var(--color-main-grey-800);
+  --prism-color-surface-strong: var(--color-main-grey-700);
+  --prism-color-ink: var(--color-main-grey-50);
+  --prism-color-muted: var(--color-main-grey-300);
+  --prism-color-line: var(--color-main-grey-600);
+  --prism-color-accent: var(--color-main-pink-400);
+  --prism-color-accent-strong: var(--color-main-pink-300);
+  --prism-color-warm: var(--color-main-orange-300);
+  --prism-color-cool: var(--color-main-blue-300);
+  --prism-color-ok: var(--color-main-green-300);
+  --prism-color-warning: var(--color-main-orange-300);
+  --prism-color-error: var(--color-main-red-300);
+  --prism-color-error-soft: var(--color-main-red-900);
+  --prism-shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="light"] {
+  --prism-color-page: #f3f1eb;
+  --prism-color-surface: #fffdf8;
+  --prism-color-surface-strong: #f7eadc;
+  --prism-color-ink: #1e2322;
+  --prism-color-muted: #66706d;
+  --prism-color-line: #d8d0c4;
+  --prism-color-accent: #126e72;
+  --prism-color-accent-strong: #0b4e52;
+  --prism-color-warm: #b85b35;
+  --prism-color-cool: #315f86;
+  --prism-color-ok: #276b43;
+  --prism-color-warning: #9b651b;
+  --prism-color-error: #a93632;
+  --prism-color-error-soft: #f8dfd9;
+  --prism-shadow-soft: 0 18px 50px rgba(45, 38, 30, 0.12);
 }
