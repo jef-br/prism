@@ -34,7 +34,26 @@
   detection) instead of writing a new one. If the doc is wrong instead:
   update `jb/docs/PRISM-match.md` to describe the real exact-match-only
   behavior and drop the edit-distance claim.
-- Answer:
+- Answer: (observed 2026-07-13, non-final — doc-vs-code call still yours)
+  - Contradiction confirmed both ways: grep finds zero Levenshtein/fuzzy/edit-distance
+    logic anywhere in `Services/Matching/Match/` (only this todo mentions it), while
+    `jb/docs/PRISM-match.md:76` does promise it — "string matching tolerates edit
+    distance — for categorical columns it is less penalized." So the doc overstates a
+    capability the code never had; this is a real doc↔code mismatch, not a
+    misreading.
+  - Correction to the recommendation above: `NumericMatcher`'s production
+    `maxDistance` is **1.478** (`MatchingConfig.json`), not `1`, and it is a **TCD**
+    (numeric magnitude tolerance on concatenated digit tokens), not a character edit
+    distance — `PRISM-match.md:49` says so explicitly ("Uses TCD, not classical
+    Levenshtein typo tolerance"). So don't cite `maxDistance` as a precedent for a
+    Levenshtein ≤ 1 threshold; it is neither the value (1 vs 1.478) nor the kind
+    (numeric distance vs char edits) claimed.
+  - The Levenshtein helper does exist: `ComputeLevenshteinDistance` at
+    `lib/Excel/ModelBuilder.cs:928` (header detection gates it on token length ≥ 4,
+    distance ≤ 1). But it lives in `Prism.Lib.Excel`; calling it from
+    `Prism.Services.Matching` adds a Matching→Excel project reference the restructure
+    otherwise keeps apart — so "reuse" is really copy-the-~35-line-helper vs. take the
+    dependency, a tradeoff to weigh, not a free reuse.
 
 ## Substring rescue scans the whole digit index per rescue token — is this a real slowdown?
 
@@ -70,7 +89,17 @@
   an n-gram map built once per `RunSubstringRescue` call) instead of the
   current brute-force scan — but only after the measurement justifies the
   added complexity.
-- Answer:
+- Answer: (observed 2026-07-13, non-final — still needs the Stopwatch run)
+  - Two config facts tighten the worst-case before any measurement: production
+    `minSubstringRescueLength = 7` (`MatchingConfig.json`), and the pass is
+    self-disabling — `NumericMatcher.cs:433` returns early when that is ≤ 0. So the
+    "rescue tokens" factor is not "every leftover filename token" but only the
+    filename's digit tokens of length ≥ 7 (`NumericMatcher.cs:443`), typically 0–2
+    per image, which shrinks the `O(unmatched × rescue tokens × index size)` product
+    further than the header framing implied.
+  - Verdict unchanged: still `probably fine, unverified`. The honest close needs a
+    Stopwatch around the `.Contains` scan on a CiMini/full batch — the config bounds
+    argue it is negligible but do not prove it.
 
 ## Bracket 4's totalImageTokens count is approximate — does that ever change a matching decision?
 
@@ -117,4 +146,16 @@
   threshold check is supposed to measure. Needs a before/after comparison on
   a labeled set (or at least CiMini) to confirm accept/reject decisions
   don't shift in an unwanted way before rolling this out.
-- Answer:
+- Answer: (observed 2026-07-13, non-final — code re-verified, product call still open)
+  - Description matches current code verbatim after the restructure:
+    `SemanticMatcher.cs:94-95` builds `totalImageTokens =
+    stringEvidence.Select(FilenameToken).Distinct(OrdinalIgnoreCase).Count() +
+    scored.Count`, and `:120-121` forms `stringSignal = min(1, stringEvidence.Count /
+    totalImageTokens)`. So the counter-example is real: `scored.Count` (candidate
+    families reaching the scoring step) inflates the denominator with a quantity
+    independent of the filename, dragging `stringSignal` — one third of the
+    `SemanticThreshold` check — down purely on pool size.
+  - Nothing here is resolvable from code alone. Whether it ever flips an
+    accept/reject near `SemanticThreshold` is the empirical question the
+    recommendation already frames; the fix (count real filename tokens instead) is
+    clear but needs the labeled/CiMini before-after before rolling.
