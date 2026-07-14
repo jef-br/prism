@@ -31,9 +31,9 @@ public class Tx_ProblemImageProcessor : IImageTransformation
             InputImage.IsKo          = true;
             InputImage.KoReasonCode  = "TRANSFORM_TOO_SMALL";
             InputImage.KoSafeMessage = koReason;
-            InputImage.TransformationResult = new ImageTransformationResult
+            InputImage.OutputRecord = new ImageRecord_OUTPUT
             {
-                Status          = TransformationStatus.Ko,
+                TransformStatus = TransformationStatus.Ko,
                 TransformerType = nameof(Tx_ProblemImageProcessor),
                 InputWidth      = InputImage.Width,
                 InputHeight     = InputImage.Height,
@@ -59,9 +59,9 @@ public class Tx_ProblemImageProcessor : IImageTransformation
         if (unknownFeatures.Length > 0)
             warnings[1] = "Unknown features: " + string.Join(", ", unknownFeatures) + ".";
 
-        InputImage.TransformationResult = new ImageTransformationResult
+        InputImage.OutputRecord = new ImageRecord_OUTPUT
         {
-            Status          = TransformationStatus.Ok,
+            TransformStatus = TransformationStatus.Ok,
             TransformerType = nameof(Tx_ProblemImageProcessor),
             InputWidth      = InputImage.Width,
             InputHeight     = InputImage.Height,

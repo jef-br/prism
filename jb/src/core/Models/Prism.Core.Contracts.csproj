@@ -32,7 +32,6 @@
     <Compile Include="..\Services\Matching\Match\MatcherContribution.cs" Link="MatcherContribution.cs" />
     <Compile Include="..\Services\Matching\Order\OrderEvidence.cs" Link="OrderEvidence.cs" />
     <Compile Include="BoundingBox.cs" />
-    <Compile Include="..\Services\Transform\Engine\ImageTransformationResult.cs" Link="ImageTransformationResult.cs" />
     <Compile Include="..\Services\Transform\Enum\TransformationStatus.cs" Link="TransformationStatus.cs" />
     <Compile Include="..\config\ConfigLoader.cs" Link="ConfigLoader.cs" />
     <Compile Include="..\config\IValidatableConfig.cs" Link="IValidatableConfig.cs" />

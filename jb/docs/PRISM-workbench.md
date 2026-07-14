@@ -13,7 +13,7 @@ Per-image route (Imported → … → Exported), Excel model summary, image coll
 
 ## No-Hidden-Behavior Rule
 
-Display PRISM-owned route, evidence, status, score, and KO data from IRL, ME, ITR, and BM **without replacing facts with UI-only interpretations**.
+Display PRISM-owned route, evidence, status, score, and KO data from IRL, ME, IRO, and BM **without replacing facts with UI-only interpretations**.
 - Label displayed values by source route stage.
 - Render raw reason codes, scores, thresholds, statuses, and safe messages when available.
 - Friendly UI text: additional display layer only.

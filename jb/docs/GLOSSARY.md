@@ -21,7 +21,6 @@ Used across all `jb/docs/` files, `AGENTFEEDBACK.md`, and `PRISM-information.md`
 | BMS | BatchManifestSummary |
 | MIR | ManifestImageRow |
 | ME | MatchEvidence |
-| ITR | ImageTransformationResult |
 | PPE | PipelineProgressEvent |
 | PJR | PrismJobRequest |
 | PJRes | PrismJobResult |

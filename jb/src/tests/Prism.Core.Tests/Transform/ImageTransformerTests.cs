@@ -38,7 +38,7 @@ public class ImageTransformerTests
 
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
-        Assert.Equal(nameof(Tx_ProblemImageProcessor), lambda.TransformationResult?.TransformerType);
+        Assert.Equal(nameof(Tx_ProblemImageProcessor), lambda.OutputRecord?.TransformerType);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class ImageTransformerTests
 
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
-        Assert.NotEmpty(lambda.TransformationResult?.Warnings ?? []);
+        Assert.NotEmpty(lambda.OutputRecord?.Warnings ?? []);
     }
 
     //  Routing — phenotype is bypassed
@@ -61,7 +61,7 @@ public class ImageTransformerTests
 
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
-        Assert.Equal(nameof(Tx_CropSquare), lambda.TransformationResult?.TransformerType);
+        Assert.Equal(nameof(Tx_CropSquare), lambda.OutputRecord?.TransformerType);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class ImageTransformerTests
 
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
-        Assert.Equal(nameof(Tx_CropSquare), lambda.TransformationResult?.TransformerType);
+        Assert.Equal(nameof(Tx_CropSquare), lambda.OutputRecord?.TransformerType);
     }
 
     //  Routing — center and stretch
@@ -84,7 +84,7 @@ public class ImageTransformerTests
 
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
-        Assert.Equal(nameof(Tx_CenterAndStretch), lambda.TransformationResult?.TransformerType);
+        Assert.Equal(nameof(Tx_CenterAndStretch), lambda.OutputRecord?.TransformerType);
     }
 
     [Fact]
@@ -97,8 +97,8 @@ public class ImageTransformerTests
         ImageTransformer.TransformImage(closeup, null, false, Parameters);
         ImageTransformer.TransformImage(generic, null, false, Parameters);
 
-        Assert.Equal(nameof(Tx_CenterAndStretch), closeup.TransformationResult?.TransformerType);
-        Assert.Equal(nameof(Tx_CenterAndStretch), generic.TransformationResult?.TransformerType);
+        Assert.Equal(nameof(Tx_CenterAndStretch), closeup.OutputRecord?.TransformerType);
+        Assert.Equal(nameof(Tx_CenterAndStretch), generic.OutputRecord?.TransformerType);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class ImageTransformerTests
         ImageRecord_LAMBDA returned = ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         Assert.Same(lambda, returned);
-        Assert.NotNull(lambda.TransformationResult);
+        Assert.NotNull(lambda.OutputRecord);
     }
 
     //  Input dimensions recorded
@@ -121,8 +121,8 @@ public class ImageTransformerTests
 
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
-        Assert.Equal(1200, lambda.TransformationResult?.InputWidth);
-        Assert.Equal(1600, lambda.TransformationResult?.InputHeight);
+        Assert.Equal(1200, lambda.OutputRecord?.InputWidth);
+        Assert.Equal(1600, lambda.OutputRecord?.InputHeight);
     }
 
     //  Service — transform disabled 
@@ -139,7 +139,7 @@ public class ImageTransformerTests
         await new TransformService().TransformAsync(matched, transformEnabled: false, headcut: false, null, default);
 
         Assert.All(matched.LambdaRecords, r =>
-            Assert.Equal(TransformationStatus.Skipped, r.TransformationResult?.Status));
+            Assert.Equal(TransformationStatus.Skipped, r.OutputRecord?.TransformStatus));
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public class ImageTransformerTests
 
         await new TransformService().TransformAsync(matched, transformEnabled: false, headcut: false, null, default);
 
-        Assert.Null(matched.LambdaRecords[0].TransformationResult);
+        Assert.Null(matched.LambdaRecords[0].OutputRecord);
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public class ImageTransformerTests
 
         TransformResult result = await new TransformService().TransformAsync(matched, transformEnabled: true, headcut: false, null, default);
 
-        Assert.Null(matched.LambdaRecords[0].TransformationResult);
+        Assert.Null(matched.LambdaRecords[0].OutputRecord);
         Assert.Equal(0, result.OkTransformedCount);
     }
 

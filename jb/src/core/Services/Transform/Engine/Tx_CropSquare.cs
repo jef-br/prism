@@ -21,9 +21,9 @@ public class Tx_CropSquare : IImageTransformation
     {
         BoundingBox crop = ComputeCenteredSquareCrop(InputImage.Width, InputImage.Height);
 
-        InputImage.TransformationResult = new ImageTransformationResult
+        InputImage.OutputRecord = new ImageRecord_OUTPUT
         {
-            Status          = TransformationStatus.Ok,
+            TransformStatus = TransformationStatus.Ok,
             TransformerType = nameof(Tx_CropSquare),
             InputWidth      = InputImage.Width,
             InputHeight     = InputImage.Height,

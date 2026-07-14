@@ -46,8 +46,8 @@ Imported → Classified → Matched → Ordered → Renamed → Generated → Tr
 | Ordered | IRL + OrderEvidence, DO set |
 | Renamed | IRL, NewName computed |
 | Generated | IRG, `GenerationRouteState` on IRL |
-| Transformed | ITR on IRL |
-| Exported | IRO, BM, MIR |
+| Transformed | IRO created on IRL (transform block) |
+| Exported | IRO enriched (export block), BM, MIR |
 
 ---
 
@@ -179,7 +179,7 @@ See `PRISM-models.md` for authoritative field-level definitions.
 | Record | After | Key fields |
 |---|---|---|
 | IRI | Import | source provenance, normalized JPG ref, dimensions, import status |
-| IRL | Classification onwards | IFs, INGP, ME, ordering result, generation state, ITR, IRO link |
+| IRL | Classification onwards | IFs, INGP, ME, ordering result, generation state, IRO link |
 | IRG | Generation | source FID, hero ref, generation method, output path, KO reason |
 | IRO | Export | final filename, MIME type, artifact ref, dimensions, byte length, export status |
 | MIR | Export | SourceReference, FinalFileName, Status, KoReasonCode, FID, DetOrder, TransformerType, TransformationStatus |

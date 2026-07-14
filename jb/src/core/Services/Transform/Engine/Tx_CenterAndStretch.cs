@@ -35,9 +35,9 @@ public class Tx_CenterAndStretch : IImageTransformation
 
         if (bytes is null)
         {
-            InputImage.TransformationResult = new ImageTransformationResult
+            InputImage.OutputRecord = new ImageRecord_OUTPUT
             {
-                Status          = TransformationStatus.Ko,
+                TransformStatus = TransformationStatus.Ko,
                 TransformerType = nameof(Tx_CenterAndStretch),
                 InputWidth      = InputImage.Width,
                 InputHeight     = InputImage.Height,
@@ -53,9 +53,9 @@ public class Tx_CenterAndStretch : IImageTransformation
         var warnings = new System.Collections.Generic.List<string>();
         if (_headcut) warnings.Add("Headcut applied.");
 
-        InputImage.TransformationResult = new ImageTransformationResult
+        InputImage.OutputRecord = new ImageRecord_OUTPUT
         {
-            Status               = TransformationStatus.Ok,
+            TransformStatus      = TransformationStatus.Ok,
             TransformerType      = nameof(Tx_CenterAndStretch),
             InputWidth           = InputImage.Width,
             InputHeight          = InputImage.Height,

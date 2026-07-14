@@ -32,7 +32,7 @@ public static class ImageTransformer {
 
     /// <summary>
     /// Selects and applies the transform strategy for <paramref name="lambda"/>, records the
-    /// outcome in <see cref="ImageRecord_LAMBDA.TransformationResult"/>, and returns the record.
+    /// outcome in <see cref="ImageRecord_LAMBDA.OutputRecord"/>, and returns the record.
     /// </summary>
     public static ImageRecord_LAMBDA TransformImage( ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters ) {
         IImageTransformation transformer = SelectTransformer(lambda, colorMat, headcut, parameters);

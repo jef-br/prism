@@ -17,7 +17,7 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | `PRISM-transform-generate.md` | Transformation decisions, background extension, generation logic |
 | `PRISM-api.md` | HTTP contracts, request/response shapes, SSE, health/config endpoints, error payloads, URL validation, request size |
 | `PRISM-workbench.md` | Web workbench behavior, upload/layout, progress visualization, no-hidden-behavior rule |
-| `PRISM-models.md` | All C# record field definitions: IRI/IRL/IRO/IRG, FR, BM/BMS/MIR, ME, ITR, PPE |
+| `PRISM-models.md` | All C# record field definitions: IRI/IRL/IRO/IRG, FR, BM/BMS/MIR, ME, PPE |
 | `PRISM-knowledge-base.md` | Consolidated reference: architecture, all CFG values, data model hierarchy, API summary, design principles |
 | `PRISM-testing.md` | Test-suite layout, per-service suite filters, one-csproj decision, test conventions |
 | `ImageNGP/imagePhenotypes.md` | 26 INGP phenotype definitions |

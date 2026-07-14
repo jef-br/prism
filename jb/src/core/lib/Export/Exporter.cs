@@ -34,7 +34,7 @@ internal static class Exporter
     //  Output record construction 
 
     /// <summary>
-    /// Attaches an <see cref="ImageRecord_OUTPUT"/> to each non-KO lambda record.
+    /// Enriches each non-KO lambda's <see cref="ImageRecord_OUTPUT"/> with the export block.
     /// Uses <see cref="ExportRequest.NormalizedImages"/> to resolve the artifact path.
     /// </summary>
     private static void BuildOutputRecords(ExportRequest request)
@@ -53,20 +53,25 @@ internal static class Exporter
             long byteLength = lambda.ProcessedBytes?.LongLength
                 ?? (path is not null && File.Exists(path) ? new FileInfo(path).Length : 0);
 
-            lambda.OutputRecord = new ImageRecord_OUTPUT
-            {
-                InitialFullName = lambda.InitialFullName,
-                Family          = lambda.Family,
-                DetOrder        = lambda.DetOrder,
-                Width           = lambda.Width,
-                Height          = lambda.Height,
-                FinalFileName   = lambda.NewName,
-                Extension       = ".jpg",
-                MimeType        = "image/jpeg",
-                ArtifactPath    = path,
-                ByteLength      = byteLength,
-                ExportStatus    = "Ok"
-            };
+            // Transform already attached the record with its transform block filled in. Export owns
+            // the export block and re-copies the identity fields, which CompactDetOrder may have
+            // renumbered since Transform ran. The record is absent only when Export is driven without
+            // a preceding Transform stage (its own unit tests do exactly that).
+            ImageRecord_OUTPUT output = lambda.OutputRecord ?? new ImageRecord_OUTPUT();
+
+            output.InitialFullName = lambda.InitialFullName;
+            output.Family          = lambda.Family;
+            output.DetOrder        = lambda.DetOrder;
+            output.Width           = lambda.Width;
+            output.Height          = lambda.Height;
+            output.FinalFileName   = lambda.NewName;
+            output.Extension       = ".jpg";
+            output.MimeType        = "image/jpeg";
+            output.ArtifactPath    = path;
+            output.ByteLength      = byteLength;
+            output.ExportStatus    = "Ok";
+
+            lambda.OutputRecord = output;
         }
     }
 
@@ -179,8 +184,8 @@ internal static class Exporter
             FamilyId             = string.IsNullOrEmpty(lambda.Family) ? null : lambda.Family,
             MatchedBy            = lambda.IsKo ? null : lambda.MatchEvidence?.AcceptedMatcherName,
             DetOrder             = lambda.IsKo ? null : lambda.DetOrder,
-            TransformerType      = lambda.TransformationResult?.TransformerType,
-            TransformationStatus = lambda.TransformationResult?.Status.ToString()
+            TransformerType      = lambda.OutputRecord?.TransformerType,
+            TransformationStatus = lambda.OutputRecord?.TransformStatus?.ToString()
         };
     }
 
@@ -247,7 +252,7 @@ internal static class Exporter
 
     private static ImageStageStep BuildTransformStep(ImageRecord_LAMBDA lambda)
     {
-        string status      = lambda.TransformationResult?.Status.ToString() ?? (lambda.IsKo ? "Skipped" : "Ok");
+        string status      = lambda.OutputRecord?.TransformStatus?.ToString() ?? (lambda.IsKo ? "Skipped" : "Ok");
         bool koAtTransform = status == "Ko";
 
         return new ImageStageStep

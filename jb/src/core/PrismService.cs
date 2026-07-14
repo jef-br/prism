@@ -179,7 +179,7 @@ public sealed class PrismService : IDisposable
         CancellationToken cancellationToken)
         => pipeline.GenerateAsync(matchedImages, matchedImages.Ingest.Parameters.Generation, progress, cancellationToken);
 
-    /// <summary>Transforms each non-KO image, enriching its LAMBDA with a TransformationResult.</summary>
+    /// <summary>Transforms each non-KO image, attaching an OutputRecord carrying the transform outcome.</summary>
     private Task<TransformResult> TransformImages(
         MatchingResult matchedWithGenerations,
         Func<PipelineProgressEvent, Task>? progress,

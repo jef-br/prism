@@ -2,7 +2,7 @@ namespace Prism.Services.Transform;
 
 /// <summary>
 /// What the Transform service hands forward: the LAMBDA collection enriched in place with each image's
-/// <c>TransformationResult</c>. Carries the originating <see cref="MatchingResult"/> forward (which in turn
+/// <c>OutputRecord</c>. Carries the originating <see cref="MatchingResult"/> forward (which in turn
 /// carries Ingest) so the Export step can still reach normalized images, counts, and warnings.
 /// </summary>
 public sealed record TransformResult

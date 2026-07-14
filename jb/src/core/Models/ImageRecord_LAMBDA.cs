@@ -116,19 +116,14 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
     /// </summary>
     public byte[]? ProcessedBytes { get; set; }
 
-    /// <summary>
-    /// Outcome of the transform routing and pixel processing for this image.
-    /// Null until the Transformed stage evaluates this record.
-    /// </summary>
-    public ImageTransformationResult? TransformationResult { get; set; }
-
     // -------------------------------------------------------------------------
-    // Export outputs — populated by the Exported stage
+    // Output record — created by the Transformed stage, enriched by the Exported stage
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Export metadata attached by the Exported stage for non-KO images.
-    /// Null for KO images or until the Exported stage completes.
+    /// Transform outcome and export metadata for this image. Created by the Transformed stage with
+    /// its transform block filled in, then enriched by the Exported stage with the export block.
+    /// Null until the Transformed stage evaluates this record, and for images KO'd before it.
     /// </summary>
     public ImageRecord_OUTPUT? OutputRecord { get; set; }
 }

@@ -29,10 +29,10 @@ public class Tx_CenterAndStretchTests
         Tx_CenterAndStretch tx = new(Margin, headcut: false, colorMat: null, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         tx.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(1948, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(1948, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(1948, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(1948, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1948);
     }
 
@@ -53,8 +53,8 @@ public class Tx_CenterAndStretchTests
         var exception = Record.Exception(() => tx.Transform(lambda));
 
         Assert.Null(exception);
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(1948, lambda.TransformationResult.OutputWidth);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(1948, lambda.OutputRecord.OutputWidth);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1948);
     }
 
@@ -71,8 +71,8 @@ public class Tx_CenterAndStretchTests
         Tx_CenterAndStretch tx = new(Margin, headcut: false, colorMat: null, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         tx.Transform(lambda);
 
-        Assert.Equal("downscale", lambda.TransformationResult!.ResizeMode);
-        Assert.InRange(lambda.TransformationResult.ScaleFactor, 0.99, 0.992);
+        Assert.Equal("downscale", lambda.OutputRecord!.ResizeMode);
+        Assert.InRange(lambda.OutputRecord.ScaleFactor, 0.99, 0.992);
     }
 
     //  Helpers

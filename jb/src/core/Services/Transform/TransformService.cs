@@ -4,7 +4,7 @@ namespace Prism.Services.Transform;
 
 /// <summary>
 /// In-process Transform implementation. Routes each non-KO LAMBDA through <see cref="ImageTransformer"/> and
-/// enriches it in place with a TransformationResult. When transform is disabled, every non-KO image is
+/// attaches an OutputRecord carrying the transform outcome. When transform is disabled, every non-KO image is
 /// marked Skipped. Emits the Transformed stage event.
 /// </summary>
 public sealed class TransformService : ITransformService
@@ -24,9 +24,9 @@ public sealed class TransformService : ITransformService
             foreach (ImageRecord_LAMBDA lambda in matched.LambdaRecords)
             {
                 if (lambda.IsKo) continue;
-                lambda.TransformationResult = new ImageTransformationResult
+                lambda.OutputRecord = new ImageRecord_OUTPUT
                 {
-                    Status          = TransformationStatus.Skipped,
+                    TransformStatus = TransformationStatus.Skipped,
                     InputWidth      = lambda.Width,
                     InputHeight     = lambda.Height,
                     SafeSummaryText = "Transform disabled by job parameters."

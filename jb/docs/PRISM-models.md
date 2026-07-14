@@ -35,15 +35,36 @@ Lifecycle hub: Imported → Classified → Matched → Ordered → Renamed → G
 | Ordering result + final rename data | FID, `_det` order, final filename |
 | Generation route state | skip / created child records / failed |
 | Optional IRG child references | |
-| Bounded ITR | once transformation has run |
-| Optional IRO link | once exportable output exists |
+| Optional IRO link | once transformation has run |
 | Current lifecycle status + KO/failure state | |
 
 ---
 
 ## IRO — `ImageRecord_OUTPUT.cs`
 
-Exportable processed image artifact.
+Transform outcome + exportable processed image artifact. The OUTPUT end of the
+Base → INPUT → LAMBDA → OUTPUT lifecycle.
+
+Written by two stages: **Transform** creates the record and fills the transform block; **Export**
+enriches that same instance with the export block and re-copies the identity fields (CompactDetOrder
+may have renumbered `_det` since Transform ran). An image KO'd at transform keeps its record but is
+skipped by Export, so it never receives the export block.
+
+**Transform block** (written by the Transformed stage):
+
+| Field | Notes |
+|---|---|
+| Transformation status | null when the Transformed stage never evaluated the image |
+| Transformer type | the `Tx_*` implementation that handled it |
+| Input + output dimensions | |
+| Crop rectangle | when a crop occurs |
+| Resize mode, scale factor | when a resize occurs |
+| Background fill method | when fill occurs |
+| Warnings | |
+| Failure reason | when transformation becomes KO |
+| Safe summary text | for workbench/manifest display |
+
+**Export block** (written by the Exported stage):
 
 | Field | Notes |
 |---|---|
@@ -56,6 +77,9 @@ Exportable processed image artifact.
 | Checksum | when available |
 | Export status | |
 | Safe export metadata | for zip, JSON, BM, API, workbench consumers |
+
+Manifest rows project selected safe fields (transformer type, transformation status) from the
+transform block.
 
 ---
 
@@ -147,7 +171,7 @@ Per-image row projected into `BM.ImageRows`. One row per canonical image.
 
 ## Manifest Row Projection
 
-From IRI/IRL, ME, ITR, IRO: original filename, final filename (OK), status, KO reason, matched FID, route-stage summaries, bounded match/classification/transform evidence, output metadata (extension, MIME, dimensions, byte length, checksum, export status), safe diagnostics.
+From IRI/IRL, ME, IRO: original filename, final filename (OK), status, KO reason, matched FID, route-stage summaries, bounded match/classification/transform evidence, output metadata (extension, MIME, dimensions, byte length, checksum, export status), safe diagnostics.
 
 ---
 
@@ -177,23 +201,11 @@ ME stores paired evidence between image-origin tokens and FR/IEM cell evidence. 
 
 ---
 
-## ITR — `ImageTransformationResult.cs`
+## ITR — retired (T-4550, 2026-07-14)
 
-Bounded transformation summary embedded by IRL.
-
-| Field | Notes |
-|---|---|
-| Transformation status | |
-| Input + output dimensions | |
-| Crop rectangle / crop decision summary | when crop occurs |
-| Resize mode, scale factor, target size | when resize occurs |
-| Background fill method / no-fill/no-reposition state | |
-| Warnings | |
-| Failure reason | when transformation becomes KO |
-| Safe summary text | for workbench/manifest display |
-| Optional transient diagnostic references | masks, intermediate images, debug output during processing only |
-
-Manifest rows project selected safe fields from the embedded bounded summary.
+`ImageTransformationResult` no longer exists. Its fields were folded into IRO's transform block
+(see above), so one record — not two — describes an image's tail end. `ImageRecord_LAMBDA` links to
+it via `OutputRecord`; the old `TransformationResult` property is gone.
 
 ---
 

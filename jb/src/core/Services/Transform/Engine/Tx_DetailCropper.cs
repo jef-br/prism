@@ -43,9 +43,9 @@ public class Tx_DetailCropper : IImageTransformation
         byte[]? bytes = InputImage.ProcessedBytes;
         if (bytes is null)
         {
-            InputImage.TransformationResult = new ImageTransformationResult
+            InputImage.OutputRecord = new ImageRecord_OUTPUT
             {
-                Status          = TransformationStatus.Ko,
+                TransformStatus = TransformationStatus.Ko,
                 TransformerType = nameof(Tx_DetailCropper),
                 InputWidth      = InputImage.Width,
                 InputHeight     = InputImage.Height,
@@ -72,9 +72,9 @@ public class Tx_DetailCropper : IImageTransformation
         var warnings = new System.Collections.Generic.List<string> { warning };
         if (_headcut) warnings.Add("Headcut applied.");
 
-        InputImage.TransformationResult = new ImageTransformationResult
+        InputImage.OutputRecord = new ImageRecord_OUTPUT
         {
-            Status               = TransformationStatus.Ok,
+            TransformStatus      = TransformationStatus.Ok,
             TransformerType      = nameof(Tx_DetailCropper),
             InputWidth           = InputImage.Width,
             InputHeight          = InputImage.Height,

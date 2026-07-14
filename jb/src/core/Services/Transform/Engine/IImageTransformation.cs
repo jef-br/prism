@@ -8,7 +8,7 @@ public interface IImageTransformation
     /// ImagePreProcessor has already populated <paramref name="InputImage"/>.BoundingBox,
     /// .Features (intersects-top/bottom/left/right, has-human, etc.), and .ProcessedBytes.
     /// Reads everything it needs directly from InputImage and records the outcome on
-    /// InputImage.TransformationResult. This is the path ImageTransformer always uses today.
+    /// InputImage.OutputRecord. This is the path ImageTransformer always uses today.
     /// </summary>
     ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage);
 

@@ -111,7 +111,64 @@ public class ExporterTests : IDisposable
         Assert.Equal("FAM001_det0.jpg", lambda.OutputRecord!.FinalFileName);
     }
 
-    //  JSON: ZipBytes is null 
+    //  Export enriches the record Transform attached — it must not overwrite the transform block
+
+    [Fact]
+    public void Run_OutputRecordAlreadyAttachedByTransform_ExportPreservesTransformBlock()
+    {
+        // The T-4550 fold made Transform the creator of OutputRecord and Export the enricher. The
+        // regression this guards: Export re-creating the record and silently dropping the transform
+        // outcome, which would surface as null TransformerType on every manifest row.
+        string imgPath = WriteTempJpeg("ok_img.jpg");
+        ImageRecord_LAMBDA lambda = MakeLambda("ok_img.jpg", "FAM001", 0);
+        lambda.OutputRecord = new ImageRecord_OUTPUT
+        {
+            TransformStatus      = TransformationStatus.Ok,
+            TransformerType      = nameof(Tx_CenterAndStretch),
+            InputWidth           = 1500,
+            InputHeight          = 2000,
+            OutputWidth          = 1948,
+            OutputHeight         = 1948,
+            BackgroundFillMethod = "background-stretch",
+            SafeSummaryText      = "Center-and-stretch applied."
+        };
+
+        Exporter.Run(MakeRequest([MakeInput("ok_img.jpg", imgPath)], [lambda], "zip"));
+
+        ImageRecord_OUTPUT output = lambda.OutputRecord!;
+
+        // Transform block survived.
+        Assert.Equal(TransformationStatus.Ok, output.TransformStatus);
+        Assert.Equal(nameof(Tx_CenterAndStretch), output.TransformerType);
+        Assert.Equal(1948, output.OutputWidth);
+        Assert.Equal("background-stretch", output.BackgroundFillMethod);
+
+        // Export block was added on top of the same instance.
+        Assert.Equal("FAM001_det0.jpg", output.FinalFileName);
+        Assert.Equal("Ok", output.ExportStatus);
+        Assert.Equal(imgPath, output.ArtifactPath);
+    }
+
+    [Fact]
+    public void Run_ManifestRow_SourcesTransformFieldsFromOutputRecord()
+    {
+        string imgPath = WriteTempJpeg("ok_img.jpg");
+        ImageRecord_LAMBDA lambda = MakeLambda("ok_img.jpg", "FAM001", 0);
+        lambda.OutputRecord = new ImageRecord_OUTPUT
+        {
+            TransformStatus = TransformationStatus.Ok,
+            TransformerType = nameof(Tx_CropSquare)
+        };
+
+        ExportArtifacts result = Exporter.Run(
+            MakeRequest([MakeInput("ok_img.jpg", imgPath)], [lambda], "json"));
+
+        ManifestImageRow row = result.Manifest.ImageRows.Single();
+        Assert.Equal(nameof(Tx_CropSquare), row.TransformerType);
+        Assert.Equal("Ok", row.TransformationStatus);
+    }
+
+    //  JSON: ZipBytes is null
 
     [Fact]
     public void Run_JsonFormat_ZipBytesNull()

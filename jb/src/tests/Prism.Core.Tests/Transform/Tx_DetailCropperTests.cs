@@ -35,11 +35,11 @@ public class Tx_DetailCropperTests
 
         // side = ceil(sqrt(1,000,000 * 0.8)) = 895 (tight bbox square of 300 removes more than
         // the 20% Coverage floor allows, so the crop falls back to the Coverage-derived side).
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(895, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(895, lambda.TransformationResult.OutputHeight);
-        Assert.Equal(string.Empty, lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(895, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(895, lambda.OutputRecord.OutputHeight);
+        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 895);
     }
 
@@ -58,11 +58,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(749, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(749, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(749, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(749, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 749);
     }
 
@@ -93,10 +93,10 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(749, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(749, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(749, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(749, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
 
         // Correctly centered: the white band [200,500) shifts by srcY=24 to land at [224,524) —
         // comfortably containing the canvas center row (374). A regression of the fixed bug would
@@ -130,9 +130,9 @@ public class Tx_DetailCropperTests
         var exception = Record.Exception(() => cropper.Transform(lambda));
 
         Assert.Null(exception);
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(749, lambda.TransformationResult.OutputWidth);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(749, lambda.OutputRecord.OutputWidth);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
 
         // srcX=0 means the free axis is unshifted: the white band at source columns [600,700)
         // must land at the same columns [600,700) in the output.
@@ -180,11 +180,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(1000, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(1000, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
     }
 
@@ -202,12 +202,12 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(500, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(500, lambda.TransformationResult.OutputHeight);
-        Assert.Equal(string.Empty, lambda.TransformationResult.BackgroundFillMethod);
-        Assert.Contains("exceeds", lambda.TransformationResult.Warnings[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(500, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(500, lambda.OutputRecord.OutputHeight);
+        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
+        Assert.Contains("exceeds", lambda.OutputRecord.Warnings[0], StringComparison.OrdinalIgnoreCase);
         AssertSquareJpeg(lambda.ProcessedBytes!, 500);
     }
 
@@ -225,11 +225,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(860, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(860, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(860, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(860, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 860);
     }
 
@@ -247,11 +247,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(1000, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(1000, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
     }
 
@@ -269,12 +269,12 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(500, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(500, lambda.TransformationResult.OutputHeight);
-        Assert.Equal(string.Empty, lambda.TransformationResult.BackgroundFillMethod);
-        Assert.Contains("exceeds", lambda.TransformationResult.Warnings[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(500, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(500, lambda.OutputRecord.OutputHeight);
+        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
+        Assert.Contains("exceeds", lambda.OutputRecord.Warnings[0], StringComparison.OrdinalIgnoreCase);
         AssertSquareJpeg(lambda.ProcessedBytes!, 500);
     }
 
@@ -290,12 +290,12 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(800, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(800, lambda.TransformationResult.OutputHeight);
-        Assert.Equal(string.Empty, lambda.TransformationResult.BackgroundFillMethod);
-        Assert.Contains("4-edge", lambda.TransformationResult.Warnings[0]);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(800, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(800, lambda.OutputRecord.OutputHeight);
+        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
+        Assert.Contains("4-edge", lambda.OutputRecord.Warnings[0]);
         AssertSquareJpeg(lambda.ProcessedBytes!, 800);
     }
 
@@ -310,8 +310,8 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ko, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
+        Assert.Equal(TransformationStatus.Ko, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
     }
 
     //  Process() parity — self-derived bbox, no lambda
@@ -388,7 +388,7 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: colorMat, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
         AssertSquareJpeg(lambda.ProcessedBytes!, 895);
     }
 
@@ -407,11 +407,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(749, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(749, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(749, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(749, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 749);
     }
 
@@ -428,11 +428,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(749, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(749, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(749, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(749, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 749);
     }
 
@@ -450,11 +450,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(860, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(860, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(860, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(860, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 860);
     }
 
@@ -470,11 +470,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(860, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(860, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(860, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(860, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 860);
     }
 
@@ -490,11 +490,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(860, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(860, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(860, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(860, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 860);
     }
 
@@ -533,11 +533,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(1000, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(1000, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
     }
 
@@ -553,11 +553,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(1000, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(1000, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
     }
 
@@ -573,11 +573,11 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(1000, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(1000, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
     }
 
@@ -595,12 +595,12 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.TransformationResult.TransformerType);
-        Assert.Equal(500, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(500, lambda.TransformationResult.OutputHeight);
-        Assert.Equal(string.Empty, lambda.TransformationResult.BackgroundFillMethod);
-        Assert.Contains("exceeds", lambda.TransformationResult.Warnings[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(500, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(500, lambda.OutputRecord.OutputHeight);
+        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
+        Assert.Contains("exceeds", lambda.OutputRecord.Warnings[0], StringComparison.OrdinalIgnoreCase);
         AssertSquareJpeg(lambda.ProcessedBytes!, 500);
     }
 
@@ -619,10 +619,10 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(1000, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(1000, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
     }
 
@@ -639,10 +639,10 @@ public class Tx_DetailCropperTests
         Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.TransformationResult!.Status);
-        Assert.Equal(1000, lambda.TransformationResult.OutputWidth);
-        Assert.Equal(1000, lambda.TransformationResult.OutputHeight);
-        Assert.Equal("background-stretch", lambda.TransformationResult.BackgroundFillMethod);
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
     }
 

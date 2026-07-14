@@ -109,7 +109,7 @@ Object very light (white, light gray, creme) + background also very light → us
 
 If salient object exits image frame at one or more edges → margin **cannot** be applied in that direction. Object "sticks" to intersecting edges. No repositioning in blocked direction(s).
 
-When `Tx_DetailCropper` is selected but detects during pixel processing that the crop cannot be repositioned (border intersection blocks manipulation), it **internally delegates to `Tx_CropSquare`** — the image receives a centered square crop without background extension, is not KO'd, and is not exported unchanged. `ImageTransformationResult.TransformerType` records `Tx_CropSquare`; `Warnings` records the reason for the fallback. This is an internal fallback, not a routing decision in `ImageTransformer.cs`.
+When `Tx_DetailCropper` is selected but detects during pixel processing that the crop cannot be repositioned (border intersection blocks manipulation), it **internally delegates to `Tx_CropSquare`** — the image receives a centered square crop without background extension, is not KO'd, and is not exported unchanged. The OUTPUT record's `TransformerType` records `Tx_CropSquare`; `Warnings` records the reason for the fallback. This is an internal fallback, not a routing decision in `ImageTransformer.cs`.
 
 ---
 
