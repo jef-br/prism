@@ -72,7 +72,7 @@ button:disabled {
 
 .workbench-shell-dragging .drop-zone {
   border-color: var(--prism-color-warm);
-  background: #fff5e7;
+  background: var(--prism-color-surface-strong);
 }
 
 .workbench-header {
@@ -255,7 +255,7 @@ button:disabled {
 
 .error-detail {
   border-radius: var(--prism-radius);
-  background: rgba(255, 255, 255, 0.64);
+  background: var(--prism-color-surface);
   padding: 10px;
 }
 
@@ -284,8 +284,8 @@ button:disabled {
   border: 2px dashed var(--prism-color-accent);
   border-radius: var(--prism-radius);
   background:
-    linear-gradient(90deg, rgba(18, 110, 114, 0.08) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(18, 110, 114, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, var(--prism-color-line) 1px, transparent 1px),
+    linear-gradient(0deg, var(--prism-color-line) 1px, transparent 1px),
     var(--prism-color-surface);
   background-size: 22px 22px;
   padding: 24px;
