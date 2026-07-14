@@ -155,33 +155,6 @@ None of this is validated end-to-end:
 ---
 
 
-### T-3400 · Web workbench: dark mode, layout compaction, import/export feedback
-**Status:** Ready | **Profile:** P1-feature-worker
-**Tracks:** root `jbtodo.md` — web-workbench refinement, triaged 2026-07-10.
-
-**Problem:** Three-part complaint, confirmed against current code:
-1. No dark theme — `PRISM-theme.css` (`jb/src/workbench/web/styles/PRISM-theme.css`) defines only one warm/beige palette (`--prism-color-page: #f3f1eb`, `--prism-color-surface-strong: #f7eadc`), no dark variant.
-2. Page-level scrolling drowns the output — `WorkbenchShell.tsx` stacks `UploadSection` → `RouteSection` → `ResultSection` in one vertical column (`workbench-main-column`); the ZIP download button in `ResultSection` sits below the full progress/route detail, so users must scroll past everything to reach it.
-3. Import/export stage feedback is generic — `StatusPanel.tsx` shows fixed dev-facing chips ("Empty input", "Loading", "Progress placeholder", "Result placeholder") rather than the real per-stage Import/Export state (accepted/rejected counts, blocked-vs-running) that `PRISM-workbench.md`'s Required Display section already mandates ("image collection/import state", "output preview", "KO records").
-
-Also confirmed: no Upscale control exists in `JobParameterPanel.tsx` today (only rename/transform/generation/ReturnOriginalImages) — the todo's "Upscaling currently not explicitly mentioned is a good thing" is **confirming that omission is intentional**, not requesting it be added. Do not add an Upscale toggle as part of this ticket.
-
-**Scope decision (2026-07-10):** tighten the existing single-column layout — do not restructure into tabs/stepper (bigger rework, more regression surface with no automated test suite). Dark mode: auto (`prefers-color-scheme`) + a manual header toggle that overrides and persists.
-
-**What to do:**
-1. Add a dark variable set to `PRISM-theme.css` gated by `@media (prefers-color-scheme: dark)`, plus a `[data-theme="dark"]`/`[data-theme="light"]` override pair driven by a manual toggle. Reuse the existing CSS variable names (`--prism-color-page`, `-surface`, `-surface-strong`, `-ink`, `-muted`, `-line`, etc.) so component CSS doesn't need touching.
-2. Add a small theme toggle in `WorkbenchShell.tsx`'s header, persisting the user's explicit choice to `localStorage` and defaulting to `prefers-color-scheme` when no explicit choice is stored.
-3. Reorder/compact `WorkbenchShell.tsx`'s main column so Upload + Result (with the download link) are reachable without scrolling past full route detail — e.g. move `ResultSection` above `RouteSection`, or collapse `RouteSection`'s live event list into a fixed-height internally-scrolling panel (workbench.css already uses this pattern — see the `max-height: 240px; overflow: auto;` rule around line 348) rather than letting it grow the page.
-4. Replace `StatusPanel.tsx`'s generic "Progress placeholder"/"Result placeholder" chips with real Import/Export-stage-labeled state sourced from the SSE progress events, per `PRISM-workbench.md`'s No-Hidden-Behavior Rule — show whether the job is actively importing/exporting vs. blocked, using the actual stage name from the progress event, not a synthetic label.
-
-**Acceptance:**
-- `npm run typecheck` and `npm run build` green in `jb/src/workbench/web`.
-- Manual verification: toggle dark mode, confirm all sections legible in both themes; run a job and confirm the download link is reachable without scrolling past the full route/progress detail; confirm `StatusPanel` reflects real stage state during Import/Export, not placeholder text.
-
-**Files:** `jb/src/workbench/web/styles/PRISM-theme.css`, `jb/src/workbench/web/styles/workbench.css`, `jb/src/workbench/web/sections/WorkbenchShell.tsx`, `jb/src/workbench/web/components/StatusPanel.tsx`, `jb/src/workbench/web/sections/ResultSection.tsx`, `jb/src/workbench/web/sections/RouteSection.tsx`.
-
----
-
 
 ### T-3500 · Fuse Import→Match in-process handoff to remove redundant image decode
 **Status:** Ready | **Profile:** P1-feature-worker
@@ -396,6 +369,27 @@ Migrate every remaining `PrismConfigLocator`/`ConfigCache` call site to `ConfigL
 **Acceptance:** `git grep -l "PrismConfigLocator\|ConfigCache"` returns zero source hits; build + full suite green; `pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` unchanged vs pre-change manifest.
 
 **Files:** `jb/src/core/config/PrismConfigLocator.cs`, `jb/src/core/config/ConfigCache.cs`, call sites listed above.
+
+---
+
+
+### T-4600 · SSE progress events carry no per-item counts or blocked state
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-3400]] review (2026-07-14) — the web StatusPanel requirement that could not be met from the web side.
+
+**Problem:** `PipelineProgressEvent` (`jb/src/core/Pipeline/PipelineProgressEvent.cs`) declares `CompletedCount`/`TotalCount`/`Severity` fields, but the only place any `PipelineProgressEvent` is ever constructed is `StageProgress.EmitStarted` (`jb/src/core/Services/StageProgress.cs:24-31`). It emits exactly one `"Stage {name} started."` event per stage, with `CompletedCount`/`TotalCount` left `null` and `Severity` hardcoded to `"Information"`. No accepted/rejected count, no blocked-vs-running state, and no per-item progress is emitted anywhere in the pipeline.
+
+Consequence: the workbench can only ever display a stage *name*. `PRISM-workbench.md`'s Required Display section mandates "image collection/import state", "output preview", and "KO records" — none of which the SSE stream can currently source. T-3400 was closed on the narrower claim (real stage name replaces placeholder text) precisely because its web-only file scope made this unfixable there.
+
+**What to do:**
+1. Decide the progress contract: which stages emit per-item progress, and what an item is (per image? per family?). Import and Export are the two the workbench most needs (accepted/rejected counts).
+2. Extend `StageProgress` beyond `EmitStarted` — at minimum an `EmitProgress`/`EmitCompleted` that populates `CompletedCount`/`TotalCount`, and a real `Severity` for blocked/warning states (KO records are the obvious source).
+3. Emit from `Importer.cs` and `Exporter.cs` first (accepted/rejected are already computed there — KO records exist), then the remaining stages as warranted.
+4. Update `StatusPanel.tsx` to read `severity` (it currently ignores the field entirely — only `StageRouteList.tsx:41` reads it) and render the real counts + blocked-vs-running distinction.
+
+**Acceptance:** a running job's SSE stream carries non-null `CompletedCount`/`TotalCount` for Import and Export, and a non-`Information` `Severity` when items KO; the workbench StatusPanel shows real accepted/rejected counts and a blocked-vs-running distinction sourced from those events (no synthetic labels, per the No-Hidden-Behavior Rule).
+
+**Files:** `jb/src/core/Pipeline/PipelineProgressEvent.cs`, `jb/src/core/Services/StageProgress.cs`, `jb/src/core/lib/Ingress/Importer.cs`, `jb/src/core/lib/Export/Exporter.cs`, `jb/src/workbench/web/components/StatusPanel.tsx`, `jb/docs/PRISM-workbench.md`.
 
 ---
 

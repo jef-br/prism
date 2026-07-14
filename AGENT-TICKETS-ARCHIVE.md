@@ -3,6 +3,29 @@
 Done tickets, moved here by /ticket-finish to keep AGENT-TICKETS.md (read every session start) lean.
 Newest at the top.
 
+### T-3400 · Web workbench: dark mode, layout compaction, import/export feedback
+**Status:** Done (2026-07-14) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-14)
+**Tracks:** root `jbtodo.md` — web-workbench refinement, triaged 2026-07-10.
+
+**Outcome (2026-07-14):** implemented in `403ed16`; review found the dark theme shipped three theme-bypassing hardcoded colors, fixed in `f9df410`:
+- `.workbench-shell-dragging .drop-zone` hardcoded `#fff5e7`, so the drag-over title (inheriting near-white `--prism-color-ink`) rendered at ~1:1 contrast in dark mode — effectively invisible. Now `var(--prism-color-surface-strong)`: 13.5:1 light / 8.9:1 dark.
+- `.drop-zone` grid pattern hardcoded the *light* accent teal at 8% opacity, rendering the grid invisible on the dark surface. Now `var(--prism-color-line)`.
+- `.error-detail` hardcoded `rgba(255,255,255,0.64)`. Now `var(--prism-color-surface)`.
+
+The dark *palette* itself was complete throughout — all 15 semantic tokens are mirrored across the light `:root`, `@media (prefers-color-scheme: dark)`, and both `[data-theme]` blocks. The bugs were purely values that escaped the variable system.
+
+**Accepted as-is (user decision, 2026-07-14):** `.primary-button`/`.action-button` use `color: white` on `--prism-color-accent` (pink-500 `#d43d78`) = 4.43:1 in dark mode, marginally under the 4.5:1 AA bar for normal text. Judged close enough; the accent is a brand color.
+
+**Scope narrowed (user decision, 2026-07-14):** item 4's "accepted/rejected counts, blocked-vs-running" requirement is **not** met and was **not** achievable in this ticket. `StageProgress.EmitStarted` is the only place a `PipelineProgressEvent` is ever constructed, and it leaves `CompletedCount`/`TotalCount` null — so the SSE stream carries no such data, and T-3400's file list is web-only. T-3400 closes on the achievable bar (real stage name replaces the placeholder chips); the backend gap is now [[T-4600]].
+
+**Delivered:** dark palette + `@media (prefers-color-scheme: dark)` + `[data-theme]` override pair in `PRISM-theme.css`; tri-state (auto/light/dark) header toggle in `WorkbenchShell.tsx` persisting to `localStorage` (auto correctly *removes* the attribute); `ResultSection` reordered above `RouteSection` and `RouteSection` bounded to one row per stage via `StageRouteList.tsx`; `StatusPanel.tsx` placeholder chips replaced with the real SSE stage name. No Upscale toggle added (negative constraint honored). `npm run typecheck` + `npm run build` green.
+
+**Files:** `jb/src/workbench/web/styles/PRISM-theme.css`, `.../styles/workbench.css`, `.../sections/WorkbenchShell.tsx`, `.../components/StatusPanel.tsx`, `.../sections/StageRouteList.tsx`, `.../sections/UploadSection.tsx`.
+
+---
+
+
 ### T-3900 · Order: `DetermineTieBreaker` rescan can mislabel the deciding tiebreaker
 **Status:** Done (2026-07-13) | **Profile:** P1-feature-worker
 **Tracks:** `jb/src/core/Services/Matching/Order/jbtodo.md` (triaged 2026-07-11).
