@@ -22,12 +22,12 @@ public sealed record ColumnClassificationConfig
     {
         if (CategoricalMaximumUniqueValues <= 0)
         {
-            throw new InvalidOperationException("ExcelConfig.ColumnClassification.CategoricalMaximumUniqueValues must be greater than zero.");
+            throw new PrismConfigurationException("ExcelConfig.ColumnClassification.CategoricalMaximumUniqueValues must be greater than zero.");
         }
 
         if (CategoricalMaximumValueLength <= 0)
         {
-            throw new InvalidOperationException("ExcelConfig.ColumnClassification.CategoricalMaximumValueLength must be greater than zero.");
+            throw new PrismConfigurationException("ExcelConfig.ColumnClassification.CategoricalMaximumValueLength must be greater than zero.");
         }
     }
 }

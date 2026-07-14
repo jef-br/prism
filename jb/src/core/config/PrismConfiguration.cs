@@ -7,10 +7,13 @@ namespace Prism.Core;
 /// Owns all threshold, limit, and queue values used by the pipeline.
 /// </summary>
 public sealed class PrismConfiguration {
-    
-    private static string pcjson = "Prism_Config.json";
+
+    /// <summary>Config file name; resolve its path with <see cref="ConfigLoader.RequireFile"/>.</summary>
+    public const string FileName = "Prism_Config.json";
 
     
+
+
     // --- Input limits 
 
     public long MaximumRequestBytes { get; private set; }
@@ -87,7 +90,7 @@ public sealed class PrismConfiguration {
     public IReadOnlyList<string> AcceptedZipExtensions { get; private set; } = [];
     public IReadOnlyList<string> AcceptedMediaTypes => [.. AcceptedImageExtensions, .. AcceptedExcelExtensions, .. AcceptedZipExtensions];
 
-    // --- Model assets (paths relative to the core root; resolved by PrismConfigLocator.FindModelAsset)
+    // --- Model assets (paths relative to the core root; resolved by ModelAssetLocator.Find)
     public string ClipModelDir { get; private set; } = "";
     public string ClipModelFile { get; private set; } = "";
     public string ClipVocabFile { get; private set; } = "";
@@ -105,11 +108,11 @@ public sealed class PrismConfiguration {
     // --- Factory
     public static PrismConfiguration LoadPrismConfig( string cfgPath ) {
         if (string.IsNullOrWhiteSpace(cfgPath)) {
-            throw new PrismConfigurationException($"{pcjson} path must not be null or empty.");
+            throw new PrismConfigurationException($"{FileName} path must not be null or empty.");
         }
 
         if (!File.Exists(cfgPath)) {
-            throw new PrismConfigurationException($"{pcjson} was not found at: {cfgPath}");
+            throw new PrismConfigurationException($"{FileName} was not found at: {cfgPath}");
         }
 
         string rawJson;
@@ -117,7 +120,7 @@ public sealed class PrismConfiguration {
             rawJson = File.ReadAllText(cfgPath);
         } catch (Exception readException) {
             throw new PrismConfigurationException(
-                $"{pcjson} could not be read at: {cfgPath}",
+                $"{FileName} could not be read at: {cfgPath}",
                 readException);
         }
 
@@ -126,7 +129,7 @@ public sealed class PrismConfiguration {
             document = JsonDocument.Parse(rawJson);
         } catch (JsonException parseException) {
             throw new PrismConfigurationException(
-                $"{pcjson} is not valid JSON: {parseException.Message}",
+                $"{FileName} is not valid JSON: {parseException.Message}",
                 parseException);
         }
 
@@ -142,7 +145,7 @@ public sealed class PrismConfiguration {
     // Fail fast on missing analyzer assets: the refinement chain needs the YOLO26 detector, and a
     // per-image degradation would be silent. Same resolution order as the CLIP model assets.
     private static void ValidateAnalyzerAssets() {
-        if (PrismConfigLocator.FindModelAsset("Services/Matching/Analyzers/ONNX/yolo26s.onnx") is null)
+        if (ModelAssetLocator.Find("Services/Matching/Analyzers/ONNX/yolo26s.onnx") is null)
             throw new PrismConfigurationException(
                 "YOLO26 ONNX model not found. Deploy Services/Matching/Analyzers/ONNX/yolo26s.onnx next to " +
                 "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
@@ -233,8 +236,8 @@ public sealed class PrismConfiguration {
         AssertInRange(ThresholdForInfluentialTags, 0.0, 1.0, cfgPath, "Classification.Confidence_Threshold");
         AssertInRange(ThresholdForDiscardingClassificationTags, 0.0, 1.0, cfgPath, "Classification.Cutoff_Threshold");
 
-        if (ThresholdForDiscardingClassificationTags > ThresholdForInfluentialTags) {throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Classification.Cutoff_Threshold ({ThresholdForDiscardingClassificationTags}) must be <= Classification.Confidence_Threshold ({ThresholdForInfluentialTags}).");}
-        if (MaxHammingDistance < 0) {throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Classification.Deduplication.HammingThreshold must be >= 0 but was {MaxHammingDistance}.");}
+        if (ThresholdForDiscardingClassificationTags > ThresholdForInfluentialTags) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Classification.Cutoff_Threshold ({ThresholdForDiscardingClassificationTags}) must be <= Classification.Confidence_Threshold ({ThresholdForInfluentialTags}).");}
+        if (MaxHammingDistance < 0) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Classification.Deduplication.HammingThreshold must be >= 0 but was {MaxHammingDistance}.");}
 
         AssertInRange(Weight_NumTokens, 0.0, 1.0, cfgPath, "Classification.Weights.NumericToken_Weight");
         AssertInRange(Weight_StringTokens, 0.0, 1.0, cfgPath, "Classification.Weights.StringToken_Weight");
@@ -252,15 +255,15 @@ public sealed class PrismConfiguration {
         AssertPositive(MinGeneratedImgWidth, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.width");
         AssertPositive(MinGeneratedImgWidthHeight, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.height");
 
-        if (JobRetries < 0) {throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Pipeline.JobRetries must be >= 0 but was {JobRetries}.");}
-        if (JobRetentionPeriodInHours <= 0) throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Jobs.JobRetentionPeriodInHours must be > 0 but was {JobRetentionPeriodInHours}.");
+        if (JobRetries < 0) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Pipeline.JobRetries must be >= 0 but was {JobRetries}.");}
+        if (JobRetentionPeriodInHours <= 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Jobs.JobRetentionPeriodInHours must be > 0 but was {JobRetentionPeriodInHours}.");
 
         AssertPositive(MaxQueuedJobs, cfgPath, "Jobs.MaxQueuedJobs");
         AssertPositive(MaxConcurrentJobs, cfgPath, "Jobs.MaxConcurrentJobs");
 
-        if (AcceptedImageExtensions.Count == 0) throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Input.Images.extensions must contain at least one entry.");
-        if (AcceptedExcelExtensions.Count == 0) throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Input.EXCEL.extensions must contain at least one entry.");
-        if (AcceptedZipExtensions.Count == 0) throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': Input.ZIP.extensions must contain at least one entry.");
+        if (AcceptedImageExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.Images.extensions must contain at least one entry.");
+        if (AcceptedExcelExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.EXCEL.extensions must contain at least one entry.");
+        if (AcceptedZipExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.ZIP.extensions must contain at least one entry.");
 
         AssertNonEmpty(ClipModelDir, cfgPath, "Models.Clip.Dir");
         AssertNonEmpty(ClipModelFile, cfgPath, "Models.Clip.Model");
@@ -275,7 +278,7 @@ public sealed class PrismConfiguration {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Number || !element.Value.TryGetInt32(out int val)) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': required integer field '{string.Join(".", path)}' is missing or not a valid integer.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': required integer field '{string.Join(".", path)}' is missing or not a valid integer.");
         }
 
         return val;
@@ -285,7 +288,7 @@ public sealed class PrismConfiguration {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Number || !element.Value.TryGetInt64(out long val)) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': required integer field '{string.Join(".", path)}' is missing or not a valid integer.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': required integer field '{string.Join(".", path)}' is missing or not a valid integer.");
         }
 
         return val;
@@ -295,7 +298,7 @@ public sealed class PrismConfiguration {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Number || !element.Value.TryGetDouble(out double val)) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': required numeric field '{string.Join(".", path)}' is missing or not a valid number.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': required numeric field '{string.Join(".", path)}' is missing or not a valid number.");
         }
 
         return val;
@@ -305,7 +308,7 @@ public sealed class PrismConfiguration {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || (element.Value.ValueKind != JsonValueKind.True && element.Value.ValueKind != JsonValueKind.False)) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': required boolean field '{string.Join(".", path)}' is missing or not a valid boolean.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': required boolean field '{string.Join(".", path)}' is missing or not a valid boolean.");
         }
 
         return element.Value.GetBoolean();
@@ -315,7 +318,7 @@ public sealed class PrismConfiguration {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.String) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': required string field '{string.Join(".", path)}' is missing or not a string.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': required string field '{string.Join(".", path)}' is missing or not a string.");
         }
 
         return element.Value.GetString()!;
@@ -325,13 +328,13 @@ public sealed class PrismConfiguration {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Array) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': required array field '{string.Join(".", path)}' is missing or not an array.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': required array field '{string.Join(".", path)}' is missing or not an array.");
         }
 
         List<string> values = [];
         foreach (JsonElement item in element.Value.EnumerateArray()) {
             if (item.ValueKind != JsonValueKind.String) {
-                throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': array field '{string.Join(".", path)}' must contain only strings.");
+                throw new PrismConfigurationException($"{FileName} at '{cfgPath}': array field '{string.Join(".", path)}' must contain only strings.");
             }
 
             values.Add(item.GetString()!);
@@ -392,37 +395,37 @@ public sealed class PrismConfiguration {
 
     private static void AssertPositive( long val, string cfgPath, string fieldPath ) {
         if (val <= 0) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': field '{fieldPath}' must be > 0 but was {val}.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be > 0 but was {val}.");
         }
     }
 
     private static void AssertPositive( int val, string cfgPath, string fieldPath ) {
         if (val <= 0) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': field '{fieldPath}' must be > 0 but was {val}.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be > 0 but was {val}.");
         }
     }
 
     private static void AssertPositive( double val, string cfgPath, string fieldPath ) {
         if (val <= 0.0) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': field '{fieldPath}' must be > 0 but was {val}.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be > 0 but was {val}.");
         }
     }
 
     private static void AssertInRange( double val, double min, double max, string cfgPath, string fieldPath ) {
         if (val < min || val > max) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': field '{fieldPath}' must be between {min} and {max} but was {val}.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be between {min} and {max} but was {val}.");
         }
     }
 
     private static void AssertInRange( int val, int min, int max, string cfgPath, string fieldPath ) {
         if (val < min || val > max) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': field '{fieldPath}' must be between {min} and {max} but was {val}.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be between {min} and {max} but was {val}.");
         }
     }
 
     private static void AssertNonEmpty( string val, string cfgPath, string fieldPath ) {
         if (string.IsNullOrWhiteSpace(val)) {
-            throw new PrismConfigurationException($"{pcjson} at '{cfgPath}': field '{fieldPath}' must be a non-empty string.");
+            throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be a non-empty string.");
         }
     }
 }

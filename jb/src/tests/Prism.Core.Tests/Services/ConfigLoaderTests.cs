@@ -32,16 +32,19 @@ public class ConfigLoaderTests : IDisposable {
         public required float Beta { get; init; }
     }
 
+    // Mirrors a real section class: required props, no initializers, and a Validate() that fails loud
+    // with PrismConfigurationException — the single config exception type every production
+    // section class throws (T-4560).
     private sealed class ValidatedSection : IValidatableConfig {
         public required int Alpha { get; init; }
         public void Validate() {
-            if (Alpha <= 0) throw new InvalidOperationException("Alpha must be > 0");
+            if (Alpha <= 0) throw new PrismConfigurationException("Alpha must be > 0");
         }
     }
 
     [Fact]
     public void RequireFile_Missing_ThrowsListingSearchedPaths() {
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.RequireFile("no_such_file_zz.json"));
         Assert.Contains("no_such_file_zz.json", ex.Message);
         Assert.Contains(Path.Combine(AppContext.BaseDirectory, "config"), ex.Message);
@@ -50,7 +53,7 @@ public class ConfigLoaderTests : IDisposable {
     [Fact]
     public void Section_MissingSection_ThrowsNamingExistingSections() {
         string fileName = WriteConfig("""{ "Alpha": {}, "Bravo": {} }""");
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<ProbeSection>(fileName, "Charlie"));
         Assert.Contains("Charlie", ex.Message);
         Assert.Contains("Alpha", ex.Message);
@@ -60,7 +63,7 @@ public class ConfigLoaderTests : IDisposable {
     [Fact]
     public void Section_MisspelledKey_Throws() {
         string fileName = WriteConfig("""{ "Probe": { "Alfa": 1, "Beta": 2.0 } }""");
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<ProbeSection>(fileName, "Probe"));
         Assert.Contains("Probe", ex.Message);
     }
@@ -101,7 +104,7 @@ public class ConfigLoaderTests : IDisposable {
     [Fact]
     public void Section_ValidatableConfig_ValidateFailurePropagates() {
         string fileName = WriteConfig("""{ "Probe": { "Alpha": -1 } }""");
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<ValidatedSection>(fileName, "Probe"));
         Assert.Contains("Alpha must be > 0", ex.Message);
     }

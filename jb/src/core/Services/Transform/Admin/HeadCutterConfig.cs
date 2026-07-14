@@ -15,6 +15,6 @@ public sealed class HeadCutterConfig : IValidatableConfig
     public void Validate()
     {
         if (FaceHeightCutFactor is <= 0.0 or >= 1.0)
-            throw new InvalidOperationException("HeadCutter.FaceHeightCutFactor must be in (0,1)");
+            throw new PrismConfigurationException("HeadCutter.FaceHeightCutFactor must be in (0,1)");
     }
 }

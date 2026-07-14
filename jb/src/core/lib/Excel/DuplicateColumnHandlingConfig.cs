@@ -17,7 +17,7 @@ public sealed record DuplicateColumnHandlingConfig
     {
         if (OverlapRatioForMerge <= 0 || OverlapRatioForMerge > 1)
         {
-            throw new InvalidOperationException("ExcelConfig.DuplicateColumnHandling.OverlapRatioForMerge must be greater than zero and less than or equal to one.");
+            throw new PrismConfigurationException("ExcelConfig.DuplicateColumnHandling.OverlapRatioForMerge must be greater than zero and less than or equal to one.");
         }
     }
 }

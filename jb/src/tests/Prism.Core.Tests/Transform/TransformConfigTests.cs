@@ -74,7 +74,7 @@ public class TransformConfigTests : IDisposable {
         // MinOutputPx is required with no in-code default — deserialization itself must fail loud.
         string fileName = WriteConfig("""{ "ProblemImageProcessor": { "MinInputPx": 570, "MaxUpscale": 1.42 } }""");
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<ProblemImageProcessorConfig>(fileName, "ProblemImageProcessor"));
         Assert.Contains("MinOutputPx", ex.Message);
     }
@@ -83,7 +83,7 @@ public class TransformConfigTests : IDisposable {
     public void Section_OutOfRangeAdjacentCropCap_ThrowsWithFieldName() {
         string fileName = WriteConfig("""{ "DetailCropper": { "AdjacentCropCap": 1.5 } }""");
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<DetailCropperConfig>(fileName, "DetailCropper"));
         Assert.Contains("DetailCropper.AdjacentCropCap", ex.Message);
     }
@@ -97,14 +97,14 @@ public class TransformConfigTests : IDisposable {
         }
         """);
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<CropTransformSettings>(fileName, "Crop"));
         Assert.Contains("Crop.WhiteSpaceMargin", ex.Message);
     }
 
     [Fact]
     public void Section_MissingFile_ThrowsFailLoud() {
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<BgStretchConfig>($"transform_Config_missing_{Guid.NewGuid():N}.json", "BgStretch"));
         Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
     }

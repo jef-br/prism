@@ -386,12 +386,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
 
     private static PhenotypeRuleSet LoadRuleSet()
     {
-        string? imageRolesPath = PrismConfigLocator.FindFolderLocalConfig("ImageRoles.json");
-        if (imageRolesPath is null)
-            throw new PrismConfigurationException(
-                "ImageRoles.json not found. Ensure ImageRoles.json is present in the config directory next to Prism_Config.json.");
-
-        return ConfigCache.GetOrLoad(() => PhenotypeRuleSet.Load(imageRolesPath), imageRolesPath);
+        return PhenotypeRuleSet.Load(ConfigLoader.RequireFile("ImageRoles.json"));
     }
 
     /// <summary>

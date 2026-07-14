@@ -22,12 +22,12 @@ public sealed record FamilyIdProperties
     {
         if (!IsNumeric.HasValue)
         {
-            throw new InvalidOperationException("ExcelConfig.FamilyIDProperties.IsNumeric is required.");
+            throw new PrismConfigurationException("ExcelConfig.FamilyIDProperties.IsNumeric is required.");
         }
 
         if (Length <= 0)
         {
-            throw new InvalidOperationException("ExcelConfig.FamilyIDProperties.Length must be greater than zero.");
+            throw new PrismConfigurationException("ExcelConfig.FamilyIDProperties.Length must be greater than zero.");
         }
     }
 }

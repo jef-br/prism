@@ -34,6 +34,6 @@ public sealed class YoloAnalyzerConfig : IValidatableConfig
         if (AbsenceConfidence is <= 0f or > 1f) problems.Add("Yolo.AbsenceConfidence must be in (0,1]");
         if (HeroPersonMinArea is <= 0f or >= 1f) problems.Add("Yolo.HeroPersonMinArea must be in (0,1)");
 
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }
 }

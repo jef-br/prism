@@ -37,12 +37,8 @@ internal sealed record PrismApiConfiguration {
     /// invalid, or temp storage is unavailable.
     /// </summary>
     public static PrismApiConfiguration Load() {
-        string configPath = PrismConfigLocator.FindPrismConfigPath()
-            ?? throw new PrismConfigurationException(
-                "Prism_Config.json was not found in any expected location. " +
-                "Ensure the file is deployed next to the running assembly.");
-
-        PrismConfiguration core = PrismConfiguration.LoadPrismConfig(configPath);
+        PrismConfiguration core = PrismConfiguration.LoadPrismConfig(
+            ConfigLoader.RequireFile(PrismConfiguration.FileName));
 
         // Every transform_Config.json and analyzer_Config.json section, loaded through the same
         // ConfigLoader the Transform and Matching stages use. A missing file, a misspelled key, or an

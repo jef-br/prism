@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
+using Prism.Core;
 
 namespace Prism.Config;
 
@@ -12,6 +13,11 @@ namespace Prism.Config;
 /// edited file is re-parsed on next use while unchanged files parse once per process. Compiles into
 /// the shared contracts assembly so engine projects can load their own config without referencing
 /// Prism.Core.
+/// <para>
+/// Every config failure throws <see cref="PrismConfigurationException"/> — the single fail-loud type
+/// for PRISM-owned configuration across the whole codebase (T-4560). It derives from
+/// <see cref="InvalidOperationException"/>, so existing catch sites keep working.
+/// </para>
 /// </summary>
 public static class ConfigLoader {
     private static readonly ConcurrentDictionary<string, object> cache = new();
@@ -35,7 +41,7 @@ public static class ConfigLoader {
 
     public static string RequireFile(string configFileName) {
         return FindFile(configFileName)
-            ?? throw new InvalidOperationException(
+            ?? throw new PrismConfigurationException(
                 $"Config file '{configFileName}' not found. Searched: {string.Join("; ", CandidatePaths(configFileName))}");
     }
 
@@ -59,14 +65,14 @@ public static class ConfigLoader {
     private static T LoadSection<T>(string path, string sectionName) {
         using JsonDocument doc = ParseDocument(path);
         if (doc.RootElement.ValueKind != JsonValueKind.Object)
-            throw new InvalidOperationException($"Config file {path} must contain a JSON object at the root.");
+            throw new PrismConfigurationException($"Config file {path} must contain a JSON object at the root.");
 
         foreach (JsonProperty property in doc.RootElement.EnumerateObject())
             if (string.Equals(property.Name, sectionName, StringComparison.OrdinalIgnoreCase))
                 return Materialize<T>(property.Value.GetRawText(), path, sectionName);
 
         string available = string.Join(", ", doc.RootElement.EnumerateObject().Select(p => p.Name));
-        throw new InvalidOperationException(
+        throw new PrismConfigurationException(
             $"Section '{sectionName}' not found in {path}. Available sections: {available}.");
     }
 
@@ -74,7 +80,7 @@ public static class ConfigLoader {
         try {
             return JsonDocument.Parse(File.ReadAllText(path), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
         } catch (JsonException ex) {
-            throw new InvalidOperationException($"Config file {path} is not valid JSON: {ex.Message}", ex);
+            throw new PrismConfigurationException($"Config file {path} is not valid JSON: {ex.Message}", ex);
         }
     }
 
@@ -83,9 +89,9 @@ public static class ConfigLoader {
         T config;
         try {
             config = JsonSerializer.Deserialize<T>(json, SerializerOptions)
-                ?? throw new InvalidOperationException($"Failed to deserialize {origin}.");
+                ?? throw new PrismConfigurationException($"Failed to deserialize {origin}.");
         } catch (JsonException ex) {
-            throw new InvalidOperationException($"Cannot load {origin}: {ex.Message}", ex);
+            throw new PrismConfigurationException($"Cannot load {origin}: {ex.Message}", ex);
         }
 
         if (config is IValidatableConfig validatable) validatable.Validate();

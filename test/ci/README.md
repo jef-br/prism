@@ -50,7 +50,7 @@ Both run on `runs-on: [self-hosted, windows]`.
    PRISM_ONNX_MODEL_DIR = C:\prism-ci-assets\models
    ```
 
-   `PrismConfigLocator.FindModelAsset` resolves each relative path above in order: beside
+   `ModelAssetLocator.Find` resolves each relative path above in order: beside
    `Prism_Config.json`, then against `PRISM_ONNX_MODEL_DIR`, then the source-tree copy under
    `jb/src/core/` (a dev convenience — the models are gitignored, so this last hop never resolves on a
    fresh CI checkout).

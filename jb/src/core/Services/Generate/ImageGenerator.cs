@@ -130,13 +130,11 @@ internal static class ImageGenerator
 
     /// <summary>
     /// Loads generation thresholds from the <c>Generation</c> section of <c>Prism_Config.json</c>.
-    /// Throws <see cref="InvalidOperationException"/> when the file is missing or the section is malformed.
+    /// Throws <see cref="PrismConfigurationException"/> when the file is missing or the section is malformed.
     /// </summary>
     private static Generate_Config LoadConfig()
     {
-        string configPath = PrismConfigLocator.FindPrismConfigPath()
-            ?? throw new InvalidOperationException(
-                "Prism_Config.json could not be located. Ensure the file is deployed next to the assembly.");
+        string configPath = ConfigLoader.RequireFile(PrismConfiguration.FileName);
 
         string json = File.ReadAllText(configPath, System.Text.Encoding.UTF8);
 
@@ -147,19 +145,19 @@ internal static class ImageGenerator
         }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException(
+            throw new PrismConfigurationException(
                 $"Failed to parse Prism_Config.json at '{configPath}': {ex.Message}", ex);
         }
 
         using (doc)
         {
             if (!doc.RootElement.TryGetProperty("Generation", out JsonElement genEl))
-                throw new InvalidOperationException(
+                throw new PrismConfigurationException(
                     "Prism_Config.json is missing required 'Generation' section.");
 
             int minFamily = genEl.TryGetProperty("MinImagesPerFamily", out JsonElement mipEl)
                 ? mipEl.GetInt32()
-                : throw new InvalidOperationException(
+                : throw new PrismConfigurationException(
                     "Prism_Config.json Generation section is missing 'MinImagesPerFamily'.");
 
             int minWidth  = 0;

@@ -7,7 +7,7 @@ namespace PrismCoreTests.Ingest;
 
 /// <summary>
 /// Shared fixture for the Ingest suite. Loads the real Prism_Config.json and ExcelConfig.json once
-/// per test class (same PrismConfigLocator resolution production uses), owns a per-run temp root that
+/// per test class (same ConfigLoader resolution production uses), owns a per-run temp root that
 /// doubles as job temp root and fixture-image folder, and provides deterministic image factories.
 /// Generated images are filled with seeded noise: noise defeats JPEG/PNG compression, so even small
 /// canvases stay above the configured Input.Images.filesize.min without shipping binary fixtures.
@@ -27,12 +27,11 @@ public sealed class ImporterFixture : IDisposable {
     public string CiMiniExcelPath { get; }
 
     public ImporterFixture() {
-        string configPath = PrismConfigLocator.FindPrismConfigPath()
-            ?? throw new InvalidOperationException("Prism_Config.json not found — the Ingest suite needs the deployed config next to the test assembly.");
+        string configPath = ConfigLoader.RequireFile(PrismConfiguration.FileName);
 
         Configuration   = PrismConfiguration.LoadPrismConfig(configPath);
         ConfigDirectory = Path.GetDirectoryName(configPath)!;
-        modelBuilder    = ModelBuilder.FromConfigFile(Path.Combine(ConfigDirectory, "ExcelConfig.json"));
+        modelBuilder    = ModelBuilder.FromConfigFile(ConfigLoader.RequireFile("ExcelConfig.json"));
         TempRoot        = Path.Combine(Path.GetTempPath(), $"PRISM-INGEST-TESTS-{Guid.NewGuid():N}");
         Directory.CreateDirectory(TempRoot);
         CiMiniExcelPath = Path.Combine(PipelineFixture.ResolveTestFixturePath(), "CiMini", "ci-mini.xlsx");

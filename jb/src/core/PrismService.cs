@@ -211,29 +211,14 @@ public sealed class PrismService : IDisposable
     /// </summary>
     private static (PrismConfiguration Config, ModelBuilder ExcelModelBuilder) Initialize()
     {
-        string configPath = LocatePrismConfig();
-        PrismConfiguration config = PrismConfiguration.LoadPrismConfig(configPath);
-        ValidateRequiredFolderLocalConfigs(configPath);
-        string coreDir = Path.GetDirectoryName(configPath)!;
-        ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(Path.Combine(coreDir, "ExcelConfig.json"));
+        PrismConfiguration config = PrismConfiguration.LoadPrismConfig(
+            ConfigLoader.RequireFile(PrismConfiguration.FileName));
+        ValidateRequiredFolderLocalConfigs();
+        ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(ConfigLoader.RequireFile("ExcelConfig.json"));
         return (config, modelBuilder);
     }
 
-    private static string LocatePrismConfig()
-    {
-        string? configPath = PrismConfigLocator.FindPrismConfigPath();
-
-        if (configPath is null)
-        {
-            throw new PrismConfigurationException(
-                "Prism_Config.json was not found in any expected location. " +
-                "Ensure the file is deployed next to the running assembly.");
-        }
-
-        return configPath;
-    }
-
-    private static void ValidateRequiredFolderLocalConfigs(string prismConfigPath)
+    private static void ValidateRequiredFolderLocalConfigs()
     {
         string[] requiredFolderLocalConfigs =
         [
@@ -245,20 +230,9 @@ public sealed class PrismService : IDisposable
             "DetOrderKeywordStems.json"
         ];
 
-        string coreDirectory = Path.GetDirectoryName(prismConfigPath)
-            ?? throw new PrismConfigurationException("Could not determine core configuration directory.");
-
-        foreach (string relativePath in requiredFolderLocalConfigs)
-        {
-            string fullPath = Path.Combine(coreDirectory, relativePath);
-
-            if (!File.Exists(fullPath))
-            {
-                throw new PrismConfigurationException(
-                    $"Required PRISM configuration file was not found: {fullPath}. " +
-                    "Ensure all configuration assets are deployed with the assembly.");
-            }
-        }
+        // RequireFile throws PrismConfigurationException naming the file and every path it searched.
+        foreach (string configFileName in requiredFolderLocalConfigs)
+            ConfigLoader.RequireFile(configFileName);
     }
 
     // -------------------------------------------------------------------------

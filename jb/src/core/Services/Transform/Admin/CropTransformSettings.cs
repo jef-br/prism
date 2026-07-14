@@ -25,6 +25,6 @@ public sealed class CropTransformSettings : IValidatableConfig
         if (CropExtensionOneSided is < 0.0 or > 1.0) problems.Add("Crop.CropExtensionOneSided must be in [0,1]");
         if (CropExtensionBiDirectional is < 0.0 or > 1.0) problems.Add("Crop.CropExtensionBiDirectional must be in [0,1]");
 
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }
 }

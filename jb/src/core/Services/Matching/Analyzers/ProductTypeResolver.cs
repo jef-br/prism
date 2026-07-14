@@ -24,11 +24,11 @@ public sealed class ProductTypeResolver
     public static ProductTypeResolver Load(string jsonPath)
     {
         if (!File.Exists(jsonPath))
-            throw new InvalidOperationException($"ProductTypeMap.json not found at: {jsonPath}");
+            throw new PrismConfigurationException($"ProductTypeMap.json not found at: {jsonPath}");
 
         using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
         if (!doc.RootElement.TryGetProperty("productTypes", out JsonElement types) || types.ValueKind != JsonValueKind.Object)
-            throw new InvalidOperationException($"ProductTypeMap.json at {jsonPath} is missing the \"productTypes\" object.");
+            throw new PrismConfigurationException($"ProductTypeMap.json at {jsonPath} is missing the \"productTypes\" object.");
 
         HashSet<string> slugs = new(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, string> termToSlug = new(StringComparer.OrdinalIgnoreCase);
@@ -44,7 +44,7 @@ public sealed class ProductTypeResolver
         }
 
         if (slugs.Count == 0)
-            throw new InvalidOperationException($"ProductTypeMap.json at {jsonPath} defines no product types.");
+            throw new PrismConfigurationException($"ProductTypeMap.json at {jsonPath} defines no product types.");
 
         return new ProductTypeResolver(slugs, termToSlug);
     }

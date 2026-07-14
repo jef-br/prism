@@ -36,7 +36,7 @@ public class PhenotypeRuleSetTests
     [Fact]
     public void Load_MissingFile_ThrowsInvalidOperationException()
     {
-        Assert.Throws<InvalidOperationException>(() =>
+        Assert.Throws<PrismConfigurationException>(() =>
             PhenotypeRuleSet.Load(@"C:\does\not\exist\ImageRoles.json"));
     }
 
@@ -48,7 +48,7 @@ public class PhenotypeRuleSetTests
         {
             // "null" deserializes to null reference, triggering the ?? throw branch.
             File.WriteAllText(tempPath, "null", System.Text.Encoding.UTF8);
-            Assert.Throws<InvalidOperationException>(() => PhenotypeRuleSet.Load(tempPath));
+            Assert.Throws<PrismConfigurationException>(() => PhenotypeRuleSet.Load(tempPath));
         }
         finally
         {

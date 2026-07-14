@@ -51,7 +51,7 @@ public class AnalyzerConfigTests : IDisposable {
         // TextureDiffMin is required with no in-code default — deserialization itself must fail loud.
         string fileName = WriteConfig("""{ "Interior": { "MinAreaFraction": 0.04, "MinEdgeStrength": 0.1176 } }""");
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<InteriorAnalyzerConfig>(fileName, "Interior"));
         Assert.Contains("TextureDiffMin", ex.Message);
     }
@@ -60,7 +60,7 @@ public class AnalyzerConfigTests : IDisposable {
     public void Section_MissingSection_ThrowsNamingIt() {
         string fileName = WriteConfig("""{ "Interior": { "MinAreaFraction": 0.04, "MinEdgeStrength": 0.1176, "TextureDiffMin": 0.015 } }""");
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<YoloAnalyzerConfig>(fileName, "Yolo"));
         Assert.Contains("Yolo", ex.Message);
     }
@@ -69,7 +69,7 @@ public class AnalyzerConfigTests : IDisposable {
     public void Section_OutOfRangeOverlapIou_ThrowsWithFieldName() {
         string fileName = WriteConfig("""{ "MultipleProducts": { "OverlapIou": 1.5, "Confidence": 0.70 } }""");
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<MultipleProductsAnalyzerConfig>(fileName, "MultipleProducts"));
         Assert.Contains("MultipleProducts.OverlapIou", ex.Message);
     }
@@ -82,7 +82,7 @@ public class AnalyzerConfigTests : IDisposable {
         }
         """);
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<ExposureAnalyzerConfig>(fileName, "Exposure"));
         Assert.Contains("Exposure.LowLuminance", ex.Message);
     }
@@ -95,14 +95,14 @@ public class AnalyzerConfigTests : IDisposable {
         }
         """);
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<ColorAnalyzerConfig>(fileName, "Colors"));
         Assert.Contains("Colors.Palette", ex.Message);
     }
 
     [Fact]
     public void Section_MissingFile_ThrowsFailLoud() {
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<InteriorAnalyzerConfig>($"analyzer_Config_missing_{Guid.NewGuid():N}.json", "Interior"));
         Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
     }

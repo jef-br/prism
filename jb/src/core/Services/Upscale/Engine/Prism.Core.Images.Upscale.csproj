@@ -5,6 +5,12 @@
 
   <ItemGroup>
     <Using Include="Prism.Services.Matching" />
+    <!-- PrismConfigurationException — the single config fail-loud type; compiled into Prism.Core.Contracts. -->
+    <Using Include="Prism.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Models\Prism.Core.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

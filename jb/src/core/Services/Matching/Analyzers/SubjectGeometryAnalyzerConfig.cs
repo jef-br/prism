@@ -21,6 +21,6 @@ public sealed class SubjectGeometryAnalyzerConfig : IValidatableConfig
     public void Validate()
     {
         if (ForegroundColorDistance is <= 0f or >= 1f)
-            throw new InvalidOperationException("SubjectGeometry.ForegroundColorDistance must be in (0,1)");
+            throw new PrismConfigurationException("SubjectGeometry.ForegroundColorDistance must be in (0,1)");
     }
 }

@@ -100,7 +100,7 @@ public sealed record MatchingConfig
         string json = File.ReadAllText(configPath);
         MatchingConfig? config = JsonSerializer.Deserialize<MatchingConfig>(json, JsonOptions);
 
-        return config ?? throw new InvalidOperationException("MatchingConfig.json could not be parsed.");
+        return config ?? throw new PrismConfigurationException("MatchingConfig.json could not be parsed.");
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()

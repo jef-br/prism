@@ -33,16 +33,16 @@ public sealed class PhenotypeRuleSet
     /// </summary>
     /// <param name="jsonPath">Absolute path to <c>ImageRoles.json</c>.</param>
     /// <returns>Loaded rule set ready for evaluation.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the file is missing or cannot be parsed.</exception>
+    /// <exception cref="PrismConfigurationException">Thrown when the file is missing or cannot be parsed.</exception>
     public static PhenotypeRuleSet Load(string jsonPath)
     {
         if (!File.Exists(jsonPath))
-            throw new InvalidOperationException($"ImageRoles.json not found at: {jsonPath}");
+            throw new PrismConfigurationException($"ImageRoles.json not found at: {jsonPath}");
 
         string json = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
 
         ImageRolesConfig config = JsonSerializer.Deserialize<ImageRolesConfig>(json, JsonOptions)
-            ?? throw new InvalidOperationException($"Failed to deserialize ImageRoles.json at: {jsonPath}");
+            ?? throw new PrismConfigurationException($"Failed to deserialize ImageRoles.json at: {jsonPath}");
 
         return new PhenotypeRuleSet(config.Phenotypes);
     }

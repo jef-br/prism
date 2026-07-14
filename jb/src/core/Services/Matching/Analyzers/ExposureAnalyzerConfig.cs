@@ -28,6 +28,6 @@ public sealed class ExposureAnalyzerConfig : IValidatableConfig
         if (LowLuminance is < 0f or >= 1f) problems.Add("Exposure.LowLuminance must be in [0,1)");
         if (FlaggedFraction is <= 0f or > 1f) problems.Add("Exposure.FlaggedFraction must be in (0,1]");
 
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }
 }

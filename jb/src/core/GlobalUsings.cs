@@ -4,6 +4,7 @@
 // without a using directive in every file. See jb/docs (restructure) for the namespace map.
 global using Prism.Core;
 global using Prism.Contracts;
+global using Prism.Config;
 global using Prism.Services.Matching;
 global using Prism.Services.Transform;
 global using Prism.Services.Generate;

@@ -18,6 +18,6 @@ public sealed class MultipleProductsAnalyzerConfig : IValidatableConfig
     public void Validate()
     {
         if (OverlapIou is <= 0f or >= 1f)
-            throw new InvalidOperationException("MultipleProducts.OverlapIou must be in (0,1)");
+            throw new PrismConfigurationException("MultipleProducts.OverlapIou must be in (0,1)");
     }
 }

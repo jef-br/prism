@@ -36,12 +36,8 @@ public sealed class TransformService : ITransformService
             return new TransformResult { Matched = matched, OkTransformedCount = 0 };
         }
 
-        string? prismConfigPath = PrismConfigLocator.FindPrismConfigPath();
-        if (prismConfigPath is null)
-            throw new PrismConfigurationException("Prism_Config.json not found — cannot run preprocessor.");
-
-        PrismConfiguration prismConfig = ConfigCache.GetOrLoad(
-            () => PrismConfiguration.LoadPrismConfig(prismConfigPath), prismConfigPath);
+        PrismConfiguration prismConfig = PrismConfiguration.LoadPrismConfig(
+            ConfigLoader.RequireFile(PrismConfiguration.FileName));
 
         // Load + validate every transform_Config.json section once per stage run, then hand the bundle
         // to each per-image transform — no config lookup inside the parallel loop below.

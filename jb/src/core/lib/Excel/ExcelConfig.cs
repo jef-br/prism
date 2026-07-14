@@ -78,7 +78,7 @@ public sealed record ExcelConfig
 
         if (config is null)
         {
-            throw new InvalidOperationException("Excel config could not be parsed.");
+            throw new PrismConfigurationException("Excel config could not be parsed.");
         }
 
         config.Validate();
@@ -93,12 +93,12 @@ public sealed record ExcelConfig
     {
         if (string.IsNullOrWhiteSpace(RecordPrimaryKey))
         {
-            throw new InvalidOperationException("ExcelConfig.RecordPrimaryKey is required.");
+            throw new PrismConfigurationException("ExcelConfig.RecordPrimaryKey is required.");
         }
 
         if (HeaderRowIndicators.Count == 0 || HeaderRowIndicators.Any(string.IsNullOrWhiteSpace))
         {
-            throw new InvalidOperationException("ExcelConfig.HeaderRowIndicators must contain at least one non-empty value.");
+            throw new PrismConfigurationException("ExcelConfig.HeaderRowIndicators must contain at least one non-empty value.");
         }
 
         HeaderRowSearchSpace.Validate();

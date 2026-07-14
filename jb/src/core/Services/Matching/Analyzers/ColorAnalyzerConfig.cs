@@ -44,6 +44,6 @@ public sealed class ColorAnalyzerConfig : IValidatableConfig
         if (BinsPerChannel < 2) problems.Add("Colors.BinsPerChannel must be >= 2");
         if (Palette.Count == 0) problems.Add("Colors.Palette must define at least one named color");
 
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }
 }

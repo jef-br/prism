@@ -32,12 +32,12 @@ public sealed record HeaderRowSearchSpace
     {
         if (FirstRow < 0 || LastRow < FirstRow)
         {
-            throw new InvalidOperationException("ExcelConfig.HeaderRowSearchSpace rows must be zero-based and ordered.");
+            throw new PrismConfigurationException("ExcelConfig.HeaderRowSearchSpace rows must be zero-based and ordered.");
         }
 
         if (FirstColumn < 0 || LastColumn < FirstColumn)
         {
-            throw new InvalidOperationException("ExcelConfig.HeaderRowSearchSpace columns must be zero-based and ordered.");
+            throw new PrismConfigurationException("ExcelConfig.HeaderRowSearchSpace columns must be zero-based and ordered.");
         }
     }
 }

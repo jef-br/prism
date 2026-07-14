@@ -17,14 +17,14 @@ public sealed class UpscaleService : IUpscaleService {
     /// </summary>
     public static UpscaleService Create( PrismConfiguration configuration ) {
         if (ImageUpscaler.IsGpuAvailable) {
-            string? modelPath = PrismConfigLocator.FindModelAsset(configuration.UpscaleModelPath);
+            string? modelPath = ModelAssetLocator.Find(configuration.UpscaleModelPath);
 
             if (modelPath is null)
                 throw new PrismConfigurationException(
                     $"Real-ESRGAN ONNX model not found at '{configuration.UpscaleModelPath}'. Deploy it next " +
                     "to Prism_Config.json, or set PRISM_ONNX_MODEL_DIR.");
 
-            string? configPath = PrismConfigLocator.FindModelAsset(TilingConfigRelativePath);
+            string? configPath = ModelAssetLocator.Find(TilingConfigRelativePath);
 
             if (configPath is null)
                 throw new PrismConfigurationException(

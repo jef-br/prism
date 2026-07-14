@@ -314,22 +314,14 @@ internal static class ImageOrderer
     //  Config loader 
 
     /// <summary>
-    /// Locates and loads both order config files using PrismConfigLocator conventions.
-    /// Throws <see cref="PrismConfigurationException"/> when either file is not found.
+    /// Locates and loads both order config files. Throws <see cref="PrismConfigurationException"/>
+    /// when either file is not found.
     /// </summary>
     private static DetOrderConfig LoadConfig()
     {
-        string? rulesPath = PrismConfigLocator.FindFolderLocalConfig("DetOrderRules.json");
-        string? stemsPath = PrismConfigLocator.FindFolderLocalConfig("DetOrderKeywordStems.json");
-
-        if (rulesPath is null)
-            throw new PrismConfigurationException(
-                "DetOrderRules.json not found. Ensure DetOrderRules.json is present in the config directory next to Prism_Config.json.");
-        if (stemsPath is null)
-            throw new PrismConfigurationException(
-                "DetOrderKeywordStems.json not found. Ensure DetOrderKeywordStems.json is present in the config directory next to Prism_Config.json.");
-
-        return ConfigCache.GetOrLoad(() => DetOrderConfig.Load(rulesPath, stemsPath), rulesPath, stemsPath);
+        return DetOrderConfig.Load(
+            ConfigLoader.RequireFile("DetOrderRules.json"),
+            ConfigLoader.RequireFile("DetOrderKeywordStems.json"));
     }
 
 }

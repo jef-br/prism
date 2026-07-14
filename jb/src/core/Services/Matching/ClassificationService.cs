@@ -142,12 +142,7 @@ public sealed class ClassificationService : IClassificationService
 
     internal static ClipPromptCatalog LoadPromptCatalog()
     {
-        string? clipPromptsPath = PrismConfigLocator.FindFolderLocalConfig("ClipPrompts.json");
-        if (clipPromptsPath is null)
-            throw new PrismConfigurationException(
-                "ClipPrompts.json not found. Ensure ClipPrompts.json is present in the config directory next to Prism_Config.json.");
-
-        return ClipPromptCatalog.Load(clipPromptsPath);
+        return ClipPromptCatalog.Load(ConfigLoader.RequireFile("ClipPrompts.json"));
     }
 
     /// <summary>
@@ -159,11 +154,11 @@ public sealed class ClassificationService : IClassificationService
     {
         string pathRoot = configuration.ClipModelDir;
 
-        // The 146 MB model is not copied into build outputs; FindModelAsset resolves it from the deployed
+        // The 146 MB model is not copied into build outputs; ModelAssetLocator resolves it from the deployed
         // location, the PRISM_ONNX_MODEL_DIR override, or the single source-tree copy.
-        string? modelPath  = PrismConfigLocator.FindModelAsset($"{pathRoot}/{configuration.ClipModelFile}");
-        string? vocabPath  = PrismConfigLocator.FindModelAsset($"{pathRoot}/{configuration.ClipVocabFile}");
-        string? mergesPath = PrismConfigLocator.FindModelAsset($"{pathRoot}/{configuration.ClipMergesFile}");
+        string? modelPath  = ModelAssetLocator.Find($"{pathRoot}/{configuration.ClipModelFile}");
+        string? vocabPath  = ModelAssetLocator.Find($"{pathRoot}/{configuration.ClipVocabFile}");
+        string? mergesPath = ModelAssetLocator.Find($"{pathRoot}/{configuration.ClipMergesFile}");
 
         if (modelPath is null || vocabPath is null || mergesPath is null)
             throw new PrismConfigurationException(

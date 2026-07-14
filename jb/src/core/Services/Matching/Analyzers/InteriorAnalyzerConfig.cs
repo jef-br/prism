@@ -25,6 +25,6 @@ public sealed class InteriorAnalyzerConfig : IValidatableConfig
         if (MinEdgeStrength <= 0f) problems.Add("Interior.MinEdgeStrength must be > 0");
         if (TextureDiffMin <= 0f) problems.Add("Interior.TextureDiffMin must be > 0");
 
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }
 }

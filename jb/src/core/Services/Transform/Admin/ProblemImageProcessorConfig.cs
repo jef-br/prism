@@ -22,6 +22,6 @@ public sealed class ProblemImageProcessorConfig : IValidatableConfig
         if (MinOutputPx < MinInputPx) problems.Add("ProblemImageProcessor.MinOutputPx must be >= MinInputPx");
         if (MaxUpscale <= 1.0) problems.Add("ProblemImageProcessor.MaxUpscale must be > 1.0");
 
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }
 }

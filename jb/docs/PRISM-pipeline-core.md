@@ -126,6 +126,44 @@ construction (`FeatureAnalysisService`), or stage entry (`TransformService`) —
 - Engine assemblies can do this because `ConfigLoader` compiles into `Prism.Core.Contracts`, which
   they already reference.
 
+### One loader, one exception type, no config cache (accepted 2026-07-14, T-4560)
+
+`PrismConfigLocator` and `ConfigCache` are **deleted**. Everything resolves config through
+`ConfigLoader.RequireFile(name)` (path) / `ConfigLoader.Section<T>` / `Root<T>` (parsed), and model
+assets through `ModelAssetLocator.Find(relativePath)`.
+
+**Every config failure throws `PrismConfigurationException`** — the single fail-loud type across the
+whole codebase. Not just `ConfigLoader`'s own failures (missing file, missing section, missing/misspelled
+required key), but every section class's `Validate()` and every hand-written `Load(path)` parser:
+Excel (`ExcelConfig` + its sub-configs), Analyzers, Classify (`ClipPromptCatalog`, `PhenotypeRuleSet`),
+`MatchingConfig`, `TranslationConfig`, `DetOrderConfig`, `ProductTypeResolver`, Transform's `Admin/*Config`,
+and `UpscaleConfig`. `HostRules_Config` and `ImageNgpVocabulary` already did.
+
+It derives from `InvalidOperationException`, so any `catch (InvalidOperationException)` still catches it.
+**But `Assert.Throws<T>` in xUnit is an exact-type match**, so tests assert
+`Assert.Throws<PrismConfigurationException>` — asserting the base type fails.
+
+**Not** converted, deliberately: failures that are *not* config — image-too-small
+(`Tx_ProblemImageProcessor`), HTTP/WeTransfer fetch errors, `ServiceHttp` empty responses, the
+`Upscaler_g_p_u.Initialize()` lifecycle guard, and user-workbook parsing in `ExcelFileHandler` (that is
+user data, not PRISM-owned config). Those keep `InvalidOperationException`.
+
+**Do not re-add a config cache.** `ConfigCache` memoized the hand-written `Load(path)` parsers
+(`MatchingConfig`, `TranslationConfig`, `ExcelConfig`, `PhenotypeRuleSet`, `DetOrderConfig`,
+`ProductTypeResolver`, `PrismConfiguration`). It was measured and removed:
+
+- **All config JSON in the project totals 62 KB.**
+- Every one of those load sites fires **once per job**, never per image — `ImageMatcher.Run` is a
+  static per-job method, `MatchingService` constructs `FeatureAnalysisService`/`ClassificationService`
+  once per job, `TransformService` bundles once per stage run.
+- Total config parse cost is therefore single-digit-to-low-tens of **milliseconds per job**, against a
+  job that runs CLIP + YOLO per image and Real-ESRGAN upscaling — on the order of **0.01% of a job**.
+
+The cache bought nothing and cost a whole indirection layer. Those sites now call their parser
+directly. This is **not** the same as `ConfigLoader`'s internal cache, which stays: the two
+fixed-signature engine `Process()` entry points above self-load **per call**, and that one *is* the
+per-image path.
+
 ---
 
 ## V1 Job Queue

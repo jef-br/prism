@@ -40,7 +40,7 @@ public sealed record HeaderDetectionConfig
     {
         if (value <= 0 || value > 1)
         {
-            throw new InvalidOperationException($"{name} must be greater than zero and less than or equal to one.");
+            throw new PrismConfigurationException($"{name} must be greater than zero and less than or equal to one.");
         }
     }
 }

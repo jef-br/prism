@@ -9,6 +9,7 @@
     <Compile Remove="config\ConfigLoader.cs" />
     <Compile Remove="config\IValidatableConfig.cs" />
     <Compile Remove="config\ModelAssetLocator.cs" />
+    <Compile Remove="config\PrismConfigurationException.cs" />
     <Compile Remove="Services\Transform\Enum\TransformationStatus.cs" />
     <Compile Remove="Services\Matching\Classify\**\*.cs" />
     <Compile Remove="Services\Matching\Analyzers\**\*.cs" />

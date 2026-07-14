@@ -48,31 +48,10 @@ internal sealed class ImageMatcher {
     /// <param name="families">Family records resolved from the Internal Excel Model.</param>
     /// <returns>Number of records KO'd because no FamilyID match was found.</returns>
     internal static int Run( List<ImageRecord_LAMBDA> records, IReadOnlyList<FamilyIDRecord> families ) {
-        string matchingConfigPath = LoadConfigPath(
-            "MatchingConfig.json",
-            "MatchingConfig.json not found in the config directory next to Prism_Config.json.");
-
-        string translationConfigPath = LoadConfigPath(
-            "TranslationDictionary.json",
-            "TranslationDictionary.json not found in the config directory next to Prism_Config.json.");
-
-        string excelConfigPath = LoadConfigPath(
-            "ExcelConfig.json",
-            "ExcelConfig.json not found in the config directory next to Prism_Config.json.");
-
-        MatchingConfig matchingConfig = ConfigCache.GetOrLoad(
-            () => MatchingConfig.Load(matchingConfigPath), matchingConfigPath);
-        TranslationConfig translationConfig = ConfigCache.GetOrLoad(
-            () => TranslationConfig.Load(translationConfigPath), translationConfigPath);
-        ExcelConfig excelConfig = ConfigCache.GetOrLoad(
-            () => ExcelConfig.Load(excelConfigPath), excelConfigPath);
-
-        string? prismConfigPath = PrismConfigLocator.FindPrismConfigPath();
-        if (prismConfigPath is null)
-            throw new PrismConfigurationException("Prism_Config.json not found — cannot load convergence weight.");
-
-        PrismConfiguration prismConfig = ConfigCache.GetOrLoad(
-            () => PrismConfiguration.LoadPrismConfig(prismConfigPath), prismConfigPath);
+        MatchingConfig matchingConfig       = MatchingConfig.Load(ConfigLoader.RequireFile("MatchingConfig.json"));
+        TranslationConfig translationConfig = TranslationConfig.Load(ConfigLoader.RequireFile("TranslationDictionary.json"));
+        ExcelConfig excelConfig             = ExcelConfig.Load(ConfigLoader.RequireFile("ExcelConfig.json"));
+        PrismConfiguration prismConfig      = PrismConfiguration.LoadPrismConfig(ConfigLoader.RequireFile(PrismConfiguration.FileName));
 
         ImageMatcher matcher = new(matchingConfig, translationConfig, excelConfig.RecordPrimaryKey);
         return matcher.RunWaterfall(records, families, prismConfig.Weight_MatchingSignalsConverging);
@@ -616,13 +595,4 @@ internal sealed class ImageMatcher {
         return signalCount >= 2;
     }
 
-    //  Config loading 
-
-    private static string LoadConfigPath( string relativePath, string missingMessage ) {
-        string? path = PrismConfigLocator.FindFolderLocalConfig(relativePath);
-        if (path is null)
-            throw new PrismConfigurationException(missingMessage);
-
-        return path;
-    }
 }

@@ -13,7 +13,7 @@ internal sealed record UpscaleConfig {
     /// <summary>Loads and parses cfg_Upscale.json from the given path.</summary>
     internal static UpscaleConfig Load( string configPath ) {
         if (!File.Exists(configPath))
-            throw new FileNotFoundException("cfg_Upscale.json was not found.", configPath);
+            throw new PrismConfigurationException($"cfg_Upscale.json was not found at: {configPath}");
 
         JsonDocument doc = JsonDocument.Parse(File.ReadAllText(configPath));
         using (doc) {

@@ -20,16 +20,11 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService
     {
         analyzerParameters = AnalyzerParameters.FromConfig();
 
-        string? mapPath = PrismConfigLocator.FindFolderLocalConfig("ProductTypeMap.json");
-        if (mapPath is null)
-            throw new PrismConfigurationException(
-                "ProductTypeMap.json not found. Ensure ProductTypeMap.json is present in the config directory next to Prism_Config.json.");
+        productTypes = ProductTypeResolver.Load(ConfigLoader.RequireFile("ProductTypeMap.json"));
 
-        productTypes = ConfigCache.GetOrLoad(() => ProductTypeResolver.Load(mapPath), mapPath);
-
-        // The 37 MB detector is not copied into build outputs; FindModelAsset resolves it from the
+        // The 37 MB detector is not copied into build outputs; ModelAssetLocator resolves it from the
         // deployed location, the PRISM_ONNX_MODEL_DIR override, or the single source-tree copy.
-        yoloModelPath = PrismConfigLocator.FindModelAsset(YoloModelRelativePath);
+        yoloModelPath = ModelAssetLocator.Find(YoloModelRelativePath);
         if (yoloModelPath is null)
             throw new PrismConfigurationException(
                 "YOLO26 ONNX model not found. Deploy Services/Matching/Analyzers/ONNX/yolo26s.onnx next to " +

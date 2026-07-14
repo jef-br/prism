@@ -44,6 +44,6 @@ public sealed class IllustrationAnalyzerConfig : IValidatableConfig
         if (ColorBinsPerChannel < 2) problems.Add("IsIllustration.ColorBinsPerChannel must be >= 2");
         if (MaxColorClusters < 1) problems.Add("IsIllustration.MaxColorClusters must be >= 1");
 
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }
 }

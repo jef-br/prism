@@ -110,15 +110,7 @@ public static class ImportSmokeTest
             return configPath;
         }
 
-        string? detected = PrismConfigLocator.FindPrismConfigPath();
-        if (detected is null)
-        {
-            throw new PrismConfigurationException(
-                "Prism_Config.json could not be found. Pass a configPath argument or ensure the " +
-                "file is next to the running assembly.");
-        }
-
-        return detected;
+        return ConfigLoader.RequireFile(PrismConfiguration.FileName);
     }
 }
 

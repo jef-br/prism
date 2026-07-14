@@ -19,6 +19,6 @@ public sealed class LowContrastEnhancementConfig : IValidatableConfig
         if (ClipLimit <= 0.0) problems.Add("LowContrastEnhancement.ClipLimit must be > 0");
         if (TileSize < 1) problems.Add("LowContrastEnhancement.TileSize must be >= 1");
 
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }
 }

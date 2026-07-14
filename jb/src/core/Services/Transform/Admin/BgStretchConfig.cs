@@ -23,6 +23,6 @@ public sealed class BgStretchConfig : IValidatableConfig
         if (Tier4MinRatio <= Tier2MaxRatio) problems.Add("BgStretch.Tier4MinRatio must be > Tier2MaxRatio");
         if (FeatherPx < 0) problems.Add("BgStretch.FeatherPx must be >= 0");
 
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join("; ", problems));
+        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }
 }

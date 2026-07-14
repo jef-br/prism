@@ -115,7 +115,9 @@ All runtime config JSON is centralized in `jb/src/core/config/` and copied to ou
 | `DetOrderRules.json`, `DetOrderKeywordStems.json` | `jb/src/core/config/` |
 | `HostRules.json`, `analyzer_Config.json`, `ProductTypeMap.json` | `jb/src/core/config/` |
 
-Model assets (not copied to every bin) resolve via `PrismConfigLocator.FindModelAsset` against the source tree: CLIP at `Services/Matching/Classify/ONNX/`, YOLO at `Services/Matching/Analyzers/ONNX/`, Real-ESRGAN at `Services/Upscale/Engine/ONNX/`.
+Model assets (not copied to every bin) resolve via `ModelAssetLocator.Find` against the source tree: CLIP at `Services/Matching/Classify/ONNX/`, YOLO at `Services/Matching/Analyzers/ONNX/`, Real-ESRGAN at `Services/Upscale/Engine/ONNX/`.
+
+All config resolves through `ConfigLoader` (`RequireFile` / `Section<T>` / `Root<T>`, namespace `Prism.Config`). `PrismConfigLocator` and `ConfigCache` are deleted (T-4560) — do not reintroduce a config cache; see `jb/docs/PRISM-pipeline-core.md`. Every config failure throws `PrismConfigurationException`.
 
 On API startup, `PrismApiConfiguration.Load()` validates all config and model assets. Missing config or model files **fail fast and loud** — never silently.
 

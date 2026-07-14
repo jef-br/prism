@@ -7,7 +7,7 @@ namespace PrismCoreTests.Analyzers;
 
 /// <summary>
 /// Smoke tests for the YOLO26 detector boundary: the model must load from its deployed location
-/// (resolved by PrismConfigLocator) and produce parseable, normalized detections without throwing.
+/// (resolved by ModelAssetLocator) and produce parseable, normalized detections without throwing.
 /// </summary>
 public class YoloDetectorTests
 {
@@ -27,7 +27,7 @@ public class YoloDetectorTests
     // 37 MB model is not committed.
     private static string? FindModel()
     {
-        return PrismConfigLocator.FindModelAsset("Services/Matching/Analyzers/ONNX/yolo26s.onnx");
+        return ModelAssetLocator.Find("Services/Matching/Analyzers/ONNX/yolo26s.onnx");
     }
 
     [Fact]

@@ -15,11 +15,9 @@ bool Hosts(string serviceName) =>
     string.IsNullOrWhiteSpace(onlyService) || string.Equals(onlyService, serviceName, StringComparison.OrdinalIgnoreCase);
 
 // Load the same configuration and Excel model builder the in-process core validates at startup.
-string configPath = PrismConfigLocator.FindPrismConfigPath()
-    ?? throw new InvalidOperationException("Prism_Config.json was not found next to the service host.");
-PrismConfiguration configuration = PrismConfiguration.LoadPrismConfig(configPath);
-string coreDirectory = Path.GetDirectoryName(configPath)!;
-ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(Path.Combine(coreDirectory, "ExcelConfig.json"));
+PrismConfiguration configuration = PrismConfiguration.LoadPrismConfig(
+    ConfigLoader.RequireFile(PrismConfiguration.FileName));
+ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(ConfigLoader.RequireFile("ExcelConfig.json"));
 
 // In-process implementations — this host IS the service. Remote clients reach these over HTTP.
 IArtifactStore store          = new LocalArtifactStore();

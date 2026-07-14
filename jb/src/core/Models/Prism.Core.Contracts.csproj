@@ -36,5 +36,6 @@
     <Compile Include="..\config\ConfigLoader.cs" Link="ConfigLoader.cs" />
     <Compile Include="..\config\IValidatableConfig.cs" Link="IValidatableConfig.cs" />
     <Compile Include="..\config\ModelAssetLocator.cs" Link="ModelAssetLocator.cs" />
+    <Compile Include="..\config\PrismConfigurationException.cs" Link="PrismConfigurationException.cs" />
   </ItemGroup>
 </Project>

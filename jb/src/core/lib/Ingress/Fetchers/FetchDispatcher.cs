@@ -12,16 +12,12 @@ public sealed class FetchDispatcher
 
     /// <summary>
     /// Creates a dispatcher backed by all registered fetch strategies, using HostRules.json
-    /// from the configured config directory discovered via <see cref="PrismConfigLocator"/>.
+    /// from the config directory discovered via <see cref="ConfigLoader"/>.
     /// </summary>
     public static FetchDispatcher Create()
     {
-        string? hostRulesPath = PrismConfigLocator.FindFolderLocalConfig("HostRules.json");
-        if (hostRulesPath is null)
-            throw new PrismConfigurationException(
-                "HostRules.json not found — cannot initialise fetch strategies.");
-
-        string configDirectory = Path.GetDirectoryName(hostRulesPath)!;
+        // HostRules_Config.Load takes the directory, not the file — resolve the file, then its folder.
+        string configDirectory = Path.GetDirectoryName(ConfigLoader.RequireFile("HostRules.json"))!;
         return Create(configDirectory);
     }
 

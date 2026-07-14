@@ -47,7 +47,7 @@ public sealed record TranslationConfig
         string json = File.ReadAllText(configPath);
         TranslationConfig? config = JsonSerializer.Deserialize<TranslationConfig>(json, JsonOptions);
 
-        return config ?? throw new InvalidOperationException("Translation config could not be parsed.");
+        return config ?? throw new PrismConfigurationException("Translation config could not be parsed.");
     }
 
     /// <summary>

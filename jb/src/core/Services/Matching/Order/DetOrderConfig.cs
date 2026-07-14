@@ -36,7 +36,7 @@ public sealed class DetOrderConfig
 
     /// <summary>
     /// Loads and parses both JSON config files.
-    /// Throws <see cref="InvalidOperationException"/> on bad JSON or missing required structure.
+    /// Throws <see cref="PrismConfigurationException"/> on bad JSON or missing required structure.
     /// </summary>
     /// <param name="rulesPath">Absolute path to DetOrderRules.json.</param>
     /// <param name="stemsPath">Absolute path to DetOrderKeywordStems.json.</param>
@@ -111,7 +111,7 @@ public sealed class DetOrderConfig
         using JsonDocument doc = ParseJsonDocument(json, path);
 
         if (!doc.RootElement.TryGetProperty("productTypes", out JsonElement productTypesEl))
-            throw new InvalidOperationException(
+            throw new PrismConfigurationException(
                 $"DetOrderRules.json at '{path}' is missing required 'productTypes' property.");
 
         var result = new Dictionary<string, List<DetSlotRule>>(StringComparer.OrdinalIgnoreCase);
@@ -184,7 +184,7 @@ public sealed class DetOrderConfig
         using JsonDocument doc = ParseJsonDocument(json, path);
 
         if (!doc.RootElement.TryGetProperty("DetOrderKeywordStems", out JsonElement stemsEl))
-            throw new InvalidOperationException(
+            throw new PrismConfigurationException(
                 $"DetOrderKeywordStems.json at '{path}' is missing required 'DetOrderKeywordStems' property.");
 
         var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -209,7 +209,7 @@ public sealed class DetOrderConfig
     private static string ReadJsonFile(string path)
     {
         if (!File.Exists(path))
-            throw new InvalidOperationException($"Config file not found: '{path}'.");
+            throw new PrismConfigurationException($"Config file not found: '{path}'.");
         return File.ReadAllText(path, System.Text.Encoding.UTF8);
     }
 
@@ -221,7 +221,7 @@ public sealed class DetOrderConfig
         }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException(
+            throw new PrismConfigurationException(
                 $"Failed to parse JSON at '{path}': {ex.Message}", ex);
         }
     }
@@ -237,7 +237,7 @@ public sealed class DetOrderConfig
             return index;
         }
 
-        throw new InvalidOperationException(
+        throw new PrismConfigurationException(
             $"Unexpected slot name '{slotName}' in '{sourcePath}'. Expected format: det0, det1, …");
     }
 }

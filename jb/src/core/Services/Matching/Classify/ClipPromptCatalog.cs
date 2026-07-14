@@ -24,12 +24,12 @@ public sealed class ClipPromptCatalog {
 
     /// <summary>
     /// Loads and parses <c>ClipPrompts.json</c>.
-    /// Throws <see cref="InvalidOperationException"/> on a missing file or bad structure.
+    /// Throws <see cref="PrismConfigurationException"/> on a missing file or bad structure.
     /// </summary>
     /// <param name="jsonPath">Absolute path to ClipPrompts.json.</param>
     public static ClipPromptCatalog Load( string jsonPath ) {
         if (!File.Exists(jsonPath))
-            throw new InvalidOperationException($"ClipPrompts.json not found at: {jsonPath}");
+            throw new PrismConfigurationException($"ClipPrompts.json not found at: {jsonPath}");
 
         string json = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
 
@@ -37,12 +37,12 @@ public sealed class ClipPromptCatalog {
         try {
             doc = JsonDocument.Parse(json);
         } catch (JsonException ex) {
-            throw new InvalidOperationException($"Failed to parse ClipPrompts.json at '{jsonPath}': {ex.Message}", ex);
+            throw new PrismConfigurationException($"Failed to parse ClipPrompts.json at '{jsonPath}': {ex.Message}", ex);
         }
 
         using (doc) {
             if (!doc.RootElement.TryGetProperty("prompts", out JsonElement promptsEl) || promptsEl.ValueKind != JsonValueKind.Array)
-                throw new InvalidOperationException($"ClipPrompts.json at '{jsonPath}' is missing required 'prompts' array.");
+                throw new PrismConfigurationException($"ClipPrompts.json at '{jsonPath}' is missing required 'prompts' array.");
 
             var map = new Dictionary<string, (string Feature, string Value)>();
             foreach (JsonElement entry in promptsEl.EnumerateArray()) {
@@ -51,7 +51,7 @@ public sealed class ClipPromptCatalog {
                 string value = entry.TryGetProperty("value", out JsonElement v) ? v.GetString() ?? "" : "";
 
                 if (string.IsNullOrWhiteSpace(prompt))
-                    throw new InvalidOperationException($"ClipPrompts.json at '{jsonPath}' has a prompt entry with no 'prompt' text.");
+                    throw new PrismConfigurationException($"ClipPrompts.json at '{jsonPath}' has a prompt entry with no 'prompt' text.");
 
                 map[prompt] = (feature, value);
             }

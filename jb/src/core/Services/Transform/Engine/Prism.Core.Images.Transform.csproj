@@ -5,6 +5,9 @@
 
   <ItemGroup>
     <Using Include="Prism.Contracts" />
+    <Using Include="Prism.Config" />
+    <!-- PrismConfigurationException — the single config fail-loud type; compiled into Prism.Core.Contracts. -->
+    <Using Include="Prism.Core" />
   </ItemGroup>
 
   <ItemGroup>

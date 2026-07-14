@@ -18,6 +18,6 @@ public sealed class FilenameAnalyzerConfig : IValidatableConfig
     public void Validate()
     {
         if (OrientationConfidence is <= 0f or > 1f)
-            throw new InvalidOperationException("Filename.OrientationConfidence must be in (0,1]");
+            throw new PrismConfigurationException("Filename.OrientationConfidence must be in (0,1]");
     }
 }
