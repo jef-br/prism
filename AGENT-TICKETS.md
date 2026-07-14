@@ -98,6 +98,10 @@ M5 gate condition: all Classify decisions answered; ONNX session migrated to sin
 
 **Files:** `jb/src/core/Services/Matching/ImageOrderer.cs`, `jb/src/core/Services/Matching/Order/*.cs`, `jb/src/core/Services/Matching/MatchingService.cs` (if root-caused to classification confidence).
 
+**Note (2026-07-14, [[T-4560]] verification):** did **not** reproduce. Three consecutive `-Mode Full -Dataset CiMini` runs on an unchanged tree produced byte-identical `DetOrder`/`FinalFileName`, all matching golden. Three runs cannot prove an intermittent race is gone — a coin can land the same way three times — so the ticket stays open, but re-verify (5+ runs, per Acceptance) before spending effort on a fix.
+
+**Direction (2026-07-14, user):** the fix likely lives in **CLIP refinement**, not in a tie-break hack. If two images in a family score near-identically, that is the classifier failing to distinguish them; a deterministic secondary key would only freeze an arbitrary answer in place. Look at (a) the model side, (b) the CLIP prompts (`ClipPrompts.json`), and (c) the PRISM config values — thresholds in particular — before adding tie-break machinery.
+
 ---
 
 
@@ -122,6 +126,10 @@ M5 gate condition: all Classify decisions answered; ONNX session migrated to sin
 - `jb/docs/PRISM-order-rename.md` and CLAUDE.md agree with implemented behavior.
 
 **Files:** `jb/src/core/config/DetOrderRules.json`, `jb/src/core/Services/Matching/ImageOrderer.cs`, `jb/src/core/Services/Matching/Order/*.cs`, `jb/docs/PRISM-order-rename.md`, `CLAUDE.md`.
+
+**Note (2026-07-14, [[T-4560]] verification):** appears **already fixed**. The CiMini evidence run numbered from zero — `90861025_det0.jpg`, and family `94613033` → det0/det1/det2 — which is exactly the documented target. Confirm on a fresh run before closing; nothing in this repo's history explicitly claims the fix.
+
+**Direction (2026-07-14, user):** ordering also depends on **phenotypes**, which are still only half implemented — so the det index that comes out of the spec'd ordering pass can legitimately leave gaps while that work is incomplete. Consider a **final collapse pass**: after ordering runs per spec, renumber each family's assigned slots down to a contiguous `det0..detN` with no gaps. Make it **toggle-able** via config — the pre-collapse numbering is the one that carries ImageRole/slot meaning, and we may want to see it raw.
 
 ---
 
