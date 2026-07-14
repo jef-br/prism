@@ -3,7 +3,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Session start
 On the first prompt of every session, read these files before doing anything else:
-1. `AGENT-TICKETS.md` — open tickets only (Done tickets live in `AGENT-TICKETS-archive.md`; read that only when history is needed)
+1. `AGENT-TICKETS.md` — open tickets only (Done tickets live in `AGENT-TICKETS-ARCHIVE.md`; read that only when history is needed)
 2. `jb/docs/PRISM-index.md` — source of truth; maps tasks to documentation files
 3. `AGENTFEEDBACK.md` — static reload memory: project constraints, config locations, behavioral gotchas. Not a ticket board.
 

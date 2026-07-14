@@ -30,7 +30,7 @@ Main thread is the orchestrator: owns ticket status, final integration, conflict
 
 Status: Ready, Blocked, Active, Review, Done. Agent type: `explorer`, `worker`, or orchestrator.
 P1/P4 tickets carry a `**Review:** <verdict> (YYYY-MM-DD)` line once reviewed; `Approve` is required before Done.
-Done tickets are moved to `AGENT-TICKETS-archive.md` (via /ticket-finish) — this file holds open tickets only.
+Done tickets are moved to `AGENT-TICKETS-ARCHIVE.md` (via /ticket-finish) — this file holds open tickets only.
 
 ## Runtime Profiles
 
