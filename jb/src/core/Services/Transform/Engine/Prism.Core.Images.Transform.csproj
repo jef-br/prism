@@ -8,8 +8,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="CropTransformSettings.cs" />
     <Compile Include="IImageTransformation.cs" />
     <Compile Include="..\ImageTransformer.cs" />
     <Compile Include="Tx_CenterAndStretch.cs" />
@@ -19,12 +17,14 @@
     <Compile Include="Tx_util_BgStretch.cs" />
     <Compile Include="Tx_util_HeadCutter.cs" />
     <Compile Include="Utils\Tx_LowContrastEnhancement.cs" />
-    <Compile Include="TransformParameters.cs" />
-    <Compile Include="ProblemImageProcessorConfig.cs" />
-    <Compile Include="BgStretchConfig.cs" />
-    <Compile Include="DetailCropperConfig.cs" />
-    <Compile Include="LowContrastEnhancementConfig.cs" />
-    <Compile Include="HeadCutterConfig.cs" />
+    <Compile Include="..\Admin\AssemblyInfo.cs" Link="Admin\AssemblyInfo.cs" />
+    <Compile Include="..\Admin\TransformParameters.cs" Link="Admin\TransformParameters.cs" />
+    <Compile Include="..\Admin\CropTransformSettings.cs" Link="Admin\CropTransformSettings.cs" />
+    <Compile Include="..\Admin\ProblemImageProcessorConfig.cs" Link="Admin\ProblemImageProcessorConfig.cs" />
+    <Compile Include="..\Admin\BgStretchConfig.cs" Link="Admin\BgStretchConfig.cs" />
+    <Compile Include="..\Admin\DetailCropperConfig.cs" Link="Admin\DetailCropperConfig.cs" />
+    <Compile Include="..\Admin\LowContrastEnhancementConfig.cs" Link="Admin\LowContrastEnhancementConfig.cs" />
+    <Compile Include="..\Admin\HeadCutterConfig.cs" Link="Admin\HeadCutterConfig.cs" />
   </ItemGroup>
 
   <ItemGroup>

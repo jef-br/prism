@@ -99,7 +99,7 @@ button:disabled {
 .header-description {
   margin: 0;
   color: var(--prism-color-muted);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   line-height: 1.45;
 }
 
@@ -121,7 +121,7 @@ button:disabled {
 .eyebrow {
   margin: 0 0 4px;
   color: var(--prism-color-accent-strong);
-  font-size: 0.5rem;
+  font-size: 1rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
