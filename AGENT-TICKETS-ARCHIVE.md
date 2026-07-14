@@ -3,6 +3,73 @@
 Done tickets, moved here by /ticket-finish to keep AGENT-TICKETS.md (read every session start) lean.
 Newest at the top.
 
+### T-4500 · Master: generic ConfigLoader + Transform cleanup (waves T-4510…T-4560)
+**Status:** Done (2026-07-14) | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-14) — index ticket, no diff of its own. Every child was individually reviewed: T-4510/T-4520/T-4530/T-4540 Approve (2026-07-12), T-4550 Approve (2026-07-14), T-4560 Approve (2026-07-14).
+
+Master/index ticket for the approved 2026-07-12 plan: replace the per-config `Load()` pattern AND `PrismConfigLocator` with one generic section-aware **ConfigLoader**, clean up the Transform folder layout, delete `BackgroundType`, and fold `ImageTransformationResult` into the record lifecycle (`Base → INPUT → LAMBDA → OUTPUT`).
+
+All six children Done:
+- Wave 1: [[T-4510]] ConfigLoader core ∥ [[T-4520]] Transform layout + dead code
+- Wave 2: [[T-4530]] Transform adoption ∥ [[T-4540]] Analyzers adoption
+- Wave 3: [[T-4550]] OUTPUT record merge (commit `d5c2727`)
+- Wave 4: [[T-4560]] rest-of-PRISM migration + retire PrismConfigLocator/ConfigCache (commit `5e98be0`)
+
+**Master-level gate — all passed (2026-07-14, final state = `5e98be0`):**
+- `dotnet build jb/src/PRISM.sln` → 0 errors. (2 warnings, `CS0414 MatchingService._disposed` + `CS8602`, are pre-existing at HEAD in untouched code — not introduced by this work. Worth a follow-up.)
+- Full suite: **370 passed / 0 failed.**
+- API startup fail-loud check: misspelling `FeatherPx` in `transform_Config.json` stops startup with `Prism.Core.PrismConfigurationException: Cannot load section 'BgStretch' … missing required properties including: 'FeatherPx'`.
+- `pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` → PASSED, 14 sources match golden, 14 Ok.
+- Evidence run (non-vacuous transformed output): **14/14 manifest rows** carry `TransformerType` + `TransformationStatus` sourced from `ImageRecord_OUTPUT` — 9× `Tx_CropSquare`, 5× `Tx_CenterAndStretch`, all `Ok`.
+
+**Incidental finding worth keeping:** [[T-2820]] (non-deterministic det-slots for tied images) **did not reproduce**. Three consecutive `-Mode Full -Dataset CiMini` runs on an unchanged build produced byte-identical `DetOrder`/`FinalFileName`, matching the golden every time. That made the T-4560 identity check a strict golden match rather than a fuzzy diff. Three runs cannot prove an intermittent race is gone — but T-2820's stated repro no longer reproduces, so re-verify before spending effort on it. Related: `_det` numbering now starts at `det0` (see the evidence table above), which is also what [[T-2830]] asks for — re-check that ticket too before working it.
+
+**Files:** index only — see child tickets.
+
+---
+
+
+### T-4560 · Migrate remaining PRISM to ConfigLoader; retire PrismConfigLocator + ConfigCache
+**Status:** Done (2026-07-14) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-14)
+
+Migrated all 23 `PrismConfigLocator` and all 9 `ConfigCache` call sites to `ConfigLoader.RequireFile`/`Section<T>`/`Root<T>` and `ModelAssetLocator.Find`; deleted `PrismConfigLocator.cs` and `ConfigCache.cs`. `git grep` returns zero source hits. Commit `5e98be0`.
+
+**Decision — ConfigCache deleted with NO replacement (do not re-add a config cache).** It memoized the hand-written `Load(path)` parsers, but the memoization was measured and found worthless: all config JSON in the project totals **62 KB**, and every one of those sites fires **once per job, never per image** (`ImageMatcher.Run` is a static per-job method; `MatchingService` constructs its sub-services once per job; `TransformService` bundles once per stage run). Config parsing is on the order of **0.01%** of a job that runs CLIP + YOLO per image plus Real-ESRGAN. Those sites now call their parser directly. Recorded in `jb/docs/PRISM-pipeline-core.md`.
+`ConfigLoader`'s **own** internal cache stays — a different thing. The two fixed-signature engine webservice entry points (`Tx_util_BgStretch.Process`, `Tx_LowContrastEnhancement`) self-load per call, and that one *is* the per-image path.
+
+**Scope widened mid-ticket (user-approved): one exception type for config.** `PrismConfigurationException` is now the single fail-loud type for every config failure — `ConfigLoader`'s own throws plus ~45 across every section class's `Validate()` and every hand-written parser (Excel, Analyzers, Classify, Match, Order, Transform/Admin, Upscale). It derives from `InvalidOperationException`, so `catch` sites are unaffected — **but xUnit's `Assert.Throws<T>` is exact-type**, so config tests now assert the precise type (this is what caught the change; 8 tests failed until updated). Non-config runtime failures deliberately keep `InvalidOperationException`: image-too-small, HTTP/WeTransfer fetch, `ServiceHttp`, the `Upscaler_g_p_u.Initialize()` lifecycle guard, and `ExcelFileHandler`'s user-workbook parsing (a bad user workbook is not a deployment fault).
+
+**Also:** `Prism.Core.Images.Upscale.csproj` had **no** `ProjectReference` to `Prism.Core.Contracts` and only compiled transitively — it now references it directly (no cycle; Contracts has no outbound references). `Prism.Config` added to the 4 GlobalUsings shims. `PrismConfiguration.FileName` const replaces the repeated `"Prism_Config.json"` literal.
+
+**Acceptance — all met:** zero `git grep` source hits; build 0 errors; suite 370 passed / 0 failed (same count — identity migration); CiMini Full byte-identical to the pre-change 3-run baseline including `DetOrder`.
+
+**Files:** `jb/src/core/config/*`, all call sites, ~20 config classes, 3 engine csprojs, 4 GlobalUsings, `CLAUDE.md`, `jb/docs/PRISM-pipeline-core.md`, `jb/docs/PRISM-transform-generate.md`, `test/ci/README.md`.
+
+---
+
+
+### T-4550 · Fold ImageTransformationResult into ImageRecord_OUTPUT (Base→INPUT→LAMBDA→OUTPUT)
+**Status:** Done (2026-07-14) | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-14)
+
+Folded `ImageTransformationResult` into `ImageRecord_OUTPUT`, completing the record lifecycle. Commit `d5c2727`.
+
+`ImageRecord_OUTPUT` now carries a **transform block** and an **export block**. Transform creates the record and fills the transform block; Export enriches that same instance with the export block and re-copies the identity fields (`CompactDetOrder` may have renumbered `_det` since Transform ran). Deleted `Engine/ImageTransformationResult.cs`, its Contracts csproj link, and `ImageRecord_LAMBDA.TransformationResult`.
+
+**Design decisions (all reviewer-confirmed):**
+- Property is `TransformStatus`, not `Status` — the record already inherits `ImportStatus` and carries `ExportStatus`, so a bare `Status` is ambiguous. It is **nullable**, so "transform never evaluated this image" stays distinguishable from the enum's `NotEvaluated` default; this preserves `Exporter.BuildTransformStep`'s `?? (IsKo ? "Skipped" : "Ok")` fallback exactly.
+- Props are `get; set;` not `init` — two stages write the record now.
+- `Tx_*` classes do **not** set the identity fields; Export owns them. Verified by tracing every reader: nothing reads identity off a KO-at-transform record (`ManifestImageRow` takes identity from `lambda.*`, `ImageJourneyItem.Output` is null for KO).
+- Field initializers kept (`string.Empty`, `1.0`, `[]`) — carried over verbatim. The no-shadow-defaults rule scopes to **config classes**, not contract/model records; changing these would change manifest output.
+
+**Acceptance — met:** build 0/0; suite 370 passed / 0 failed (incl. 2 new Export tests covering the two-writer contract — the regression this fold could silently introduce); CiMini evidence run confirms 14/14 manifest rows carry `TransformerType` + `TransformationStatus` from `OutputRecord` (9× `Tx_CropSquare`, 5× `Tx_CenterAndStretch`, all Ok).
+
+**Files:** `jb/src/core/Models/ImageRecord_OUTPUT.cs`, `ImageRecord_LAMBDA.cs`, `Prism.Core.Contracts.csproj`, `Services/Transform/**`, `lib/Export/Exporter.cs`, Transform/Export tests, `jb/docs/{GLOSSARY,PRISM-models,PRISM-index,PRISM-knowledge-base,PRISM-transform-generate,PRISM-workbench}.md`.
+
+---
+
+
 ### T-3400 · Web workbench: dark mode, layout compaction, import/export feedback
 **Status:** Done (2026-07-14) | **Profile:** P1-feature-worker
 **Review:** Approve (2026-07-14)

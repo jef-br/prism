@@ -207,32 +207,31 @@ None of this is validated end-to-end:
 
 **Problem:** The 2026-07-08 core restructure renamed folders and C# namespaces to `Services/`/`Prism.Services.*` + `lib/`/`Prism.Lib.*`, but several identifiers were never updated, so the same project now answers to 2-3 different names depending on where you look. Confirmed by direct inspection of every `namespace` declaration, every `.csproj`, and `PRISM.sln`:
 
-1. **Test namespace break — a real bug, not cosmetic.** Every other test subfolder follows `PrismCoreTests.<Folder>` (`PrismCoreTests.Export`, `.Order`, `.Match`, `.Transform`, `.Excel`, `.Classify`, `.Generate`, `.ImageNGP`, `.Rename`, `.Services`) — but `jb/src/tests/Prism.Core.Tests/Analyzers/*.cs` (`YoloDetectorTests.cs`, `VisualAnalyzerTests.cs`, `ProductTypeResolverTests.cs`) declare `namespace Prism.Core.Tests.Analyzers;` instead. T-3200's documented per-stage isolation command — `dotnet test --filter "FullyQualifiedName~PrismCoreTests.<Stage>"` — silently matches zero tests for Analyzers today.
-2. **Project/assembly identity mismatch.** `Prism.Core.Images.Classify.csproj`, `Prism.Core.Images.Transform.csproj`, `Prism.Core.Images.Upscale.csproj` never had their file name/assembly name updated. Each now has three different names for the same project: assembly `Prism.Core.Images.Transform.dll`, namespace `Prism.Services.Transform`, folder `Services/Transform/Engine/` (same pattern for Classify → `Prism.Services.Matching`, Upscale → `Prism.Services.Upscale`). Neither `<AssemblyName>` nor `<RootNamespace>` is set explicitly in any of the three, so both default to the stale file name.
-3. **Stale solution-folder hierarchy.** `PRISM.sln` still nests these three projects under solution folder `core > Images > Transform` / `core > Images > Classify` — a Visual Studio artifact left over from the pre-restructure `jb/src/core/Images/` layout, not the real `Services/` layout.
-4. **Upscale invisible in the solution.** `Prism.Core.Images.Upscale.csproj` has no `Project(...)` entry in `PRISM.sln` at all — it only builds because `Prism.Core.csproj` references it directly via `<ProjectReference>`. Its sibling engine projects (Classify, Transform) do have solution entries; Upscale doesn't, for no documented reason.
-5. **CLAUDE.md's project list is stale.** The solution-project list in CLAUDE.md's Architecture section names Contracts/Core/Images.Classify/Images.Transform/Api (Workbench.Wpf was removed 2026-07-10 along with the WPF workbench itself), but omits `Prism.Core.Images.Upscale`, `Prism.Core.Tests`, and `Prism.ServiceHost` — all three real and already part of the tree (Tests and ServiceHost even have `PRISM.sln` entries). `jb/docs/PRISM-transform-generate.md` also has one stale example path (`Images/Upscale/ONNX/...` instead of the actual `Services/Upscale/Engine/ONNX/...` used by `Prism_Config.json` and `PrismConfigLocator`).
+1. **Project/assembly identity mismatch.** `Prism.Core.Images.Classify.csproj`, `Prism.Core.Images.Transform.csproj`, `Prism.Core.Images.Upscale.csproj` never had their file name/assembly name updated. Each now has three different names for the same project: assembly `Prism.Core.Images.Transform.dll`, namespace `Prism.Services.Transform`, folder `Services/Transform/Engine/` (same pattern for Classify → `Prism.Services.Matching`, Upscale → `Prism.Services.Upscale`). Neither `<AssemblyName>` nor `<RootNamespace>` is set explicitly in any of the three, so both default to the stale file name.
+2. **Stale solution-folder hierarchy.** `PRISM.sln` still nests these three projects under solution folder `core > Images > Transform` / `core > Images > Classify` — a Visual Studio artifact left over from the pre-restructure `jb/src/core/Images/` layout, not the real `Services/` layout.
+3. **Upscale invisible in the solution.** `Prism.Core.Images.Upscale.csproj` has no `Project(...)` entry in `PRISM.sln` at all — it only builds because `Prism.Core.csproj` references it directly via `<ProjectReference>`. Its sibling engine projects (Classify, Transform) do have solution entries; Upscale doesn't, for no documented reason.
+4. **CLAUDE.md's project list is stale.** The solution-project list in CLAUDE.md's Architecture section names Contracts/Core/Images.Classify/Images.Transform/Api (Workbench.Wpf was removed 2026-07-10 along with the WPF workbench itself), but omits `Prism.Core.Images.Upscale`, `Prism.Core.Tests`, and `Prism.ServiceHost` — all three real and already part of the tree (Tests and ServiceHost even have `PRISM.sln` entries). `jb/docs/PRISM-transform-generate.md` also has one stale example path (`Images/Upscale/ONNX/...` instead of the actual `Services/Upscale/Engine/ONNX/...` used by `Prism_Config.json` and `PrismConfigLocator`).
 
-**Confirmed blast radius:** exactly 6 files repo-wide contain the literal string `Prism.Core.Images` — `Prism.Core.csproj` (3 `<ProjectReference>` paths), `PRISM.sln`, `CLAUDE.md`, `jb/docs/PRISM-transform-generate.md`, plus 2 doc-comments in `Tx_DetailCropper.cs`/`CropTransformSettings.cs` that reference the project name descriptively. No CI workflow, PowerShell script, or test infra hardcodes these names (checked `.github/workflows/*.yml`, `test/ci/`). Model-asset resolution (`PrismConfigLocator.FindModelAsset`, `Prism_Config.json`'s `Models` section, `PrismConfiguration.cs`, `FeatureAnalysisService.cs`) already uses the correct `Services/...` paths — not part of this bug, already fixed in the original restructure. This is a build-graph/text rename with no runtime behavior change.
+**Correction (2026-07-14):** this ticket previously carried a fifth item — the Analyzers test-namespace break (`namespace Prism.Core.Tests.Analyzers;` instead of `PrismCoreTests.Analyzers`), which made `--filter "FullyQualifiedName~PrismCoreTests.Analyzers"` match zero tests. **That item is already fixed** and is no longer part of this ticket: all four files in `jb/src/tests/Prism.Core.Tests/Analyzers/` (`YoloDetectorTests.cs`, `VisualAnalyzerTests.cs`, `ProductTypeResolverTests.cs`, plus `AnalyzerConfigTests.cs` added by T-4300) now declare `namespace PrismCoreTests.Analyzers;`. Fixed incidentally by commit `c16ec50` ("align tests with namespace refactoring"), not by this ticket. The bug no longer reproduces — do not "re-fix" it. What remains here is the pure project/solution rename.
+
+**Confirmed blast radius (re-measured 2026-07-14):** 5 files repo-wide contain the literal string `Prism.Core.Images` (excluding the ticket board itself) — `Prism.Core.csproj` (3 `<ProjectReference>` paths), `PRISM.sln`, `CLAUDE.md`, `jb/docs/PRISM-transform-generate.md`, plus 1 doc-comment in `Tx_DetailCropper.cs` that references the project name descriptively. `CropTransformSettings.cs` no longer mentions it — T-4530 rewrote that file during the ConfigLoader migration, so it has dropped out of scope. No CI workflow, PowerShell script, or test infra hardcodes these names (checked `.github/workflows/*.yml`, `test/ci/`). Model-asset resolution (`PrismConfigLocator.FindModelAsset`, `Prism_Config.json`'s `Models` section, `PrismConfiguration.cs`, `FeatureAnalysisService.cs`) already uses the correct `Services/...` paths — not part of this bug, already fixed in the original restructure. This is a build-graph/text rename with no runtime behavior change.
 
 **What to do:**
-1. Fix the test-namespace bug first (smallest, highest-value fix): change `namespace Prism.Core.Tests.Analyzers;` → `namespace PrismCoreTests.Analyzers;` in the 3 files listed above.
-2. Rename the three engine `.csproj` files to match their real namespace: `Prism.Core.Images.Classify.csproj` → `Prism.Services.Matching.Classify.csproj`, `Prism.Core.Images.Transform.csproj` → `Prism.Services.Transform.csproj`, `Prism.Core.Images.Upscale.csproj` → `Prism.Services.Upscale.csproj`. Update the 3 `<ProjectReference>` paths in `Prism.Core.csproj` accordingly.
-3. Update `PRISM.sln`: rename the 3 project entries to their new names/paths, add the missing Upscale project entry, and replace the stale `Images` solution folder with one that mirrors the real `Services/` layout.
-4. Update the 2 doc-comment mentions in `Tx_DetailCropper.cs`/`CropTransformSettings.cs` to the new project name.
-5. Update CLAUDE.md's Architecture/Solution project list to name every project actually in the tree (add Upscale, Tests, ServiceHost), and fix the one stale path example in `PRISM-transform-generate.md`.
-6. Do **not** touch `Prism.Contracts`-namespaced files that live outside `Models/` (e.g. `OrderEvidence.cs`, `MatchEvidence.cs`, `ImageFeatureSnapshot.cs`) — that cross-folder namespace is deliberate (`Prism.Core.Contracts.csproj` cherry-picks files by relative path regardless of physical location). Don't "fix" these into folder-matching namespaces.
+1. Rename the three engine `.csproj` files to match their real namespace: `Prism.Core.Images.Classify.csproj` → `Prism.Services.Matching.Classify.csproj`, `Prism.Core.Images.Transform.csproj` → `Prism.Services.Transform.csproj`, `Prism.Core.Images.Upscale.csproj` → `Prism.Services.Upscale.csproj`. Update the 3 `<ProjectReference>` paths in `Prism.Core.csproj` accordingly.
+2. Update `PRISM.sln`: rename the 3 project entries to their new names/paths, add the missing Upscale project entry, and replace the stale `Images` solution folder with one that mirrors the real `Services/` layout.
+3. Update the doc-comment mention in `Tx_DetailCropper.cs` to the new project name.
+4. Update CLAUDE.md's Architecture/Solution project list to name every project actually in the tree (add Upscale, Tests, ServiceHost), and fix the one stale path example in `PRISM-transform-generate.md`.
+5. Do **not** touch `Prism.Contracts`-namespaced files that live outside `Models/` (e.g. `OrderEvidence.cs`, `MatchEvidence.cs`, `ImageFeatureSnapshot.cs`) — that cross-folder namespace is deliberate (`Prism.Core.Contracts.csproj` cherry-picks files by relative path regardless of physical location). Don't "fix" these into folder-matching namespaces.
 
 **Verification:**
 - `dotnet build jb/src/PRISM.sln` → 0 errors / 0 warnings, same as before the rename.
 - `dotnet sln jb/src/PRISM.sln list` shows all real projects, including the 3 renamed ones and the previously-missing Upscale entry.
-- Reproduce the bug before fixing it, then confirm the fix: `dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj --filter "FullyQualifiedName~PrismCoreTests.Analyzers"` matches 0 tests beforehand and the full Analyzer suite afterward.
 - Full existing suite (`dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj`) has the same pass count before and after — pure identity rename, nothing should newly pass or fail.
 - `git grep -n "Prism.Core.Images"` returns zero hits repo-wide.
 - Open `PRISM.sln` (Visual Studio or `dotnet sln list`) and confirm the solution-folder hierarchy matches the physical `Services/`/`lib/` layout — no leftover `Images` grouping.
 - `pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` still produces the existing `expected-manifest.json` unchanged (proves the rename didn't alter runtime behavior).
 
-**Files:** `jb/src/core/Services/Matching/Classify/Prism.Core.Images.Classify.csproj`, `jb/src/core/Services/Transform/Engine/Prism.Core.Images.Transform.csproj`, `jb/src/core/Services/Upscale/Engine/Prism.Core.Images.Upscale.csproj`, `jb/src/core/Prism.Core.csproj`, `jb/src/PRISM.sln`, `jb/src/tests/Prism.Core.Tests/Analyzers/YoloDetectorTests.cs`, `jb/src/tests/Prism.Core.Tests/Analyzers/VisualAnalyzerTests.cs`, `jb/src/tests/Prism.Core.Tests/Analyzers/ProductTypeResolverTests.cs`, `jb/src/core/Services/Transform/Engine/Tx_DetailCropper.cs`, `jb/src/core/Services/Transform/Engine/CropTransformSettings.cs`, `CLAUDE.md`, `jb/docs/PRISM-transform-generate.md`.
+**Files:** `jb/src/core/Services/Matching/Classify/Prism.Core.Images.Classify.csproj`, `jb/src/core/Services/Transform/Engine/Prism.Core.Images.Transform.csproj`, `jb/src/core/Services/Upscale/Engine/Prism.Core.Images.Upscale.csproj`, `jb/src/core/Prism.Core.csproj`, `jb/src/PRISM.sln`, `jb/src/core/Services/Transform/Engine/Tx_DetailCropper.cs`, `CLAUDE.md`, `jb/docs/PRISM-transform-generate.md`.
 
 ---
 
@@ -308,8 +307,10 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 
 **Problem:** Style/config rules are enforced only at edit time (conventions hook) and by review — nothing compiler-grade catches violations from non-Claude edits or agents that bypass process. The baseline trial measured per-rule cost in Prism.Core: SA1402 (one type per file) = 9, SA1649 (file name matches type) = 1, SA1101 (`this.` prefix) = 472, SA1633 (file header) = 113, SA1025 (whitespace) = 424, SA1503 (braces required) = 320, S109 (magic numbers) = 98.
 
+**Pre-existing state (verified 2026-07-14):** `jb/src/Directory.Build.props` **already exists** (committed in `06e09ca` "First agentic wave") and currently sets `TargetFramework` / `ImplicitUsings` / `Nullable` / `LangVersion` / `Deterministic` for every project under `jb/src/`. This ticket **extends** that file — it does not create it. Nothing else is in place: no `StyleCop.Analyzers` or `SonarAnalyzer.CSharp` package reference exists anywhere in the repo, and there is no `SonarLint.xml`.
+
 **What to do:**
-1. Add `StyleCop.Analyzers` (prerelease, for modern C#) + `SonarAnalyzer.CSharp` to all production projects — use a `Directory.Build.props` at `jb/src/` scoped to exclude the test project (S109 on test literals would be pure noise; decide test-project treatment explicitly).
+1. Add `StyleCop.Analyzers` (prerelease, for modern C#) + `SonarAnalyzer.CSharp` to all production projects — via the existing `Directory.Build.props` at `jb/src/`, scoped to exclude the test project (S109 on test literals would be pure noise; decide test-project treatment explicitly).
 2. Curated severities in the root `.editorconfig`: `dotnet_analyzer_diagnostic.severity = none` as the floor, then explicitly:
    - `warning`: SA1402, SA1649, SA1101, SA1633, **S109 (priority — this is the config-driven-design rule at compiler grade)**. S109 needs `dotnet_diagnostic.S109.severity = warning` (off by default) plus a `SonarLint.xml` AdditionalFile to set its allowed-values parameter (0, 1, -1 at minimum) so structural constants don't drown the empirical ones.
    - `none` **permanently**: SA1500 — it enforces Allman brace placement, the exact opposite of the house K&R rule (`csharp_new_line_before_open_brace = none` in `.editorconfig`). Comment the suppression with this reason.
@@ -321,54 +322,7 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 
 **Acceptance:** Packages active in all production projects; curated `.editorconfig` severities in place with suppression reasons commented; SA1402/SA1649/S109 at zero warnings and CI-gated; SA1633/SA1101 either at zero or split into follow-up tickets; SA1500 suppressed with the K&R rationale; full suite green.
 
-**Files:** `jb/src/Directory.Build.props` (new), `.editorconfig` (root), `SonarLint.xml` (new), `.github/workflows/ci.yml`, phased cleanup edits across `jb/src`.
-
----
-
-
-### T-4500 · Master: generic ConfigLoader + Transform cleanup (waves T-4510…T-4560)
-**Status:** Ready | **Profile:** P4-critical-architecture
-
-Master/index ticket for the approved 2026-07-12 plan (source: user goal.md, now captured here): replace the per-config `Load()` pattern AND `PrismConfigLocator` with one generic section-aware **ConfigLoader**, clean up the Transform folder layout, delete `BackgroundType`, and fold `ImageTransformationResult` into the record lifecycle (`Base → INPUT → LAMBDA → OUTPUT`). Decisions locked with the user:
-1. **Loader home:** contracts + config plumbing share one assembly — ConfigLoader compiles into `Prism.Core.Contracts` via `<Compile Link>` (FamilyIDRecord precedent), file at `jb/src/core/config/ConfigLoader.cs`, namespace `Prism.Config`. This makes the loader engine-reachable (`Prism.Core → Engine → Contracts`), dissolving the `Tx_util_BgStretch`/`Tx_LowContrastEnhancement` static `Configure()` push-in and its temporal-coupling landmine. Assembly rename (→ Prism.Admin/Prism.Shared) folds into [[T-3700]].
-2. **ImageTransformationResult** fields fold into `ImageRecord_OUTPUT`; Transform creates/attaches the OutputRecord, Export enriches it.
-3. **Rollout in parallel waves** — tickets inside a wave touch disjoint files; a wave starts when the previous wave is Done:
-   - Wave 1: [[T-4510]] ConfigLoader core ∥ [[T-4520]] Transform layout + dead code
-   - Wave 2: [[T-4530]] Transform adoption ∥ [[T-4540]] Analyzers adoption
-   - Wave 3: [[T-4550]] OUTPUT record merge
-   - Wave 4: [[T-4560]] rest-of-PRISM migration + retire PrismConfigLocator/ConfigCache
-
-Done when all six child tickets are Done. Master-level gate: full suite green, API startup fail-loud check, and a prism-evidence-report transform run confirming real (non-vacuous) transformed output.
-
-**Files:** index only — see child tickets.
-
----
-
-
-### T-4550 · Fold ImageTransformationResult into ImageRecord_OUTPUT (Base→INPUT→LAMBDA→OUTPUT)
-**Status:** Ready | **Profile:** P4-critical-architecture
-**Found by:** [[T-4500]] (Wave 3 — touches TransformService) — unblocked, [[T-4530]] Done + reviewed Approve 2026-07-12.
-
-**Note for the implementer:** Transform now receives its config as a `TransformParameters` bundle (T-4530), so `TransformService.TransformAsync` already holds everything the OUTPUT-record construction needs; `ImageTransformer.TransformImage(lambda, colorMat, headcut, parameters)` is the current signature.
-
-Per the record lifecycle (an image starts as Base, enters as INPUT, moves through PRISM as LAMBDA, leaves as OUTPUT): extend `ImageRecord_OUTPUT` with the transform-outcome fields (Status, TransformerType, In/Out dimensions, CropRectangle, ResizeMode, ScaleFactor, BackgroundFillMethod, Warnings, FailureReason, SafeSummaryText). Transform stage constructs/attaches `lambda.OutputRecord` with those fields; `Exporter.BuildOutputRecords` enriches the existing record (FinalFileName, ArtifactPath, ByteLength, ExportStatus) instead of creating it. Delete `Engine/ImageTransformationResult.cs` (+ Contracts csproj link) and `ImageRecord_LAMBDA.TransformationResult`; update `ManifestImageRow`, `Exporter`, `Tx_*` return paths, and Transform/Export tests.
-
-**Acceptance:** build + full suite green; prism-evidence-report run confirms manifest rows carry the OUTPUT-record transform fields end-to-end.
-
-**Files:** `jb/src/core/Models/ImageRecord_OUTPUT.cs`, `jb/src/core/Models/ImageRecord_LAMBDA.cs`, `jb/src/core/Services/Transform/Engine/ImageTransformationResult.cs`, `jb/src/core/Services/Transform/TransformService.cs`, `jb/src/core/lib/Export/Exporter.cs`, `jb/src/core/lib/Export/ManifestImageRow.cs`, `jb/src/core/Models/Prism.Core.Contracts.csproj`, `jb/src/tests/Prism.Core.Tests/Transform/*`, `jb/src/tests/Prism.Core.Tests/Export/*`.
-
----
-
-
-### T-4560 · Migrate remaining PRISM to ConfigLoader; retire PrismConfigLocator + ConfigCache
-**Status:** Blocked | **Profile:** P1-feature-worker
-**Blocked-by:** [[T-4530]], [[T-4540]], [[T-4550]] (Wave 4).
-
-Migrate every remaining `PrismConfigLocator`/`ConfigCache` call site to `ConfigLoader`/`ModelAssetLocator`: `ImageMatcher`, `ImageOrderer`, `MatchingService`, `ClassificationService`, `FetchDispatcher`, `UpscaleService`, `PrismService`, `ImageGenerator`, ServiceHost `Program.cs`, `PrismApiConfiguration`, `ImporterFixture`, `YoloDetectorTests`, `ImportSmokeTest`. `Prism_Config.json` keeps loading through `PrismConfiguration` but via `ConfigLoader.Root<T>`/`RequireFile` — the 25K-line class's internal restructure is explicitly OUT of scope. Then delete `PrismConfigLocator.cs` and `ConfigCache.cs`.
-
-**Acceptance:** `git grep -l "PrismConfigLocator\|ConfigCache"` returns zero source hits; build + full suite green; `pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` unchanged vs pre-change manifest.
-
-**Files:** `jb/src/core/config/PrismConfigLocator.cs`, `jb/src/core/config/ConfigCache.cs`, call sites listed above.
+**Files:** `jb/src/Directory.Build.props` (exists — extend), `.editorconfig` (root, exists — extend), `SonarLint.xml` (new), `.github/workflows/ci.yml`, phased cleanup edits across `jb/src`.
 
 ---
 
