@@ -3,6 +3,32 @@
 Done tickets, moved here by /ticket-finish to keep AGENT-TICKETS.md (read every session start) lean.
 Newest at the top.
 
+### T-3500 · Fuse Import→Match in-process handoff to remove redundant image decode
+**Status:** Done (2026-07-15) | **Profile:** P1-feature-worker
+**Tracks:** root `jbtodo.md` — Import/Match fusion, triaged 2026-07-10.
+
+**Problem:** `Importer.cs` normalizes each source image and writes it to disk once (`NormalizedJpgPath`, job temp folder). When Matching runs in the same process (today's default in-process mode), `MatchingService.PrepareLambda` (`jb/src/core/Services/Matching/MatchingService.cs:247`) re-reads that same file with `Image.Load<Rgba32>(source.NormalizedJpgPath)` — a second full decode of bytes Import already held in memory moments earlier, for every OK image in the batch.
+
+**Scope decision (2026-07-10):** in-process decode reuse only. `NormalizedJpgPath` stays on disk unchanged — Exporter, KO handling, and the cross-process HTTP contract all still depend on it (see [[T-3600]] for that separate gap). This ticket only removes the redundant decode when Import and Match run in the same process/call.
+
+**What to do:**
+1. Extend the Import→Match handoff so the decoded normalized image (or raw normalized bytes) survives past `Importer.cs` into `IngestResult`/`ImageRecord_INPUT` for the in-process path, instead of being decoded, used, and discarded.
+2. Update `MatchingService.PrepareLambda` to use the carried-forward image/bytes when present, falling back to `Image.Load(NormalizedJpgPath)` only when absent (i.e., when Matching is invoked without a preceding in-process Import — `HttpMatchingService`/`Prism.ServiceHost`, or any future direct-to-Matching entry point).
+3. Confirm the fast-path already-conforming-JPEG case in `Importer.cs` (metadata-only `Image.Identify` + file copy, no full decode) still behaves correctly — that path has no decoded in-memory image to hand forward, so Match still decodes once there, same as today (no regression, just no double-decode to remove).
+4. Verify no change to `NormalizedJpgPath`, `NormalizedWidth`/`NormalizedHeight`, or any disk artifact Exporter/KO handling reads — this is an in-memory-only optimization.
+
+**Acceptance:**
+- `dotnet build jb/src/PRISM.sln` 0/0.
+- `pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` produces an identical `expected-manifest.json` to a pre-change run (no behavioral change, only I/O reduction).
+- Spot-check (debug counter or log) confirms decode calls against `NormalizedJpgPath` drop from 2 to 1 per image on the in-process path.
+
+**Files:** `jb/src/core/lib/Ingress/Importer.cs`, `jb/src/core/Models/ImageRecord_INPUT.cs`, `jb/src/core/Services/Matching/MatchingService.cs`, `jb/src/core/Services/IngestResult.cs`.
+
+**Closed: measured, not worth it (2026-07-15).** Gate decision per root `jbtodo.md`'s "measure before deciding" (user-approved, dataset SPACINI29 per user — CiMini too small). Temporary Stopwatch probe in `PrepareLambda` split the normalized-JPEG load into file-read vs decode; full pipeline on SPACINI29 (86 source JPEGs ~486 MB total, 86/86 OK, job wall **156.5 s**): file read **1.8 s summed** (~1.2% counted serially, <0.5% wall at the 8-wide `Parallel.For` fan-out — all a bytes-carry saves, since it still decodes from memory), decode **21.3 s summed CPU** (~2–3 s wall — all a decoded-`Image<Rgba32>` carry could save, at ~16 MB/image unbounded RAM spike + pixel drift vs. the JPEG on disk). Neither saving justifies the memory risk the jbtodo flagged. No production code changed; instrumentation reverted. Decision recorded in `PRISM-io-import.md` ("Import→Match Handoff: Disk Is the Contract"); root jbtodo block closed (commit cd4bc59).
+**Review:** Approve (2026-07-15)
+
+---
+
 ### T-3600 · Matching's HTTP contract silently assumes a shared filesystem with Import
 **Status:** Done (2026-07-15) | **Profile:** P4-critical-architecture
 **Found by:** Import↔Match fusion scoping ([[T-3500]]), 2026-07-10.
