@@ -194,6 +194,34 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 ---
 
 
+### T-4110 · Unify ONNX Runtime execution-provider policy across every model-running component in PRISM
+**Status:** Ready | **Profile:** P4-critical-architecture
+**Found by:** [[T-4100]] — health-probe investigation surfaced two inconsistencies (version skew + YOLO CPU-only).
+
+**Problem:** PRISM's ONNX/model-running components are inconsistent along three axes that should be uniform:
+1. **Package version skew.** Classify (CLIP) pins `Microsoft.ML.OnnxRuntime.DirectML 1.20.1`; Upscale pins `1.24.4`. In the monolith API host both run in-process, so two versions of the same native runtime load into one address space — a latent binding/load-order risk (works today, but fragile).
+2. **Provider policy skew.** CLIP (`ImageClassifier.cs:108-111`) and Upscale (`Upscaler_g_p_u.cs:60-62`) append the DirectML EP gated on `GpuProbe.HasHardwareDirectMLAdapter()`; **YOLO (`YoloDetector.cs:65`) appends no EP at all → CPU-only always**, even on a GPU box. No shared session-options factory exists, so each site decides independently.
+3. **No mandate for future model code.** Analyzers (e.g. `Analyzer_FacePose`, `Analyzer_TextPresent`, YOLO-based ones) and future transformers (segmentation for coverage-ratio masks, etc.) will also run models, with no single policy to follow.
+
+**Mandate (2026-07-15, user):** every part of PRISM image processing that runs a model MUST use the **same ONNX Runtime DirectML package, the same version, and the same execution-provider policy** — **CPU-only always works (mandatory baseline); GPU (DirectML) used automatically when a hardware adapter is present.** Applies to CLIP, YOLO, Upscale today, and to all future analyzers and transformers. This is a sibling of [[T-3300]] (each separable service/deployable must honor the same policy independently), not of T-3500/T-3600.
+
+**What to do:**
+1. **Single version.** Centralize the ONNX Runtime DirectML package + version to one pin (central package management via `Directory.Packages.props`, or the existing `jb/src/Directory.Build.props`). Align the two engine projects to one version. **Re-verify CiMini golden 5× after the bump** — changing CLIP's runtime can shift FP results (guards [[T-2820]]'s determinism).
+2. **Single provider policy.** Introduce one shared session-options factory in core (e.g. `OnnxSessionFactory`, reusing `GpuProbe`) that appends the DirectML EP when a hardware adapter is present and falls back to CPU otherwise. Route CLIP, YOLO, and Upscale through it — YOLO gains GPU-when-present; all three become identical. No direct `AppendExecutionProvider_DML` or bare `new InferenceSession` outside the factory.
+3. **Make it mandatory + enforced.** Document the policy in `jb/docs/PRISM-classify.md` (or a dedicated model-runtime note) + `AGENTFEEDBACK.md`, and add a conventions-hook category so any new `InferenceSession` not created via the factory fails review. Covers future analyzers/transformers.
+
+**Acceptance:**
+- Exactly one ONNX Runtime DirectML package + version referenced repo-wide (grep-proven).
+- One shared session-options factory; CLIP/YOLO/Upscale all use it; no bare `InferenceSession`/`AppendExecutionProvider_DML` elsewhere.
+- `GET /PRISM/health` `SessionRuntimeProviders` shows all three consistent (all DirectML(GPU) on a GPU box; all CPU on a CPU-only box).
+- CPU-only mode fully green (forced no-adapter path); CiMini golden identical across 5 consecutive runs after version unification.
+- Documented, enforced mandatory policy for any future model-running code.
+
+**Files:** `jb/src/Directory.Build.props` (or new `Directory.Packages.props`), the three engine `.csproj`, `jb/src/core/Services/Matching/ImageClassifier.cs`, `jb/src/core/Services/Matching/Analyzers/YoloDetector.cs`, `jb/src/core/Services/Upscale/Engine/Upscaler_g_p_u.cs`, `jb/src/core/Services/Matching/GpuProbe.cs`, new `OnnxSessionFactory`, `jb/src/api/RuntimeProviderProbe.cs`, `jb/docs/PRISM-classify.md`, `AGENTFEEDBACK.md`, conventions hook.
+
+---
+
+
 ### T-4400 · Adopt Roslyn analyzers: SA1402/SA1649/SA1101/SA1633/S109 (S109 priority), suppress SA1500/SA1025/SA1503
 **Status:** Ready | **Profile:** P1-feature-worker
 **Found by:** 2026-07-12 analyzer baseline trial (StyleCop.Analyzers + SonarAnalyzer.CSharp on Prism.Core: 2,699 unique warnings).
