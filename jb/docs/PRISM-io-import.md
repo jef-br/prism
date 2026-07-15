@@ -22,7 +22,7 @@ The job temp folder is the **artifact bus** between core stages. Ingress, Matchi
 
 ### Import→Match Handoff: Disk Is the Contract (closed 2026-07-15, T-3500)
 
-The proposed in-process fusion (carry normalized JPEG bytes or the decoded image from Import into Matching to skip the re-read at `MatchingService.PrepareLambda`) was **measured and rejected**. SPACINI29 (86 images, ~4 MB each), full pipeline, job wall 156.5 s:
+The proposed in-process fusion (carry normalized JPEG bytes or the decoded image from Import into Matching to skip the re-read at `MatchingService.PrepareLambda`) was **measured and rejected**. SPACINI29 (86 source JPEGs, ~486 MB, ~5.7 MB each), full pipeline, job wall 156.5 s:
 
 - Re-reading the normalized files: **1.8 s summed** (~1.2% even counted serially; the reads run 8-wide in `Parallel.For`, so real wall impact is well under 0.5%) — this is all a bytes-carry could save.
 - Decoding them: **21.3 s summed CPU** (~2–3 s wall under the same parallelism) — all a decoded-image carry could save, at ~16 MB per image of unbounded RAM (batch-sized spike, multiplied by concurrent jobs) plus pixel drift vs. the JPEG on disk.

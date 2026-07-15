@@ -127,6 +127,9 @@ None of this is validated end-to-end:
 
 **Files:** `jb/src/core/lib/Ingress/Importer.cs`, `jb/src/core/Models/ImageRecord_INPUT.cs`, `jb/src/core/Services/Matching/MatchingService.cs`, `jb/src/core/Services/IngestResult.cs`.
 
+**Closed: measured, not worth it (2026-07-15).** Gate decision per root `jbtodo.md`'s "measure before deciding" (user-approved, dataset SPACINI29 per user — CiMini too small). Temporary Stopwatch probe in `PrepareLambda` split the normalized-JPEG load into file-read vs decode; full pipeline on SPACINI29 (86 source JPEGs ~486 MB total, 86/86 OK, job wall **156.5 s**): file read **1.8 s summed** (~1.2% counted serially, <0.5% wall at the 8-wide `Parallel.For` fan-out — all a bytes-carry saves, since it still decodes from memory), decode **21.3 s summed CPU** (~2–3 s wall — all a decoded-`Image<Rgba32>` carry could save, at ~16 MB/image unbounded RAM spike + pixel drift vs. the JPEG on disk). Neither saving justifies the memory risk the jbtodo flagged. No production code changed; instrumentation reverted. Decision recorded in `PRISM-io-import.md` ("Import→Match Handoff: Disk Is the Contract"); root jbtodo block closed (commit cd4bc59).
+**Review:** Approve (2026-07-15)
+
 ---
 
 
