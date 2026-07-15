@@ -70,3 +70,6 @@ if (Hosts("upscale"))
 }
 
 app.Run();
+
+// Required by WebApplicationFactory<Program> for integration testing. Do not remove.
+public partial class Program { }
