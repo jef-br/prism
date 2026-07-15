@@ -13,6 +13,14 @@ internal static class ServiceHttp
     internal static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = null };
 
     /// <summary>
+    /// Creates the HttpClient for a service client. Transport timeout is infinite: a stage POST legitimately
+    /// runs for many minutes (CLIP classify, Real-ESRGAN warmup), and HttpClient's 100s default killed
+    /// distributed runs mid-stage. Stage lifetime is governed by the job's CancellationToken instead.
+    /// </summary>
+    internal static HttpClient CreateClient(Uri baseAddress) =>
+        new() { BaseAddress = baseAddress, Timeout = Timeout.InfiniteTimeSpan };
+
+    /// <summary>
     /// POSTs <paramref name="body"/> as JSON to <paramref name="route"/> and deserializes the response.
     /// Throws when the host returns a non-success status or an empty body.
     /// </summary>
