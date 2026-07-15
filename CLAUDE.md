@@ -42,7 +42,7 @@ PRISM is a C#/.NET image processing pipeline with a web workbench.
 - `Prism.Services.Transform` (`core/Services/Transform/Engine/`) — transform engine
 - `Prism.Services.Upscale` (`core/Services/Upscale/Engine/`) — Real-ESRGAN GPU upscaler
 - `Prism.Api` (`api/`) — ASP.NET Core 10 minimal API
-- `Prism.ServiceHost` (`services/`) — standalone per-service HTTP host (`PRISM_SERVICE=ingest|matching|generate|transform|upscale`)
+- `Prism.ServiceHost` (`services/`) — standalone per-service HTTP host for the public services (`PRISM_SERVICE=matching|generate|transform|upscale`); ingest is core and always runs in-process
 - `Prism.Core.Tests` (`tests/`) — xUnit suite
 
 Not in the `.sln`: the npm-based web workbench (`jb/src/workbench/web/`).

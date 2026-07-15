@@ -2,16 +2,15 @@ namespace Prism.Core;
 
 /// <summary>
 /// Builds the <see cref="PipelineServices"/> set. Defaults to in-process implementations; when a remote
-/// host URL is configured for a service (via environment variable), that service is swapped for its HTTP
-/// client automatically — no pipeline or orchestrator change required. This is how a monolith deployment
-/// (no URLs → all in-process) and a distributed deployment (URLs set → HTTP clients) share one code path.
-/// Discovery is environment-only and local-filesystem-friendly: every host shares the same job temp folder.
+/// host URL is configured for a public service (via environment variable), that service is swapped for its
+/// HTTP client automatically — no pipeline or orchestrator change required. This is how a monolith
+/// deployment (no URLs → all in-process) and a distributed deployment (URLs set → HTTP clients) share one
+/// code path. Only the public services (Matching, Generate, Transform, Upscale) are remotable; core
+/// (ingress, export, job mechanics) always runs in-process. Discovery is environment-only and
+/// local-filesystem-friendly: every host shares the same job temp folder.
 /// </summary>
 public static class PipelineServiceFactory
 {
-    /// <summary>Environment variable naming the remote Ingest host base URL.</summary>
-    public const string IngestUrlVariable = "PRISM_INGEST_URL";
-
     /// <summary>Environment variable naming the remote Matching host base URL.</summary>
     public const string MatchingUrlVariable = "PRISM_MATCHING_URL";
 
@@ -40,9 +39,9 @@ public static class PipelineServiceFactory
     /// </summary>
     public static PipelineServices CreateFromEnvironment(PrismConfiguration configuration, ModelBuilder modelBuilder)
     {
-        IIngestService ingest = RemoteUrl(IngestUrlVariable) is { } ingestUrl
-            ? new HttpIngestService(ingestUrl)
-            : new IngestService(configuration, modelBuilder);
+        // Ingest is core, not a public service — it always runs in-process where the pipeline runs.
+        // Media enters PRISM only through ingress (see PRISM-overview.md "Core vs. Features").
+        IIngestService ingest = new IngestService(configuration, modelBuilder);
 
         IMatchingService matching = RemoteUrl(MatchingUrlVariable) is { } matchingUrl
             ? new HttpMatchingService(matchingUrl)

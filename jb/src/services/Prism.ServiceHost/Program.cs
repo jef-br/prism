@@ -1,9 +1,11 @@
 using Prism.Core;
 
-// PRISM service host — exposes the pipeline-visible services (Ingest, Matching, Generate, Transform, Upscale)
-// over HTTP so they can be deployed and scaled independently. By default the host exposes all services;
-// set PRISM_SERVICE=ingest|matching|generate|transform|upscale to run a single service as its own deployable
-// host. Every host shares the local job temp folder, which is the artifact bus; there is no cloud storage.
+// PRISM service host — exposes the public services (Matching, Generate, Transform, Upscale) over HTTP so
+// they can be deployed and scaled independently. Ingest is core, not a public service: media enters PRISM
+// only through in-process ingress, so this host has no ingest route. By default the host exposes all public
+// services; set PRISM_SERVICE=matching|generate|transform|upscale to run a single service as its own
+// deployable host. Every host shares the local job temp folder, which is the artifact bus; there is no
+// cloud storage.
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -14,14 +16,12 @@ string? onlyService = Environment.GetEnvironmentVariable("PRISM_SERVICE");
 bool Hosts(string serviceName) =>
     string.IsNullOrWhiteSpace(onlyService) || string.Equals(onlyService, serviceName, StringComparison.OrdinalIgnoreCase);
 
-// Load the same configuration and Excel model builder the in-process core validates at startup.
+// Load the same configuration the in-process core validates at startup.
 PrismConfiguration configuration = PrismConfiguration.LoadPrismConfig(
     ConfigLoader.RequireFile(PrismConfiguration.FileName));
-ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(ConfigLoader.RequireFile("ExcelConfig.json"));
 
 // In-process implementations — this host IS the service. Remote clients reach these over HTTP.
 IArtifactStore store          = new LocalArtifactStore();
-IIngestService ingest         = new IngestService(configuration, modelBuilder);
 IMatchingService matching     = new MatchingService(configuration);
 IGenerateService generate     = new GenerateService();
 ITransformService transform   = new TransformService();
@@ -32,13 +32,6 @@ WebApplication app = builder.Build();
 // Root health: reports which services this process hosts.
 app.MapGet(PrismServiceRoutes.Health, () =>
     Results.Json(new { status = "ok", host = "prism-service-host", services = onlyService ?? "all" }));
-
-if (Hosts("ingest"))
-{
-    app.MapPost(PrismServiceRoutes.Ingest, async (PrismJobRequest request, CancellationToken ct) =>
-        Results.Json(await ingest.ImportAsync(request, store, null, ct)));
-    app.MapGet(PrismServiceRoutes.Ingest + "/health", () => Results.Json(new { status = "ok", service = "ingest" }));
-}
 
 if (Hosts("matching"))
 {

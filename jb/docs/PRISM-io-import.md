@@ -18,7 +18,7 @@ The job temp folder is the **artifact bus** between core stages. Ingress, Matchi
 
 - `IngestResult` carries `NormalizedJpgPath` as an **absolute local path**, not bytes. This is deliberate: the Matching HTTP contract (`HttpMatchingService` → `Prism.ServiceHost PRISM_SERVICE=matching`) is only valid against a host that reads the same filesystem that Ingest wrote. There is no ship-bytes-over-the-wire variant and none is planned.
 - A Matching host that cannot read the job temp folder fails loud: `MatchingService.MatchAsync` throws with an explicit co-deployment message instead of KO-ing every image with misleading per-image decode errors.
-- Only the **features** (Transform / Generate / Upscale) may legitimately run out-of-process per deployment; the `Prism.ServiceHost` per-service split is meaningful for those only.
+- The **public services** (Matching / Transform / Generate / Upscale) are the only ones that may run out-of-process via `Prism.ServiceHost` (`PRISM_SERVICE=matching|generate|transform|upscale`); a Matching host is additionally valid only on the same filesystem Ingest wrote (the guard above). **Ingest is never a service** — media enters PRISM exclusively through in-process ingress, which is also what attaches context (Excel/IEM) to media for the downstream services (T-3300, 2026-07-15).
 
 ### Import→Match Handoff: Disk Is the Contract (closed 2026-07-15, T-3500)
 
