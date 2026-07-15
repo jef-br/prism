@@ -4,6 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Prism.Core.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Prism.Services.Matching.Tests")]
 
 namespace Prism.Services.Matching;
 
