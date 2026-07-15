@@ -150,6 +150,9 @@ None of this is validated end-to-end:
 
 **Direction + partial progress (2026-07-15, user):** the central design question is **decided**: Ingress + Matching + Export are **always co-deployed on one physical system**; only Transform/Generate/Upscale vary per public route. This selects **option (b)** — no ship-bytes-over-the-wire work; the core needs no cross-host shared filesystem because ingress and matching run in one process sharing one job temp folder. Confirmed in code that URL ingress is fully implemented (`FetchDispatcher` + Dropbox/WeTransfer/HTTPS fetchers → `SourceKind = RemoteUrl`), and lives in the **API host** (`PrismProcessIngressReader`), not the standalone `Prism.ServiceHost` matching route. First slice of the "documented deliberate answer" acceptance landed: a **Core vs. Features** section added to `jb/docs/PRISM-overview.md` (core = aggregation+normalize+match+order+export fed by URL/upload; features = Transform/Generate/Upscale; ServiceHost split is feature-only). **Remaining for this ticket:** fold the same statement into `PRISM-io-import.md` + `AGENTFEEDBACK.md`, and add the startup check / clear failure mode when a Matching host can't read `NormalizedJpgPath` (covered by [[T-3300]]'s planned real-HTTP tests).
 
+**Completed (2026-07-15):** remaining scope landed — `PRISM-io-import.md` gained a "Co-Deployment Contract" section, `AGENTFEEDBACK.md` a core co-deployment Behavioral Memory bullet, and `MatchingService.MatchAsync` now throws an explicit `InvalidOperationException` (co-deployment message, not `PrismConfigurationException` — deployment topology, not config) when OK images exist but `IngestResult.JobTempFolder` is unreadable, replacing misleading per-image `CLASSIFY_ERROR` KOs. Covered by `Match/MatchingCoDeploymentGuardTests.cs` (Match suite 56/56 green; build 0 errors, only pre-existing warnings). Real-HTTP roundtrip coverage stays with [[T-3300]] as ticketed.
+**Review:** Approve (2026-07-15)
+
 ---
 
 

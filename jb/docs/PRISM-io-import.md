@@ -12,6 +12,16 @@
 
 ---
 
+## Co-Deployment Contract (Core, decided 2026-07-15)
+
+The job temp folder is the **artifact bus** between core stages. Ingress, Matching, and Export are **always co-deployed on one physical system** sharing one process filesystem — never split across machines (see `PRISM-overview.md` "Core vs. Features"). Consequences:
+
+- `IngestResult` carries `NormalizedJpgPath` as an **absolute local path**, not bytes. This is deliberate: the Matching HTTP contract (`HttpMatchingService` → `Prism.ServiceHost PRISM_SERVICE=matching`) is only valid against a host that reads the same filesystem that Ingest wrote. There is no ship-bytes-over-the-wire variant and none is planned.
+- A Matching host that cannot read the job temp folder fails loud: `MatchingService.MatchAsync` throws with an explicit co-deployment message instead of KO-ing every image with misleading per-image decode errors.
+- Only the **features** (Transform / Generate / Upscale) may legitimately run out-of-process per deployment; the `Prism.ServiceHost` per-service split is meaningful for those only.
+
+---
+
 ## Input Handling
 
 **Local Path:** `Importer.cs` performs first checks. Only inputs that pass enter normalization.

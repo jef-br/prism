@@ -24,6 +24,7 @@ Resolved decisions and gotchas agents should know before touching code:
 - **CLIP input_ids**: combined-input `Run()` is the fix for the input_ids inference bug. Already merged. Do not revert to separate runs.
 - **Dual-interface contract**: all `Tx_*` processing-tool classes expose `Process(byte[] arr, int stride, float upscale_factor)`. Match this signature exactly.
 - **WPF workbench deleted (2026-07-10)**: the web workbench (`jb/src/workbench/web/`) is the only workbench frontend. `Prism.Workbench.Wpf` was removed from `PRISM.sln` and `jb/src/workbench/wpf/` deleted. Do not re-add WPF parity language or web/WPF "allowed differences" — workbench docs are web-only.
+- **Core co-deployment (2026-07-15, T-3600)**: Ingress + Matching + Export always run on one physical system sharing the job temp folder (the artifact bus). Do not propose shipping normalized image bytes over the wire for Matching; `NormalizedJpgPath` as a local absolute path is the deliberate contract. Only Transform/Generate/Upscale may be split out via `Prism.ServiceHost`. See `PRISM-overview.md` "Core vs. Features" and `PRISM-io-import.md` "Co-Deployment Contract".
 
 ## Reload Rules
 

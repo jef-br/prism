@@ -43,6 +43,16 @@ public sealed class MatchingService : IMatchingService, IDisposable
             .Where(r => r.ImportStatus == ImportStatus.Ok && r.NormalizedJpgPath is not null)
             .ToList();
 
+        // Co-deployment guard: the job temp folder is the artifact bus between Ingest and Matching
+        // (see PRISM-io-import.md "Co-Deployment Contract"). A Matching host that cannot see it is a
+        // deployment topology error — fail loud here instead of KO-ing every image downstream with
+        // misleading per-image decode errors.
+        if (okImages.Count > 0 && !Directory.Exists(ingest.JobTempFolder))
+            throw new InvalidOperationException(
+                $"Matching host cannot read job temp folder '{ingest.JobTempFolder}'. " +
+                "Ingress, Matching and Export must be co-deployed on one filesystem — " +
+                "see jb/docs/PRISM-io-import.md (Co-Deployment Contract).");
+
         // Fail-fast: max-effort FamilyID detection already ran during Import. With zero parsed
         // families, matching is impossible, so KO every image immediately instead of decoding and
         // feature-analysing the whole batch only to reject all of it.
