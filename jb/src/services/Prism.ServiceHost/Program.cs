@@ -49,12 +49,23 @@ if (Hosts("generate"))
 
 if (Hosts("transform"))
 {
-    // A transform host upscales below-minimum images via the static Upscaler_g_p_u (T-2800). Mirror the
-    // in-process pipeline's semantics (PipelineServiceFactory.EnsureUpscalerReady): a missing GPU model
-    // degrades to the CPU Lanczos4 fallback instead of blocking transform hosting.
-    try { UpscaleService.Create(configuration); }
-    catch (PrismConfigurationException) { }
-    ITransformService transform = new TransformService();
+    // With PRISM_UPSCALE_URL set, this transform host delegates upscaling to the remote Upscale host and
+    // needs no local Real-ESRGAN session. Otherwise it upscales below-minimum images via the static
+    // Upscaler_g_p_u (T-2800), mirroring the in-process pipeline's semantics
+    // (PipelineServiceFactory.EnsureUpscalerReady): a missing GPU model degrades to the CPU Lanczos4
+    // fallback instead of blocking transform hosting.
+    ITransformService transform;
+    string? upscaleUrl = Environment.GetEnvironmentVariable(PipelineServiceFactory.UpscaleUrlVariable);
+    if (string.IsNullOrWhiteSpace(upscaleUrl))
+    {
+        try { UpscaleService.Create(configuration); }
+        catch (PrismConfigurationException) { }
+        transform = new TransformService();
+    }
+    else
+    {
+        transform = new TransformService(new HttpUpscaleService(new Uri(upscaleUrl, UriKind.Absolute)));
+    }
     app.MapPost(PrismServiceRoutes.Transform, async (MatchingResult matched, CancellationToken ct) =>
         Results.Json(await transform.TransformAsync(matched, matched.Ingest.Parameters.Transform, matched.Ingest.Parameters.Headcut, null, ct)));
     app.MapGet(PrismServiceRoutes.Transform + "/health", () => Results.Json(new { status = "ok", service = "transform" }));

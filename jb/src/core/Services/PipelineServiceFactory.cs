@@ -20,6 +20,9 @@ public static class PipelineServiceFactory
     /// <summary>Environment variable naming the remote Transform host base URL.</summary>
     public const string TransformUrlVariable = "PRISM_TRANSFORM_URL";
 
+    /// <summary>Environment variable naming the remote Upscale host base URL.</summary>
+    public const string UpscaleUrlVariable = "PRISM_UPSCALE_URL";
+
     /// <summary>Builds an all-in-process service set (the modular monolith).</summary>
     public static PipelineServices CreateInProcess(PrismConfiguration configuration, ModelBuilder modelBuilder)
     {
@@ -56,11 +59,17 @@ public static class PipelineServiceFactory
         {
             transform = new HttpTransformService(transformUrl);
         }
+        else if (RemoteUrl(UpscaleUrlVariable) is { } upscaleUrl)
+        {
+            // In-process Transform delegating upscaling to a remote Upscale host — no local
+            // Real-ESRGAN session needed in this process.
+            transform = new TransformService(new HttpUpscaleService(upscaleUrl));
+        }
         else
         {
             // Eagerly load the process-wide Real-ESRGAN GPU session before this in-process
             // TransformService runs (T-2800) — mirrors the MatchingService/CLIP eager-init above. Only
-            // needed when Transform actually runs in this process; a remote Transform host initializes
+            // needed when Transform upscales locally in this process; a remote Transform host initializes
             // its own copy at its own startup (Prism.ServiceHost/Program.cs), so there is nothing to do
             // on the HttpTransformService branch.
             EnsureUpscalerReady(configuration);

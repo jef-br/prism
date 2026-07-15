@@ -12,12 +12,6 @@ namespace PrismCoreTests.ServiceHost;
 /// (or explicitly clears it) to host all four. Manages the process env var to avoid crosstalk
 /// between tests.
 /// </summary>
-[CollectionDefinition("Service Host")]
-public class ServiceHostCollection : ICollectionFixture<ServiceHostFixture>
-{
-    // This class has no code; it exists only to attach the fixture to every test in the collection.
-}
-
 public sealed class ServiceHostFixture : IAsyncLifetime
 {
     private WebApplicationFactory<Program>? factory;
