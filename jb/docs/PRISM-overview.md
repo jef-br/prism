@@ -7,6 +7,13 @@
 - **Users**: Junior non-technical admin staff; ~250 concurrent.
 - **Runtime**: Local servers; GPU not guaranteed; CPU-only fully supported.
 
+## Core vs. Features
+
+PRISM's **core** — the "prism" itself — is always deployed as one co-located unit: **friendly/greedy input aggregation → normalizing → matching → ordering → normalized output (export)**. Ingress, matching, and export are never split across machines; a full PRISM is always deployed internally even when only some routes are exposed publicly.
+
+- **Ingress is a first-class front door.** Inputs arrive either as uploads or fetched from **URLs** (Dropbox / WeTransfer / direct HTTPS; `SourceKind = RemoteUrl`), materialized to the job's temp folder, then run straight through the in-process pipeline. Because ingress and matching share one process and one temp folder, the core needs **no shared filesystem between separate hosts** — there is no cross-machine image handoff to arrange.
+- **Transform, Generate, and Upscale are features** layered on the core. They are the only parts that legitimately vary or run out-of-process per deployment (a given public instance may offer different transform/generation/upscale behavior via different API routes). The standalone `Prism.ServiceHost` per-service split is meaningful only for these features — it takes pre-materialized inputs and does not itself fetch URLs.
+
 ## Accepted Input
 
 Images: `jpg jpeg png tif tiff pdf webp bmp gif`. PSD excluded unless added explicitly.

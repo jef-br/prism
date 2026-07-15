@@ -13,6 +13,7 @@ internal sealed record PrismHealthResponse
     public int MaxQueuedJobs { get; init; }
     public int MaxConcurrentJobs { get; init; }
     public IReadOnlyList<string> SupportedRuntimeProviders { get; init; } = [];
+    public IReadOnlyList<string> SessionRuntimeProviders { get; init; } = [];
     public bool ConfigReady { get; init; }
     public bool RequiredModelAssetsReady { get; init; }
     public bool TempStorageReady { get; init; }

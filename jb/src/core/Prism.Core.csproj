@@ -38,9 +38,9 @@
 
   <ItemGroup>
     <ProjectReference Include="Models\Prism.Core.Contracts.csproj" />
-    <ProjectReference Include="Services\Matching\Classify\Prism.Core.Images.Classify.csproj" />
-    <ProjectReference Include="Services\Transform\Engine\Prism.Core.Images.Transform.csproj" />
-    <ProjectReference Include="Services\Upscale\Engine\Prism.Core.Images.Upscale.csproj" />
+    <ProjectReference Include="Services\Matching\Classify\Prism.Services.Matching.Classify.csproj" />
+    <ProjectReference Include="Services\Transform\Engine\Prism.Services.Transform.csproj" />
+    <ProjectReference Include="Services\Upscale\Engine\Prism.Services.Upscale.csproj" />
   </ItemGroup>
 
   <ItemGroup>

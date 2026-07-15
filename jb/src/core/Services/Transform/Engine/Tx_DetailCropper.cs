@@ -111,7 +111,7 @@ public class Tx_DetailCropper : IImageTransformation
         else
         {
             // ImagePreProcessor lives in Prism.Core, which itself depends on this project
-            // (Prism.Core.Images.Transform) — it cannot be referenced back from here without a
+            // (Prism.Services.Transform) — it cannot be referenced back from here without a
             // circular project reference. Tx_CenterAndStretch.Process() establishes the precedent
             // for this constraint: self-derive full-frame bounds locally instead. This treats the
             // no-lambda caller as the degenerate 0-intersection case (whole frame is the subject).

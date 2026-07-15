@@ -28,7 +28,10 @@ Compaction rules when `false`:
 - **Only closes gaps — never reorders.** The relative det order assigned by the Order stage is preserved exactly under all circumstances.
 
 Implementation placement:
-- Handled during **export**, as the first step of `Exporter.Run` (before output-record and manifest building, both of which read `DetOrder`). `DetOrderConfig` and `ImageOrderer` are untouched; the flag reaches `Exporter.Run` via `ExportRequest`.
+- `ImageOrderer.CompactDetOrder(records)` performs the renumber. It is called as the first step of `Exporter.Run` (before output-record and manifest building, both of which read `DetOrder`), and also from the MatchLite / MatchOnly paths in `PrismService`. `DetOrderConfig` and the Order stage are untouched; the flag reaches `Exporter.Run` via `ExportRequest`, gated by `PrismConfiguration.DetOrderGapsAllowed`.
+
+Current-state caveat (phenotypes half-implemented):
+- Compaction fixes *numbering* (families start at `det0`, not `det8`), but it does **not** by itself make semantic slots `det0`–`det7` appear — that depends on phenotypes firing. Today the per-feature analyzers largely return `UNKNOWN`, so `PhenotypeRuleSet.Assign` returns null and every image overflows; compaction then yields `det0`-based numbering over the overflow (filename-hint → natural-filename) order rather than true slot semantics. This is expected until the analyzer/phenotype backlog lands — it is not an ordering bug.
 - Compaction only renumbers `DetOrder`. `ImageRecord_Base.NewName` is computed (`{Family}_det{DetOrder}.jpg`), so the output filename, manifest row, and `ImageRecord_OUTPUT.DetOrder` follow automatically — no filename string rewriting.
 - Safe against rename collisions: `ImageRenamer.HasDetCollision` runs upstream, and a monotonic gap-closing renumber of already-distinct indices cannot introduce a collision.
 

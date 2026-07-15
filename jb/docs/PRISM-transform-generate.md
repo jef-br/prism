@@ -38,7 +38,7 @@ Pre-step called inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast
 - Tensor pipeline: JPEG → BGR uint8 → NCHW float32 [0,1] → `_session.Run(["input"])` → NCHW float32 [0,1] × 2 → clamp → BGR uint8 → JPEG. Tensor names: `input` / `output`.
 - Top-up: remaining scale after ×2 SR applied via Lanczos4 resize.
 - Config: model asset resolved via `ModelAssetLocator.Find(configuration.UpscaleModelPath)` — the path comes from `Prism_Config.json`'s `Models` section and points at `Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus.onnx`. Throws `PrismConfigurationException` when DirectML is available but model is missing.
-- Access boundary: `GpuProbe` is internal to `Prism.Core.Images.Upscale`. External callers (e.g. `UpscaleService` in `Prism.Core`) use `ImageUpscaler.IsGpuAvailable` rather than calling `GpuProbe` directly.
+- Access boundary: `GpuProbe` is internal to `Prism.Services.Upscale`. External callers (e.g. `UpscaleService` in `Prism.Core`) use `ImageUpscaler.IsGpuAvailable` rather than calling `GpuProbe` directly.
 
 ### Tile stitching — weighted blend (no seams)
 

@@ -35,16 +35,17 @@ Suites: `Ingest`, `Excel`, `Classify`, `Analyzers`, `Match`, `Order`, `Rename`, 
 
 PRISM is a C#/.NET image processing pipeline with a web workbench.
 
-**Solution:** `jb/src/PRISM.sln` — 7 projects:
+**Solution:** `jb/src/PRISM.sln` — 8 projects:
 - `Prism.Core.Contracts` (`core/Models/`) — model records
 - `Prism.Core` — pipeline orchestrator + all `Services/`/`lib/` submodules
-- `Prism.Core.Images.Classify` (`core/Services/Matching/Classify/`) — ONNX/CLIP engine (rename pending, T-3700)
-- `Prism.Core.Images.Transform` (`core/Services/Transform/Engine/`) — transform engine (rename pending, T-3700)
+- `Prism.Services.Matching.Classify` (`core/Services/Matching/Classify/`) — ONNX/CLIP engine
+- `Prism.Services.Transform` (`core/Services/Transform/Engine/`) — transform engine
+- `Prism.Services.Upscale` (`core/Services/Upscale/Engine/`) — Real-ESRGAN GPU upscaler
 - `Prism.Api` (`api/`) — ASP.NET Core 10 minimal API
 - `Prism.ServiceHost` (`services/`) — standalone per-service HTTP host (`PRISM_SERVICE=ingest|matching|generate|transform|upscale`)
 - `Prism.Core.Tests` (`tests/`) — xUnit suite
 
-Not in the `.sln`: `Prism.Core.Images.Upscale` (builds via `Prism.Core` ProjectReference only — T-3700) and the npm-based web workbench (`jb/src/workbench/web/`).
+Not in the `.sln`: the npm-based web workbench (`jb/src/workbench/web/`).
 
 ### Pipeline (stage order is immutable)
 ```
