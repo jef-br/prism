@@ -20,6 +20,15 @@ The job temp folder is the **artifact bus** between core stages. Ingress, Matchi
 - A Matching host that cannot read the job temp folder fails loud: `MatchingService.MatchAsync` throws with an explicit co-deployment message instead of KO-ing every image with misleading per-image decode errors.
 - Only the **features** (Transform / Generate / Upscale) may legitimately run out-of-process per deployment; the `Prism.ServiceHost` per-service split is meaningful for those only.
 
+### Import→Match Handoff: Disk Is the Contract (closed 2026-07-15, T-3500)
+
+The proposed in-process fusion (carry normalized JPEG bytes or the decoded image from Import into Matching to skip the re-read at `MatchingService.PrepareLambda`) was **measured and rejected**. SPACINI29 (86 images, ~4 MB each), full pipeline, job wall 156.5 s:
+
+- Re-reading the normalized files: **1.8 s summed** (~1.2% even counted serially; the reads run 8-wide in `Parallel.For`, so real wall impact is well under 0.5%) — this is all a bytes-carry could save.
+- Decoding them: **21.3 s summed CPU** (~2–3 s wall under the same parallelism) — all a decoded-image carry could save, at ~16 MB per image of unbounded RAM (batch-sized spike, multiplied by concurrent jobs) plus pixel drift vs. the JPEG on disk.
+
+Neither saving justifies an unbounded Import→Match memory spike. `NormalizedJpgPath` on the job temp folder **is** the Import→Match handoff — do not re-propose in-memory carry without new evidence that decode/read time has become a dominant cost.
+
 ---
 
 ## Input Handling

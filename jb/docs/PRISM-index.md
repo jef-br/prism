@@ -10,7 +10,7 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | `PRISM-overview.md` | System specs, accepted media, batch limits, terminology |
 | `PRISM-pipeline-core.md` | Stage order, Prism.cs / Pipeline.cs, PJR, PJRes, failure policies, config lifecycle |
 | `PRISM-excel.md` | IEM, header detection, deduplication, PK rules, column validity |
-| `PRISM-io-import.md` | Import strategies, path/stream/multipart/URL/zip/directory, flat JPG, EXIF, corrupt-image KO, original-image export policy |
+| `PRISM-io-import.md` | Import strategies, path/stream/multipart/URL/zip/directory, flat JPG, EXIF, corrupt-image KO, original-image export policy, core co-deployment contract, Import→Match disk handoff decision |
 | `PRISM-classify.md` | ONNX, classification thresholds, orientation values, border intersection, human detection, head visibility, UNKNOWN states |
 | `PRISM-match.md` | Waterfall gates, NumericMatcher, StringMatcher, ImageLabelingMatcher, tie-breaking, synonyms, stop words, NoiseFilter |
 | `PRISM-order-rename.md` | `_det` suffix, ordering rules, output filename stem, unmatched naming |
