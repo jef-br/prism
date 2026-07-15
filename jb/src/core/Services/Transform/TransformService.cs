@@ -60,11 +60,11 @@ public sealed class TransformService : ITransformService
         int okTransformed = 0;
         Parallel.ForEach(
             matched.LambdaRecords.Where(l => !l.IsKo),
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = cancellationToken },
             lambda =>
             {
                 inputByName.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input);
-                (byte[]? preprocessed, Mat? colorMat) = ImagePreProcessor.Preprocess(lambda, input?.NormalizedJpgPath, prismConfig, remoteUpscale);
+                (byte[]? preprocessed, Mat? colorMat) = ImagePreProcessor.Preprocess(lambda, input?.NormalizedJpgPath, prismConfig, remoteUpscale, cancellationToken);
 
                 if (lambda.IsKo) { colorMat?.Dispose(); return; }
 

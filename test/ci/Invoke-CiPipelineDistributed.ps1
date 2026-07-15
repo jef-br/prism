@@ -60,10 +60,16 @@ function Clear-ServiceEnv {
     $env:PRISM_UPSCALE_URL   = $null
 }
 
-# A pre-existing API on the distributed port cannot be trusted to carry the right service wiring.
-$alreadyUp = $false
-try { Invoke-RestMethod -Uri "$apiUrl/PRISM/health" -TimeoutSec 3 | Out-Null; $alreadyUp = $true } catch { }
-if ($alreadyUp) { throw "Something already answers at $apiUrl - stop it first; distributed mode must start its own API." }
+# Pre-existing occupants cannot be trusted to carry the right service wiring, and a stale process on a
+# service port would otherwise surface only as a slow 240s health-wait timeout. Fail fast on all five.
+foreach ($occupied in @($apiUrl) + ($ports.Values | ForEach-Object { "http://localhost:$_" })) {
+    $alreadyUp = $false
+    try { Invoke-RestMethod -Uri "$occupied/health" -TimeoutSec 3 | Out-Null; $alreadyUp = $true } catch { }
+    if (-not $alreadyUp) {
+        try { Invoke-RestMethod -Uri "$occupied/PRISM/health" -TimeoutSec 3 | Out-Null; $alreadyUp = $true } catch { }
+    }
+    if ($alreadyUp) { throw "Something already answers at $occupied - stop it first; distributed mode must start its own processes." }
+}
 
 Write-Host "[Distributed] Building PRISM.sln ..." -ForegroundColor Cyan
 & dotnet build "$repoRoot/jb/src/PRISM.sln" -clp:ErrorsOnly

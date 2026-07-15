@@ -20,7 +20,18 @@ public sealed class ServiceHostFixture : IAsyncLifetime
     /// The HTTP client managed by the factory. Use this to construct service clients
     /// (e.g. <c>new HttpMatchingService(Client)</c>).
     /// </summary>
-    public HttpClient Client => factory?.CreateClient() ?? throw new InvalidOperationException("Fixture not initialized.");
+    public HttpClient Client
+    {
+        get
+        {
+            HttpClient client = factory?.CreateClient() ?? throw new InvalidOperationException("Fixture not initialized.");
+            // Mirrors ServiceHttp.CreateClient: CreateClient()'s 100s default aborts GPU-bound upscale
+            // roundtrips when PipelineIntegrationTests contends for the shared Real-ESRGAN session in
+            // the same process (jbtodo.md R8). Cancellation, not transport timeout, bounds the calls.
+            client.Timeout = Timeout.InfiniteTimeSpan;
+            return client;
+        }
+    }
 
     /// <summary>
     /// Initializes the factory, ensuring PRISM_SERVICE env var is clear so all services are hosted.
