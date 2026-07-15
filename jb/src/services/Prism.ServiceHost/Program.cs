@@ -20,21 +20,20 @@ bool Hosts(string serviceName) =>
 PrismConfiguration configuration = PrismConfiguration.LoadPrismConfig(
     ConfigLoader.RequireFile(PrismConfiguration.FileName));
 
-// In-process implementations — this host IS the service. Remote clients reach these over HTTP.
-IArtifactStore store          = new LocalArtifactStore();
-IMatchingService matching     = new MatchingService(configuration);
-IGenerateService generate     = new GenerateService();
-ITransformService transform   = new TransformService();
-IUpscaleService upscale       = UpscaleService.Create(configuration);
-
 WebApplication app = builder.Build();
 
 // Root health: reports which services this process hosts.
 app.MapGet(PrismServiceRoutes.Health, () =>
     Results.Json(new { status = "ok", host = "prism-service-host", services = onlyService ?? "all" }));
 
+// Each hosted service is constructed inside its own branch so a single-service host loads only the
+// resources it serves (a transform host never loads CLIP; a matching host never fail-fasts on the
+// Real-ESRGAN asset). Fail-fast is preserved per hosted service: no model → no host.
+
 if (Hosts("matching"))
 {
+    IArtifactStore store      = new LocalArtifactStore();
+    IMatchingService matching = new MatchingService(configuration);
     app.MapPost(PrismServiceRoutes.Match, async (IngestResult ingestResult, CancellationToken ct) =>
         Results.Json(await matching.MatchAsync(ingestResult, store, null, ct)));
     app.MapGet(PrismServiceRoutes.Match + "/health", () => Results.Json(new { status = "ok", service = "matching" }));
@@ -42,6 +41,7 @@ if (Hosts("matching"))
 
 if (Hosts("generate"))
 {
+    IGenerateService generate = new GenerateService();
     app.MapPost(PrismServiceRoutes.Generate, async (MatchingResult matched, CancellationToken ct) =>
         Results.Json(await generate.GenerateAsync(matched, matched.Ingest.Parameters.Generation, null, ct)));
     app.MapGet(PrismServiceRoutes.Generate + "/health", () => Results.Json(new { status = "ok", service = "generate" }));
@@ -49,6 +49,12 @@ if (Hosts("generate"))
 
 if (Hosts("transform"))
 {
+    // A transform host upscales below-minimum images via the static Upscaler_g_p_u (T-2800). Mirror the
+    // in-process pipeline's semantics (PipelineServiceFactory.EnsureUpscalerReady): a missing GPU model
+    // degrades to the CPU Lanczos4 fallback instead of blocking transform hosting.
+    try { UpscaleService.Create(configuration); }
+    catch (PrismConfigurationException) { }
+    ITransformService transform = new TransformService();
     app.MapPost(PrismServiceRoutes.Transform, async (MatchingResult matched, CancellationToken ct) =>
         Results.Json(await transform.TransformAsync(matched, matched.Ingest.Parameters.Transform, matched.Ingest.Parameters.Headcut, null, ct)));
     app.MapGet(PrismServiceRoutes.Transform + "/health", () => Results.Json(new { status = "ok", service = "transform" }));
@@ -56,6 +62,8 @@ if (Hosts("transform"))
 
 if (Hosts("upscale"))
 {
+    // Dedicated upscale hosting fails fast: DirectML present but no model asset → no host.
+    IUpscaleService upscale = UpscaleService.Create(configuration);
     app.MapPost(PrismServiceRoutes.Upscale, async (UpscaleRequest request, CancellationToken ct) =>
         Results.Json(await upscale.UpscaleAsync(request.ImageBytes, request.ScaleFactor, ct)));
     app.MapGet(PrismServiceRoutes.Upscale + "/health", () => Results.Json(new { status = "ok", service = "upscale" }));
