@@ -48,6 +48,12 @@ jobs:
         shell: pwsh
         run: pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini
 
+      # Same golden, fully distributed: 4 Prism.ServiceHost processes + API wired via PRISM_*_URL
+      # (T-3300). Passing the identical expectations in both modes proves distributed correctness.
+      - name: Distributed full pipeline (CiMini golden, 4 service hosts)
+        shell: pwsh
+        run: pwsh test/ci/Invoke-CiPipelineDistributed.ps1 -Mode Full -Dataset CiMini
+
       - name: Publish API + ServiceHost
         shell: pwsh
         run: |
@@ -70,4 +76,5 @@ jobs:
             publish/**
             jb/src/workbench/web/.next/**
             matching-testlogs.txt
+            distributed-testlogs/**
           if-no-files-found: ignore
