@@ -12,7 +12,7 @@ public sealed class HttpTransformService : ITransformService
 
     /// <summary>Creates the client targeting the remote Transform host base address.</summary>
     public HttpTransformService(Uri baseAddress)
-        => client = new HttpClient { BaseAddress = baseAddress };
+        => client = ServiceHttp.CreateClient(baseAddress);
 
     /// <summary>Creates the client over an externally-managed <see cref="HttpClient"/>.</summary>
     public HttpTransformService(HttpClient client)

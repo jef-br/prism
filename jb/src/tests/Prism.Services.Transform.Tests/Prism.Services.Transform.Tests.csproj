@@ -15,14 +15,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.7" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\core\Prism.Core.csproj" />
     <ProjectReference Include="..\..\core\Models\Prism.Core.Contracts.csproj" />
-    <ProjectReference Include="..\..\services\Prism.ServiceHost\Prism.ServiceHost.csproj" />
-    <ProjectReference Include="..\Prism.Tests.Shared\Prism.Tests.Shared.csproj" />
   </ItemGroup>
 
 </Project>

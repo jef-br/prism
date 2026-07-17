@@ -5,10 +5,18 @@ namespace Prism.Services.Transform;
 /// <summary>
 /// In-process Transform implementation. Routes each non-KO LAMBDA through <see cref="ImageTransformer"/> and
 /// attaches an OutputRecord carrying the transform outcome. When transform is disabled, every non-KO image is
-/// marked Skipped. Emits the Transformed stage event.
+/// marked Skipped. Emits the Transformed stage event. Below-minimum images upscale through the given
+/// <see cref="IUpscaleService"/> when one is provided (remote Upscale host, PRISM_UPSCALE_URL); otherwise
+/// through the local static Real-ESRGAN session.
 /// </summary>
 public sealed class TransformService : ITransformService
 {
+    private readonly IUpscaleService? remoteUpscale;
+
+    public TransformService() : this(null) { }
+
+    public TransformService(IUpscaleService? remoteUpscale) => this.remoteUpscale = remoteUpscale;
+
     /// <inheritdoc/>
     public async Task<TransformResult> TransformAsync(
         MatchingResult matched,
@@ -52,11 +60,11 @@ public sealed class TransformService : ITransformService
         int okTransformed = 0;
         Parallel.ForEach(
             matched.LambdaRecords.Where(l => !l.IsKo),
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = cancellationToken },
             lambda =>
             {
                 inputByName.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input);
-                (byte[]? preprocessed, Mat? colorMat) = ImagePreProcessor.Preprocess(lambda, input?.NormalizedJpgPath, prismConfig);
+                (byte[]? preprocessed, Mat? colorMat) = ImagePreProcessor.Preprocess(lambda, input?.NormalizedJpgPath, prismConfig, remoteUpscale, cancellationToken);
 
                 if (lambda.IsKo) { colorMat?.Dispose(); return; }
 

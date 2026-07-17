@@ -126,7 +126,7 @@ public sealed class PipelineFixture : IAsyncLifetime {
     /// fixture. No hardcoded absolute path, so it resolves on any checkout (CI runner included).
     /// Throws rather than returning null: CiMini is committed, so a missing fixture is a real failure.
     /// </summary>
-    internal static string ResolveTestFixturePath() {
+    public static string ResolveTestFixturePath() {
         string assemblyDir = new FileInfo(typeof(PipelineFixture).Assembly.Location).DirectoryName
             ?? throw new InvalidOperationException("Cannot determine assembly directory");
 

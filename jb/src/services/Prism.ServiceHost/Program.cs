@@ -1,9 +1,11 @@
 using Prism.Core;
 
-// PRISM service host — exposes the pipeline-visible services (Ingest, Matching, Generate, Transform, Upscale)
-// over HTTP so they can be deployed and scaled independently. By default the host exposes all services;
-// set PRISM_SERVICE=ingest|matching|generate|transform|upscale to run a single service as its own deployable
-// host. Every host shares the local job temp folder, which is the artifact bus; there is no cloud storage.
+// PRISM service host — exposes the public services (Matching, Generate, Transform, Upscale) over HTTP so
+// they can be deployed and scaled independently. Ingest is core, not a public service: media enters PRISM
+// only through in-process ingress, so this host has no ingest route. By default the host exposes all public
+// services; set PRISM_SERVICE=matching|generate|transform|upscale to run a single service as its own
+// deployable host. Every host shares the local job temp folder, which is the artifact bus; there is no
+// cloud storage.
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -14,18 +16,9 @@ string? onlyService = Environment.GetEnvironmentVariable("PRISM_SERVICE");
 bool Hosts(string serviceName) =>
     string.IsNullOrWhiteSpace(onlyService) || string.Equals(onlyService, serviceName, StringComparison.OrdinalIgnoreCase);
 
-// Load the same configuration and Excel model builder the in-process core validates at startup.
+// Load the same configuration the in-process core validates at startup.
 PrismConfiguration configuration = PrismConfiguration.LoadPrismConfig(
     ConfigLoader.RequireFile(PrismConfiguration.FileName));
-ModelBuilder modelBuilder = ModelBuilder.FromConfigFile(ConfigLoader.RequireFile("ExcelConfig.json"));
-
-// In-process implementations — this host IS the service. Remote clients reach these over HTTP.
-IArtifactStore store          = new LocalArtifactStore();
-IIngestService ingest         = new IngestService(configuration, modelBuilder);
-IMatchingService matching     = new MatchingService(configuration);
-IGenerateService generate     = new GenerateService();
-ITransformService transform   = new TransformService();
-IUpscaleService upscale       = UpscaleService.Create(configuration);
 
 WebApplication app = builder.Build();
 
@@ -33,15 +26,14 @@ WebApplication app = builder.Build();
 app.MapGet(PrismServiceRoutes.Health, () =>
     Results.Json(new { status = "ok", host = "prism-service-host", services = onlyService ?? "all" }));
 
-if (Hosts("ingest"))
-{
-    app.MapPost(PrismServiceRoutes.Ingest, async (PrismJobRequest request, CancellationToken ct) =>
-        Results.Json(await ingest.ImportAsync(request, store, null, ct)));
-    app.MapGet(PrismServiceRoutes.Ingest + "/health", () => Results.Json(new { status = "ok", service = "ingest" }));
-}
+// Each hosted service is constructed inside its own branch so a single-service host loads only the
+// resources it serves (a transform host never loads CLIP; a matching host never fail-fasts on the
+// Real-ESRGAN asset). Fail-fast is preserved per hosted service: no model → no host.
 
 if (Hosts("matching"))
 {
+    IArtifactStore store      = new LocalArtifactStore();
+    IMatchingService matching = new MatchingService(configuration);
     app.MapPost(PrismServiceRoutes.Match, async (IngestResult ingestResult, CancellationToken ct) =>
         Results.Json(await matching.MatchAsync(ingestResult, store, null, ct)));
     app.MapGet(PrismServiceRoutes.Match + "/health", () => Results.Json(new { status = "ok", service = "matching" }));
@@ -49,6 +41,7 @@ if (Hosts("matching"))
 
 if (Hosts("generate"))
 {
+    IGenerateService generate = new GenerateService();
     app.MapPost(PrismServiceRoutes.Generate, async (MatchingResult matched, CancellationToken ct) =>
         Results.Json(await generate.GenerateAsync(matched, matched.Ingest.Parameters.Generation, null, ct)));
     app.MapGet(PrismServiceRoutes.Generate + "/health", () => Results.Json(new { status = "ok", service = "generate" }));
@@ -56,6 +49,23 @@ if (Hosts("generate"))
 
 if (Hosts("transform"))
 {
+    // With PRISM_UPSCALE_URL set, this transform host delegates upscaling to the remote Upscale host and
+    // needs no local Real-ESRGAN session. Otherwise it upscales below-minimum images via the static
+    // Upscaler_g_p_u (T-2800), mirroring the in-process pipeline's semantics
+    // (PipelineServiceFactory.EnsureUpscalerReady): a missing GPU model degrades to the CPU Lanczos4
+    // fallback instead of blocking transform hosting.
+    ITransformService transform;
+    string? upscaleUrl = Environment.GetEnvironmentVariable(PipelineServiceFactory.UpscaleUrlVariable);
+    if (string.IsNullOrWhiteSpace(upscaleUrl))
+    {
+        try { UpscaleService.Create(configuration); }
+        catch (PrismConfigurationException) { }
+        transform = new TransformService();
+    }
+    else
+    {
+        transform = new TransformService(new HttpUpscaleService(new Uri(upscaleUrl, UriKind.Absolute)));
+    }
     app.MapPost(PrismServiceRoutes.Transform, async (MatchingResult matched, CancellationToken ct) =>
         Results.Json(await transform.TransformAsync(matched, matched.Ingest.Parameters.Transform, matched.Ingest.Parameters.Headcut, null, ct)));
     app.MapGet(PrismServiceRoutes.Transform + "/health", () => Results.Json(new { status = "ok", service = "transform" }));
@@ -63,9 +73,14 @@ if (Hosts("transform"))
 
 if (Hosts("upscale"))
 {
+    // Dedicated upscale hosting fails fast: DirectML present but no model asset → no host.
+    IUpscaleService upscale = UpscaleService.Create(configuration);
     app.MapPost(PrismServiceRoutes.Upscale, async (UpscaleRequest request, CancellationToken ct) =>
         Results.Json(await upscale.UpscaleAsync(request.ImageBytes, request.ScaleFactor, ct)));
     app.MapGet(PrismServiceRoutes.Upscale + "/health", () => Results.Json(new { status = "ok", service = "upscale" }));
 }
 
 app.Run();
+
+// Required by WebApplicationFactory<Program> for integration testing. Do not remove.
+public partial class Program { }

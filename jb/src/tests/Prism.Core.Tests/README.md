@@ -4,7 +4,7 @@ End-to-end integration tests for the full PRISM pipeline using the xUnit test fr
 
 ## Test Structure
 
-- **PipelineFixture.cs** — Runs each distinct pipeline configuration once and caches the result.
+- **PipelineFixture.cs** (lives in `Prism.Tests.Shared`, referenced by this project) — Runs each distinct pipeline configuration once and caches the result. Also shared by `Prism.Services.Matching.Tests` (MatchLite, SubjectEdgeDetector real-image tests), so it moved out of this project to a dedicated classlib (T-3300 step 3).
 - **PipelineIntegrationTests.cs** — End-to-end assertions, all reading the fixture's cached results.
 
 ### Why a fixture

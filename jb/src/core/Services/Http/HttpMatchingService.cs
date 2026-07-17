@@ -11,7 +11,7 @@ public sealed class HttpMatchingService : IMatchingService
 
     /// <summary>Creates the client targeting the remote Matching host base address.</summary>
     public HttpMatchingService(Uri baseAddress)
-        => client = new HttpClient { BaseAddress = baseAddress };
+        => client = ServiceHttp.CreateClient(baseAddress);
 
     /// <summary>Creates the client over an externally-managed <see cref="HttpClient"/>.</summary>
     public HttpMatchingService(HttpClient client)

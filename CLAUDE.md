@@ -23,27 +23,29 @@ npm run build
 npm run typecheck    # tsc --noEmit
 ```
 
-### Tests (xUnit, one project, per-service suites by namespace)
+### Tests (xUnit, split per public service, per-service suites by namespace)
 ```
-dotnet test jb/src/tests/Prism.Core.Tests/Prism.Core.Tests.csproj                    # everything, incl. pipeline integration
-dotnet test ... --filter "FullyQualifiedName~PrismCoreTests.<Suite>"                 # one service suite
-dotnet test ... --filter "FullyQualifiedName!~PipelineIntegrationTests"              # unit tests only
+dotnet test jb/src/PRISM.sln                                                         # everything, every project, incl. pipeline integration
+dotnet test jb/src/tests/Prism.Services.Matching.Tests/Prism.Services.Matching.Tests.csproj   # one project in isolation
+dotnet test jb/src/PRISM.sln --filter "FullyQualifiedName~PrismCoreTests.<Suite>"    # one service suite, any project
+dotnet test jb/src/PRISM.sln --filter "FullyQualifiedName!~PipelineIntegrationTests" # unit tests only
 ```
-Suites: `Ingest`, `Excel`, `Classify`, `Analyzers`, `Match`, `Order`, `Rename`, `ImageNGP`, `Generate`, `Transform`, `Upscale`, `Export`, `Services` (service glue: artifact store, contract serialization). Root namespace `PrismCoreTests` holds the end-to-end suite (`PipelineIntegrationTests` + shared `PipelineFixture`). Deliberately one `.csproj` — do not split per service until services actually deploy independently (see T-3300). End-to-end validation additionally runs via `pwsh test/ci/Invoke-CiPipeline.ps1`.
+Five projects under `jb/src/tests/`, split along public-service boundaries (T-3300): `Prism.Services.Matching.Tests` (`Match`, `Order`, `Classify`, `Analyzers`), `Prism.Services.Generate.Tests` (`Generate`), `Prism.Services.Transform.Tests` (`Transform`), `Prism.Services.Upscale.Tests` (`Upscale`), and `Prism.Core.Tests` for everything not a separately-deployable service (`Ingest`, `Excel`, `Export`, `Rename`, `ImageNGP`, `Services`, `ServiceHost`, root namespace `PrismCoreTests` = `PipelineIntegrationTests`). `Prism.Tests.Shared` is a non-test classlib holding `PipelineFixture`, referenced by both `Prism.Core.Tests` and `Prism.Services.Matching.Tests` (MatchLite and SubjectEdgeDetector real-image tests need it too). Namespaces are unchanged by the split, so `--filter "FullyQualifiedName~PrismCoreTests.<Suite>"` still works regardless of which project a suite now lives in. See `jb/docs/PRISM-testing.md`. End-to-end validation additionally runs via `pwsh test/ci/Invoke-CiPipeline.ps1`.
 
 ## Architecture
 
 PRISM is a C#/.NET image processing pipeline with a web workbench.
 
-**Solution:** `jb/src/PRISM.sln` — 8 projects:
+**Solution:** `jb/src/PRISM.sln` — 13 projects:
 - `Prism.Core.Contracts` (`core/Models/`) — model records
 - `Prism.Core` — pipeline orchestrator + all `Services/`/`lib/` submodules
 - `Prism.Services.Matching.Classify` (`core/Services/Matching/Classify/`) — ONNX/CLIP engine
 - `Prism.Services.Transform` (`core/Services/Transform/Engine/`) — transform engine
 - `Prism.Services.Upscale` (`core/Services/Upscale/Engine/`) — Real-ESRGAN GPU upscaler
 - `Prism.Api` (`api/`) — ASP.NET Core 10 minimal API
-- `Prism.ServiceHost` (`services/`) — standalone per-service HTTP host (`PRISM_SERVICE=ingest|matching|generate|transform|upscale`)
-- `Prism.Core.Tests` (`tests/`) — xUnit suite
+- `Prism.ServiceHost` (`services/`) — standalone per-service HTTP host for the public services (`PRISM_SERVICE=matching|generate|transform|upscale`); ingest is core and always runs in-process
+- `Prism.Core.Tests` + `Prism.Services.{Matching,Generate,Transform,Upscale}.Tests` (`tests/`) — xUnit suites split along public-service boundaries (T-3300)
+- `Prism.Tests.Shared` (`tests/`) — fixture classlib (`PipelineFixture`), not a test project
 
 Not in the `.sln`: the npm-based web workbench (`jb/src/workbench/web/`).
 

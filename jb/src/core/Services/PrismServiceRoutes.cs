@@ -7,9 +7,6 @@ namespace Prism.Core;
 /// </summary>
 public static class PrismServiceRoutes
 {
-    /// <summary>POST PrismJobRequest → IngestResult.</summary>
-    public const string Ingest = "/prism-service/ingest";
-
     /// <summary>POST IngestResult → MatchingResult.</summary>
     public const string Match = "/prism-service/match";
 

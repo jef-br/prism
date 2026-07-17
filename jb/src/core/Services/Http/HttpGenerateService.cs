@@ -12,7 +12,7 @@ public sealed class HttpGenerateService : IGenerateService
 
     /// <summary>Creates the client targeting the remote Generate host base address.</summary>
     public HttpGenerateService(Uri baseAddress)
-        => client = new HttpClient { BaseAddress = baseAddress };
+        => client = ServiceHttp.CreateClient(baseAddress);
 
     /// <summary>Creates the client over an externally-managed <see cref="HttpClient"/>.</summary>
     public HttpGenerateService(HttpClient client)

@@ -79,7 +79,7 @@ public static class ImagePreProcessor {
     /// Returns (null, null) and sets <see cref="ImageRecord_LAMBDA.IsKo"/> when the image fails thresholds.
     /// </summary>
     public static (byte[]? bytes, Mat? colorMat) Preprocess(
-        ImageRecord_LAMBDA lambda, string? imagePath, PrismConfiguration config)
+        ImageRecord_LAMBDA lambda, string? imagePath, PrismConfiguration config, IUpscaleService? remoteUpscale = null, CancellationToken cancellationToken = default)
     {
         byte[]? flatJpg = ReadNormalizedJpg(imagePath);
         if (flatJpg is null) return (null, null);
@@ -92,7 +92,7 @@ public static class ImagePreProcessor {
 
         lambda.BoundingBox = ParseSalientBox(bbox.coords, bbox.origW, bbox.origH);
 
-        byte[]? processedBytes = Upscale(flatJpg, bbox, config, lambda);
+        byte[]? processedBytes = Upscale(flatJpg, bbox, config, lambda, remoteUpscale, cancellationToken);
         if (lambda.IsKo) { colorMat.Dispose(); return (null, null); }
 
         return (processedBytes, colorMat);
@@ -194,7 +194,7 @@ public static class ImagePreProcessor {
 
     // Step 4: upscale decision based on the salient bbox's largest pixel dimension
     private static byte[]? Upscale( byte[] flatJpg, (string coords, int origW, int origH) bbox,
-                                     PrismConfiguration config, ImageRecord_LAMBDA lambda ) {
+                                     PrismConfiguration config, ImageRecord_LAMBDA lambda, IUpscaleService? remoteUpscale, CancellationToken cancellationToken ) {
         if (bbox.origW == 0) return flatJpg;
 
         string[] parts = bbox.coords.Split(',');
@@ -212,7 +212,13 @@ public static class ImagePreProcessor {
         if (scale > config.MaxUpScaleFactor)
             return Ko(lambda, "PREPROCESS_UPSCALE_EXCEEDED", $"Required scale {scale:F2}× exceeds maximum {config.MaxUpScaleFactor:F2}×.");
 
-        return ImageUpscaler.Upscale(flatJpg, scale);
+        // Remote host when PRISM_UPSCALE_URL routed one in (distributed deployment), local static
+        // session otherwise. GetAwaiter().GetResult() is safe here: callers run inside Parallel.ForEach
+        // worker threads with no synchronization context to deadlock on. The job's CancellationToken is
+        // the only bound on the remote call — the HttpClient transport timeout is infinite (ServiceHttp).
+        return remoteUpscale is null
+            ? ImageUpscaler.Upscale(flatJpg, scale)
+            : remoteUpscale.UpscaleAsync(flatJpg, scale, cancellationToken).GetAwaiter().GetResult();
     }
 
     private static byte[]? Ko( ImageRecord_LAMBDA lambda, string code, string message ) {
