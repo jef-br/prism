@@ -48,9 +48,9 @@ Neither saving justifies an unbounded Import→Match memory spike. `NormalizedJp
 ## Remote Fetcher Strategies
 
 Implement from the start:
-- `jb/src/core/IO/Fetchers/Fetch_HTTPS_DirectFile.cs` — generic direct HTTP/HTTPS file URLs
-- `jb/src/core/IO/Fetchers/Fetch_DropBox.cs`
-- `jb/src/core/IO/Fetchers/Fetch_WeTransfer.cs`
+- `jb/src/core/lib/Ingress/Fetchers/Fetch_HTTPS_DirectFile.cs` — generic direct HTTP/HTTPS file URLs
+- `jb/src/core/lib/Ingress/Fetchers/Fetch_DropBox.cs`
+- `jb/src/core/lib/Ingress/Fetchers/Fetch_WeTransfer.cs`
 
 URL policy from HCFG:
 ```json

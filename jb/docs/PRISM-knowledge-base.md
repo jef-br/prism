@@ -26,8 +26,8 @@
 
 ### Batch Capacity
 
-- Configured cap: 2500 images; hard ceiling: 5000
-- Max image filesize: 25 MB (configurable in CFG)
+- Configured cap: 10000 images (`Input.Images.amount.max`, configurable in CFG)
+- Max image filesize: 250 MB (`Input.Images.filesize.max`, configurable in CFG)
 - Designed for ~250 concurrent users, ~4 batches/day each
 
 ---
@@ -53,7 +53,7 @@ Imported → Classified → Matched → Ordered → Renamed → Generated → Tr
 
 ## Configuration: CFG
 
-**Location:** `jb/src/core/Prism_Config.json`
+**Location:** `jb/src/core/config/Prism_Config.json`
 ```md
 | Configuration Area | JSON Path |
 |-------------------|-----------|
@@ -134,7 +134,7 @@ transform section loads through `ConfigLoader.Section<T>` and is composed into `
 
 ## Configuration: XCFG
 
-**Location:** `jb/src/core/Excel/ExcelConfig.json`
+**Location:** `jb/src/core/config/ExcelConfig.json`
 
 ```json
 {

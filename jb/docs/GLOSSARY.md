@@ -5,10 +5,10 @@ Used across all `jb/docs/` files, `AGENTFEEDBACK.md`, and `PRISM-information.md`
 | Abbr | Full form |
 |---|---|
 | PRISM | The application / pipeline |
-| CFG | `Prism_Config.json` at `jb/src/core/` |
-| XCFG | `ExcelConfig.json` at `jb/src/core/Excel/` |
+| CFG | `Prism_Config.json` at `jb/src/core/config/` |
+| XCFG | `ExcelConfig.json` at `jb/src/core/config/` |
 | MCFG | `MatchingConfig.json` at `jb/src/core/config/` |
-| HCFG | `HostRules.json` at `jb/src/core/IO/cfg/` |
+| HCFG | `HostRules.json` at `jb/src/core/config/` |
 | IEM | InternalExcelModel (collated, deduplicated Excel worksheets) |
 | FID | FamilyID (primary product identifier; becomes output filename stem) |
 | PK | Primary Key |

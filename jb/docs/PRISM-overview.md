@@ -21,8 +21,8 @@ Excel: `.xlsx`, any human language, 2000+ suppliers.
 
 ## Batch & File Limits
 
-- Normal cap: **2500 images**; hard ceiling: **5000**. Max **25 MB**/file.
-- Heavy daily avg: ~10k images + 2 Excel → ~4 batches of 2500.
+- Cap: **10000 images** per batch (`Input.Images.amount.max` in CFG). Max **250 MB**/image file (`Input.Images.filesize.max`).
+- Heavy daily avg: ~10k images + 2 Excel → fits in a single batch.
 - Limits in CFG.
 
 ## External Resources

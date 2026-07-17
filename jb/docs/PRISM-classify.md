@@ -27,7 +27,7 @@ INGP taxonomy: 26 phenotypes in `jb/docs/ImageNGP/imagePhenotypes.md` and `jb/do
 
 INGP classification is config-driven — editable without recompiling the server:
 
-- `ImageNGP.json` (`jb/src/core/ImageNGP/`) — canonical taxonomy: every IF id with its datatype and allowed values, plus the 26-phenotype catalogue.
+- `ImageNGP.json` (`jb/src/core/config/`) — canonical taxonomy: every IF id with its datatype and allowed values, plus the 26-phenotype catalogue.
 - `ImageRoles.json` (same folder) — IF→phenotype rules, evaluated first-match by `PhenotypeRuleSet.cs`.
 - `ClipPrompts.json` (`jb/src/core/config/`) — CLIP prompt → (IF, value) bindings, loaded by `ClipPromptCatalog.cs`.
 

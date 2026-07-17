@@ -112,6 +112,87 @@
     2,500 unmatched ≈ 1.1 s. Measured, not worth an n-gram index; details in
     `PRISM-match.md`. Ready for /todo-finish.
 
+## StringMatcher's fuzzy fallback is a narrow patch, not a semantically-aware multilingual matcher — how far are we, and what would it take?
+
+- [ ] Future-work note (not an active bug): Bracket 3's fuzzy fallback (T-3800,
+  `StringMatcher.CollectFuzzyCategoricalEvidence`) is a single bounded Levenshtein
+  edit-distance check — distance ≤1, tokens ≥4 chars, categorical columns only. It
+  has none of: a real dictionary/lexicon, morphological stemming, or true semantic
+  (meaning-based) similarity. Should StringMatcher eventually become a genuinely
+  semantically-aware, multilingual matcher — dictionary + stemming + fuzzy +
+  semantics, all four layers — and if so, what would actually be required to get
+  there from where the code stands today?
+- Impact:
+  - Low today — the current fuzzy fallback already closes the specific gap it was
+    built for (typos/regional spelling in short categorical words). The ceiling is
+    the real issue: today's design structurally cannot catch morphological
+    variants ("boots"/"boot", "cardigans"/"cardigan"), true synonyms outside the
+    manually curated `TranslationDictionary.json`, or cross-language variants that
+    were never hand-entered as a synonym group.
+  - Effect on other TODOs: none currently tracked. This is a forward-looking
+    architecture question, not a defect to fix.
+- Industry standard:
+  Production multilingual text-matching stacks typically layer four independent
+  techniques, each catching a different class of mismatch: (1) a dictionary/lexicon
+  for direct cross-language term translation, (2) stemming or lemmatization to
+  collapse inflected word forms to a common root, (3) bounded edit-distance fuzzy
+  matching for typos, and (4) embedding-based semantic similarity for true
+  meaning-based matches (e.g. recognizing "jacket" and "coat" as related concepts).
+  None of the four substitutes for the others.
+- How far removed the current code is, piece by piece:
+  1. **Dictionary:** today's "dictionary" is `TranslationDictionary.json`'s
+     manually curated `SynonymGroups` — a hand-maintained list of specific word
+     pairs per domain, not a general multilingual lexicon. No bilingual/multilingual
+     word-translation dependency exists anywhere in PRISM. Every new synonym
+     (English↔French↔German↔Spanish↔Dutch, per the existing translation dictionary's
+     language coverage) must be entered by a person, one pair at a time.
+  2. **Stemming:** does not exist at all. No stemmer, lemmatizer, or morphological
+     reduction runs anywhere in Match. "boots" and "boot" are unrelated tokens to
+     the matcher today, as are "running" and "run".
+  3. **Fuzzy:** partially exists (T-3800) but narrowly — one fixed edit-distance
+     bound, categorical columns only, no length-scaled tolerance, no cross-language
+     awareness.
+  4. **Semantics:** does not exist for text-to-text matching. CLIP (already loaded
+     in-process for image classification) has a text encoder and could in principle
+     score token/phrase similarity, but nothing in Match calls it for that today,
+     and its embeddings are trained for image-text alignment — using it for
+     word-to-word similarity would need its own validation, not an assumption that
+     it transfers.
+- Prerequisites before this becomes buildable:
+  - A real dictionary/lexicon source (embedded multilingual resource or a
+    dependency) — real footprint/licensing/maintenance cost, not a config tweak.
+  - A stemming approach appropriate per language PRISM must actually support (a
+    single algorithm does not generalize across English/French/German/Spanish/
+    Dutch) — likely a per-language library dependency (e.g. Snowball-family
+    stemmers), scoped to the real language list, not a placeholder count.
+  - A validated semantic-similarity source — reusing CLIP's text encoder is the
+    obvious in-process candidate (no new model to load), but needs its own
+    calibration proving it produces sane token-similarity rankings before being
+    trusted for matching decisions; if it doesn't hold up, a dedicated embedding
+    model becomes a new dependency instead.
+  - A decision on where this sits in the bracket waterfall: a new bracket, or a
+    reshaping of Bracket 3/4's confidence math? Meaning-based similarity has a very
+    different false-positive profile than edit-distance — edit-distance mistakes
+    are close spellings of the same idea; semantic mistakes can be genuinely
+    different products that happen to sit near each other in embedding space
+    (e.g. "jacket" vs "vest").
+  - A labeled validation set sized for this — larger than the 3-value Levenshtein
+    tuning T-3800 needed. Semantic false positives risk real product mismatches,
+    not typo-tolerance nuance, so this needs real measurement before any threshold
+    is trusted in production.
+  - Its own performance pass: unlike today's categorical-only, small-vocabulary
+    Levenshtein scan (already measured cheap), dictionary+stemming+semantic
+    matching against potentially large descriptive/free-text columns could
+    reintroduce a genuine performance risk. The substring-rescue perf conclusion
+    elsewhere in this file does not carry over — that measured a different,
+    lighter operation.
+- Recommended solution:
+  Do not build this speculatively. This entry exists to record the honest distance
+  from today's implementation to the four-layer vision and what each layer would
+  cost, so a future decision starts from a real estimate instead of "add semantic
+  matching" as a one-line wish. No code change implied by this todo on its own.
+- Answer:
+
 ## Bracket 4's totalImageTokens count is approximate — does that ever change a matching decision?
 
 - [ ] SemanticMatcher.totalImageTokens: in `SemanticMatcher.TryMatch`,
