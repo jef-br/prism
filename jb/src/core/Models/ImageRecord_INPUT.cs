@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Prism.Contracts;
 
 /// <summary>
@@ -39,6 +41,16 @@ public class ImageRecord_INPUT : ImageRecord_Base {
 
     /// <summary>Height of the normalized image in pixels. Set after normalization.</summary>
     public int NormalizedHeight { get; set; }
+
+    /// <summary>
+    /// Encoded normalized JPEG bytes, carried forward in memory only when the Imported stage ran the
+    /// full decode/re-encode path (not the already-conforming-JPEG fast path). Lets an in-process Match
+    /// build its <c>Image&lt;Rgba32&gt;</c> from these bytes instead of re-reading <see cref="NormalizedJpgPath"/>
+    /// from disk (T-3500). <see cref="JsonIgnoreAttribute"/> keeps this out of the HTTP wire contract —
+    /// a cross-process Match always falls back to <see cref="NormalizedJpgPath"/>. Null once consumed.
+    /// </summary>
+    [JsonIgnore]
+    public byte[]? NormalizedJpegBytes { get; set; }
 
     // Downstream matching tokens (populated downstream)
 

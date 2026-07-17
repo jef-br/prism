@@ -271,7 +271,21 @@ public sealed class MatchingService : IMatchingService, IDisposable
         Image<Rgba32> image;
         try
         {
-            image = Image.Load<Rgba32>(source.NormalizedJpgPath);
+            // In-process Import->Match fusion (T-3500): when Import ran in this same process it hands
+            // forward the encoded normalized JPEG bytes it already produced, so this decode reads from
+            // memory instead of re-opening NormalizedJpgPath. Bytes (not a decoded Image) are the carried-
+            // forward form deliberately — holding a decoded Image<Rgba32> per OK image in the batch would
+            // balloon peak memory between Import finishing and this chunked loop consuming it; the encoded
+            // bytes are a small fraction of that size. Absent (cross-process Match, or the Importer fast
+            // path that never re-encoded) falls back to the disk read exactly as before.
+            image = source.NormalizedJpegBytes is byte[] normalizedBytes
+                ? Image.Load<Rgba32>(normalizedBytes)
+                : Image.Load<Rgba32>(source.NormalizedJpgPath);
+
+            // Consumed once — release the reference immediately rather than holding it for the rest of
+            // the job (the post-match refinement chain re-reads NormalizedJpgPath from disk separately;
+            // out of scope for this ticket, see AGENT-TICKETS.md T-3500).
+            source.NormalizedJpegBytes = null;
         }
         catch (Exception ex)
         {

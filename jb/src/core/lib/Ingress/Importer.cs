@@ -341,6 +341,7 @@ public sealed class Importer
             normalizedPath,
             out int normalizedWidth,
             out int normalizedHeight,
+            out byte[]? normalizedBytes,
             out ImportKoRecord? koRecord);
 
         if (!normalizedSuccessfully)
@@ -376,6 +377,7 @@ public sealed class Importer
             OriginalContentType = originalContentType,
             ByteLength          = byteLength,
             NormalizedJpgPath   = normalizedPath,
+            NormalizedJpegBytes = normalizedBytes,
             NormalizedWidth     = normalizedWidth,
             NormalizedHeight    = normalizedHeight,
             Width               = normalizedWidth,
@@ -393,6 +395,11 @@ public sealed class Importer
     /// <param name="destinationPath">Absolute path for the normalized JPEG output.</param>
     /// <param name="width">Normalized image width when successful.</param>
     /// <param name="height">Normalized image height when successful.</param>
+    /// <param name="normalizedBytes">
+    /// Encoded normalized JPEG bytes when the full decode/re-encode path ran (see
+    /// <see cref="ImageRecord_INPUT.NormalizedJpegBytes"/>). Null on the fast path, where the source
+    /// bytes are copied unchanged and no in-memory encoded image exists to hand forward.
+    /// </param>
     /// <param name="koRecord">KO record when normalization fails.</param>
     /// <returns>True when normalization succeeded.</returns>
     private bool TryNormalizeToJpeg(
@@ -401,11 +408,13 @@ public sealed class Importer
         string destinationPath,
         out int width,
         out int height,
+        out byte[]? normalizedBytes,
         out ImportKoRecord? koRecord)
     {
-        width    = 0;
-        height   = 0;
-        koRecord = null;
+        width           = 0;
+        height          = 0;
+        normalizedBytes = null;
+        koRecord        = null;
 
         if (TryFastPathCopyConformingJpeg(sourcePath, destinationPath, out width, out height))
         {
@@ -420,7 +429,14 @@ public sealed class Importer
             height = sourceImage.Height;
 
             JpegEncoder encoder = new() { Quality = NormalizedJpegQuality };
-            sourceImage.SaveAsJpeg(destinationPath, encoder);
+
+            // Encode once to memory, then write those exact bytes to disk. Avoids a second decode of
+            // NormalizedJpgPath downstream: the in-process Match stage reads these bytes directly
+            // (ImageRecord_INPUT.NormalizedJpegBytes) instead of re-opening this file (T-3500).
+            using MemoryStream encodedStream = new();
+            sourceImage.SaveAsJpeg(encodedStream, encoder);
+            normalizedBytes = encodedStream.ToArray();
+            File.WriteAllBytes(destinationPath, normalizedBytes);
 
             return true;
         }
