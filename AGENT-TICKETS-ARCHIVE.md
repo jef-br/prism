@@ -3,6 +3,37 @@
 Done tickets, moved here by /ticket-finish to keep AGENT-TICKETS.md (read every session start) lean.
 Newest at the top.
 
+### T-3300 · Validate and complete the Phase 2 distributed-services seam
+**Status:** Done (2026-07-17) | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-17)
+**Tracks:** `jb/src/core/Services/jbtodo.md` (per-service test suite todo, triaged 2026-07-07).
+
+**Problem:** The physical separation of deployables described as "Phase 2" in `PipelineServices.cs` is largely already built, not merely planned:
+- `PipelineServiceFactory.CreateFromEnvironment` already swaps any of Ingest/Matching/Generate/Transform for its HTTP client (`Http*Service` in `jb/src/core/Services/Http/`) when `PRISM_INGEST_URL` / `PRISM_MATCHING_URL` / `PRISM_GENERATE_URL` / `PRISM_TRANSFORM_URL` is set.
+- `jb/src/services/Prism.ServiceHost/Program.cs` already exposes each service over HTTP independently via `PRISM_SERVICE=ingest|matching|generate|transform|upscale`.
+
+None of this is validated end-to-end:
+1. No test exercises the actual HTTP round trip for any `Http*Service` client against `Prism.ServiceHost` — only in-process paths are tested today.
+2. No CI job runs PRISM as actually-separate processes (multiple `Prism.ServiceHost` instances + URL env vars wired per service) — `ci.yml`/`full-pipeline.yml` only run the monolith API.
+
+**Correction (2026-07-11):** this ticket previously claimed the API's in-process pipeline never initializes the GPU upscaler, sourced from `test/ci/README.md`. That's stale — `test/ci/README.md` describes a pre-T-2800 state. `PipelineServiceFactory.CreateFromEnvironment` already calls `EnsureUpscalerReady` before constructing `TransformService` on the same path `Pipeline`'s constructor uses (`jb/src/core/Pipeline.cs:26`), and T-2800 (archived Done) confirms this was fixed and verified via a live CiMini Full run. No upscaler-init fix is needed here; `test/ci/README.md`'s "Full run is currently red" section should be corrected separately (out of scope for this ticket).
+
+**What to do:**
+1. Add integration tests that stand up a `Prism.ServiceHost` instance (or in-memory `WebApplicationFactory`) per service and exercise each `Http*Service` client against it — real HTTP, not mocked.
+2. Add a CI (or scheduled) job that runs the full pipeline with all four service URLs pointed at separate `Prism.ServiceHost` processes, and asserts it produces the same manifest as the in-process run on CiMini.
+3. Only once distributed correctness is proven: split `Prism.Core.Tests` into per-service `.csproj` files along the existing namespace boundaries (`Transform/`, `Match/`, `Classify/`, `ImageNGP/`, `Order/`, `Rename/`, `Generate/`, `Export/`, plus [[T-3200]]'s `Ingest/`). This step only pays off once steps 1-2 make Phase 2 real — do not do it speculatively first.
+
+**Acceptance:**
+- `-Mode Full -Dataset CiMini` passes both in-process and fully distributed (4 separate `Prism.ServiceHost` processes), producing identical `expected-manifest.json`.
+- Each `Http*Service` has at least one real-HTTP-roundtrip test.
+- Test projects physically split, mirroring the proven service boundaries.
+
+**Files:** `jb/src/core/Services/PipelineServiceFactory.cs`, `jb/src/core/Services/Http/*.cs`, `jb/src/services/Prism.ServiceHost/Program.cs`, `jb/src/tests/Prism.Core.Tests/*`, `.github/workflows/ci.yml`.
+
+**Closeout (2026-07-17):** implemented across commits `2f337b6`..`53502f9` (T-3300 branch, merged to main at `1ebd00e`). Reviewer verified distributed correctness via actual CI run `29451640778` showing both in-process and 4-service-host distributed goldens matching on CiMini; all four `Http*Service` clients have real-HTTP roundtrip tests (`jb/src/tests/Prism.Core.Tests/ServiceHost/`); test projects split into `Prism.Services.{Matching,Generate,Transform,Upscale}.Tests` + `Prism.Core.Tests` + `Prism.Tests.Shared`. Two non-blocking follow-ups noted by review, not ticketed separately: (1) `ServiceHostTestHelpers.cs`/`ServiceHostFixture.cs` carry method-level XML doc comments against CLAUDE.md's class-summary-only rule; (2) root `jbtodo.md`'s T-3300 independent-review block (R1-R8) should be closed per the todo lifecycle, with R7 (sync-over-async remote upscale call) ticketed separately if still wanted.
+
+---
+
 ### T-3500 · Fuse Import→Match in-process handoff to remove redundant image decode
 **Status:** Done (2026-07-15) | **Profile:** P1-feature-worker
 **Tracks:** root `jbtodo.md` — Import/Match fusion, triaged 2026-07-10.
