@@ -54,6 +54,12 @@
     `Prism.Services.Matching` adds a Matching→Excel project reference the restructure
     otherwise keeps apart — so "reuse" is really copy-the-~35-line-helper vs. take the
     dependency, a tradeoff to weigh, not a free reuse.
+  - Update 2026-07-17: implemented on main (T-3800 rescue, commit e2e1f84) —
+    `StringMatcher.CollectFuzzyCategoricalEvidence`, categorical columns only,
+    distance ≤ 1, both sides ≥ 4 chars, evidence score 0.75. Reuse turned out free:
+    `ModelBuilder.ComputeLevenshteinDistance` is internal but same assembly
+    (`Prism.Core`), no new project reference. Doc updated (`PRISM-match.md`).
+    Ready for /todo-finish once T-3800 validation is accepted.
 
 ## Substring rescue scans the whole digit index per rescue token — is this a real slowdown?
 
@@ -100,6 +106,11 @@
   - Verdict unchanged: still `probably fine, unverified`. The honest close needs a
     Stopwatch around the `.Contains` scan on a CiMini/full batch — the config bounds
     argue it is negligible but do not prove it.
+  - Update 2026-07-17: measured on main (T-3800 rescue, commit e2e1f84) —
+    `SubstringRescuePerfMeasurement.cs` (Prism.Services.Matching.Tests) at synthetic
+    heavy-batch scale (3,000 families, production config): 250 unmatched ≈ 336 ms,
+    2,500 unmatched ≈ 1.1 s. Measured, not worth an n-gram index; details in
+    `PRISM-match.md`. Ready for /todo-finish.
 
 ## Bracket 4's totalImageTokens count is approximate — does that ever change a matching decision?
 
@@ -159,3 +170,8 @@
     accept/reject near `SemanticThreshold` is the empirical question the
     recommendation already frames; the fix (count real filename tokens instead) is
     clear but needs the labeled/CiMini before-after before rolling.
+  - Update 2026-07-17: fix implemented on main (T-3800 rescue, commit e2e1f84) —
+    `totalImageTokens = stringMatcher.CountFilenameTokens(filename)`; pool size no
+    longer leaks into `stringSignal`. Unit tests pass; the before/after on a labeled
+    set (accept/reject flips near `SemanticThreshold`) is still the open validation
+    before /todo-finish.
