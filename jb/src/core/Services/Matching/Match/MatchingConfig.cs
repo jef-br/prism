@@ -8,23 +8,23 @@ namespace Prism.Services.Matching;
 public sealed record MatchingConfig
 {
     /// <summary>All configured matching rules.</summary>
-    public IReadOnlyList<MatchingRule> Rules { get; init; } = [];
+    public required IReadOnlyList<MatchingRule> Rules { get; init; }
 
     /// <summary>
     /// Minimum combined evidence score for Bracket 4 semantic matching to accept an assignment.
     /// Computed as the average of CLIP, numeric, and string signals scaled to [0, 1].
     /// </summary>
-    public double SemanticThreshold { get; init; } = 0.9;
+    public required double SemanticThreshold { get; init; }
 
     /// <summary>Weight applied to each semantic signal when computing MatchEvidence.FinalScore for Bracket 4.</summary>
-    public double SemanticWeight { get; init; } = 0.15;
+    public required double SemanticWeight { get; init; }
 
     /// <summary>
     /// Minimum distinct filename tokens the winning family must have matched for a Bracket 3 string
     /// assignment. 1 preserves the historical behavior; 2 rejects single-common-token matches
     /// (e.g. one shared color word), trading recall for precision — Brackets 4–5 may still rescue.
     /// </summary>
-    public int Bracket3MinDistinctTokens { get; init; } = 1;
+    public required int Bracket3MinDistinctTokens { get; init; }
 
     /// <summary>
     /// Minimum digit count for a filename token or family digit target to act as standalone numeric
@@ -32,41 +32,41 @@ public sealed record MatchingConfig
     /// digit fragments (e.g. "MGGE073" → "073") from producing false Bracket 1 ties. Shorter tokens
     /// may still participate in Bracket 2 concatenations whose combined length meets the threshold.
     /// </summary>
-    public int MinNumericTokenLength { get; init; } = 1;
+    public required int MinNumericTokenLength { get; init; }
 
     /// <summary>
     /// When true, the numeric digit index additionally covers every digit run (and capped whole-value
     /// digit string) of every family column — not just the configured numeric rule fields. Lets
     /// filenames match identifiers embedded in compound cells (e.g. label "MAN-Posy Green-1010930-60105").
     /// </summary>
-    public bool IndexDigitRunsAllColumns { get; init; } = false;
+    public required bool IndexDigitRunsAllColumns { get; init; }
 
     /// <summary>
     /// Minimum digit count for the numeric substring rescue pass (accepts the unique family whose
     /// digit target contains the filename token). 0 disables the pass.
     /// </summary>
-    public int MinSubstringRescueLength { get; init; } = 0;
+    public required int MinSubstringRescueLength { get; init; }
 
     /// <summary>
     /// Minimum length for an identifier-grade filename token (contains both letters and digits,
     /// occurs in exactly one family) to accept a Bracket 3 match on its own, bypassing
     /// Bracket3MinDistinctTokens. 0 disables the bypass.
     /// </summary>
-    public int IdentifierTokenMinLength { get; init; } = 0;
+    public required int IdentifierTokenMinLength { get; init; }
 
     /// <summary>
     /// When true, the string token index also contains concatenations of adjacent cell tokens in
     /// both orders ("palm"+"blue" → "palmblue"/"bluepalm") and filename tokens are additionally
     /// split at letter↔digit boundaries, so glued compound tokens can match.
     /// </summary>
-    public bool IndexExcelTokenBigrams { get; init; } = false;
+    public required bool IndexExcelTokenBigrams { get; init; }
 
     /// <summary>
     /// When true, a final bracket propagates a matched FamilyID to unmatched images whose rare
     /// filename token set points to exactly one matched sibling image (and to no image matched to
     /// a different family).
     /// </summary>
-    public bool EnableSiblingPropagation { get; init; } = false;
+    public required bool EnableSiblingPropagation { get; init; }
 
     /// <summary>
     /// When true, images with a meaningless filename (1.jpg, DSCN2365.jpg, IMG_10005.png) borrow
@@ -74,7 +74,26 @@ public sealed record MatchingConfig
     /// pattern and one of its tokens appears in the Excel data. Format folders (HD, Web, packshot,
     /// 800 x 1200) are never borrowed.
     /// </summary>
-    public bool EnableFolderNameEnrichment { get; init; } = false;
+    public required bool EnableFolderNameEnrichment { get; init; }
+
+    /// <summary>
+    /// Minimum token length (both sides) for the Bracket 3 categorical edit-distance fallback to
+    /// consider a fuzzy match. Guards short 2-3 letter words from accidentally matching an unrelated
+    /// short word.
+    /// </summary>
+    public required int FuzzyMinTokenLength { get; init; }
+
+    /// <summary>
+    /// Maximum Levenshtein edit distance for the Bracket 3 categorical fuzzy fallback — bounded
+    /// tolerance for typo/regional spelling variants (e.g. "gray"/"grey").
+    /// </summary>
+    public required int FuzzyMaxEditDistance { get; init; }
+
+    /// <summary>
+    /// Evidence score assigned to a categorical fuzzy match — between the synonym score (0.85) and
+    /// exact score (1.0).
+    /// </summary>
+    public required double FuzzyMatchScore { get; init; }
 
     /// <summary>Rules that drive numeric token matching (familyID, EAN).</summary>
     public IReadOnlyList<MatchingRule> NumericRules =>
@@ -98,9 +117,15 @@ public sealed record MatchingConfig
             throw new FileNotFoundException("MatchingConfig.json was not found.", configPath);
 
         string json = File.ReadAllText(configPath);
-        MatchingConfig? config = JsonSerializer.Deserialize<MatchingConfig>(json, JsonOptions);
-
-        return config ?? throw new PrismConfigurationException("MatchingConfig.json could not be parsed.");
+        try
+        {
+            return JsonSerializer.Deserialize<MatchingConfig>(json, JsonOptions)
+                ?? throw new PrismConfigurationException("MatchingConfig.json could not be parsed.");
+        }
+        catch (JsonException ex)
+        {
+            throw new PrismConfigurationException($"Cannot load MatchingConfig.json: {ex.Message}", ex);
+        }
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()

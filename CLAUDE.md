@@ -104,7 +104,7 @@ The web workbench is a **decorator over `Prism.cs`** — it provides visibility 
 
 Every parameter lives in a JSON config file placed next to the code that uses it. No magic values inline.
 
-**No shadow defaults in Transform/Analyzers (core rule, 2026-07-12):** config classes under `Services/Transform/` and `Services/Matching/Analyzers/` carry **no in-code property initializers** — every property is declared `required` and loads from exactly ONE JSON file per area (`transform_Config.json`, `analyzer_Config.json`). A missing or misspelled key fails loud at load time, never silently falls back.
+**No shadow defaults, anywhere (core rule, 2026-07-12, broadened repo-wide 2026-07-17):** every PRISM config class carries **no in-code property initializers** — every property is declared `required` and loads from its JSON file with required-member enforcement. A missing or misspelled key fails loud at load time (as `PrismConfigurationException`), never silently falls back. Applies to every config class in the repo, not just Transform/Analyzers (`transform_Config.json`, `analyzer_Config.json`, `MatchingConfig.json`, and beyond). Existing config classes not yet converted (`ExcelConfig`, `PrismConfiguration`, `TranslationConfig`, `HostRules`, `ProductTypeMap`, `ImageNGP`, `ImageRoles`, `DetOrderRules`, `ClipPrompts`, etc.) are legacy debt pending a dedicated retrofit ticket — new or touched config code must follow this rule regardless. Same rule extends to constructor parameters that thread config-sourced tuning values through code: no C#-level default values on them either — every call site (production and test) must supply them explicitly, so a missing config value is a compile error or a load-time exception, never a silent fallback.
 
 Key config files:
 

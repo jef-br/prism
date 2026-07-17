@@ -9,6 +9,9 @@
   "indexExcelTokenBigrams": true,
   "enableSiblingPropagation": true,
   "enableFolderNameEnrichment": true,
+  "fuzzyMinTokenLength": 4,
+  "fuzzyMaxEditDistance": 1,
+  "fuzzyMatchScore": 0.75,
   "rules": [
     {
       "excelField": "FamilyID",

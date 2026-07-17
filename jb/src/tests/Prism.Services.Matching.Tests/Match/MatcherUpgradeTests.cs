@@ -39,6 +39,16 @@ public class MatcherUpgradeTests
         StopWords     = new StopWordConfig { General = [], Domain = [] }
     };
 
+    // Production-equivalent tuning values (MatchingConfig.json is required-only now — tests supply
+    // their own explicit fixture values rather than relying on constructor defaults). Individual
+    // tests override the specific value under test via named arguments.
+    private const int DefaultBracket3MinDistinctTokens = 1;
+    private const int DefaultIdentifierTokenMinLength = 0;
+    private const bool DefaultIndexExcelTokenBigrams = false;
+    private const int DefaultFuzzyMinTokenLength = 4;
+    private const int DefaultFuzzyMaxEditDistance = 1;
+    private const double DefaultFuzzyMatchScore = 0.75;
+
     //  M1: min-token-length guard (INPUTMA24 false ties)
 
     [Fact]
@@ -141,7 +151,8 @@ public class MatcherUpgradeTests
     public void Bracket3_GluedFilenameToken_MatchesAdjacentExcelTokens()
     {
         // Filename glues "palm blue" into "palmblue"; the Excel cell holds them adjacent.
-        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2, indexExcelTokenBigrams: true);
+        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2, identifierTokenMinLength: DefaultIdentifierTokenMinLength, indexExcelTokenBigrams: true,
+            fuzzyMinTokenLength: DefaultFuzzyMinTokenLength, fuzzyMaxEditDistance: DefaultFuzzyMaxEditDistance, fuzzyMatchScore: DefaultFuzzyMatchScore);
         FamilyIDRecord famA = MakeFamily("94612975", ("reference", "ANASTASIA AB-PALM BLUE", ExcelColumnClassification.Mixed));
         FamilyIDRecord famB = MakeFamily("94612976", ("reference", "ARIZONA CC-BLUE LEAF", ExcelColumnClassification.Mixed));
 
@@ -156,7 +167,8 @@ public class MatcherUpgradeTests
     [Fact]
     public void Bracket3_UniqueIdentifierToken_BypassesMinDistinctTokensGate()
     {
-        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2, identifierTokenMinLength: 4);
+        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2, identifierTokenMinLength: 4, indexExcelTokenBigrams: DefaultIndexExcelTokenBigrams,
+            fuzzyMinTokenLength: DefaultFuzzyMinTokenLength, fuzzyMaxEditDistance: DefaultFuzzyMaxEditDistance, fuzzyMatchScore: DefaultFuzzyMatchScore);
         FamilyIDRecord famA = MakeFamily("98954095", ("reference", "1707527E", ExcelColumnClassification.Mixed));
         FamilyIDRecord famB = MakeFamily("98954100", ("reference", "2653556E", ExcelColumnClassification.Mixed));
 
@@ -169,7 +181,8 @@ public class MatcherUpgradeTests
     [Fact]
     public void Bracket3_IdentifierBypassDisabled_GateStillRejects()
     {
-        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2, identifierTokenMinLength: 0);
+        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2, identifierTokenMinLength: 0, indexExcelTokenBigrams: DefaultIndexExcelTokenBigrams,
+            fuzzyMinTokenLength: DefaultFuzzyMinTokenLength, fuzzyMaxEditDistance: DefaultFuzzyMaxEditDistance, fuzzyMatchScore: DefaultFuzzyMatchScore);
         FamilyIDRecord famA = MakeFamily("98954095", ("reference", "1707527E", ExcelColumnClassification.Mixed));
         FamilyIDRecord famB = MakeFamily("98954100", ("reference", "2653556E", ExcelColumnClassification.Mixed));
 
@@ -182,7 +195,8 @@ public class MatcherUpgradeTests
     public void Bracket3_TopTie_ShortDigitTokenDiscriminates()
     {
         // Both families are cardigans in magenta; only famA carries color code "76".
-        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2);
+        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2, identifierTokenMinLength: DefaultIdentifierTokenMinLength, indexExcelTokenBigrams: DefaultIndexExcelTokenBigrams,
+            fuzzyMinTokenLength: DefaultFuzzyMinTokenLength, fuzzyMaxEditDistance: DefaultFuzzyMaxEditDistance, fuzzyMatchScore: DefaultFuzzyMatchScore);
         FamilyIDRecord famA = MakeFamily("90861052",
             ("type", "CARDIGAN MAGENTA", ExcelColumnClassification.Categorical),
             ("RefCo", "24211507-76", ExcelColumnClassification.Mixed));
@@ -289,7 +303,8 @@ public class MatcherUpgradeTests
         Assert.Contains("SH23005", img.MatchingName);
 
         // And the borrowed name now matches: StringMatcher finds the unique family via the folder tokens.
-        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2, identifierTokenMinLength: 4, indexExcelTokenBigrams: true);
+        StringMatcher matcher = new(EmptyTranslation, bracket3MinDistinctTokens: 2, identifierTokenMinLength: 4, indexExcelTokenBigrams: true,
+            fuzzyMinTokenLength: DefaultFuzzyMinTokenLength, fuzzyMaxEditDistance: DefaultFuzzyMaxEditDistance, fuzzyMatchScore: DefaultFuzzyMatchScore);
         MatchEvidence? evidence = matcher.TryMatch(img, [famA, famB]);
         Assert.Equal("98765432", evidence?.FinalFamilyId);
     }

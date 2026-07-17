@@ -27,7 +27,10 @@ internal sealed class ImageMatcher {
             translationConfig,
             matchingConfig.Bracket3MinDistinctTokens,
             matchingConfig.IdentifierTokenMinLength,
-            matchingConfig.IndexExcelTokenBigrams);
+            matchingConfig.IndexExcelTokenBigrams,
+            matchingConfig.FuzzyMinTokenLength,
+            matchingConfig.FuzzyMaxEditDistance,
+            matchingConfig.FuzzyMatchScore);
         clipLabelEnricher = new ClipLabelEnricher();
         filenameToCellMatcher = new FilenameToCellMatcher();
         siblingPropagator = new SiblingPropagator();

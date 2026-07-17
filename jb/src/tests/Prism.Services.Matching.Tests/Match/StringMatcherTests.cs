@@ -12,7 +12,7 @@ public class StringMatcherTests
     [Fact]
     public void TryMatch_FilenameTokenMatchesOneFamily_ReturnsEvidence()
     {
-        StringMatcher      matcher = new(EmptyTranslation);
+        StringMatcher      matcher = MakeMatcher(EmptyTranslation);
         FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("blue-shirt.jpg");
 
@@ -30,7 +30,7 @@ public class StringMatcherTests
     [Fact]
     public void TryMatch_FilenameTokenMatchesNoFamily_ReturnsNull()
     {
-        StringMatcher      matcher = new(EmptyTranslation);
+        StringMatcher      matcher = MakeMatcher(EmptyTranslation);
         FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("red-shirt.jpg");
 
@@ -44,7 +44,7 @@ public class StringMatcherTests
     [Fact]
     public void TryMatch_FilenameTokenMatchesTwoFamilies_ReturnsNull()
     {
-        StringMatcher      matcher = new(EmptyTranslation);
+        StringMatcher      matcher = MakeMatcher(EmptyTranslation);
         FamilyIDRecord       famA    = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
         FamilyIDRecord       famB    = FamilyWithProperty("FAM002", "color", "blue", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("blue-shirt.jpg");
@@ -59,7 +59,7 @@ public class StringMatcherTests
     [Fact]
     public void TryMatch_FilenameHasOnlyDigits_ReturnsNull()
     {
-        StringMatcher      matcher = new(EmptyTranslation);
+        StringMatcher      matcher = MakeMatcher(EmptyTranslation);
         FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "12345", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("12345.jpg");
 
@@ -83,7 +83,7 @@ public class StringMatcherTests
             StopWords = new StopWordConfig { General = [], Domain = [] }
         };
 
-        StringMatcher      matcher = new(withSynonyms);
+        StringMatcher      matcher = MakeMatcher(withSynonyms);
         FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("blau-shirt.jpg"); // German synonym for blue
 
@@ -106,7 +106,7 @@ public class StringMatcherTests
         famA.MergeProperty(new ExcelPropertyValue("color", ["ivory"], []), ExcelColumnClassification.Categorical);
         FamilyIDRecord famB = FamilyWithProperty("FAM_B", "color", "ivory", ExcelColumnClassification.Categorical);
 
-        StringMatcher matcher = new(EmptyTranslation);
+        StringMatcher matcher = MakeMatcher(EmptyTranslation);
         ImageRecord_LAMBDA record = MakeLambda("alba_ivory_B.jpg");
 
         MatchEvidence? evidence = matcher.TryMatch(record, [famA, famB]);
@@ -122,7 +122,7 @@ public class StringMatcherTests
         FamilyIDRecord famA = FamilyWithProperty("FAM_A", "color", "ivory", ExcelColumnClassification.Categorical);
         FamilyIDRecord famB = FamilyWithProperty("FAM_B", "color", "ivory", ExcelColumnClassification.Categorical);
 
-        StringMatcher matcher = new(EmptyTranslation);
+        StringMatcher matcher = MakeMatcher(EmptyTranslation);
         ImageRecord_LAMBDA record = MakeLambda("ivory-dress.jpg");
 
         Assert.Null(matcher.TryMatch(record, [famA, famB]));
@@ -135,7 +135,7 @@ public class StringMatcherTests
     {
         // "grey" (image) vs "gray" (Excel) — distance 1, both length-4 — PRISM-match.md's documented
         // tolerance for categorical columns (color, material, product type).
-        StringMatcher      matcher = new(EmptyTranslation);
+        StringMatcher      matcher = MakeMatcher(EmptyTranslation);
         FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "gray", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("grey-shirt.jpg");
 
@@ -150,7 +150,7 @@ public class StringMatcherTests
     public void TryMatch_CategoricalColumnEditDistanceTwo_DoesNotMatch()
     {
         // "gray" vs "grape" — distance 2 — outside the bounded distance-1 tolerance.
-        StringMatcher      matcher = new(EmptyTranslation);
+        StringMatcher      matcher = MakeMatcher(EmptyTranslation);
         FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "grape", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("gray-shirt.jpg");
 
@@ -162,7 +162,7 @@ public class StringMatcherTests
     {
         // "red" vs "rad" — distance 1 but both below the 4-character fuzzy-eligibility floor, so a
         // short word cannot accidentally match an unrelated short word.
-        StringMatcher      matcher = new(EmptyTranslation);
+        StringMatcher      matcher = MakeMatcher(EmptyTranslation);
         FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "red", ExcelColumnClassification.Categorical);
         ImageRecord_LAMBDA record  = MakeLambda("rad-shirt.jpg");
 
@@ -174,7 +174,7 @@ public class StringMatcherTests
     {
         // Same distance-1 typo, but the family column is Mixed, not Categorical — fuzzy tolerance is
         // scoped to categorical columns only (free text is too ambiguous for a safe fuzzy scan).
-        StringMatcher      matcher = new(EmptyTranslation);
+        StringMatcher      matcher = MakeMatcher(EmptyTranslation);
         FamilyIDRecord       family  = FamilyWithProperty("FAM001", "reference", "cardigan", ExcelColumnClassification.Mixed);
         ImageRecord_LAMBDA record  = MakeLambda("cardigen-shirt.jpg");
 
@@ -186,7 +186,7 @@ public class StringMatcherTests
     [Fact]
     public void ScoreCandidatesByStringTokens_SimpleCase_ReturnsExpectedMatchCountAndEvidence()
     {
-        StringMatcher matcher = new(EmptyTranslation);
+        StringMatcher matcher = MakeMatcher(EmptyTranslation);
         FamilyIDRecord family = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
 
         var scored = matcher.ScoreCandidatesByStringTokens("blue-shirt.jpg", [family], [family]);
@@ -207,7 +207,7 @@ public class StringMatcherTests
         famA.MergeProperty(new ExcelPropertyValue("color", ["ivory"], []), ExcelColumnClassification.Categorical);
         FamilyIDRecord famB = FamilyWithProperty("FAM_B", "color", "ivory", ExcelColumnClassification.Categorical);
 
-        StringMatcher matcher = new(EmptyTranslation);
+        StringMatcher matcher = MakeMatcher(EmptyTranslation);
         var scored = matcher.ScoreCandidatesByStringTokens("alba_ivory.jpg", [famA, famB], [famA, famB]);
 
         Assert.Equal(2, scored.Count);
@@ -226,7 +226,7 @@ public class StringMatcherTests
         FamilyIDRecord famA = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
         FamilyIDRecord famB = FamilyWithProperty("FAM002", "color", "blue", ExcelColumnClassification.Categorical);
 
-        StringMatcher matcher = new(EmptyTranslation);
+        StringMatcher matcher = MakeMatcher(EmptyTranslation);
         var scored = matcher.ScoreCandidatesByStringTokens("blue-shirt.jpg", [famA], [famA, famB]);
 
         Assert.Single(scored);
@@ -245,7 +245,7 @@ public class StringMatcherTests
             StopWords = new StopWordConfig { General = [], Domain = [] }
         };
 
-        StringMatcher matcher = new(withSynonyms);
+        StringMatcher matcher = MakeMatcher(withSynonyms);
         FamilyIDRecord family = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
 
         var scored = matcher.ScoreCandidatesByStringTokens("blau-shirt.jpg", [family], [family]);
@@ -258,7 +258,7 @@ public class StringMatcherTests
     [Fact]
     public void ScoreCandidatesByStringTokens_NoTokenMatches_ReturnsEmpty()
     {
-        StringMatcher matcher = new(EmptyTranslation);
+        StringMatcher matcher = MakeMatcher(EmptyTranslation);
         FamilyIDRecord family = FamilyWithProperty("FAM001", "color", "blue", ExcelColumnClassification.Categorical);
 
         var scored = matcher.ScoreCandidatesByStringTokens("red-shirt.jpg", [family], [family]);
@@ -281,7 +281,7 @@ public class StringMatcherTests
         FamilyIDRecord famB = FamilyWithProperty("FAM_B", "color", "blue", ExcelColumnClassification.Categorical);
         FamilyIDRecord famC = FamilyWithProperty("FAM_C", "material", "wool", ExcelColumnClassification.Categorical);
 
-        StringMatcher matcher = new(EmptyTranslation);
+        StringMatcher matcher = MakeMatcher(EmptyTranslation);
         var scored = matcher.ScoreCandidatesByStringTokens("blue_wool_shirt.jpg", [famA, famB, famC], [famA, famB, famC]);
 
         Assert.Equal(3, scored.Count);
@@ -300,6 +300,19 @@ public class StringMatcherTests
         SynonymGroups = [],
         StopWords     = new StopWordConfig { General = [], Domain = [] }
     };
+
+    // Production-equivalent tuning values (MatchingConfig.json is required-only now — tests supply
+    // their own explicit fixture values rather than relying on constructor defaults).
+    private const int DefaultBracket3MinDistinctTokens = 1;
+    private const int DefaultIdentifierTokenMinLength = 0;
+    private const bool DefaultIndexExcelTokenBigrams = false;
+    private const int DefaultFuzzyMinTokenLength = 4;
+    private const int DefaultFuzzyMaxEditDistance = 1;
+    private const double DefaultFuzzyMatchScore = 0.75;
+
+    private static StringMatcher MakeMatcher(TranslationConfig translation) =>
+        new(translation, DefaultBracket3MinDistinctTokens, DefaultIdentifierTokenMinLength, DefaultIndexExcelTokenBigrams,
+            DefaultFuzzyMinTokenLength, DefaultFuzzyMaxEditDistance, DefaultFuzzyMatchScore);
 
     private static ImageRecord_LAMBDA MakeLambda(string filename) =>
         new() { InitialFullName = filename };

@@ -23,6 +23,9 @@ internal sealed class StringMatcher
     private readonly int bracket3MinDistinctTokens;
     private readonly int identifierTokenMinLength;
     private readonly bool indexExcelTokenBigrams;
+    private readonly int fuzzyMinTokenLength;
+    private readonly int fuzzyMaxEditDistance;
+    private readonly double fuzzyMatchScore;
 
     // Inverted token index (family token → postings), built once per family set so Bracket 3 does not
     // rescan every family for every image. Keyed by reference identity of the families list.
@@ -35,19 +38,15 @@ internal sealed class StringMatcher
     // stay exact-match-only (free text is too large/ambiguous for a safe fuzzy scan).
     private Dictionary<string, List<Posting>>? categoricalTokenIndex;
 
-    // Bounded to distance 1 — matches NumericMatcher's own MaxDistance production value — and only for
-    // tokens at least 4 characters long (mirrors ModelBuilder's fuzzy header-term gate), so a short
-    // 2-3 letter word cannot accidentally match an unrelated short word.
-    private const int FuzzyMinTokenLength = 4;
-    private const int FuzzyMaxEditDistance = 1;
-    private const double FuzzyMatchScore = 0.75;
-
-    internal StringMatcher(TranslationConfig translationConfig, int bracket3MinDistinctTokens = 1, int identifierTokenMinLength = 0, bool indexExcelTokenBigrams = false)
+    internal StringMatcher(TranslationConfig translationConfig, int bracket3MinDistinctTokens, int identifierTokenMinLength, bool indexExcelTokenBigrams, int fuzzyMinTokenLength, int fuzzyMaxEditDistance, double fuzzyMatchScore)
     {
         this.translationConfig = translationConfig;
         this.bracket3MinDistinctTokens = bracket3MinDistinctTokens;
         this.identifierTokenMinLength = identifierTokenMinLength;
         this.indexExcelTokenBigrams = indexExcelTokenBigrams;
+        this.fuzzyMinTokenLength = fuzzyMinTokenLength;
+        this.fuzzyMaxEditDistance = fuzzyMaxEditDistance;
+        this.fuzzyMatchScore = fuzzyMatchScore;
     }
 
     //  Bracket 3 
@@ -263,16 +262,16 @@ internal sealed class StringMatcher
         Dictionary<string, List<Posting>> categoricalIndex,
         Dictionary<string, List<TokenEvidenceItem>> byFamily)
     {
-        if (imageToken.Normalized.Length < FuzzyMinTokenLength)
+        if (imageToken.Normalized.Length < fuzzyMinTokenLength)
             return;
 
         foreach (KeyValuePair<string, List<Posting>> entry in categoricalIndex)
         {
-            if (entry.Key.Length < FuzzyMinTokenLength ||
-                Math.Abs(entry.Key.Length - imageToken.Normalized.Length) > FuzzyMaxEditDistance)
+            if (entry.Key.Length < fuzzyMinTokenLength ||
+                Math.Abs(entry.Key.Length - imageToken.Normalized.Length) > fuzzyMaxEditDistance)
                 continue;
 
-            if (ModelBuilder.ComputeLevenshteinDistance(imageToken.Normalized, entry.Key) > FuzzyMaxEditDistance)
+            if (ModelBuilder.ComputeLevenshteinDistance(imageToken.Normalized, entry.Key) > fuzzyMaxEditDistance)
                 continue;
 
             foreach (Posting posting in entry.Value)
@@ -285,7 +284,7 @@ internal sealed class StringMatcher
                     posting.FamilyToken,
                     posting.PropertyName,
                     posting.FamilyId,
-                    FuzzyMatchScore));
+                    fuzzyMatchScore));
             }
         }
     }
