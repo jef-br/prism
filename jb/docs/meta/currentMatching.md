@@ -1,6 +1,6 @@
 # How Matching Actually Works (Right Now)
 
-*Plain-language description of the code in `jb/src/core/Images/Match/`.*
+*Plain-language description of the code in `jb/src/core/Services/Matching/Match/`.*
 
 ---
 
@@ -165,7 +165,7 @@ Every photo — matched or rejected — gets a `MatchEvidence` record that expla
 
 ## Known Gaps (Deviations from Spec)
 
-These are tracked in `jb/src/core/Images/Match/jbtodo.md`.
+These are tracked in `jb/src/core/Services/Matching/Match/jbtodo.md`.
 
 | # | What the spec says | What the code does |
 |---|---|---|
@@ -181,5 +181,5 @@ These are tracked in `jb/src/core/Images/Match/jbtodo.md`.
 
 | File | What it controls |
 |---|---|
-| `jb/src/core/Images/Match/MatchingConfig.json` | Which Excel columns to match against; TCD `maxDistance`; label evidence weights |
-| `jb/src/core/Images/Match/Translate/TranslationDictionary.json` | Synonyms (e.g. `bleu` = `blue`); stop words to ignore |
+| `jb/src/core/config/MatchingConfig.json` | Which Excel columns to match against; TCD `maxDistance`; label evidence weights |
+| `jb/src/core/config/TranslationDictionary.json` | Synonyms (e.g. `bleu` = `blue`); stop words to ignore |

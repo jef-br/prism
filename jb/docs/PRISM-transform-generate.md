@@ -3,7 +3,7 @@
 
 ## ImagePreProcessor
 
-`jb/src/core/Images/ImagePreProcessor.cs` — static class, single entry point `Preprocess(lambda, imagePath, config)`.
+`jb/src/core/Services/Matching/ImagePreProcessor.cs` — static class, single entry point `Preprocess(lambda, imagePath, config)`.
 
 Steps in order:
 1. **EXIF orient + flatten**: ImageSharp `AutoOrient()` + `BackgroundColor(White)` → encoded to flat JPEG (no alpha, sRGB).
@@ -25,7 +25,7 @@ Pre-step called inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast
 
 **Algorithm:** CLAHE (Contrast Limited Adaptive Histogram Equalization) via OpenCVSharp4.  
 **Scope:** applied to the full image, not the background region only — applying to a background-only region requires a reliable background mask which is unavailable at this stage, and full-image CLAHE is safer for bbox accuracy.  
-**Implementation:** `jb/src/core/Images/Transform/processingtools/Tx_LowContrastEnhancement.cs` (T-1900).
+**Implementation:** `jb/src/core/Services/Transform/Engine/Utils/Tx_LowContrastEnhancement.cs` (T-1900).
 
 ---
 
@@ -33,7 +33,7 @@ Pre-step called inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast
 
 **Decision (T-2500, closed):** `Upscaler_g_p_u.RunRealEsrgan` implemented. Uses `Microsoft.ML.OnnxRuntime.DirectML` (already in NuGet).
 
-- Model: `Real-ESRGAN_x2plus.onnx` — fixed ×2 super-resolution. Located at `jb/src/core/Images/Upscale/ONNX/Real-ESRGAN_x2plus.onnx`.
+- Model: `Real-ESRGAN_x2plus.onnx` — fixed ×2 super-resolution. Located at `jb/src/core/Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus.onnx`.
 - Session init: `Upscaler_g_p_u.Initialize(modelPath, configPath)` called from `UpscaleService.Create()` when `ImageUpscaler.IsGpuAvailable` is true. CPU Lanczos4 fallback active when no DirectML adapter is detected.
 - Tensor pipeline: JPEG → BGR uint8 → NCHW float32 [0,1] → `_session.Run(["input"])` → NCHW float32 [0,1] × 2 → clamp → BGR uint8 → JPEG. Tensor names: `input` / `output`.
 - Top-up: remaining scale after ×2 SR applied via Lanczos4 resize.
@@ -52,9 +52,9 @@ The committed model export has a fixed `[1, 3, 64, 64]` input, so `RunTiled` spl
 
 ## Transformation Overview
 
-Images transformed one by one, each based on image analysis enriched with match information. Salient object detection, bounding box calculation, and background identification feed the per-image transform decision. Useful tags from `ImageMatcher.cs` attenuate transformation parameters. Transform rules in `jb/src/core/Images/Transform`. Transformation parameters guided by per-image IFs and selected INGP phenotype.
+Images transformed one by one, each based on image analysis enriched with match information. Salient object detection, bounding box calculation, and background identification feed the per-image transform decision. Useful tags from `ImageMatcher.cs` attenuate transformation parameters. Transform rules in `jb/src/core/Services/Transform/Engine`. Transformation parameters guided by per-image IFs and selected INGP phenotype.
 
-**Current impl:** All Tx classes (`Tx_CropSquare`, `Tx_CenterAndStretch`, `Tx_DetailCropper`, `Tx_ProblemImageProcessor`) are active — no processing gate remains. `ImageTransformer.SelectTransformer()` routes live per the matrix below. `Tx_DetailCropper` implements the full 0–4 edge-intersection decision tree (greedy crop with Coverage floor, OneSided/BiDirectional extension budgets, corner-anchored fallbacks) with headcut integration; see `Tx_DetailCropperTests.cs` for coverage. Remaining open work in `jb/src/core/Images/Transform/jbtodo.md` is limited to `Tx_util_HeadCutter` (Algorithm A anatomy-guided search, family-aware mode).
+**Current impl:** All Tx classes (`Tx_CropSquare`, `Tx_CenterAndStretch`, `Tx_DetailCropper`, `Tx_ProblemImageProcessor`) are active — no processing gate remains. `ImageTransformer.SelectTransformer()` routes live per the matrix below. `Tx_DetailCropper` implements the full 0–4 edge-intersection decision tree (greedy crop with Coverage floor, OneSided/BiDirectional extension budgets, corner-anchored fallbacks) with headcut integration; see `Tx_DetailCropperTests.cs` for coverage. Remaining open work in `jb/src/core/Services/Transform/Engine/jbtodo.md` is limited to `Tx_util_HeadCutter` (Algorithm A anatomy-guided search, family-aware mode).
 
 ---
 
@@ -77,7 +77,7 @@ All other IFs (human detection, head visibility, orientation, background, color,
 
 ## Salient Object Bounds
 
-Represented by `jb/src/core/Images/Transform/BoundingBox.cs`. Fields (all integers): `X`, `Y`, `Width`, `Height`, `Top`, `Left`, `Right`, `Bottom`.
+Represented by `jb/src/core/Models/BoundingBox.cs`. Fields (all integers): `X`, `Y`, `Width`, `Height`, `Top`, `Left`, `Right`, `Bottom`.
 
 `BoundingBox` does not emit confidence, detection method, or border-intersection flags. Border-intersection state tracked separately as transform/classification evidence.
 
@@ -197,7 +197,7 @@ When `ImageTransformer.cs` finds `salient-bbox` UNKNOWN, or `SelectedPhenotype` 
 
 If image collection for a FID has **x or fewer images** (configurable in CFG) → generate new images, provided originals are high enough quality.
 
-**Current impl:** `GenerationBackendAvailable()` returns `false`. Decision shell (which families qualify) implemented in `ImageGenerator.cs`. Every qualified family receives `GenerationRouteState.Gated` — no inference runs. Open work in `jb/src/core/Images/Generate/jbtodo.md`.
+**Current impl:** `GenerationBackendAvailable()` returns `false`. Decision shell (which families qualify) implemented in `ImageGenerator.cs`. Every qualified family receives `GenerationRouteState.Gated` — no inference runs. Open work in `jb/src/core/Services/Generate/jbtodo.md`.
 
 ### Local Generation (Recommended)
 

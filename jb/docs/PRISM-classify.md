@@ -19,7 +19,7 @@ INGP = phenotype derived from a combination of IFs. Not a single trait list like
 
 INGP taxonomy: 26 phenotypes in `jb/docs/ImageNGP/imagePhenotypes.md` and `jb/docs/ImageNGP/PRODUCTTYPES.MD`.
 
-**Current impl**: Most IFs set to `UNKNOWN` via `RecordUnknownFeatures()` in `ImageFeatureAnalyzer.cs`. CLIP runs for: `hero-is-human`, `hero-orientation`, `head-visible`, `body-visible` using natural-language prompts from `ClipPrompts.json`. Open work in `jb/src/core/Images/Classify/jbtodo.md`.
+**Current impl**: Most IFs set to `UNKNOWN` via `RecordUnknownFeatures()` in `ImageFeatureAnalyzer.cs`. CLIP runs for: `hero-is-human`, `hero-orientation`, `head-visible`, `body-visible` using natural-language prompts from `ClipPrompts.json`. Open work in `jb/src/core/Services/Matching/Classify/jbtodo.md`.
 
 ---
 
@@ -29,7 +29,7 @@ INGP classification is config-driven — editable without recompiling the server
 
 - `ImageNGP.json` (`jb/src/core/ImageNGP/`) — canonical taxonomy: every IF id with its datatype and allowed values, plus the 26-phenotype catalogue.
 - `ImageRoles.json` (same folder) — IF→phenotype rules, evaluated first-match by `PhenotypeRuleSet.cs`.
-- `ClipPrompts.json` (`jb/src/core/Images/Classify/`) — CLIP prompt → (IF, value) bindings, loaded by `ClipPromptCatalog.cs`.
+- `ClipPrompts.json` (`jb/src/core/config/`) — CLIP prompt → (IF, value) bindings, loaded by `ClipPromptCatalog.cs`.
 
 At startup `ImageNgpValidator` cross-checks every IF id, value, and phenotype id used in `ImageRoles.json`, `DetOrderRules.json`, and `ClipPrompts.json` against `ImageNGP.json`. Any unknown id/value **fails fast and loud** — no silent UNKNOWN-on-typo.
 
@@ -39,7 +39,7 @@ At startup `ImageNgpValidator` cross-checks every IF id, value, and phenotype id
 
 - Temporary model: `sentence-transformers/clip-ViT-B-32`
 - Sources: Hugging Face `sentence-transformers/clip-ViT-B-32` or Microsoft Foundry `sentence-transformers-clip-vit-b-32`
-- Local path: `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/model_uint8.onnx`
+- Local path: `jb/src/core/Services/Matching/Classify/ONNX/clip-vit-b32-uint8/model_uint8.onnx`
 - SHA-256: `4AC011172C8C022937BB83DAD2E8FC207F52F19972B36E14808CC3C8042C4E60` — verify before creating `InferenceSession`; mismatch → FFAIL
 - Must not be stored in git. Not recreatable (temporary; will be replaced by PRISM-owned model).
 - Tensor names, shapes, dtypes, tokenizer compatibility, normalization details: validated by `ImageClassifier.cs` at model load.
@@ -189,4 +189,4 @@ The first signal catches the high line frequency typical of technical drawings. 
 
 Transparent pixels count as white for the background signal. Every-other-pixel sampling used in the color signal for performance.
 
-File: `jb/src/core/Images/Classify/Analyzers/Analyzer_IsIllustration.cs`
+File: `jb/src/core/Services/Matching/Analyzers/Analyzer_IsIllustration.cs`

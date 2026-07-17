@@ -7,7 +7,7 @@ Used across all `jb/docs/` files, `AGENTFEEDBACK.md`, and `PRISM-information.md`
 | PRISM | The application / pipeline |
 | CFG | `Prism_Config.json` at `jb/src/core/` |
 | XCFG | `ExcelConfig.json` at `jb/src/core/Excel/` |
-| MCFG | `MatchingConfig.json` at `jb/src/core/Images/Match/` |
+| MCFG | `MatchingConfig.json` at `jb/src/core/config/` |
 | HCFG | `HostRules.json` at `jb/src/core/IO/cfg/` |
 | IEM | InternalExcelModel (collated, deduplicated Excel worksheets) |
 | FID | FamilyID (primary product identifier; becomes output filename stem) |
@@ -28,7 +28,7 @@ Used across all `jb/docs/` files, `AGENTFEEDBACK.md`, and `PRISM-information.md`
 | IF | ImageFeature |
 | INGP | ImageNGP (phenotype derived from a combination of IFs) |
 | DO | DetOrder |
-| DOR | `DetOrderRules.json` at `jb/src/core/Images/Order/` |
+| DOR | `DetOrderRules.json` at `jb/src/core/config/` |
 | PT | ProductType |
 | KO | Failed/rejected item (recorded in manifest; job continues when valid work remains) |
 | OK | Successful item |

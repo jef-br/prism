@@ -3,7 +3,7 @@
 
 ## Overview
 
-`ImageMatcher.cs` (`jb/src/core/Images/ImageMatcher.cs`) calculates the most probable image↔FID association. Uses strategy pattern to load matcher classes. Scoring logic must be readable and easy to update. Rules and values are grouped per matcher class at the top of the file. More than one image can belong to a single FID.
+`ImageMatcher.cs` (`jb/src/core/Services/Matching/ImageMatcher.cs`) calculates the most probable image↔FID association. Uses strategy pattern to load matcher classes. Scoring logic must be readable and easy to update. Rules and values are grouped per matcher class at the top of the file. More than one image can belong to a single FID.
 
 ---
 
@@ -99,7 +99,7 @@ Parses input string → logical string tokens; compares against categorical, des
 
 ## `ClipLabelEnricher.cs`
 
-Uses `clip-vit-b32-uint8` at `jb/src/core/Images/Classify/ONNX/clip-vit-b32-uint8/`.
+Uses `clip-vit-b32-uint8` at `jb/src/core/Services/Matching/Classify/ONNX/clip-vit-b32-uint8/`.
 
 **Not a matcher** — never assigns FamilyIDs. Provides CLIP label evidence for already-matched records (Brackets 1–3) and supplies the hard-filter signal for `SemanticMatcher` (Bracket 4).
 
@@ -120,8 +120,8 @@ Weights support/weaken candidate confidence but do **not** override exact numeri
 
 - Exact normalized token matching first.
 - Configured multilingual synonyms count as evidence for known product words (colors, materials, PTs).
-- Code + mapping files: `jb/src/core/Images/Match/Translate/`.
-- Synonym dictionary: `jb/src/core/Images/Match/Translate/TranslationDictionary.json`.
+- Code + mapping files: `jb/src/core/Services/Matching/Match/Translate/`.
+- Synonym dictionary: `jb/src/core/config/TranslationDictionary.json`.
 - No automatic language detection or translation.
 
 ---

@@ -43,7 +43,7 @@ Condition 1 is implemented. Condition 2 is **not**. There is no phenotype check 
 
 The Ordering stage will later receive two images claiming the same phenotype for the same FamilyID. It has to resolve this itself, which it can do — but it means the problem lands in a later stage instead of being caught early where it's easiest to understand and fix.
 
-**Status:** Gap. Tracked in `jb/src/core/Images/Match/jbtodo.md`.
+**Status:** Gap. Tracked in `jb/src/core/Services/Matching/Match/jbtodo.md`.
 
 ---
 
@@ -98,7 +98,7 @@ For the matching part of that trace, you'd need to show:
 
 The workbench factor graph (if/when built) won't be able to show the full matching trace. An operator can see *that* an image matched family A but not *why* family B lost by a small margin. Debugging mismatches requires reading code instead of clicking the UI.
 
-**Status:** Partial gap. Tracked in `jb/src/core/Images/Match/jbtodo.md`.
+**Status:** Partial gap. Tracked in `jb/src/core/Services/Matching/Match/jbtodo.md`.
 
 ---
 

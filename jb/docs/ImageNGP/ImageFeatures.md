@@ -136,7 +136,7 @@ Confidence scale: `very-high` ≥ 0.95 | `high` 0.85–0.94 | `medium` 0.70–0.
 ## Architecture decisions (deliverables 6–8)
 
 **`salient-bbox` storage**
-Use the existing `BoundingBox` struct (`jb/src/core/Images/Transform/BoundingBox.cs`). Add a method to return a flat `float[4]` `[x, y, w, h]` normalized [0.0–1.0] for serialization. The typed struct is the in-memory form; the flat array is the serialized form.
+Use the existing `BoundingBox` struct (`jb/src/core/Models/BoundingBox.cs`). Add a method to return a flat `float[4]` `[x, y, w, h]` normalized [0.0–1.0] for serialization. The typed struct is the in-memory form; the flat array is the serialized form.
 
 **`pose-type` and `body-visible` detector sharing**
 Both features are computed in a single skeleton/PAF detector pass, gated on `skin-tone-area` exceeding a configured threshold. `body-visible` is evaluated before `pose-type` within that pass.
