@@ -216,7 +216,10 @@ Status per finding is kept current.
 
 ## R7 · Remote upscale call blocks worker threads (sync-over-async, non-blocking)
 
-**Answer:** OPEN — deferred until after R1
+**Answer:** FIXED — `TransformService`'s loop now runs `Parallel.ForEachAsync`; `ImagePreProcessor.Preprocess`/
+`Upscale` are `PreprocessAsync`/`UpscaleAsync`, awaiting `remoteUpscale.UpscaleAsync` for real instead of
+`.GetAwaiter().GetResult()`. Local GPU/CPU upscale path stays synchronous (compute, not I/O). Full solution
+suite green (399/399) after conversion.
 
 - **Cause:** Inside Transform's parallel loop, the remote upscale HTTP call is awaited synchronously
   (`GetAwaiter().GetResult()`); the loop is sync so a truly async call needs a bigger refactor

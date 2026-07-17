@@ -78,7 +78,7 @@ public static class ImagePreProcessor {
     /// Sets <see cref="ImageRecord_LAMBDA.BoundingBox"/> and feature values on <paramref name="lambda"/>.
     /// Returns (null, null) and sets <see cref="ImageRecord_LAMBDA.IsKo"/> when the image fails thresholds.
     /// </summary>
-    public static (byte[]? bytes, Mat? colorMat) Preprocess(
+    public static async Task<(byte[]? bytes, Mat? colorMat)> PreprocessAsync(
         ImageRecord_LAMBDA lambda, string? imagePath, PrismConfiguration config, IUpscaleService? remoteUpscale = null, CancellationToken cancellationToken = default)
     {
         byte[]? flatJpg = ReadNormalizedJpg(imagePath);
@@ -92,7 +92,7 @@ public static class ImagePreProcessor {
 
         lambda.BoundingBox = ParseSalientBox(bbox.coords, bbox.origW, bbox.origH);
 
-        byte[]? processedBytes = Upscale(flatJpg, bbox, config, lambda, remoteUpscale, cancellationToken);
+        byte[]? processedBytes = await UpscaleAsync(flatJpg, bbox, config, lambda, remoteUpscale, cancellationToken);
         if (lambda.IsKo) { colorMat.Dispose(); return (null, null); }
 
         return (processedBytes, colorMat);
@@ -193,7 +193,7 @@ public static class ImagePreProcessor {
     }
 
     // Step 4: upscale decision based on the salient bbox's largest pixel dimension
-    private static byte[]? Upscale( byte[] flatJpg, (string coords, int origW, int origH) bbox,
+    private static async Task<byte[]?> UpscaleAsync( byte[] flatJpg, (string coords, int origW, int origH) bbox,
                                      PrismConfiguration config, ImageRecord_LAMBDA lambda, IUpscaleService? remoteUpscale, CancellationToken cancellationToken ) {
         if (bbox.origW == 0) return flatJpg;
 
@@ -213,12 +213,11 @@ public static class ImagePreProcessor {
             return Ko(lambda, "PREPROCESS_UPSCALE_EXCEEDED", $"Required scale {scale:F2}× exceeds maximum {config.MaxUpScaleFactor:F2}×.");
 
         // Remote host when PRISM_UPSCALE_URL routed one in (distributed deployment), local static
-        // session otherwise. GetAwaiter().GetResult() is safe here: callers run inside Parallel.ForEach
-        // worker threads with no synchronization context to deadlock on. The job's CancellationToken is
-        // the only bound on the remote call — the HttpClient transport timeout is infinite (ServiceHttp).
+        // session otherwise. The remote leg is a real await — no thread held during the round-trip.
+        // The local leg stays synchronous: it's GPU/CPU compute, not I/O, so there's nothing to yield on.
         return remoteUpscale is null
             ? Upscaler.Upscale(flatJpg, scale)
-            : remoteUpscale.UpscaleAsync(flatJpg, scale, cancellationToken).GetAwaiter().GetResult();
+            : await remoteUpscale.UpscaleAsync(flatJpg, scale, cancellationToken);
     }
 
     private static byte[]? Ko( ImageRecord_LAMBDA lambda, string code, string message ) {

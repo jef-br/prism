@@ -22,7 +22,7 @@ public class RemoteUpscaleRoutingTests
     }
 
     [Fact]
-    public void Preprocess_BelowMinimumImage_RoutesUpscaleThroughRemoteHost()
+    public async Task Preprocess_BelowMinimumImage_RoutesUpscaleThroughRemoteHost()
     {
         PrismConfiguration config = PrismConfiguration.LoadPrismConfig(
             ConfigLoader.RequireFile(PrismConfiguration.FileName));
@@ -44,7 +44,7 @@ public class RemoteUpscaleRoutingTests
         var counting = new CountingUpscaleService(new HttpUpscaleService(fixture.Client));
         var lambda = new ImageRecord_LAMBDA { InitialFullName = "square.jpg", ImportStatus = ImportStatus.Ok };
 
-        (byte[]? processed, var colorMat) = ImagePreProcessor.Preprocess(lambda, imagePath, config, counting);
+        (byte[]? processed, var colorMat) = await ImagePreProcessor.PreprocessAsync(lambda, imagePath, config, counting);
         colorMat?.Dispose();
 
         Assert.False(lambda.IsKo, $"Image KO'd instead of upscaling: {lambda.KoReasonCode} {lambda.KoSafeMessage}");

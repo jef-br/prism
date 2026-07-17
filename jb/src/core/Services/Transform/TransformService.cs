@@ -58,13 +58,13 @@ public sealed class TransformService : ITransformService
         // writes only its own lambda; the GPU upscaler serializes its InferenceSession.Run calls
         // internally (Upscaler._sessionLock), so parallel callers are safe there too.
         int okTransformed = 0;
-        Parallel.ForEach(
+        await Parallel.ForEachAsync(
             matched.LambdaRecords.Where(l => !l.IsKo),
             new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = cancellationToken },
-            lambda =>
+            async (lambda, ct) =>
             {
                 inputByName.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input);
-                (byte[]? preprocessed, Mat? colorMat) = ImagePreProcessor.Preprocess(lambda, input?.NormalizedJpgPath, prismConfig, remoteUpscale, cancellationToken);
+                (byte[]? preprocessed, Mat? colorMat) = await ImagePreProcessor.PreprocessAsync(lambda, input?.NormalizedJpgPath, prismConfig, remoteUpscale, ct);
 
                 if (lambda.IsKo) { colorMat?.Dispose(); return; }
 
