@@ -29,6 +29,19 @@ internal sealed class StringMatcher
     private Dictionary<string, List<Posting>>? tokenIndex;
     private IReadOnlyList<FamilyIDRecord>? indexedFamilies;
 
+    // Categorical-only subset of tokenIndex, built alongside it. PRISM-match.md: string matching
+    // tolerates edit distance for categorical columns (color, material, product type) specifically —
+    // spelling mistakes are penalized less than a serial-number discrepancy. Descriptive/Mixed columns
+    // stay exact-match-only (free text is too large/ambiguous for a safe fuzzy scan).
+    private Dictionary<string, List<Posting>>? categoricalTokenIndex;
+
+    // Bounded to distance 1 — matches NumericMatcher's own MaxDistance production value — and only for
+    // tokens at least 4 characters long (mirrors ModelBuilder's fuzzy header-term gate), so a short
+    // 2-3 letter word cannot accidentally match an unrelated short word.
+    private const int FuzzyMinTokenLength = 4;
+    private const int FuzzyMaxEditDistance = 1;
+    private const double FuzzyMatchScore = 0.75;
+
     internal StringMatcher(TranslationConfig translationConfig, int bracket3MinDistinctTokens = 1, int identifierTokenMinLength = 0, bool indexExcelTokenBigrams = false)
     {
         this.translationConfig = translationConfig;
@@ -201,15 +214,19 @@ internal sealed class StringMatcher
         IReadOnlyList<FamilyIDRecord> families)
     {
         Dictionary<string, List<Posting>> index = GetOrBuildTokenIndex(families);
+        Dictionary<string, List<Posting>> categoricalIndex = GetOrBuildCategoricalTokenIndex(families);
         Dictionary<string, List<TokenEvidenceItem>> byFamily = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (FilenameToken imageToken in imageTokens)
         {
+            bool anyHit = false;
+
             foreach (string key in ExpandSynonymKeys(imageToken.Normalized).Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 if (!index.TryGetValue(key, out List<Posting>? postings))
                     continue;
 
+                anyHit = true;
                 bool isExact = key.Equals(imageToken.Normalized, StringComparison.OrdinalIgnoreCase);
 
                 foreach (Posting posting in postings)
@@ -225,9 +242,52 @@ internal sealed class StringMatcher
                         isExact ? 1.0 : 0.85));
                 }
             }
+
+            // Exact/synonym lookup found nothing for this token — fall back to a bounded edit-distance
+            // scan against categorical-column tokens only, so a typo like "gray"/"grey" still counts as
+            // evidence instead of forcing the image into a later bracket or a KO.
+            if (!anyHit)
+                CollectFuzzyCategoricalEvidence(imageToken, categoricalIndex, byFamily);
         }
 
         return byFamily;
+    }
+
+    /// <summary>
+    /// Categorical-only edit-distance fallback. Compares the image token against every distinct
+    /// categorical family token (a small, low-cardinality set per PRISM-match.md) and records evidence
+    /// for any within FuzzyMaxEditDistance. Descriptive/Mixed columns never reach this path.
+    /// </summary>
+    private void CollectFuzzyCategoricalEvidence(
+        FilenameToken imageToken,
+        Dictionary<string, List<Posting>> categoricalIndex,
+        Dictionary<string, List<TokenEvidenceItem>> byFamily)
+    {
+        if (imageToken.Normalized.Length < FuzzyMinTokenLength)
+            return;
+
+        foreach (KeyValuePair<string, List<Posting>> entry in categoricalIndex)
+        {
+            if (entry.Key.Length < FuzzyMinTokenLength ||
+                Math.Abs(entry.Key.Length - imageToken.Normalized.Length) > FuzzyMaxEditDistance)
+                continue;
+
+            if (ModelBuilder.ComputeLevenshteinDistance(imageToken.Normalized, entry.Key) > FuzzyMaxEditDistance)
+                continue;
+
+            foreach (Posting posting in entry.Value)
+            {
+                if (!byFamily.TryGetValue(posting.FamilyId, out List<TokenEvidenceItem>? evidence))
+                    byFamily[posting.FamilyId] = evidence = [];
+
+                evidence.Add(new TokenEvidenceItem(
+                    imageToken.Original,
+                    posting.FamilyToken,
+                    posting.PropertyName,
+                    posting.FamilyId,
+                    FuzzyMatchScore));
+            }
+        }
     }
 
     /// <summary>
@@ -241,6 +301,7 @@ internal sealed class StringMatcher
             return tokenIndex;
 
         Dictionary<string, List<Posting>> index = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, List<Posting>> categorical = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (FamilyIDRecord family in families)
         {
@@ -260,10 +321,11 @@ internal sealed class StringMatcher
                     if (string.IsNullOrEmpty(familyToken))
                         continue;
 
-                    if (!index.TryGetValue(familyToken, out List<Posting>? postings))
-                        index[familyToken] = postings = [];
+                    Posting posting = new(family.FamilyID, property.Key, familyToken);
+                    AddPosting(index, familyToken, posting);
 
-                    postings.Add(new Posting(family.FamilyID, property.Key, familyToken));
+                    if (classification == ExcelColumnClassification.Categorical)
+                        AddPosting(categorical, familyToken, posting);
                 }
 
                 if (indexExcelTokenBigrams)
@@ -272,8 +334,25 @@ internal sealed class StringMatcher
         }
 
         tokenIndex = index;
+        categoricalTokenIndex = categorical;
         indexedFamilies = families;
         return index;
+    }
+
+    /// <summary>Categorical-only subset of the token index, built and cached alongside GetOrBuildTokenIndex.</summary>
+    private Dictionary<string, List<Posting>> GetOrBuildCategoricalTokenIndex(IReadOnlyList<FamilyIDRecord> families)
+    {
+        GetOrBuildTokenIndex(families);
+        return categoricalTokenIndex!;
+    }
+
+    /// <summary>Appends one posting to the index bucket for <paramref name="key"/>.</summary>
+    private static void AddPosting(Dictionary<string, List<Posting>> index, string key, Posting posting)
+    {
+        if (!index.TryGetValue(key, out List<Posting>? postings))
+            index[key] = postings = [];
+
+        postings.Add(posting);
     }
 
     /// <summary>
@@ -408,6 +487,13 @@ internal sealed class StringMatcher
 
         return [..results.OrderByDescending(r => r.MatchCount)];
     }
+
+    /// <summary>
+    /// Counts the meaningful filename tokens (same extraction ExtractImageTokens uses for Bracket 3/4
+    /// matching). Used by SemanticMatcher to compute stringSignal's denominator from the filename
+    /// itself, rather than mixing in an unrelated candidate-pool count.
+    /// </summary>
+    internal int CountFilenameTokens(string filename) => ExtractImageTokens(filename).Count;
 
     //  Token extraction
 

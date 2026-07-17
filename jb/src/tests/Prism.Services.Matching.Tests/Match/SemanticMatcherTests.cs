@@ -112,6 +112,43 @@ public class SemanticMatcherTests
         Assert.Equal(2, evidence.StringTokenEvidence.Count);
     }
 
+    //  totalImageTokens precision (T-3800 item 3)
+
+    [Fact]
+    public void TryMatch_TotalImageTokensReflectsRealFilenameTokenCount_NotCandidatePoolSize()
+    {
+        // Same shape as TryMatch_MultipleOverlappingCandidates_RanksCorrectly (FAM_A matches 2 of the
+        // 3 filename tokens "tote"/"leather"/"bag"; FAM_B matches 1; FAM_C is CLIP-filtered out), but
+        // the threshold is tuned to fall strictly between the pre-fix and post-fix combined score:
+        //   pre-fix (buggy):  totalImageTokens = 2 distinct matched tokens + 2 scored candidates = 4
+        //                     stringSignal = 2/4 = 0.5   → combined = (1.0 + 0.5 + 0.5) / 3 = 0.667 → REJECTED at 0.70
+        //   post-fix (real):  totalImageTokens = 3 real filename tokens (tote, leather, bag)
+        //                     stringSignal = 2/3 = 0.667 → combined = (1.0 + 0.5 + 0.667) / 3 = 0.722 → ACCEPTED at 0.70
+        // This proves the fix changes an accept/reject outcome that was previously wrong only because
+        // of how many other candidates happened to reach the scoring step, not because of the filename.
+        SemanticMatcher matcher = MakeMatcher(semanticThreshold: 0.70);
+        FamilyIDRecord famA = new("FAM_A");
+        famA.MergeProperty(new ExcelPropertyValue("ProductType", ["tote"], []), ExcelColumnClassification.Categorical);
+        famA.MergeProperty(new ExcelPropertyValue("material", ["leather"], []), ExcelColumnClassification.Categorical);
+
+        FamilyIDRecord famB = new("FAM_B");
+        famB.MergeProperty(new ExcelPropertyValue("ProductType", ["tote"], []), ExcelColumnClassification.Categorical);
+
+        FamilyIDRecord famC = FamilyWithProperty("FAM_C", "ProductType", "backpack", ExcelColumnClassification.Categorical);
+
+        ImageRecord_LAMBDA record = MakeLambda("tote-leather-bag.jpg", influentialLabel: "tote");
+
+        (MatchEvidence? evidence, _) = matcher.TryMatch(record, [famA, famB, famC], NoNumericRules, ProductTypeLabelRule);
+
+        // NotNull alone is the accept/reject proof: under the pre-fix formula this scenario computed
+        // combinedScore=0.667 < 0.70 and TryMatch would have returned null (rejected).
+        Assert.NotNull(evidence);
+        Assert.Equal("FAM_A", evidence!.FinalFamilyId);
+
+        // combinedScore = (1.0 clip + 0.5 numeric-neutral + 0.667 string) / 3 = 0.7222; FinalScore = combinedScore * SemanticWeight(0.15).
+        Assert.Equal(0.7222 * 0.15, evidence.FinalScore, precision: 3);
+    }
+
     //  Helpers
 
     private static readonly TranslationConfig EmptyTranslation = new()

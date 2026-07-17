@@ -21,6 +21,7 @@ Single pass. Matched images removed from consideration after each bracket.
 - **String tokens — candidate scoring:** Filename string tokens are matched against all non-numeric columns of each remaining candidate. The candidate with the most matching tokens wins. If the top match count is shared by multiple candidates, the match is a tie and the image is not assigned.
 - **Acceptance:** Exactly one candidate must remain after CLIP and numeric filtering, with a unique highest string-token score ≥ `SemanticThreshold` (`MatchingConfig.json`).
 - **Weighting:** All three signals use `SemanticWeight` (`MatchingConfig.json`) when computing `MatchEvidence.FinalScore`.
+- **String signal precision (T-3800, fixed 2026-07-14):** `stringSignal = matched string-token evidence ÷ totalImageTokens`, where `totalImageTokens` is the real count of meaningful filename tokens (`StringMatcher.CountFilenameTokens` — the same tokenizer Brackets 3/4 use to extract evidence), not a mix of matched-token count and how many candidate families happened to reach the scoring step that round. The candidate-pool size no longer leaks into the ratio.
 
 **Bracket 5 cleanup:** KO remaining unmatched images. Not renamed; kept in manifest with original filename.
 **Bracket 6 finalize:** Finalize image→FID assignments; cluster into FID groups → move to DO.
@@ -62,6 +63,8 @@ The FamilyID rule resolves against the intrinsic `FamilyIDRecord.FamilyID` (the 
 
 `NoiseFilter.cs` owns filtering code.
 
+**`TryMatchBySubstringRescue` performance (T-3800, measured 2026-07-14):** the rescue pass scans every entry in the digit index per leftover filename token — `O(unmatched images × rescue tokens × index size)` — with no index structure. Measured at a synthetic representative scale (3,000 families, `indexDigitRunsAllColumns=true`, `minSubstringRescueLength=7` — matches production `MatchingConfig.json`; ~18k index entries; worst case, no early match so every scan runs to completion): 250 unmatched images (a generous slice of the documented ~2,500-image heavy batch) → ~336 ms total; 2,500 unmatched images (every image in the heaviest documented batch, a pathological upper bound since this pass only runs on images still unmatched after Brackets 1–4) → ~1.1 s total. Negligible next to per-image CLIP/decode/transform cost — **measured, not worth it**; no n-gram index was built. A `[Theory]` regression guard (`SubstringRescuePerfMeasurement.cs`, `jb/src/tests/Prism.Services.Matching.Tests/Match/`) asserts this stays under 10s as a blow-up detector, not a tight benchmark.
+
 ---
 
 ## `StringMatcher.cs`
@@ -74,6 +77,8 @@ Parses input string → logical string tokens; compares against categorical, des
 - **Mixed**: all columns that don't fit categorical or descriptive
 
 **Scoring:** Unlike numeric matching (which requires an exact match with no edit-distance tolerance), string matching tolerates edit distance — for categorical columns it is less penalized (spelling mistakes less severe than serial number discrepancy). More matched tokens → higher score.
+
+**Categorical edit-distance tolerance (T-3800, 2026-07-14):** When an image token has no exact/synonym hit in the token index, `StringMatcher` falls back to a bounded edit-distance scan against **categorical-column family tokens only** (Descriptive/Mixed columns stay exact-match-only — free text is too large/ambiguous for a safe fuzzy scan). Bounds: distance ≤ 1 (matches `NumericMatcher`'s own `MaxDistance` production value), both sides ≥ 4 characters (mirrors `ModelBuilder`'s fuzzy Excel-header-term gate), evidence scored at `0.75` (between the `0.85` synonym score and `1.0` exact score). Reuses `ModelBuilder.ComputeLevenshteinDistance` (internal, same assembly) rather than a second implementation. Lets regional/typo spellings ("gray"/"grey", "hoody"/"hoodie") match a categorical column directly in Bracket 3/4 instead of falling through to a later bracket or KO.
 
 **Normalization before matching:** lowercase, diacritics → base char, split punctuation/separators → token boundaries, collapse whitespace. Original token text retained in bounded evidence.
 

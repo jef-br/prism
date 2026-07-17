@@ -73,9 +73,13 @@ internal sealed class SemanticMatcher
         // inverted token index is built/cached once per bracket run, not once per image.
         var scored = stringMatcher.ScoreCandidatesByStringTokens(filename, candidates, unassignedFamilies);
 
+        // Real filename-token count (StringMatcher's own tokenizer) — independent of how many
+        // candidate families happened to be in the pool this round, so stringSignal below reflects
+        // only "how much of this filename did we actually explain."
+        int totalImageTokens = stringMatcher.CountFilenameTokens(filename);
+
         FamilyIDRecord winner;
         List<TokenEvidenceItem> stringEvidence;
-        int totalImageTokens;
 
         if (scored.Count > 0)
         {
@@ -91,8 +95,6 @@ internal sealed class SemanticMatcher
             }
 
             (winner, _, stringEvidence) = topCandidates[0];
-            totalImageTokens = stringEvidence.Select(e => e.FilenameToken).Distinct(StringComparer.OrdinalIgnoreCase).Count()
-                               + scored.Count; // rough total; precision here is cosmetic
         }
         else if (candidates.Count == 1)
         {
@@ -103,7 +105,6 @@ internal sealed class SemanticMatcher
 
             winner        = candidates[0];
             stringEvidence = [];
-            totalImageTokens = 0;
         }
         else
         {

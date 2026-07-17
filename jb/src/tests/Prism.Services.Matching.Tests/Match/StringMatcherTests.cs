@@ -128,6 +128,59 @@ public class StringMatcherTests
         Assert.Null(matcher.TryMatch(record, [famA, famB]));
     }
 
+    //  Bracket 3: categorical edit-distance tolerance (T-3800 item 1)
+
+    [Fact]
+    public void TryMatch_CategoricalColumnRegionalSpelling_MatchesWithinEditDistanceOne()
+    {
+        // "grey" (image) vs "gray" (Excel) — distance 1, both length-4 — PRISM-match.md's documented
+        // tolerance for categorical columns (color, material, product type).
+        StringMatcher      matcher = new(EmptyTranslation);
+        FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "gray", ExcelColumnClassification.Categorical);
+        ImageRecord_LAMBDA record  = MakeLambda("grey-shirt.jpg");
+
+        MatchEvidence? evidence = matcher.TryMatch(record, [family]);
+
+        Assert.NotNull(evidence);
+        Assert.Equal("FAM001", evidence!.FinalFamilyId);
+        Assert.NotEmpty(evidence.StringTokenEvidence);
+    }
+
+    [Fact]
+    public void TryMatch_CategoricalColumnEditDistanceTwo_DoesNotMatch()
+    {
+        // "gray" vs "grape" — distance 2 — outside the bounded distance-1 tolerance.
+        StringMatcher      matcher = new(EmptyTranslation);
+        FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "grape", ExcelColumnClassification.Categorical);
+        ImageRecord_LAMBDA record  = MakeLambda("gray-shirt.jpg");
+
+        Assert.Null(matcher.TryMatch(record, [family]));
+    }
+
+    [Fact]
+    public void TryMatch_CategoricalColumnShortTokenTypo_DoesNotMatch()
+    {
+        // "red" vs "rad" — distance 1 but both below the 4-character fuzzy-eligibility floor, so a
+        // short word cannot accidentally match an unrelated short word.
+        StringMatcher      matcher = new(EmptyTranslation);
+        FamilyIDRecord       family  = FamilyWithProperty("FAM001", "color", "red", ExcelColumnClassification.Categorical);
+        ImageRecord_LAMBDA record  = MakeLambda("rad-shirt.jpg");
+
+        Assert.Null(matcher.TryMatch(record, [family]));
+    }
+
+    [Fact]
+    public void TryMatch_MixedColumnTypo_DoesNotMatch()
+    {
+        // Same distance-1 typo, but the family column is Mixed, not Categorical — fuzzy tolerance is
+        // scoped to categorical columns only (free text is too ambiguous for a safe fuzzy scan).
+        StringMatcher      matcher = new(EmptyTranslation);
+        FamilyIDRecord       family  = FamilyWithProperty("FAM001", "reference", "cardigan", ExcelColumnClassification.Mixed);
+        ImageRecord_LAMBDA record  = MakeLambda("cardigen-shirt.jpg");
+
+        Assert.Null(matcher.TryMatch(record, [family]));
+    }
+
     //  Bracket 4 support: ScoreCandidatesByStringTokens (indexed rewrite)
 
     [Fact]

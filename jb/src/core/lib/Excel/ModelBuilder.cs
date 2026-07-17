@@ -925,7 +925,9 @@ public sealed class ModelBuilder
         return cells[columnIndex] ?? string.Empty;
     }
 
-    private static int ComputeLevenshteinDistance(string left, string right)
+    // Internal (not private): reused by StringMatcher.cs for Bracket 3/4 categorical-column edit-distance
+    // tolerance, so the bounded edit-distance calculation exists in exactly one place.
+    internal static int ComputeLevenshteinDistance(string left, string right)
     {
         if (left.Length == 0)
         {
