@@ -1,0 +1,21 @@
+# .NET build output
+[Bb]in/
+[Oo]bj/
+
+# ONNX model assets — never committed (see jb/docs/PRISM-model-runtime.md / PRISM-classify.md)
+*.onnx
+
+# Test datasets — only CiMini is committed (see test/datasets/CiMini/README.md)
+test/datasets/*
+!test/datasets/CiMini
+
+# Knowledge graph output (generated locally by graphify)
+graphify-out/
+
+# Web workbench
+node_modules/
+.next/
+
+# IDE / editor
+.vs/
+*.user
