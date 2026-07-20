@@ -62,7 +62,7 @@ public sealed class YoloDetector : IDisposable {
         if (!File.Exists(modelPath)) return;
 
         try {
-            session = new InferenceSession(modelPath);
+            session = OnnxSessionFactory.Create(modelPath);
             inputName = session.InputMetadata.Keys.FirstOrDefault() ?? TensorImages;
             outputName = session.OutputMetadata.Keys.FirstOrDefault() ?? TensorOutput0;
         } catch {

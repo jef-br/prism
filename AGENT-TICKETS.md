@@ -121,8 +121,10 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 
 
 ### T-4110 · Unify ONNX Runtime execution-provider policy across every model-running component in PRISM
-**Status:** Ready | **Profile:** P4-critical-architecture
+**Status:** Review | **Profile:** P4-critical-architecture
 **Found by:** [[T-4100]] — health-probe investigation surfaced two inconsistencies (version skew + YOLO CPU-only).
+**Implemented (2026-07-20):** CPM via new `jb/src/Directory.Packages.props` — single pin for ORT DirectML 1.24.4 plus (user-directed scope extension) ImageSharp/OpenCvSharp4/test packages; new `OnnxSessionFactory` (file-linked like `GpuProbe`) is the sole session-construction path for CLIP/YOLO/Upscale; `RuntimeProviderProbe.SessionProviders()` no longer hardcodes YOLO=CPU; conventions-hook category `onnx-session-bypass` added and verified firing; policy doc `jb/docs/PRISM-model-runtime.md` + index row + classify-doc pointer + AGENTFEEDBACK entry. Build green; full suite failure set byte-identical to HEAD baseline on the Linux CI container (failures = missing model assets + Windows-only OpenCV natives, pre-existing).
+**Deferred to dev box (needs model assets + Windows):** CiMini golden 5× re-verify after the 1.20.1→1.24.4 CLIP runtime bump, and live `GET /PRISM/health` `SessionRuntimeProviders` check (expect all three identical: DirectML(GPU) on the GPU box / CPU when no adapter). Do these before /ticket-finish.
 
 **Problem:** PRISM's ONNX/model-running components are inconsistent along three axes that should be uniform:
 1. **Package version skew.** Classify (CLIP) pins `Microsoft.ML.OnnxRuntime.DirectML 1.20.1`; Upscale pins `1.24.4`. In the monolith API host both run in-process, so two versions of the same native runtime load into one address space — a latent binding/load-order risk (works today, but fragile).

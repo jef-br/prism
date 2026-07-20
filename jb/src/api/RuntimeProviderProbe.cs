@@ -21,12 +21,11 @@ internal static class RuntimeProviderProbe {
         }
     }
 
-    // What each session opens with, per the actual code paths (T-4100 investigation):
-    //  - CLIP and Upscale append the DirectML EP, but bind to the GPU only when a hardware DX12 adapter
-    //    is present (ImageUpscaler.IsGpuAvailable probes it once); otherwise ORT runs them on CPU.
-    //  - YOLO appends no EP — it is always CPU.
+    // What each session opens with: CLIP, YOLO, and Upscale all construct their InferenceSession via the
+    // shared OnnxSessionFactory (T-4110), which binds to the GPU only when a hardware DX12 adapter is
+    // present (ImageUpscaler.IsGpuAvailable probes the same GpuProbe check); otherwise all three run CPU.
     internal static IReadOnlyList<string> SessionProviders() {
-        string clipUpscale = ImageUpscaler.IsGpuAvailable ? "DirectML(GPU)" : "CPU";
-        return [$"CLIP={clipUpscale}", "YOLO=CPU", $"Upscale={clipUpscale}"];
+        string ep = ImageUpscaler.IsGpuAvailable ? "DirectML(GPU)" : "CPU";
+        return [$"CLIP={ep}", $"YOLO={ep}", $"Upscale={ep}"];
     }
 }

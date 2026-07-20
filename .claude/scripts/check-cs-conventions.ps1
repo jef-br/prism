@@ -94,6 +94,18 @@ function Get-Violations([string[]]$lines, [string]$fileBase, [string]$fullPath) 
         }
     }
 
+    # -- ONNX sessions must go through OnnxSessionFactory (T-4110): no bare SessionOptions/InferenceSession
+    # construction or direct EP append outside the factory itself.
+    if ($fullPath -match 'jb[/\\]src[/\\]' -and $fileBase -ne 'OnnxSessionFactory' -and $fullPath -notmatch '[/\\]tests[/\\]') {
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            $l = $lines[$i]
+            if ($l.TrimStart().StartsWith('//')) { continue }
+            if ($l -match 'new\s+InferenceSession\(|AppendExecutionProvider_DML\(|new\s+SessionOptions\(\)') {
+                $v += New-Violation 'onnx-session-bypass' "Direct ONNX session/provider construction at line $($i + 1) — route through OnnxSessionFactory.Create() instead (T-4110)."
+            }
+        }
+    }
+
     return $v
 }
 

@@ -105,10 +105,7 @@ public sealed class ImageClassifier : IDisposable
 
         try
         {
-            var opts = new SessionOptions();
-            if (GpuProbe.HasHardwareDirectMLAdapter())
-                opts.AppendExecutionProvider_DML(0);
-            session = new InferenceSession(modelPath, opts);
+            session = OnnxSessionFactory.Create(modelPath);
 
             IReadOnlyDictionary<string, NodeMetadata> inputMeta  = session.InputMetadata;
             IReadOnlyDictionary<string, NodeMetadata> outputMeta = session.OutputMetadata;

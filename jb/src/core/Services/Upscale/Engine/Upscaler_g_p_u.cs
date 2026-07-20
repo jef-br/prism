@@ -57,9 +57,7 @@ public static class Upscaler_g_p_u {
             if (!File.Exists(modelPath)) return;
 
             try {
-                var opts = new SessionOptions();
-                opts.AppendExecutionProvider_DML(0);
-                InferenceSession session = new(modelPath, opts);
+                InferenceSession session = OnnxSessionFactory.Create(modelPath);
 
                 int[] inputDims = session.InputMetadata[TensorInput].Dimensions;
                 _tileHeight = inputDims[2] > 0 ? inputDims[2] : 0;
