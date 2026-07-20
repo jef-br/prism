@@ -19,7 +19,6 @@
     <Compile Remove="Services\Transform\Admin\**\*.cs" />
     <Compile Remove="Services\Transform\ImageTransformer.cs" />
     <Compile Remove="Services\Upscale\Engine\**\*.cs" />
-    <Compile Remove="Services\Upscale\ImageUpscaler.cs" />
   </ItemGroup>
 
   <ItemGroup>

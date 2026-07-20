@@ -23,9 +23,9 @@ internal static class RuntimeProviderProbe {
 
     // What each session opens with: CLIP, YOLO, and Upscale all construct their InferenceSession via the
     // shared OnnxSessionFactory (T-4110), which binds to the GPU only when a hardware DX12 adapter is
-    // present (ImageUpscaler.IsGpuAvailable probes the same GpuProbe check); otherwise all three run CPU.
+    // present (Upscaler.IsGpuAvailable probes the same GpuProbe check); otherwise all three run CPU.
     internal static IReadOnlyList<string> SessionProviders() {
-        string ep = ImageUpscaler.IsGpuAvailable ? "DirectML(GPU)" : "CPU";
+        string ep = Upscaler.IsGpuAvailable ? "DirectML(GPU)" : "CPU";
         return [$"CLIP={ep}", $"YOLO={ep}", $"Upscale={ep}"];
     }
 }

@@ -137,17 +137,22 @@ public sealed class PrismConfiguration {
             PrismConfiguration config = ParseAndValidate(document.RootElement, cfgPath);
             string coreConfigDirectory = Path.GetDirectoryName(cfgPath) ?? string.Empty;
             ImageNgpValidator.Validate(coreConfigDirectory);
-            ValidateAnalyzerAssets();
+            ValidateModelAssets(config);
             return config;
         }
     }
 
-    // Fail fast on missing analyzer assets: the refinement chain needs the YOLO26 detector, and a
-    // per-image degradation would be silent. Same resolution order as the CLIP model assets.
-    private static void ValidateAnalyzerAssets() {
+    // Fail fast on missing model assets: the refinement chain needs the YOLO26 detector and Transform
+    // needs the Real-ESRGAN upscaler, and a per-image degradation would be silent (T-4110: no fallback
+    // upscaler exists). Same resolution order as the CLIP model assets.
+    private static void ValidateModelAssets( PrismConfiguration config ) {
         if (ModelAssetLocator.Find("Services/Matching/Analyzers/ONNX/yolo26s.onnx") is null)
             throw new PrismConfigurationException(
                 "YOLO26 ONNX model not found. Deploy Services/Matching/Analyzers/ONNX/yolo26s.onnx next to " +
+                "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
+        if (ModelAssetLocator.Find(config.UpscaleModelPath) is null)
+            throw new PrismConfigurationException(
+                $"Real-ESRGAN ONNX model not found at '{config.UpscaleModelPath}'. Deploy it next to " +
                 "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
     }
 

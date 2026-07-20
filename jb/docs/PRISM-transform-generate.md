@@ -11,7 +11,7 @@ Steps in order:
 3. **Upscale decision** (based on bbox pixel dimensions, not whole-image dimensions):
    - bbox largest dimension `< MinInputSizeInPixels` (570 px) → KO `PREPROCESS_TOO_SMALL`
    - `≥ MinOutputWidth` (800 px) → pass flat JPEG through unchanged
-   - Between 570–800 → `ImageUpscaler.Upscale(bytes, scale)` (GPU if DirectML adapter present, else CPU Lanczos4 capped ×1.42)
+   - Between 570–800 → `Upscaler.Upscale(bytes, scale)` (Real-ESRGAN ×2 + Lanczos4 top-up; DirectML when a hardware adapter is present, CPU EP otherwise — see `PRISM-model-runtime.md`)
    - Required scale `> MaxUpScaleFactor` (1.42) → KO `PREPROCESS_UPSCALE_EXCEEDED`
 4. Returns upscaled flat-JPEG bytes or null on KO. Sets `lambda.IsKo`, `lambda.KoReasonCode`, `lambda.KoSafeMessage` on KO.
 
@@ -29,16 +29,16 @@ Pre-step called inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast
 
 ---
 
-## GPU Upscaling (Real-ESRGAN)
+## Upscaling (Real-ESRGAN)
 
-**Decision (T-2500, closed):** `Upscaler_g_p_u.RunRealEsrgan` implemented. Uses `Microsoft.ML.OnnxRuntime.DirectML` (already in NuGet).
+**Decision (T-2500, closed; reshaped by T-4110):** single `Upscaler` class (`Services/Upscale/Engine/Upscaler.cs`) — the model runs on every host; `OnnxSessionFactory` picks DirectML (hardware adapter present) or the CPU EP. No separate CPU algorithm exists (the former `ImageUpscaler` router and `Upscaler_c_p_u` Lanczos fallback are deleted).
 
 - Model: `Real-ESRGAN_x2plus.onnx` — fixed ×2 super-resolution. Located at `jb/src/core/Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus.onnx`.
-- Session init: `Upscaler_g_p_u.Initialize(modelPath, configPath)` called from `UpscaleService.Create()` when `ImageUpscaler.IsGpuAvailable` is true. CPU Lanczos4 fallback active when no DirectML adapter is detected.
+- Session init: `Upscaler.Initialize(modelPath, configPath)` called from `UpscaleService.Create()` on every host at startup.
 - Tensor pipeline: JPEG → BGR uint8 → NCHW float32 [0,1] → `_session.Run(["input"])` → NCHW float32 [0,1] × 2 → clamp → BGR uint8 → JPEG. Tensor names: `input` / `output`.
 - Top-up: remaining scale after ×2 SR applied via Lanczos4 resize.
-- Config: model asset resolved via `ModelAssetLocator.Find(configuration.UpscaleModelPath)` — the path comes from `Prism_Config.json`'s `Models` section and points at `Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus.onnx`. Throws `PrismConfigurationException` when DirectML is available but model is missing.
-- Access boundary: `GpuProbe` is internal to `Prism.Services.Upscale`. External callers (e.g. `UpscaleService` in `Prism.Core`) use `ImageUpscaler.IsGpuAvailable` rather than calling `GpuProbe` directly.
+- Config: model asset resolved via `ModelAssetLocator.Find(configuration.UpscaleModelPath)` — the path comes from `Prism_Config.json`'s `Models` section. Missing asset fails config load (`PrismConfiguration.ValidateModelAssets`); a present-but-unloadable model fails `UpscaleService.Create` — both loud, no fallback (T-4110, see `PRISM-model-runtime.md`).
+- Access boundary: `GpuProbe` is internal to `Prism.Services.Upscale`. External callers (e.g. `RuntimeProviderProbe` in `Prism.Api`) use `Upscaler.IsGpuAvailable` rather than calling `GpuProbe` directly.
 
 ### Tile stitching — weighted blend (no seams)
 
@@ -46,7 +46,7 @@ The committed model export has a fixed `[1, 3, 64, 64]` input, so `RunTiled` spl
 
 - Each tile edge that faces a real neighboring tile discards a small band nearest the seam (least-accurate pixels, at the edge of the model's receptive field), then tapers from 0 to 1 across the remaining overlap with a raised-cosine ramp. An edge facing the true image border carries full weight throughout — there is no neighbor to blend against there.
 - Every output pixel accumulates a weighted sum from every tile that covers it (`AccumulateTile`) and is normalized by the accumulated weight at the end (`NormalizeAccumulator`). A pixel's "home" tile always contributes full weight, so the divide is never by zero.
-- Tunable via `jb/src/core/Services/Upscale/Engine/cfg_Upscale.json` (`UpscaleConfig`): `Tiling.TileOverlapPixels` (total overlap reserved per seam, source pixels) and `Tiling.DiscardBandPixels` (portion of that overlap discarded before blending starts). Resolved via `ModelAssetLocator.Find("Services/Upscale/Engine/cfg_Upscale.json")`; `UpscaleService.Create()` throws `PrismConfigurationException` if it can't be found. A missing/unreadable config at the `Upscaler_g_p_u.Initialize` level itself falls back to hardcoded defaults (16px overlap / 3px discard) rather than blocking GPU session load.
+- Tunable via `jb/src/core/Services/Upscale/Engine/cfg_Upscale.json` (`UpscaleConfig`): `Tiling.TileOverlapPixels` (total overlap reserved per seam, source pixels) and `Tiling.DiscardBandPixels` (portion of that overlap discarded before blending starts). Resolved via `ModelAssetLocator.Find("Services/Upscale/Engine/cfg_Upscale.json")`; `UpscaleService.Create()` throws `PrismConfigurationException` if it can't be found. A missing/unreadable config at the `Upscaler.Initialize` level itself falls back to hardcoded defaults (16px overlap / 3px discard) rather than blocking session load.
 
 ---
 

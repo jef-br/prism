@@ -14,12 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\ImageUpscaler.cs" />
     <Compile Include="..\..\Matching\GpuProbe.cs" />
     <Compile Include="..\..\Matching\OnnxSessionFactory.cs" />
     <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="Upscaler_c_p_u.cs" />
-    <Compile Include="Upscaler_g_p_u.cs" />
+    <Compile Include="Upscaler.cs" />
     <Compile Include="UpscaleConfig.cs" />
   </ItemGroup>
 

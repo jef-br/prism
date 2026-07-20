@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Prism.Services.Upscale;
 
-/// <summary>Typed configuration loaded from cfg_Upscale.json — tile overlap and discard-band sizing for Upscaler_g_p_u.RunTiled.</summary>
+/// <summary>Typed configuration loaded from cfg_Upscale.json — tile overlap and discard-band sizing for Upscaler.RunTiled.</summary>
 internal sealed record UpscaleConfig {
     /// <summary>Source pixels of overlap reserved on each side of an internal tile seam for the discard band plus the blend ramp.</summary>
     public int TileOverlapPixels { get; init; }

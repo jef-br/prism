@@ -1,7 +1,7 @@
 # PRISM — Model Runtime Policy
 *Abbreviations: `GLOSSARY.md`*
 
-Cross-cutting policy for every part of PRISM that loads and runs a model — CLIP (`ImageClassifier.cs`), YOLO (`YoloDetector.cs`), Upscale (`Upscaler_g_p_u.cs`), and any future analyzer or transformer. Not CLIP-specific; see `PRISM-classify.md` for classification-specific behavior (thresholds, taxonomy, prompts).
+Cross-cutting policy for every part of PRISM that loads and runs a model — CLIP (`ImageClassifier.cs`), YOLO (`YoloDetector.cs`), Upscale (`Upscaler.cs`), and any future analyzer or transformer. Not CLIP-specific; see `PRISM-classify.md` for classification-specific behavior (thresholds, taxonomy, prompts).
 
 ---
 
@@ -42,7 +42,9 @@ It's `internal`, file-linked (via `<Compile Include>`) into every project that l
 
 Adding a new model-running component (a new analyzer, a segmentation transformer, etc.): file-link `OnnxSessionFactory.cs` into its project next to `GpuProbe.cs`, call `OnnxSessionFactory.Create(modelPath)` inside its own `Initialize()`, and keep the surrounding lifecycle (validate → initialize → try/catch/finally → `IDisposable`) exactly as CLIP/YOLO/Upscale already do. Do not write a new probe-and-append block — that duplication is exactly what T-4110 removed.
 
-**No algorithm switching on GPU presence (2026-07-20, user decision).** A component must never gate *loading its model* on `GpuProbe`/`IsGpuAvailable` — the model loads on every host and the factory alone decides the execution provider. Upscale was the last violator: it used to skip Real-ESRGAN entirely without a GPU and silently swap in Lanczos4 (capped ×1.42). Now `UpscaleService.Create` initializes the model unconditionally; the Lanczos4 fallback (`Upscaler_c_p_u`) remains only for a missing/failed model asset (the monolith's T-2800 degrade path), never as a CPU-mode substitute.
+**No algorithm switching on GPU presence (2026-07-20, user decision).** A component must never gate *loading its model* on `GpuProbe`/`IsGpuAvailable` — the model loads on every host and the factory alone decides the execution provider. Upscale was the last violator: it used to skip Real-ESRGAN entirely without a GPU and silently swap in Lanczos4 (capped ×1.42). That fallback class (`Upscaler_c_p_u`) and the `ImageUpscaler` router are deleted — the single `Upscaler` class (`Services/Upscale/Engine/Upscaler.cs`) is the whole upscale path, and Lanczos4 survives only as its in-model top-up resize after the fixed ×2 SR step.
+
+**Missing model asset = loud startup failure (2026-07-20, user decision).** No model degrades silently to a lesser algorithm. `PrismConfiguration.ValidateModelAssets` fails config load without the YOLO or Real-ESRGAN asset, and `UpscaleService.Create` throws `PrismConfigurationException` when the model file is present but unloadable. The former monolith degrade path (T-2800's swallow in `PipelineServiceFactory.EnsureUpscalerReady`) is removed. The ×1.42 upscale KO bound is unrelated to any of this — it lives in `ImagePreProcessor` (`PREPROCESS_UPSCALE_EXCEEDED`, config `Output.Images.Resize.MAXIMUM_UpScale`) and is about refusing quality-destroying scale factors, not about hardware.
 
 ---
 
@@ -54,7 +56,7 @@ Adding a new model-running component (a new analyzer, a segmentation transformer
 
 ## Health surface
 
-`GET /PRISM/health`'s `SessionRuntimeProviders` field (`jb/src/api/RuntimeProviderProbe.cs`) reports what each component's session actually opened with. Because CLIP/YOLO/Upscale all share one factory and one gate, all three are guaranteed identical — the probe reads `ImageUpscaler.IsGpuAvailable` once and applies it to all three labels rather than querying each session independently. If this drifts (e.g. a future component genuinely needs a different policy), that's a policy exception significant enough to require updating this document first.
+`GET /PRISM/health`'s `SessionRuntimeProviders` field (`jb/src/api/RuntimeProviderProbe.cs`) reports what each component's session actually opened with. Because CLIP/YOLO/Upscale all share one factory and one gate, all three are guaranteed identical — the probe reads `Upscaler.IsGpuAvailable` once and applies it to all three labels rather than querying each session independently. If this drifts (e.g. a future component genuinely needs a different policy), that's a policy exception significant enough to require updating this document first.
 
 ---
 

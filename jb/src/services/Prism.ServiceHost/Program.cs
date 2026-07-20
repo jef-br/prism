@@ -51,15 +51,14 @@ if (Hosts("transform"))
 {
     // With PRISM_UPSCALE_URL set, this transform host delegates upscaling to the remote Upscale host and
     // needs no local Real-ESRGAN session. Otherwise it upscales below-minimum images via the static
-    // Upscaler_g_p_u (T-2800), mirroring the in-process pipeline's semantics
-    // (PipelineServiceFactory.EnsureUpscalerReady): a missing model asset degrades to the Lanczos4
-    // fallback instead of blocking transform hosting.
+    // Upscaler (T-2800), mirroring the in-process pipeline's semantics
+    // (PipelineServiceFactory.EnsureUpscalerReady): a missing model asset fails hosting loud — there is
+    // no fallback upscaler (T-4110).
     ITransformService transform;
     string? upscaleUrl = Environment.GetEnvironmentVariable(PipelineServiceFactory.UpscaleUrlVariable);
     if (string.IsNullOrWhiteSpace(upscaleUrl))
     {
-        try { UpscaleService.Create(configuration); }
-        catch (PrismConfigurationException) { }
+        UpscaleService.Create(configuration);
         transform = new TransformService();
     }
     else
