@@ -116,7 +116,12 @@ internal sealed class Pipeline : IDisposable
     {
         await StageProgress.EmitStarted(progress, request.JobID, PipelineStageNames.Exported, cancellationToken);
         ExportArtifacts artifacts = Exporter.Run(BuildExportRequest(transformed, generatedImages, request));
-        await StageProgress.EmitCompleted(progress, request.JobID, PipelineStageNames.Exported, artifacts.Manifest.Summary.OkTransformed, artifacts.Manifest.Summary.KoRecords, cancellationToken);
+
+        IReadOnlyList<ImageRecord_LAMBDA> lambdaRecords = transformed.Matched.LambdaRecords;
+        int exportedOk = lambdaRecords.Count(l => !l.IsKo);
+        int exportedKo = lambdaRecords.Count(l => l.IsKo);
+        await StageProgress.EmitCompleted(progress, request.JobID, PipelineStageNames.Exported, exportedOk, exportedKo, cancellationToken);
+
         return artifacts;
     }
 
