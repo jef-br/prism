@@ -1,0 +1,463 @@
+{
+    "folder-color.pathColors": [
+        {
+            "extension": "md",
+            "color": "foldercolorizer.color_d75f00"
+        },
+        {
+            "filePath": "prism\\.gitignore",
+            "color": "foldercolorizer.color_5f87af"
+        },
+        {
+            "extension": "csproj",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "extension": "sln",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "extension": "props",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\lib\\Excel\\",
+            "color": "foldercolorizer.color_5fafaf"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\lib\\",
+            "color": "foldercolorizer.color_5fafaf"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Services\\",
+            "color": "foldercolorizer.color_0087ff"
+        },
+        {
+            "folderPath": "bin",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "tmp",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "github",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "claude",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "prism\\.vscode\\",
+            "color": "foldercolorizer.color_9e9e9e"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\",
+            "isFolderOnly": true,
+            "color": "foldercolorizer.color_ff0000"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\api",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\workbench",
+            "color": "foldercolorizer.color_00af00"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core",
+            "color": "foldercolorizer.color_008080"
+        },
+        {
+            "filePath": "prism\\Launch_API_CORE_WEBBENCH.ps1",
+            "color": "foldercolorizer.color_ff0000"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Models\\",
+            "color": "foldercolorizer.color_008080"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Services\\Matching\\Classify\\",
+            "color": "foldercolorizer.color_5f87d7"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Services\\Matching\\Order\\",
+            "color": "foldercolorizer.color_5f87d7"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\ImageMatcher.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\ImageOrderer.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\ImagePreProcessor.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\ImageTransformer.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\tests\\Prism.Core.Tests\\",
+            "color": "foldercolorizer.color_008787"
+        },
+        {
+            "folderPath": "prism\\test\\datasets",
+            "color": "foldercolorizer.color_ff5f87"
+        },
+        {
+            "filePath": "prism\\jb\\test-scripts\\testlogs.txt",
+            "color": "foldercolorizer.color_ff5f87"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\PrismService.cs",
+            "color": "foldercolorizer.color_d75f87"
+        },
+        {
+            "filePath": "prism\\jbtodo.md",
+            "color": "foldercolorizer.color_005f5f"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Services\\Generate\\",
+            "color": "foldercolorizer.color_d700af"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Services\\Http\\",
+            "color": "foldercolorizer.color_d75f00"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Services\\Upscale\\",
+            "color": "foldercolorizer.color_8700ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\ExportArtifacts.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\ExportRequest.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\IArtifactStore.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\IIngestService.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\IngestResult.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\IngestService.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\LocalArtifactStore.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\PipelineServiceFactory.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\PipelineServices.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\PrismServiceRoutes.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\StageProgress.cs",
+            "color": "foldercolorizer.color_5f5faf"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\Analyzers",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\Classify",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\Match",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\Order",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\ClassificationService.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\ClipTokenizer.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\FeatureAnalysisService.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\GpuProbe.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\IClassificationService.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\IFeatureAnalysisService.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\IImageNgpService.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\ImageClassifier.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\ImageNgpService.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\ImageRenamer.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\IMatchingService.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\MatchingResult.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Matching\\MatchingService.cs",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Services\\Matching\\",
+            "color": "foldercolorizer.color_af8700"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\Admin",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\Engine",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\Engine\\Utils",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\Engine\\Tx_class copy 2.cs",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\Engine\\Tx_class copy 3.cs",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\Engine\\Tx_class copy.cs",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\Engine\\Tx_class.cs",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\Enum",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\goal.md",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\ImageTransformer.cs",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\ITransformService.cs",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\TransformResult.cs",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\TransformService.cs",
+            "color": "foldercolorizer.color_00d7ff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\processingtools",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\processingtools\\Tx_LowContrastEnhancement.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\BackgroundType.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\BgStretchConfig.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\CropTransformSettings.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\DetailCropperConfig.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\HeadCutterConfig.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\IImageTransformation.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\ImageTransformationResult.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\jbtodo.md",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\LowContrastEnhancementConfig.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\Prism.Core.Images.Transform.csproj",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\ProblemImageProcessorConfig.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\TransformationStatus.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\TransformConfig.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\Tx_CenterAndStretch.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\Tx_CropSquare.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\Tx_DetailCropper.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\Tx_ProblemImageProcessor.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\Tx_util_BgStretch.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\Engine\\Tx_util_HeadCutter.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\ITransformService.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\TransformResult.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "filePath": "prism\\jb\\src\\core\\Services\\Transform\\TransformService.cs",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Services\\Transform\\",
+            "color": "foldercolorizer.color_005fff"
+        },
+        {
+            "folderPath": "prism\\jb\\src\\core\\Services\\Transform\\DUMMY FOLDER\\",
+            "color": "foldercolorizer.color_00d7ff"
+        }
+    ],
+    "folder-color.favoriteColors": [
+        "foldercolorizer.color_005fff",
+        "foldercolorizer.color_ffd700",
+        "foldercolorizer.color_00ffff",
+        "foldercolorizer.color_008080",
+        "foldercolorizer.color_0087ff",
+        "foldercolorizer.color_0000ff",
+        "foldercolorizer.color_626262",
+        "foldercolorizer.color_5f5f5f",
+        "foldercolorizer.color_9e9e9e",
+        "foldercolorizer.color_121212",
+        "foldercolorizer.color_00af00",
+        "foldercolorizer.color_5fd700",
+        "foldercolorizer.color_ffaf00",
+        "foldercolorizer.color_ff0087",
+        "foldercolorizer.color_ffafff",
+        "foldercolorizer.color_d75f00"
+    ],
+    "claudeCode.useCtrlEnterToSend": true,
+    "files.exclude": {
+        "**/.git": true,
+        "**/.serena": true,
+        "**/.rtk": true,
+        "**/.tmp": true,
+        "**/.claude": true,
+        "**/.github": true,
+        "**/graphify-out": true,
+        "**/bin": true,
+        "**/obj": true,
+        "**/node_modules": true
+    },
+    "search.exclude": {
+        "**/bin": true,
+        "**/obj": true,
+        "**/graphify-out": true,
+        "**/node_modules": true
+    },
+    "[csharp]": {
+        "editor.defaultFormatter": "ms-dotnettools.csharp",
+        "editor.formatOnSave": true,
+        "editor.formatOnSaveMode": "modifications"
+    }
+}
