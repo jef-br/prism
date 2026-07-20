@@ -120,36 +120,10 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 ---
 
 
-### T-4110 · Unify ONNX Runtime execution-provider policy across every model-running component in PRISM
-**Status:** Ready | **Profile:** P4-critical-architecture
-**Found by:** [[T-4100]] — health-probe investigation surfaced two inconsistencies (version skew + YOLO CPU-only).
-
-**Problem:** PRISM's ONNX/model-running components are inconsistent along three axes that should be uniform:
-1. **Package version skew.** Classify (CLIP) pins `Microsoft.ML.OnnxRuntime.DirectML 1.20.1`; Upscale pins `1.24.4`. In the monolith API host both run in-process, so two versions of the same native runtime load into one address space — a latent binding/load-order risk (works today, but fragile).
-2. **Provider policy skew.** CLIP (`ImageClassifier.cs:108-111`) and Upscale (`Upscaler_g_p_u.cs:60-62`) append the DirectML EP gated on `GpuProbe.HasHardwareDirectMLAdapter()`; **YOLO (`YoloDetector.cs:65`) appends no EP at all → CPU-only always**, even on a GPU box. No shared session-options factory exists, so each site decides independently.
-3. **No mandate for future model code.** Analyzers (e.g. `Analyzer_FacePose`, `Analyzer_TextPresent`, YOLO-based ones) and future transformers (segmentation for coverage-ratio masks, etc.) will also run models, with no single policy to follow.
-
-**Mandate (2026-07-15, user):** every part of PRISM image processing that runs a model MUST use the **same ONNX Runtime DirectML package, the same version, and the same execution-provider policy** — **CPU-only always works (mandatory baseline); GPU (DirectML) used automatically when a hardware adapter is present.** Applies to CLIP, YOLO, Upscale today, and to all future analyzers and transformers. This is a sibling of [[T-3300]] (each separable service/deployable must honor the same policy independently), not of T-3500/T-3600.
-
-**What to do:**
-1. **Single version.** Centralize the ONNX Runtime DirectML package + version to one pin (central package management via `Directory.Packages.props`, or the existing `jb/src/Directory.Build.props`). Align the two engine projects to one version. **Re-verify CiMini golden 5× after the bump** — changing CLIP's runtime can shift FP results (guards [[T-2820]]'s determinism).
-2. **Single provider policy.** Introduce one shared session-options factory in core (e.g. `OnnxSessionFactory`, reusing `GpuProbe`) that appends the DirectML EP when a hardware adapter is present and falls back to CPU otherwise. Route CLIP, YOLO, and Upscale through it — YOLO gains GPU-when-present; all three become identical. No direct `AppendExecutionProvider_DML` or bare `new InferenceSession` outside the factory.
-3. **Make it mandatory + enforced.** Document the policy in `jb/docs/PRISM-classify.md` (or a dedicated model-runtime note) + `AGENTFEEDBACK.md`, and add a conventions-hook category so any new `InferenceSession` not created via the factory fails review. Covers future analyzers/transformers.
-
-**Acceptance:**
-- Exactly one ONNX Runtime DirectML package + version referenced repo-wide (grep-proven).
-- One shared session-options factory; CLIP/YOLO/Upscale all use it; no bare `InferenceSession`/`AppendExecutionProvider_DML` elsewhere.
-- `GET /PRISM/health` `SessionRuntimeProviders` shows all three consistent (all DirectML(GPU) on a GPU box; all CPU on a CPU-only box).
-- CPU-only mode fully green (forced no-adapter path); CiMini golden identical across 5 consecutive runs after version unification.
-- Documented, enforced mandatory policy for any future model-running code.
-
-**Files:** `jb/src/Directory.Build.props` (or new `Directory.Packages.props`), the three engine `.csproj`, `jb/src/core/Services/Matching/ImageClassifier.cs`, `jb/src/core/Services/Matching/Analyzers/YoloDetector.cs`, `jb/src/core/Services/Upscale/Engine/Upscaler_g_p_u.cs`, `jb/src/core/Services/Matching/GpuProbe.cs`, new `OnnxSessionFactory`, `jb/src/api/RuntimeProviderProbe.cs`, `jb/docs/PRISM-classify.md`, `AGENTFEEDBACK.md`, conventions hook.
-
----
-
 
 ### T-4400 · Adopt Roslyn analyzers: SA1402/SA1649/SA1101/SA1633/S109 (S109 priority), suppress SA1500/SA1025/SA1503
-**Status:** Ready | **Profile:** P1-feature-worker
+**Status:** Active | **Profile:** P1-feature-worker
+**Review (phase 1, 2026-07-20):** Approve. StyleCop.Analyzers/SonarAnalyzer.CSharp wired into every production project, curated root `.editorconfig`, `SonarLint.xml`, SA1402/SA1649 fixed to zero and CI-gated — verified internally consistent (no type compiled twice or dropped across the Prism.Core/Prism.Core.Contracts Include/Remove split), package versions confirmed real/current on nuget.org, SonarLint.xml schema confirmed correct for sonar-dotnet, CI `-warnaserror:SA1402,SA1649` confirmed to actually fail the build on regression. Two non-blocking follow-ups for Planner: (1) `Prism.Tests.Shared` is excluded from analyzer coverage by the `*Tests*` name match even though CLAUDE.md documents it as a non-test fixture classlib — debatable but defensible; (2) the ticket's own "verify the global `none` floor doesn't mute IDE0xxx hints" caveat was never checked. S109/SA1633/SA1101 correctly left warn-only (not silently suppressed, not prematurely gated) pending phases 2-4.
 **Found by:** 2026-07-12 analyzer baseline trial (StyleCop.Analyzers + SonarAnalyzer.CSharp on Prism.Core: 2,699 unique warnings).
 
 **Problem:** Style/config rules are enforced only at edit time (conventions hook) and by review — nothing compiler-grade catches violations from non-Claude edits or agents that bypass process. The baseline trial measured per-rule cost in Prism.Core: SA1402 (one type per file) = 9, SA1649 (file name matches type) = 1, SA1101 (`this.` prefix) = 472, SA1633 (file header) = 113, SA1025 (whitespace) = 424, SA1503 (braces required) = 320, S109 (magic numbers) = 98.
@@ -174,25 +148,6 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 ---
 
 
-### T-4600 · SSE progress events carry no per-item counts or blocked state
-**Status:** Ready | **Profile:** P1-feature-worker
-**Found by:** [[T-3400]] review (2026-07-14) — the web StatusPanel requirement that could not be met from the web side.
-
-**Problem:** `PipelineProgressEvent` (`jb/src/core/Pipeline/PipelineProgressEvent.cs`) declares `CompletedCount`/`TotalCount`/`Severity` fields, but the only place any `PipelineProgressEvent` is ever constructed is `StageProgress.EmitStarted` (`jb/src/core/Services/StageProgress.cs:24-31`). It emits exactly one `"Stage {name} started."` event per stage, with `CompletedCount`/`TotalCount` left `null` and `Severity` hardcoded to `"Information"`. No accepted/rejected count, no blocked-vs-running state, and no per-item progress is emitted anywhere in the pipeline.
-
-Consequence: the workbench can only ever display a stage *name*. `PRISM-workbench.md`'s Required Display section mandates "image collection/import state", "output preview", and "KO records" — none of which the SSE stream can currently source. T-3400 was closed on the narrower claim (real stage name replaces placeholder text) precisely because its web-only file scope made this unfixable there.
-
-**What to do:**
-1. Decide the progress contract: which stages emit per-item progress, and what an item is (per image? per family?). Import and Export are the two the workbench most needs (accepted/rejected counts).
-2. Extend `StageProgress` beyond `EmitStarted` — at minimum an `EmitProgress`/`EmitCompleted` that populates `CompletedCount`/`TotalCount`, and a real `Severity` for blocked/warning states (KO records are the obvious source).
-3. Emit from `Importer.cs` and `Exporter.cs` first (accepted/rejected are already computed there — KO records exist), then the remaining stages as warranted.
-4. Update `StatusPanel.tsx` to read `severity` (it currently ignores the field entirely — only `StageRouteList.tsx:41` reads it) and render the real counts + blocked-vs-running distinction.
-
-**Acceptance:** a running job's SSE stream carries non-null `CompletedCount`/`TotalCount` for Import and Export, and a non-`Information` `Severity` when items KO; the workbench StatusPanel shows real accepted/rejected counts and a blocked-vs-running distinction sourced from those events (no synthetic labels, per the No-Hidden-Behavior Rule).
-
-**Files:** `jb/src/core/Pipeline/PipelineProgressEvent.cs`, `jb/src/core/Services/StageProgress.cs`, `jb/src/core/lib/Ingress/Importer.cs`, `jb/src/core/lib/Export/Exporter.cs`, `jb/src/workbench/web/components/StatusPanel.tsx`, `jb/docs/PRISM-workbench.md`.
-
----
 
 
 ## Verification Rules

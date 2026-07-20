@@ -5,9 +5,6 @@ Represents an image generated to supplement an existing FamilyID image collectio
 
 */
 
-public enum GenerationMethod { DetailCrop, GenAiBackgroundVariation, Both }
-public enum GenerationStatus { Gated, Created, Failed }
-
 public class ImageRecord_GENERATED : ImageRecord_Base {
     public string SourceFamilyId { get; set; } = string.Empty;
     public string SourceHeroImageName { get; set; } = string.Empty;

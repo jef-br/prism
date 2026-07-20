@@ -78,25 +78,3 @@ public sealed record MatchEvidence
     /// <summary>Human-readable explanation of the matching decision. Contains no internal identifiers.</summary>
     public string SafeExplanation { get; init; } = string.Empty;
 }
-
-/// <summary>One candidate FamilyID considered during matching.</summary>
-public sealed record CandidateSummary(
-    string FamilyId,
-    double Score,
-    string MatcherName);
-
-/// <summary>Paired token evidence linking one image token to one Excel family token.</summary>
-public sealed record TokenEvidenceItem(
-    string FilenameToken,
-    string FamilyToken,
-    string PropertyName,
-    string FamilyId,
-    double Score);
-
-/// <summary>One CLIP classification label matched against a MatchingConfig label rule.</summary>
-public sealed record LabelEvidenceItem(
-    string Label,
-    string PropertyName,
-    string FamilyId,
-    double Weight,
-    double Confidence);

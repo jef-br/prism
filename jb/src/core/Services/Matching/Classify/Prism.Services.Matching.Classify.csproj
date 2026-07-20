@@ -13,6 +13,7 @@
   <ItemGroup>
     <Compile Include="..\ImageClassifier.cs" />
     <Compile Include="..\GpuProbe.cs" />
+    <Compile Include="..\OnnxSessionFactory.cs" />
     <Compile Include="..\ClipTokenizer.cs" />
     <Compile Include="ClipPromptCatalog.cs" />
     <Compile Include="DedupGroup.cs" />
@@ -64,8 +65,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.20.1" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" />
+    <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 
   <ItemGroup>

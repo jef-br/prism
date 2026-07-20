@@ -56,7 +56,7 @@ public sealed class TransformService : ITransformService
 
         // Per-image transforms are independent CPU-bound OpenCV work — safe to fan out. Each thread
         // writes only its own lambda; the GPU upscaler serializes its InferenceSession.Run calls
-        // internally (Upscaler_g_p_u._sessionLock), so parallel callers are safe there too.
+        // internally (Upscaler._sessionLock), so parallel callers are safe there too.
         int okTransformed = 0;
         Parallel.ForEach(
             matched.LambdaRecords.Where(l => !l.IsKo),

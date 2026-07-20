@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AnalysisInput>
+  <Rules>
+    <Rule>
+      <Key>S109</Key>
+      <Parameters>
+        <Parameter>
+          <Key>Exceptions</Key>
+          <Value>0,1,-1,0x0,0x00,.0,.1,0.0,1.0,-1.0</Value>
+        </Parameter>
+      </Parameters>
+    </Rule>
+  </Rules>
+</AnalysisInput>

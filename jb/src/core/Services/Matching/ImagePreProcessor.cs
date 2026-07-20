@@ -217,7 +217,7 @@ public static class ImagePreProcessor {
         // worker threads with no synchronization context to deadlock on. The job's CancellationToken is
         // the only bound on the remote call — the HttpClient transport timeout is infinite (ServiceHttp).
         return remoteUpscale is null
-            ? ImageUpscaler.Upscale(flatJpg, scale)
+            ? Upscaler.Upscale(flatJpg, scale)
             : remoteUpscale.UpscaleAsync(flatJpg, scale, cancellationToken).GetAwaiter().GetResult();
     }
 

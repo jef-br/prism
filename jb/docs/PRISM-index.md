@@ -12,6 +12,7 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | `PRISM-excel.md` | IEM, header detection, deduplication, PK rules, column validity |
 | `PRISM-io-import.md` | Import strategies, path/stream/multipart/URL/zip/directory, flat JPG, EXIF, corrupt-image KO, original-image export policy, core co-deployment contract, Import→Match disk handoff decision |
 | `PRISM-classify.md` | ONNX, classification thresholds, orientation values, border intersection, human detection, head visibility, UNKNOWN states |
+| `PRISM-model-runtime.md` | Cross-cutting ONNX Runtime policy: single package/version, `OnnxSessionFactory`, CPU-baseline/DirectML-when-present, enforcement |
 | `PRISM-match.md` | Waterfall gates, NumericMatcher, StringMatcher, ImageLabelingMatcher, tie-breaking, synonyms, stop words, NoiseFilter |
 | `PRISM-order-rename.md` | `_det` suffix, ordering rules, output filename stem, unmatched naming |
 | `PRISM-transform-generate.md` | Transformation decisions, background extension, generation logic |
@@ -34,6 +35,7 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | Working on IEM, Excel parsing | `PRISM-excel.md` + `PRISM-models.md` |
 | Working on matchers (Numeric/String/ImageLabeling) | `PRISM-match.md` + `PRISM-models.md` |
 | Working on `ImageClassifier`, ONNX | `PRISM-classify.md` + `PRISM-models.md` |
+| Working on any ONNX/model-running code (new `InferenceSession`, new analyzer/transformer) | `PRISM-model-runtime.md` |
 | Working on `ImageOrderer.cs`, rename | `PRISM-order-rename.md` + `PRISM-match.md` |
 | Working on `ImageTransformer.cs`, Tx classes | `PRISM-transform-generate.md` + `PRISM-classify.md` |
 | Working on generation logic | `PRISM-transform-generate.md` |

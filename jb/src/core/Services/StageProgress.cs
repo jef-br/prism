@@ -30,4 +30,36 @@ internal static class StageProgress
             Timestamp   = DateTimeOffset.UtcNow
         });
     }
+
+    /// <summary>
+    /// Emits the "stage completed" event for <paramref name="stageName"/> with accepted/KO counts.
+    /// No-op when <paramref name="progress"/> is null. Severity is "Warning" when <paramref name="koCount"/>
+    /// is greater than zero so the workbench can distinguish a clean stage from a blocked one.
+    /// </summary>
+    internal static async Task EmitCompleted(
+        Func<PipelineProgressEvent, Task>? progress,
+        Guid jobId,
+        string stageName,
+        int completedCount,
+        int koCount,
+        CancellationToken cancellationToken)
+    {
+        if (progress is null) return;
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        int totalCount = completedCount + koCount;
+        string severity = koCount > 0 ? "Warning" : "Information";
+
+        await progress(new PipelineProgressEvent
+        {
+            JobID          = jobId,
+            Stage          = stageName,
+            CompletedCount = completedCount,
+            TotalCount     = totalCount,
+            Severity       = severity,
+            SafeMessage    = $"Stage {stageName} completed. {completedCount}/{totalCount} accepted, {koCount} KO.",
+            Timestamp      = DateTimeOffset.UtcNow
+        });
+    }
 }

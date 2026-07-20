@@ -6,4 +6,13 @@
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
+
+  <!-- StyleCop + Sonar analyzers apply to production projects only (T-4400). Test projects and the
+       Prism.Tests.Shared fixture library are excluded by name: S109 on test literals is pure noise,
+       and per-analyzer calibration/coverage work in test code is not this ticket's concern. -->
+  <ItemGroup Condition="!$(MSBuildProjectName.Contains('Tests'))">
+    <PackageReference Include="StyleCop.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)SonarLint.xml" />
+  </ItemGroup>
 </Project>

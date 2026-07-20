@@ -3,6 +3,66 @@
 Done tickets, moved here by /ticket-finish to keep AGENT-TICKETS.md (read every session start) lean.
 Newest at the top.
 
+### T-4110 · Unify ONNX Runtime execution-provider policy across every model-running component in PRISM
+**Status:** Done (2026-07-20) | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-20) — all acceptance criteria met; two non-blocking warnings: (1) `UpscaleService.Create`'s throw branches have no automated regression test (model assets absent in CI; fast follow-up suggested), (2) session-load failure (vs file existence) still degrades silently for YOLO/CLIP — doc caveat added to `PRISM-model-runtime.md`, code fix out of this ticket's scope.
+**Found by:** [[T-4100]] — health-probe investigation surfaced two inconsistencies (version skew + YOLO CPU-only).
+**Implemented (2026-07-20):** CPM via new `jb/src/Directory.Packages.props` — single pin for ORT DirectML 1.24.4 plus (user-directed scope extension) ImageSharp/OpenCvSharp4/test packages; new `OnnxSessionFactory` (file-linked like `GpuProbe`) is the sole session-construction path for CLIP/YOLO/Upscale; `RuntimeProviderProbe.SessionProviders()` no longer hardcodes YOLO=CPU; conventions-hook category `onnx-session-bypass` added and verified firing; policy doc `jb/docs/PRISM-model-runtime.md` + index row + classify-doc pointer + AGENTFEEDBACK entry. Build green; full suite failure set byte-identical to HEAD baseline on the Linux CI container (failures = missing model assets + Windows-only OpenCV natives, pre-existing).
+**Scope extension (2026-07-20, user):** no algorithm switching on GPU presence — Upscale now loads Real-ESRGAN on every host (CPU EP when no adapter, like CLIP/YOLO). Follow-up user decisions the same day: `Upscaler_c_p_u` (Lanczos fallback) and the `ImageUpscaler` router are **deleted** — single `Upscaler` class; missing/unloadable Real-ESRGAN now fails startup loud (`ValidateModelAssets` + `UpscaleService.Create`), same as YOLO, no silent degradation. Decisions recorded in `PRISM-model-runtime.md`.
+**Deferred to dev box (needs model assets + Windows):** CiMini golden 5× re-verify after the 1.20.1→1.24.4 CLIP runtime bump, and live `GET /PRISM/health` `SessionRuntimeProviders` check (expect all three identical: DirectML(GPU) on the GPU box / CPU when no adapter). Do these before /ticket-finish.
+**Dev-box verification (2026-07-20):**
+1. **Build + tests: PASS.** `dotnet build jb/src/PRISM.sln` — 0 errors. `dotnet test jb/src/PRISM.sln` — fully green: 399/399 (Upscale 15, Generate 10, Transform 51, Matching 193, Core 130).
+2. **Health: PASS.** `GET /PRISM/health` → `SessionRuntimeProviders: ["CLIP=DirectML(GPU)","YOLO=DirectML(GPU)","Upscale=DirectML(GPU)"]` — all three identical, all GPU, YOLO no longer CPU-only. Caveat found while investigating step 4: `RuntimeProviderProbe.SessionProviders()` (`jb/src/api/RuntimeProviderProbe.cs:27-30`) derives all three labels from one `Upscaler.IsGpuAvailable` hardware check, not from querying each session's actual bound EP — so this endpoint cannot by itself catch a real per-model provider mismatch (e.g. one session silently falling back to CPU while `IsGpuAvailable` stays true). Not a regression from this ticket and out of the verification scope given here, but worth a follow-up ticket if that guarantee matters.
+3. **CiMini golden 5×: PASS, 5/5 byte-identical.** `Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` run 5 consecutive times, no code change between runs — every run exited 0 and reported `Full PASSED: 14 sources match golden, 14 Ok.` against the same committed `expected-manifest.json` (asserts Status/FamilyId/FinalFileName/DetOrder per source), which transitively proves all 5 runs identical to each other post the 1.20.1→1.24.4 bump.
+4. **Fail-fast: PASS, with a dev-box gotcha.** First attempt (renaming only `jb/src/core/Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus.onnx`) did **not** fail — this box has a machine-level `PRISM_ONNX_MODEL_DIR=C:\Users\JefB\prism-ci-assets\models` env var (`ModelAssetLocator`'s documented second-priority override, ahead of the source-tree walk) holding its own independent model copy, so the API started clean and healthy off that copy instead. Renamed the override-dir copy too, retried: startup now threw `Prism.Core.PrismConfigurationException: Real-ESRGAN ONNX model not found at 'Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus.onnx'...` from `PrismConfiguration.ValidateModelAssets` → `PrismApiConfiguration.Load()`, process exited, no port listener — correct fail-loud behavior, no silent fallback. Both copies restored afterward; re-verified clean healthy startup. Anyone re-running this check on a box with `PRISM_ONNX_MODEL_DIR` set must block that path too, or the test passes vacuously.
+
+**Problem:** PRISM's ONNX/model-running components are inconsistent along three axes that should be uniform:
+1. **Package version skew.** Classify (CLIP) pins `Microsoft.ML.OnnxRuntime.DirectML 1.20.1`; Upscale pins `1.24.4`. In the monolith API host both run in-process, so two versions of the same native runtime load into one address space — a latent binding/load-order risk (works today, but fragile).
+2. **Provider policy skew.** CLIP (`ImageClassifier.cs:108-111`) and Upscale (`Upscaler_g_p_u.cs:60-62`) append the DirectML EP gated on `GpuProbe.HasHardwareDirectMLAdapter()`; **YOLO (`YoloDetector.cs:65`) appends no EP at all → CPU-only always**, even on a GPU box. No shared session-options factory exists, so each site decides independently.
+3. **No mandate for future model code.** Analyzers (e.g. `Analyzer_FacePose`, `Analyzer_TextPresent`, YOLO-based ones) and future transformers (segmentation for coverage-ratio masks, etc.) will also run models, with no single policy to follow.
+
+**Mandate (2026-07-15, user):** every part of PRISM image processing that runs a model MUST use the **same ONNX Runtime DirectML package, the same version, and the same execution-provider policy** — **CPU-only always works (mandatory baseline); GPU (DirectML) used automatically when a hardware adapter is present.** Applies to CLIP, YOLO, Upscale today, and to all future analyzers and transformers. This is a sibling of [[T-3300]] (each separable service/deployable must honor the same policy independently), not of T-3500/T-3600.
+
+**What to do:**
+1. **Single version.** Centralize the ONNX Runtime DirectML package + version to one pin (central package management via `Directory.Packages.props`, or the existing `jb/src/Directory.Build.props`). Align the two engine projects to one version. **Re-verify CiMini golden 5× after the bump** — changing CLIP's runtime can shift FP results (guards [[T-2820]]'s determinism).
+2. **Single provider policy.** Introduce one shared session-options factory in core (e.g. `OnnxSessionFactory`, reusing `GpuProbe`) that appends the DirectML EP when a hardware adapter is present and falls back to CPU otherwise. Route CLIP, YOLO, and Upscale through it — YOLO gains GPU-when-present; all three become identical. No direct `AppendExecutionProvider_DML` or bare `new InferenceSession` outside the factory.
+3. **Make it mandatory + enforced.** Document the policy in `jb/docs/PRISM-classify.md` (or a dedicated model-runtime note) + `AGENTFEEDBACK.md`, and add a conventions-hook category so any new `InferenceSession` not created via the factory fails review. Covers future analyzers/transformers.
+
+**Acceptance:**
+- Exactly one ONNX Runtime DirectML package + version referenced repo-wide (grep-proven).
+- One shared session-options factory; CLIP/YOLO/Upscale all use it; no bare `InferenceSession`/`AppendExecutionProvider_DML` elsewhere.
+- `GET /PRISM/health` `SessionRuntimeProviders` shows all three consistent (all DirectML(GPU) on a GPU box; all CPU on a CPU-only box).
+- CPU-only mode fully green (forced no-adapter path); CiMini golden identical across 5 consecutive runs after version unification.
+- Documented, enforced mandatory policy for any future model-running code.
+
+**Files:** `jb/src/Directory.Build.props` (or new `Directory.Packages.props`), the three engine `.csproj`, `jb/src/core/Services/Matching/ImageClassifier.cs`, `jb/src/core/Services/Matching/Analyzers/YoloDetector.cs`, `jb/src/core/Services/Upscale/Engine/Upscaler_g_p_u.cs`, `jb/src/core/Services/Matching/GpuProbe.cs`, new `OnnxSessionFactory`, `jb/src/api/RuntimeProviderProbe.cs`, `jb/docs/PRISM-classify.md`, `AGENTFEEDBACK.md`, conventions hook.
+
+---
+
+
+### T-4600 · SSE progress events carry no per-item counts or blocked state
+**Status:** Done (2026-07-20) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-20)
+**Found by:** [[T-3400]] review (2026-07-14) — the web StatusPanel requirement that could not be met from the web side.
+
+**Problem:** `PipelineProgressEvent` (`jb/src/core/Pipeline/PipelineProgressEvent.cs`) declares `CompletedCount`/`TotalCount`/`Severity` fields, but the only place any `PipelineProgressEvent` is ever constructed is `StageProgress.EmitStarted` (`jb/src/core/Services/StageProgress.cs:24-31`). It emits exactly one `"Stage {name} started."` event per stage, with `CompletedCount`/`TotalCount` left `null` and `Severity` hardcoded to `"Information"`. No accepted/rejected count, no blocked-vs-running state, and no per-item progress is emitted anywhere in the pipeline.
+
+Consequence: the workbench can only ever display a stage *name*. `PRISM-workbench.md`'s Required Display section mandates "image collection/import state", "output preview", and "KO records" — none of which the SSE stream can currently source. T-3400 was closed on the narrower claim (real stage name replaces placeholder text) precisely because its web-only file scope made this unfixable there.
+
+**What to do:**
+1. Decide the progress contract: which stages emit per-item progress, and what an item is (per image? per family?). Import and Export are the two the workbench most needs (accepted/rejected counts).
+2. Extend `StageProgress` beyond `EmitStarted` — at minimum an `EmitProgress`/`EmitCompleted` that populates `CompletedCount`/`TotalCount`, and a real `Severity` for blocked/warning states (KO records are the obvious source).
+3. Emit from `Importer.cs` and `Exporter.cs` first (accepted/rejected are already computed there — KO records exist), then the remaining stages as warranted.
+4. Update `StatusPanel.tsx` to read `severity` (it currently ignores the field entirely — only `StageRouteList.tsx:41` reads it) and render the real counts + blocked-vs-running distinction.
+
+**Acceptance:** a running job's SSE stream carries non-null `CompletedCount`/`TotalCount` for Import and Export, and a non-`Information` `Severity` when items KO; the workbench StatusPanel shows real accepted/rejected counts and a blocked-vs-running distinction sourced from those events (no synthetic labels, per the No-Hidden-Behavior Rule).
+
+**Resolution (2026-07-20):** `StageProgress.EmitCompleted` populates `CompletedCount`/`TotalCount`/`Severity` (Warning when koCount>0). Wired from `IngestService` (Import stage, using `NormalizedImages.Count`/`ImageKoRecords+ZipKoRecords`) and `Pipeline.ExportAsync` (Export stage, using `LambdaRecords` `IsKo` split — the same records `Exporter.BuildZip` packages into OK/KO folders, after a review round caught the first pass using pipeline-wide cumulative KO counts instead of stage-scoped ones). `StatusPanel.tsx` reads `severity` and renders a blocked-state chip. Remaining stages (Classified/Matched/Ordered/Renamed/Generated/Transformed) intentionally left on `EmitStarted`-only per the ticket's own scoping — a candidate follow-up if the workbench needs mid-pipeline KO visibility before the final Export tally.
+
+**Files:** `jb/src/core/Pipeline/PipelineProgressEvent.cs`, `jb/src/core/Services/StageProgress.cs`, `jb/src/core/lib/Ingress/Importer.cs`, `jb/src/core/lib/Export/Exporter.cs`, `jb/src/workbench/web/components/StatusPanel.tsx`, `jb/docs/PRISM-workbench.md`.
+
+---
+
 ### T-3300 · Validate and complete the Phase 2 distributed-services seam
 **Status:** Done (2026-07-17) | **Profile:** P4-critical-architecture
 **Review:** Approve (2026-07-17)

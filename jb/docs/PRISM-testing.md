@@ -34,7 +34,7 @@ dotnet test jb/src/PRISM.sln --filter "FullyQualifiedName!~PipelineIntegrationTe
 | `PrismCoreTests.ImageNGP` | ImageNGP taxonomy validation |
 | `PrismCoreTests.Generate` | `IGenerateService` |
 | `PrismCoreTests.Transform` | `ITransformService` — Tx classes, pixel-level worked examples |
-| `PrismCoreTests.Upscale` | `IUpscaleService` — `Upscaler_g_p_u` init contract, tile-blend math |
+| `PrismCoreTests.Upscale` | `IUpscaleService` — `Upscaler` init contract, tile-blend math |
 | `PrismCoreTests.Export` | manifest/ZIP export |
 | `PrismCoreTests.Services` | service composition glue — `LocalArtifactStore`, service contract serialization |
 | `PrismCoreTests.ServiceHost` | `Prism.ServiceHost` HTTP round-trip — `Http*Service` clients against the standalone per-service host |

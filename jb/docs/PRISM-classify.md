@@ -66,12 +66,7 @@ Debug mode only. Writes model parameters, tensor metadata, bounded per-sample ou
 
 ## ONNX Runtime Provider Policy
 
-- **CPU is the required baseline.** Must run on local servers and laptops without GPU.
-- Only CPU-capable models permitted.
-- GPU absence must not disable model-dependent stages or fail a job.
-- GPU = bonus resource only.
-- Missing/invalid/incompatible required model files → FFAIL. GPU absence alone is not.
-- No GPU→CPU fallback path required — CPU-only is the supported configuration.
+Repo-wide policy (CLIP, YOLO, Upscale, and every future model-running component), not CLIP-specific — see `PRISM-model-runtime.md` for the full mandate, the single pinned package version, the shared `OnnxSessionFactory` construction path, and enforcement. Summary: CPU is the mandatory baseline; DirectML is used automatically when a hardware adapter is present; GPU absence never fails a job.
 
 ---
 

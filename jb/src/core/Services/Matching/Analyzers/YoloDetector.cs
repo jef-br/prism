@@ -55,19 +55,24 @@ public sealed class YoloDetector : IDisposable {
     }
 
     /// <summary>
-    /// Loads the YOLO26 ONNX model. Does not throw on a missing file — sets
-    /// <see cref="IsReady"/> to false instead; startup validation guarantees presence in production.
+    /// Loads the YOLO26 ONNX model. Does not throw on a missing file — sets <see cref="IsReady"/> to
+    /// false instead; startup validation (PrismConfiguration.ValidateModelAssets) guarantees presence
+    /// in production. A file that is present but fails to load throws
+    /// <see cref="PrismConfigurationException"/> — corrupt models never degrade silently (T-4110).
     /// </summary>
     public void Initialize( string modelPath ) {
         if (!File.Exists(modelPath)) return;
 
         try {
-            session = new InferenceSession(modelPath);
+            session = OnnxSessionFactory.Create(modelPath);
             inputName = session.InputMetadata.Keys.FirstOrDefault() ?? TensorImages;
             outputName = session.OutputMetadata.Keys.FirstOrDefault() ?? TensorOutput0;
-        } catch {
+        } catch (Exception loadException) {
             session?.Dispose();
             session = null;
+            throw new PrismConfigurationException(
+                $"YOLO26 ONNX model at '{modelPath}' is present but failed to load — the file is " +
+                $"corrupt, truncated, or an incompatible export: {loadException.Message}", loadException);
         }
     }
 

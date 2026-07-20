@@ -145,7 +145,7 @@ It derives from `InvalidOperationException`, so any `catch (InvalidOperationExce
 
 **Not** converted, deliberately: failures that are *not* config — image-too-small
 (`Tx_ProblemImageProcessor`), HTTP/WeTransfer fetch errors, `ServiceHttp` empty responses, the
-`Upscaler_g_p_u.Initialize()` lifecycle guard, and user-workbook parsing in `ExcelFileHandler` (that is
+`Upscaler.Initialize()` lifecycle guard, and user-workbook parsing in `ExcelFileHandler` (that is
 user data, not PRISM-owned config). Those keep `InvalidOperationException`.
 
 **Do not re-add a config cache.** `ConfigCache` memoized the hand-written `Load(path)` parsers

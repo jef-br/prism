@@ -3,8 +3,8 @@ using System.Runtime.InteropServices;
 namespace Prism.Services.Matching;
 
 // Probes DXGI for a hardware DX12-capable adapter (i.e. not Microsoft WARP software renderer).
-// Hardware adapter present → DirectML will run on GPU.
-// All-software or no DX12 → fall back to CPU Lanczos4.
+// Hardware adapter present → OnnxSessionFactory appends the DirectML EP → models run on GPU.
+// All-software or no DX12 → sessions run on the CPU execution provider.
 internal static class GpuProbe {
     // IDXGIFactory1 {770aae78-f26f-4dba-a829-253c83d1b387}
     private static readonly Guid IID_IDXGIFactory1 = new("770aae78-f26f-4dba-a829-253c83d1b387");

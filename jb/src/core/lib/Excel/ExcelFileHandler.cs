@@ -428,18 +428,3 @@ public sealed class ExcelFileHandler
         }
     }
 }
-
-/// <summary>
-/// Workbook data loaded from one Excel-like source file.
-/// </summary>
-public sealed record ExcelWorkbook(string SourceFile, IReadOnlyList<ExcelWorksheet> Worksheets);
-
-/// <summary>
-/// Worksheet data represented as ordered rows and cells.
-/// </summary>
-public sealed record ExcelWorksheet(string SourceFile, string Name, IReadOnlyList<ExcelWorksheetRow> Rows);
-
-/// <summary>
-/// One zero-based worksheet row.
-/// </summary>
-public sealed record ExcelWorksheetRow(int RowIndex, IReadOnlyList<string> Cells);

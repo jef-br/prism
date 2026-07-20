@@ -1,0 +1,33 @@
+root = true
+
+[*.cs]
+
+# K&R braces (house style, PRISM CLAUDE.md): opening brace stays on the same line as the
+# declaration/statement. This is the exact opposite of StyleCop's default Allman rule (SA1500),
+# which is why SA1500 is permanently suppressed below rather than fixed.
+csharp_new_line_before_open_brace = none
+
+# Floor: every analyzer diagnostic is off by default. Curated rules below opt back in explicitly
+# (T-4400) so StyleCop/Sonar noise doesn't drown the five rules this repo actually wants enforced.
+dotnet_analyzer_diagnostic.severity = none
+
+# --- Enforced (T-4400 phase plan) ---
+dotnet_diagnostic.SA1402.severity = warning
+dotnet_diagnostic.SA1649.severity = warning
+dotnet_diagnostic.SA1101.severity = warning
+dotnet_diagnostic.SA1633.severity = warning
+
+# Config-driven-design rule (no magic values inline) at compiler grade. Allowed literals are set
+# via SonarLint.xml (0, 1, -1 minimum) so structural constants don't drown empirical ones.
+dotnet_diagnostic.S109.severity = warning
+
+# --- Suppressed permanently ---
+# SA1500 enforces Allman brace placement, the opposite of the house K&R rule above. Never enable.
+dotnet_diagnostic.SA1500.severity = none
+
+# --- Suppressed for now (deferred, not rejected) ---
+# SA1025 (whitespace) and SA1503 (braces required) baselines are large mechanical cleanups
+# (424 + 320 warnings). Revisit once earlier phases are burned down; dotnet format handles most
+# of SA1025 automatically.
+dotnet_diagnostic.SA1025.severity = none
+dotnet_diagnostic.SA1503.severity = none

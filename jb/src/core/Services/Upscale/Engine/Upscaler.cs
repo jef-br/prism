@@ -5,17 +5,21 @@ using OpenCvSharp;
 namespace Prism.Services.Upscale;
 
 /// <summary>
-/// GPU path: Real-ESRGAN x2plus (DirectML, fixed ×2) → Lanczos4 top-up to exact target.
-/// Requires: Microsoft.ML.OnnxRuntime.DirectML NuGet + real-esrgan-x2plus.onnx model asset.
+/// The one PRISM upscaler: Real-ESRGAN x2plus (fixed ×2) → Lanczos4 top-up to exact target. The
+/// session comes from OnnxSessionFactory — DirectML when a hardware adapter is present, CPU otherwise
+/// (T-4110; there is no separate CPU algorithm, the same model runs everywhere).
+/// Requires: real-esrgan-x2plus.onnx model asset — startup validation fails loud without it.
 /// The committed model export has a fixed [1, 3, 64, 64] input, so images are processed in
 /// overlapping tiles (<see cref="RunTiled"/>) whose outputs are combined with a weighted blend across
 /// the overlap band (see <see cref="AccumulateTile"/>) rather than a hard cut, so no seam is visible at
 /// tile boundaries; a model exported with a dynamic input shape instead runs as a single tile covering
 /// the whole image. Call <see cref="Initialize"/> once at startup before invoking <see cref="Upscale"/>.
 /// </summary>
-public static class Upscaler_g_p_u {
+public static class Upscaler {
     private const double SrScale = 2.0;
     private const int SrScaleInt = 2;
+
+    private static readonly bool GpuAvailable = GpuProbe.HasHardwareDirectMLAdapter();
 
     // Fallback tiling parameters used when cfg_Upscale.json is missing or unreadable — see LoadTilingConfig.
     private const int DefaultTileOverlapPixels = 16;
@@ -39,17 +43,21 @@ public static class Upscaler_g_p_u {
     // pixels, so this band never contributes to the stitched output.
     private static int _discardBandPixels = DefaultDiscardBandPixels;
 
-    /// <summary>True when the Real-ESRGAN GPU session is loaded and ready for <see cref="Upscale"/>.</summary>
+    /// <summary>True when a hardware DirectML adapter was detected at startup.</summary>
+    public static bool IsGpuAvailable => GpuAvailable;
+
+    /// <summary>True when the Real-ESRGAN session is loaded and ready for <see cref="Upscale"/>.</summary>
     public static bool IsReady => _session is not null;
 
     /// <summary>
-    /// Loads the Real-ESRGAN ONNX model with the DirectML execution provider and the tiling parameters
+    /// Loads the Real-ESRGAN ONNX model via OnnxSessionFactory and the tiling parameters
     /// from <paramref name="configPath"/> (cfg_Upscale.json). Call once at startup before
     /// <see cref="Upscale"/>. Idempotent and thread-safe — a call once a session is already loaded is a
-    /// no-op. Does not throw: when the model file is missing or the session fails to load, this leaves
-    /// <see cref="IsReady"/> false so <see cref="ImageUpscaler"/> falls back to the CPU path instead of
-    /// the caller crashing. A missing or unreadable tiling config falls back to the hardcoded defaults
-    /// rather than blocking GPU session load — it is a tuning knob, not a correctness gate.
+    /// no-op. A missing model file returns silently (existence is validated loud upstream by
+    /// PrismConfiguration.ValidateModelAssets / UpscaleService.Create); a file that is present but
+    /// fails to load throws <see cref="PrismConfigurationException"/> — corrupt models never degrade
+    /// silently (T-4110). A missing or unreadable tiling config falls back to the hardcoded defaults
+    /// rather than blocking session load — it is a tuning knob, not a correctness gate.
     /// </summary>
     public static void Initialize( string modelPath, string configPath ) {
         lock (_sessionLock) {
@@ -57,9 +65,7 @@ public static class Upscaler_g_p_u {
             if (!File.Exists(modelPath)) return;
 
             try {
-                var opts = new SessionOptions();
-                opts.AppendExecutionProvider_DML(0);
-                InferenceSession session = new(modelPath, opts);
+                InferenceSession session = OnnxSessionFactory.Create(modelPath);
 
                 int[] inputDims = session.InputMetadata[TensorInput].Dimensions;
                 _tileHeight = inputDims[2] > 0 ? inputDims[2] : 0;
@@ -69,10 +75,12 @@ public static class Upscaler_g_p_u {
 
                 _session = session;
             }
-            catch {
-                // Graceful degradation — IsReady reports false; ImageUpscaler falls back to CPU.
+            catch (Exception loadException) {
                 _session?.Dispose();
                 _session = null;
+                throw new PrismConfigurationException(
+                    $"Real-ESRGAN ONNX model at '{modelPath}' is present but failed to load — the file is " +
+                    $"corrupt, truncated, or an incompatible export: {loadException.Message}", loadException);
             }
         }
     }
@@ -105,7 +113,7 @@ public static class Upscaler_g_p_u {
         InferenceSession? session = _session;
         if (session is null)
             throw new InvalidOperationException(
-                "Upscaler_g_p_u.Initialize() must be called before RunRealEsrgan.");
+                "Upscaler.Initialize() must be called before RunRealEsrgan.");
 
         using Mat bgrUint8 = Cv2.ImDecode(imageBytes, ImreadModes.Color);
         using Mat srBgrUint8 = RunTiled(session, bgrUint8);
