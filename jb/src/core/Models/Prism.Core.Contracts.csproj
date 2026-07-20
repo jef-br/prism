@@ -10,16 +10,25 @@
     <Compile Include="ImageStageStep.cs" />
     <Compile Include="ImageRecord_Base.cs" />
     <Compile Include="ImageRecord_GENERATED.cs" />
+    <Compile Include="GenerationMethod.cs" />
+    <Compile Include="GenerationStatus.cs" />
     <Compile Include="ImageRecord_INPUT.cs" />
     <Compile Include="ImageSourceKind.cs" />
     <Compile Include="ImportStatus.cs" />
     <Compile Include="ImageRecord_LAMBDA.cs" />
+    <Compile Include="TagCollection.cs" />
     <Compile Include="ImageRecord_OUTPUT.cs" />
     <Compile Include="PrismJobRequest.cs" />
+    <Compile Include="InputExcelFileRecord.cs" />
+    <Compile Include="InputZipFileRecord.cs" />
     <Compile Include="PrismJobResult.cs" />
     <Compile Include="MatchOnlyResult.cs" />
     <Compile Include="PrismProcessingParameters.cs" />
     <Compile Include="..\lib\Excel\FamilyIDRecord.cs" Link="FamilyIDRecord.cs" />
+    <Compile Include="..\lib\Excel\ExcelColumnClassification.cs" Link="ExcelColumnClassification.cs" />
+    <Compile Include="..\lib\Excel\ExcelPropertyValue.cs" Link="ExcelPropertyValue.cs" />
+    <Compile Include="..\lib\Excel\FamilyConflictEvidence.cs" Link="FamilyConflictEvidence.cs" />
+    <Compile Include="..\lib\Excel\ExcelCellAddress.cs" Link="ExcelCellAddress.cs" />
     <Compile Include="..\lib\Export\BatchManifest.cs" Link="BatchManifest.cs" />
     <Compile Include="..\lib\Export\BatchManifestSummary.cs" Link="BatchManifestSummary.cs" />
     <Compile Include="..\lib\Export\ManifestImageRow.cs" Link="ManifestImageRow.cs" />
@@ -30,6 +39,9 @@
     <Compile Include="..\Services\Matching\Classify\ImageFeatureSnapshot.cs" Link="ImageFeatureSnapshot.cs" />
     <Compile Include="..\Services\Matching\Match\MatchEvidence.cs" Link="MatchEvidence.cs" />
     <Compile Include="..\Services\Matching\Match\MatcherContribution.cs" Link="MatcherContribution.cs" />
+    <Compile Include="..\Services\Matching\Match\CandidateSummary.cs" Link="CandidateSummary.cs" />
+    <Compile Include="..\Services\Matching\Match\TokenEvidenceItem.cs" Link="TokenEvidenceItem.cs" />
+    <Compile Include="..\Services\Matching\Match\LabelEvidenceItem.cs" Link="LabelEvidenceItem.cs" />
     <Compile Include="..\Services\Matching\Order\OrderEvidence.cs" Link="OrderEvidence.cs" />
     <Compile Include="BoundingBox.cs" />
     <Compile Include="..\Services\Transform\Enum\TransformationStatus.cs" Link="TransformationStatus.cs" />

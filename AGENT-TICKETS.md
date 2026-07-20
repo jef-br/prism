@@ -122,7 +122,8 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 
 
 ### T-4400 · Adopt Roslyn analyzers: SA1402/SA1649/SA1101/SA1633/S109 (S109 priority), suppress SA1500/SA1025/SA1503
-**Status:** Ready | **Profile:** P1-feature-worker
+**Status:** Active | **Profile:** P1-feature-worker
+**Review (phase 1, 2026-07-20):** Approve. StyleCop.Analyzers/SonarAnalyzer.CSharp wired into every production project, curated root `.editorconfig`, `SonarLint.xml`, SA1402/SA1649 fixed to zero and CI-gated — verified internally consistent (no type compiled twice or dropped across the Prism.Core/Prism.Core.Contracts Include/Remove split), package versions confirmed real/current on nuget.org, SonarLint.xml schema confirmed correct for sonar-dotnet, CI `-warnaserror:SA1402,SA1649` confirmed to actually fail the build on regression. Two non-blocking follow-ups for Planner: (1) `Prism.Tests.Shared` is excluded from analyzer coverage by the `*Tests*` name match even though CLAUDE.md documents it as a non-test fixture classlib — debatable but defensible; (2) the ticket's own "verify the global `none` floor doesn't mute IDE0xxx hints" caveat was never checked. S109/SA1633/SA1101 correctly left warn-only (not silently suppressed, not prematurely gated) pending phases 2-4.
 **Found by:** 2026-07-12 analyzer baseline trial (StyleCop.Analyzers + SonarAnalyzer.CSharp on Prism.Core: 2,699 unique warnings).
 
 **Problem:** Style/config rules are enforced only at edit time (conventions hook) and by review — nothing compiler-grade catches violations from non-Claude edits or agents that bypass process. The baseline trial measured per-rule cost in Prism.Core: SA1402 (one type per file) = 9, SA1649 (file name matches type) = 1, SA1101 (`this.` prefix) = 472, SA1633 (file header) = 113, SA1025 (whitespace) = 424, SA1503 (braces required) = 320, S109 (magic numbers) = 98.
@@ -147,25 +148,6 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 ---
 
 
-### T-4600 · SSE progress events carry no per-item counts or blocked state
-**Status:** Ready | **Profile:** P1-feature-worker
-**Found by:** [[T-3400]] review (2026-07-14) — the web StatusPanel requirement that could not be met from the web side.
-
-**Problem:** `PipelineProgressEvent` (`jb/src/core/Pipeline/PipelineProgressEvent.cs`) declares `CompletedCount`/`TotalCount`/`Severity` fields, but the only place any `PipelineProgressEvent` is ever constructed is `StageProgress.EmitStarted` (`jb/src/core/Services/StageProgress.cs:24-31`). It emits exactly one `"Stage {name} started."` event per stage, with `CompletedCount`/`TotalCount` left `null` and `Severity` hardcoded to `"Information"`. No accepted/rejected count, no blocked-vs-running state, and no per-item progress is emitted anywhere in the pipeline.
-
-Consequence: the workbench can only ever display a stage *name*. `PRISM-workbench.md`'s Required Display section mandates "image collection/import state", "output preview", and "KO records" — none of which the SSE stream can currently source. T-3400 was closed on the narrower claim (real stage name replaces placeholder text) precisely because its web-only file scope made this unfixable there.
-
-**What to do:**
-1. Decide the progress contract: which stages emit per-item progress, and what an item is (per image? per family?). Import and Export are the two the workbench most needs (accepted/rejected counts).
-2. Extend `StageProgress` beyond `EmitStarted` — at minimum an `EmitProgress`/`EmitCompleted` that populates `CompletedCount`/`TotalCount`, and a real `Severity` for blocked/warning states (KO records are the obvious source).
-3. Emit from `Importer.cs` and `Exporter.cs` first (accepted/rejected are already computed there — KO records exist), then the remaining stages as warranted.
-4. Update `StatusPanel.tsx` to read `severity` (it currently ignores the field entirely — only `StageRouteList.tsx:41` reads it) and render the real counts + blocked-vs-running distinction.
-
-**Acceptance:** a running job's SSE stream carries non-null `CompletedCount`/`TotalCount` for Import and Export, and a non-`Information` `Severity` when items KO; the workbench StatusPanel shows real accepted/rejected counts and a blocked-vs-running distinction sourced from those events (no synthetic labels, per the No-Hidden-Behavior Rule).
-
-**Files:** `jb/src/core/Pipeline/PipelineProgressEvent.cs`, `jb/src/core/Services/StageProgress.cs`, `jb/src/core/lib/Ingress/Importer.cs`, `jb/src/core/lib/Export/Exporter.cs`, `jb/src/workbench/web/components/StatusPanel.tsx`, `jb/docs/PRISM-workbench.md`.
-
----
 
 
 ## Verification Rules

@@ -21,6 +21,7 @@ interface LatestStageInfo {
   completed?: number;
   total?: number;
   safeMessage?: string;
+  severity?: string;
 }
 
 export function StatusPanel({
@@ -81,15 +82,17 @@ function StageProgress({ stage }: { stage: LatestStageInfo }) {
     stage.total !== undefined && stage.total > 0
       ? Math.round(((stage.completed ?? 0) / stage.total) * 100)
       : undefined;
+  const isBlocked = stage.severity !== undefined && stage.severity !== "Information";
 
   return (
-    <div className="state-chip state-chip-active">
+    <div className={isBlocked ? "state-chip state-chip-blocked" : "state-chip state-chip-active"}>
       <strong>{stage.stageName}</strong>
       <span>
         {stage.completed !== undefined && stage.total !== undefined
           ? `${stage.completed} / ${stage.total}`
           : (stage.safeMessage ?? "In progress")}
       </span>
+      {isBlocked ? <small className="state-chip-severity">{stage.severity}</small> : null}
       <div className="progress-indicator">
         <div
           className={percent === undefined ? "progress-bar progress-bar-indeterminate" : "progress-bar"}
@@ -119,7 +122,8 @@ function getLatestStageInfo(events: PrismProgressEvent[]): LatestStageInfo | und
       stageName: stage,
       completed: readNumberField(events[i], ["completedCount", "CompletedCount"]),
       total: readNumberField(events[i], ["totalCount", "TotalCount"]),
-      safeMessage: readStringField(events[i], ["safeMessage", "SafeMessage", "message", "Message"])
+      safeMessage: readStringField(events[i], ["safeMessage", "SafeMessage", "message", "Message"]),
+      severity: readStringField(events[i], ["severity", "Severity"])
     };
   }
 

@@ -39,6 +39,10 @@ public sealed class IngestService : IIngestService
             .Select(d => $"Excel KO: {d.ReasonCode} — {d.Message}")
             .ToList();
 
+        int koRecordCount = import.ImageKoRecords.Count + import.ZipKoRecords.Count;
+
+        await StageProgress.EmitCompleted(progress, request.JobID, PipelineStageNames.Imported, import.NormalizedImages.Count, koRecordCount, cancellationToken);
+
         return new IngestResult
         {
             JobID              = request.JobID,
@@ -50,7 +54,7 @@ public sealed class IngestService : IIngestService
             OriginalExcelCount = request.ExcelRecords.Count,
             OriginalZipCount   = request.ZipFileRecords.Count,
             FirstExcelTempPath = request.ExcelRecords.Count > 0 ? request.ExcelRecords[0].TempFilePath : null,
-            KoRecordCount      = import.ImageKoRecords.Count + import.ZipKoRecords.Count,
+            KoRecordCount      = koRecordCount,
             Warnings           = warnings
         };
     }
