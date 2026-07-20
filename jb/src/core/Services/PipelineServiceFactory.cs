@@ -80,15 +80,15 @@ public static class PipelineServiceFactory
     }
 
     /// <summary>
-    /// Initializes the process-wide Real-ESRGAN GPU session (<see cref="Upscaler_g_p_u"/>) so the first
+    /// Initializes the process-wide Real-ESRGAN session (<see cref="Upscaler_g_p_u"/>) so the first
     /// Transform job that needs to upscale a below-minimum image doesn't crash (T-2800). Unlike CLIP,
     /// Upscaler_g_p_u is a static, process-wide resource, not one instance per service, and a missing
-    /// model asset is not fatal here — <see cref="ImageUpscaler"/> falls back to the CPU Lanczos4 path
+    /// model asset is not fatal here — <see cref="ImageUpscaler"/> falls back to the Lanczos4 path
     /// via <see cref="Upscaler_g_p_u.IsReady"/>. <see cref="UpscaleService.Create"/> still throws
-    /// <see cref="PrismConfigurationException"/> when DirectML is present but the model asset can't be
-    /// located (correct for its other caller, the standalone Prism.ServiceHost, which should fail fast);
-    /// that specific exception is swallowed here so a missing GPU model asset degrades to CPU instead of
-    /// blocking pipeline construction.
+    /// <see cref="PrismConfigurationException"/> when the model asset can't be located (correct for its
+    /// other caller, the standalone Prism.ServiceHost, which should fail fast); that specific exception
+    /// is swallowed here so a missing model asset degrades to the fallback instead of blocking pipeline
+    /// construction.
     /// </summary>
     private static void EnsureUpscalerReady(PrismConfiguration configuration)
     {

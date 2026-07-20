@@ -5,8 +5,9 @@ using OpenCvSharp;
 namespace Prism.Services.Upscale;
 
 /// <summary>
-/// GPU path: Real-ESRGAN x2plus (DirectML, fixed ×2) → Lanczos4 top-up to exact target.
-/// Requires: Microsoft.ML.OnnxRuntime.DirectML NuGet + real-esrgan-x2plus.onnx model asset.
+/// Model path: Real-ESRGAN x2plus (fixed ×2) → Lanczos4 top-up to exact target. The session comes
+/// from OnnxSessionFactory — DirectML when a hardware adapter is present, CPU otherwise (T-4110).
+/// Requires: real-esrgan-x2plus.onnx model asset.
 /// The committed model export has a fixed [1, 3, 64, 64] input, so images are processed in
 /// overlapping tiles (<see cref="RunTiled"/>) whose outputs are combined with a weighted blend across
 /// the overlap band (see <see cref="AccumulateTile"/>) rather than a hard cut, so no seam is visible at
@@ -43,7 +44,7 @@ public static class Upscaler_g_p_u {
     public static bool IsReady => _session is not null;
 
     /// <summary>
-    /// Loads the Real-ESRGAN ONNX model with the DirectML execution provider and the tiling parameters
+    /// Loads the Real-ESRGAN ONNX model via OnnxSessionFactory and the tiling parameters
     /// from <paramref name="configPath"/> (cfg_Upscale.json). Call once at startup before
     /// <see cref="Upscale"/>. Idempotent and thread-safe — a call once a session is already loaded is a
     /// no-op. Does not throw: when the model file is missing or the session fails to load, this leaves

@@ -42,6 +42,8 @@ It's `internal`, file-linked (via `<Compile Include>`) into every project that l
 
 Adding a new model-running component (a new analyzer, a segmentation transformer, etc.): file-link `OnnxSessionFactory.cs` into its project next to `GpuProbe.cs`, call `OnnxSessionFactory.Create(modelPath)` inside its own `Initialize()`, and keep the surrounding lifecycle (validate → initialize → try/catch/finally → `IDisposable`) exactly as CLIP/YOLO/Upscale already do. Do not write a new probe-and-append block — that duplication is exactly what T-4110 removed.
 
+**No algorithm switching on GPU presence (2026-07-20, user decision).** A component must never gate *loading its model* on `GpuProbe`/`IsGpuAvailable` — the model loads on every host and the factory alone decides the execution provider. Upscale was the last violator: it used to skip Real-ESRGAN entirely without a GPU and silently swap in Lanczos4 (capped ×1.42). Now `UpscaleService.Create` initializes the model unconditionally; the Lanczos4 fallback (`Upscaler_c_p_u`) remains only for a missing/failed model asset (the monolith's T-2800 degrade path), never as a CPU-mode substitute.
+
 ---
 
 ## Enforcement

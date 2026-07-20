@@ -52,7 +52,7 @@ if (Hosts("transform"))
     // With PRISM_UPSCALE_URL set, this transform host delegates upscaling to the remote Upscale host and
     // needs no local Real-ESRGAN session. Otherwise it upscales below-minimum images via the static
     // Upscaler_g_p_u (T-2800), mirroring the in-process pipeline's semantics
-    // (PipelineServiceFactory.EnsureUpscalerReady): a missing GPU model degrades to the CPU Lanczos4
+    // (PipelineServiceFactory.EnsureUpscalerReady): a missing model asset degrades to the Lanczos4
     // fallback instead of blocking transform hosting.
     ITransformService transform;
     string? upscaleUrl = Environment.GetEnvironmentVariable(PipelineServiceFactory.UpscaleUrlVariable);
@@ -73,7 +73,7 @@ if (Hosts("transform"))
 
 if (Hosts("upscale"))
 {
-    // Dedicated upscale hosting fails fast: DirectML present but no model asset → no host.
+    // Dedicated upscale hosting fails fast: no model asset → no host (any machine; T-4110).
     IUpscaleService upscale = UpscaleService.Create(configuration);
     app.MapPost(PrismServiceRoutes.Upscale, async (UpscaleRequest request, CancellationToken ct) =>
         Results.Json(await upscale.UpscaleAsync(request.ImageBytes, request.ScaleFactor, ct)));
