@@ -53,10 +53,11 @@ public static class Upscaler {
     /// Loads the Real-ESRGAN ONNX model via OnnxSessionFactory and the tiling parameters
     /// from <paramref name="configPath"/> (cfg_Upscale.json). Call once at startup before
     /// <see cref="Upscale"/>. Idempotent and thread-safe — a call once a session is already loaded is a
-    /// no-op. Does not throw: a missing model file or failed session load leaves <see cref="IsReady"/>
-    /// false, and the caller (<see cref="UpscaleService.Create"/>) is responsible for failing loud on
-    /// that. A missing or unreadable tiling config falls back to the hardcoded defaults rather than
-    /// blocking session load — it is a tuning knob, not a correctness gate.
+    /// no-op. A missing model file returns silently (existence is validated loud upstream by
+    /// PrismConfiguration.ValidateModelAssets / UpscaleService.Create); a file that is present but
+    /// fails to load throws <see cref="PrismConfigurationException"/> — corrupt models never degrade
+    /// silently (T-4110). A missing or unreadable tiling config falls back to the hardcoded defaults
+    /// rather than blocking session load — it is a tuning knob, not a correctness gate.
     /// </summary>
     public static void Initialize( string modelPath, string configPath ) {
         lock (_sessionLock) {
@@ -74,10 +75,12 @@ public static class Upscaler {
 
                 _session = session;
             }
-            catch {
-                // IsReady stays false — UpscaleService.Create turns that into a loud startup failure.
+            catch (Exception loadException) {
                 _session?.Dispose();
                 _session = null;
+                throw new PrismConfigurationException(
+                    $"Real-ESRGAN ONNX model at '{modelPath}' is present but failed to load — the file is " +
+                    $"corrupt, truncated, or an incompatible export: {loadException.Message}", loadException);
             }
         }
     }

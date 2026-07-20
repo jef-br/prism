@@ -47,6 +47,25 @@ public class UpscalerTests
     }
 
     [Fact]
+    public void Initialize_CorruptModelFile_ThrowsPrismConfigurationException()
+    {
+        string corruptPath = Path.Combine(Path.GetTempPath(), $"corrupt-upscaler-{Guid.NewGuid():N}.onnx");
+        File.WriteAllBytes(corruptPath, [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02, 0x03]);
+
+        try
+        {
+            PrismConfigurationException exception = Assert.Throws<PrismConfigurationException>(
+                () => Upscaler.Initialize(corruptPath, NonexistentConfigPath));
+            Assert.Contains("corrupt", exception.Message);
+            Assert.False(Upscaler.IsReady);
+        }
+        finally
+        {
+            File.Delete(corruptPath);
+        }
+    }
+
+    [Fact]
     public async Task Initialize_ConcurrentCallsWithNonexistentPath_DoNotDeadlock()
     {
         Task[] tasks = Enumerable.Range(0, 8)

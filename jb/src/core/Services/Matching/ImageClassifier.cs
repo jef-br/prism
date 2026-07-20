@@ -94,7 +94,10 @@ public sealed class ImageClassifier : IDisposable
 
     /// <summary>
     /// Loads the CLIP ONNX model and BPE tokenizer from the supplied paths.
-    /// Does not throw on missing files — sets <see cref="IsReady"/> to false instead.
+    /// Does not throw on missing files — sets <see cref="IsReady"/> to false instead; startup
+    /// validation (ClassificationService.ResolveClassifierPaths) guarantees presence in production.
+    /// A model or tokenizer file that is present but fails to load throws
+    /// <see cref="PrismConfigurationException"/> — corrupt assets never degrade silently (T-4110).
     /// </summary>
     /// <param name="modelPath">Absolute path to model_uint8.onnx.</param>
     /// <param name="vocabPath">Absolute path to vocab.json.</param>
@@ -124,13 +127,15 @@ public sealed class ImageClassifier : IDisposable
             if (File.Exists(vocabPath) && File.Exists(mergesPath))
                 tokenizer = new ClipTokenizer(vocabPath, mergesPath);
         }
-        catch
+        catch (Exception loadException)
         {
-            // Graceful degradation — classifier reports IsReady = false.
             session?.Dispose();
             session   = null;
             tokenizer = null;
             supportsTextEncoding = false;
+            throw new PrismConfigurationException(
+                $"CLIP ONNX assets at '{modelPath}' are present but failed to load — a file is " +
+                $"corrupt, truncated, or an incompatible export: {loadException.Message}", loadException);
         }
     }
 

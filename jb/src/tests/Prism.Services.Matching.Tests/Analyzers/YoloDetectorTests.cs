@@ -75,4 +75,24 @@ public class YoloDetectorTests
         using var image = new Image<Rgba32>(64, 64);
         Assert.Empty(detector.Detect(image, YoloCfg));
     }
+
+    [Fact]
+    public void Initialize_WithCorruptFile_ThrowsPrismConfigurationException()
+    {
+        string corruptPath = Path.Combine(Path.GetTempPath(), $"corrupt-yolo-{Guid.NewGuid():N}.onnx");
+        File.WriteAllBytes(corruptPath, [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02, 0x03]);
+
+        try
+        {
+            using var detector = new YoloDetector();
+            PrismConfigurationException exception = Assert.Throws<PrismConfigurationException>(
+                () => detector.Initialize(corruptPath));
+            Assert.Contains("corrupt", exception.Message);
+            Assert.False(detector.IsReady);
+        }
+        finally
+        {
+            File.Delete(corruptPath);
+        }
+    }
 }

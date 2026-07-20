@@ -14,7 +14,8 @@ public sealed class UpscaleService : IUpscaleService {
     /// Resolves the Real-ESRGAN model asset and tiling config and initializes the model session on
     /// every host — the execution provider (DirectML vs CPU) is the factory's decision, not a load
     /// gate. Throws <see cref="PrismConfigurationException"/> when the model asset or tiling config
-    /// cannot be located, or when the session fails to load — there is no fallback upscaler (T-4110).
+    /// cannot be located, or (from <see cref="Upscaler.Initialize"/>) when the model file is present
+    /// but corrupt — there is no fallback upscaler (T-4110).
     /// </summary>
     public static UpscaleService Create( PrismConfiguration configuration ) {
         string? modelPath = ModelAssetLocator.Find(configuration.UpscaleModelPath);
@@ -32,11 +33,6 @@ public sealed class UpscaleService : IUpscaleService {
                 "to Prism_Config.json, or set PRISM_ONNX_MODEL_DIR.");
 
         Upscaler.Initialize(modelPath, configPath);
-
-        if (!Upscaler.IsReady)
-            throw new PrismConfigurationException(
-                $"Real-ESRGAN ONNX session failed to load from '{modelPath}' — the model file is present " +
-                "but unusable (corrupt, truncated, or incompatible export).");
 
         return new UpscaleService();
     }
