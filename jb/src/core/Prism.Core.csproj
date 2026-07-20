@@ -6,6 +6,10 @@
     <Compile Remove="lib\Export\BatchManifestSummary.cs" />
     <Compile Remove="lib\Export\ManifestImageRow.cs" />
     <Compile Remove="lib\Excel\FamilyIDRecord.cs" />
+    <Compile Remove="lib\Excel\ExcelColumnClassification.cs" />
+    <Compile Remove="lib\Excel\ExcelPropertyValue.cs" />
+    <Compile Remove="lib\Excel\FamilyConflictEvidence.cs" />
+    <Compile Remove="lib\Excel\ExcelCellAddress.cs" />
     <Compile Remove="config\ConfigLoader.cs" />
     <Compile Remove="config\IValidatableConfig.cs" />
     <Compile Remove="config\ModelAssetLocator.cs" />
@@ -26,6 +30,9 @@
     <Compile Remove="Services\Matching\Match\MatchEvidence.cs" />
     <Compile Remove="Services\Matching\Match\MatcherContribution.cs" />
     <Compile Remove="Services\Matching\Match\MatchType.cs" />
+    <Compile Remove="Services\Matching\Match\CandidateSummary.cs" />
+    <Compile Remove="Services\Matching\Match\TokenEvidenceItem.cs" />
+    <Compile Remove="Services\Matching\Match\LabelEvidenceItem.cs" />
     <Compile Remove="Services\Matching\Order\OrderEvidence.cs" />
   </ItemGroup>
 
