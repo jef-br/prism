@@ -11,8 +11,8 @@
        Prism.Tests.Shared fixture library are excluded by name: S109 on test literals is pure noise,
        and per-analyzer calibration/coverage work in test code is not this ticket's concern. -->
   <ItemGroup Condition="!$(MSBuildProjectName.Contains('Tests'))">
-    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.29.0.143774" PrivateAssets="all" />
+    <PackageReference Include="StyleCop.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="all" />
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)SonarLint.xml" />
   </ItemGroup>
 </Project>
