@@ -246,6 +246,17 @@ button:disabled {
   background: var(--prism-color-error-soft);
 }
 
+.state-chip-blocked {
+  border-color: var(--prism-color-warm);
+}
+
+.state-chip-severity {
+  color: var(--prism-color-warning);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .error-detail {
   display: grid;
   gap: 8px;

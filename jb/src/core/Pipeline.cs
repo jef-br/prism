@@ -115,7 +115,9 @@ internal sealed class Pipeline : IDisposable
         CancellationToken cancellationToken)
     {
         await StageProgress.EmitStarted(progress, request.JobID, PipelineStageNames.Exported, cancellationToken);
-        return Exporter.Run(BuildExportRequest(transformed, generatedImages, request));
+        ExportArtifacts artifacts = Exporter.Run(BuildExportRequest(transformed, generatedImages, request));
+        await StageProgress.EmitCompleted(progress, request.JobID, PipelineStageNames.Exported, artifacts.Manifest.Summary.OkTransformed, artifacts.Manifest.Summary.KoRecords, cancellationToken);
+        return artifacts;
     }
 
     /// <summary>
