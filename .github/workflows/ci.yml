@@ -22,9 +22,10 @@ jobs:
       - name: Build solution (Release)
         shell: pwsh
         # T-4400 phase 1: SA1402 (one type per file) and SA1649 (file name matches type) are
-        # CI-gated as errors now that both are at zero warnings. Later phases (S109, SA1633,
-        # SA1101) get their own -warnaserror once each is burned down.
-        run: dotnet build jb/src/PRISM.sln -c Release --nologo -warnaserror:SA1402,SA1649
+        # CI-gated as errors now that both are at zero warnings. T-4400 phase 2: S109 (magic
+        # numbers) joins the gate now that the repo-wide triage is complete. Later phases
+        # (SA1633, SA1101) get their own -warnaserror once each is burned down.
+        run: dotnet build jb/src/PRISM.sln -c Release --nologo -warnaserror:SA1402,SA1649,S109
 
       - name: Unit tests (xUnit)
         shell: pwsh

@@ -67,9 +67,11 @@ public static class ImageTransformer {
     /// disqualifying it from <see cref="Tx_DetailCropper"/> routing.
     /// Default products exclude slots 0–2; clothing products (<c>clothing-*</c>) exclude slots 0–1.
     /// </summary>
+    private const int DefaultDetSlotExclusionMax = 2;
+
     private static bool IsDetailCropperDetSlotExcluded( ImageRecord_LAMBDA lambda ) {
         bool isClothing = lambda.ProductTypeId?.StartsWith("clothing-", System.StringComparison.OrdinalIgnoreCase) == true;
-        return isClothing ? lambda.DetOrder <= 1 : lambda.DetOrder <= 2;
+        return isClothing ? lambda.DetOrder <= 1 : lambda.DetOrder <= DefaultDetSlotExclusionMax;
     }
     private static bool hasEdgeIntersect( ImageFeatureSnapshot ImgFeat ) {
         return ImgFeat.GetValue("intersects-top") == "true" || ImgFeat.GetValue("intersects-bottom") == "true" || ImgFeat.GetValue("intersects-left") == "true" || ImgFeat.GetValue("intersects-right") == "true";

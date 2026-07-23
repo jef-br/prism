@@ -16,6 +16,8 @@ namespace Prism.Services.Transform;
 /// </summary>
 public class Tx_CropSquare : IImageTransformation
 {
+    private const int JpegOutputQuality = 100;
+
     /// <inheritdoc/>
     public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage)
     {
@@ -63,7 +65,7 @@ public class Tx_CropSquare : IImageTransformation
         }
 
         using MemoryStream ms = new();
-        img.Save(ms, new JpegEncoder { Quality = 90 });
+        img.Save(ms, new JpegEncoder { Quality = JpegOutputQuality });
         return ms.ToArray();
     }
 

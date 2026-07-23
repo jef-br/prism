@@ -11,8 +11,7 @@ namespace Prism.Services.Matching;
 /// token profile {cardigan, magenta}. An unmatched image inherits a FamilyID only when every
 /// profile-related matched sibling agrees on one family.
 /// </summary>
-internal sealed class SiblingPropagator
-{
+internal sealed class SiblingPropagator {
     private static readonly Regex TokenSplitPattern = new(@"[^a-zA-Z0-9]+", RegexOptions.Compiled);
 
     // Splits mixed tokens at letter↔digit boundaries: "magenta76" → ["magenta", "76"].
@@ -32,19 +31,26 @@ internal sealed class SiblingPropagator
     // legitimately share its tokens, and small batches must not have their profiles emptied.
     private const int CommonTokenFloor = 10;
 
+    // SiblingPropagation match confidence — empirical calibration, see Match/jbtodo.md.
+    private const double SiblingPropagationConfidence = 0.9;
+
+    // Minimum shared rare tokens for two profiles to be considered related.
+    private const int MinCommonTokens = 2;
+
+    // A single shared token this long or longer counts as reference-grade identity on its own.
+    private const int ReferenceGradeTokenLength = 5;
+
     /// <summary>
     /// Assigns FamilyIDs to unmatched records whose rare-token profile is a subset or superset of
     /// exactly one matched family's profiles. Returns the records still unmatched afterwards.
     /// </summary>
     /// <param name="unmatched">Records without a FamilyID after all earlier brackets.</param>
     /// <param name="allRecords">All LAMBDA records; matched ones provide the propagation sources.</param>
-    internal List<ImageRecord_LAMBDA> Run(List<ImageRecord_LAMBDA> unmatched, List<ImageRecord_LAMBDA> allRecords)
-    {
+    internal List<ImageRecord_LAMBDA> Run(List<ImageRecord_LAMBDA> unmatched, List<ImageRecord_LAMBDA> allRecords) {
         Dictionary<string, int> batchTokenCounts = CountBatchTokens(allRecords);
 
         List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> matchedProfiles = [];
-        foreach (ImageRecord_LAMBDA record in allRecords)
-        {
+        foreach (ImageRecord_LAMBDA record in allRecords) {
             if (record.IsKo || record.MatchEvidence?.FinalFamilyId is null)
                 continue;
 
@@ -68,29 +74,25 @@ internal sealed class SiblingPropagator
 
         List<ImageRecord_LAMBDA> stillUnmatched = [];
 
-        foreach (ImageRecord_LAMBDA record in unmatched)
-        {
+        foreach (ImageRecord_LAMBDA record in unmatched) {
             HashSet<string> profile = BuildProfile(record.MatchingName);
             RemoveBatchCommonTokens(profile, batchTokenCounts, allRecords.Count);
 
-            if (profile.Count == 0)
-            {
+            if (profile.Count == 0) {
                 stillUnmatched.Add(record);
                 continue;
             }
 
             // Tier 1: exact-profile membership — this photo is another shot of a known product set.
             string profileKey = ProfileKey(profile);
-            if (familyByExactProfile.TryGetValue(profileKey, out string? exactFamily))
-            {
+            if (familyByExactProfile.TryGetValue(profileKey, out string? exactFamily)) {
                 AssignSibling(record, exactFamily, profile, $"same shot set as family {exactFamily}");
                 continue;
             }
 
             // Tier 2: loose relation — subset/superset overlap, refused when related siblings disagree.
             (string? familyId, string? siblingName) = FindLooseRelation(profile, matchedProfiles);
-            if (familyId is null)
-            {
+            if (familyId is null) {
                 stillUnmatched.Add(record);
                 continue;
             }
@@ -106,12 +108,10 @@ internal sealed class SiblingPropagator
     /// carried by matched images of two or more different families (ambiguous, unsafe to propagate).
     /// </summary>
     private static Dictionary<string, string> BuildExactProfileOwners(
-        List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> matchedProfiles)
-    {
+        List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> matchedProfiles) {
         Dictionary<string, string?> owner = new(StringComparer.Ordinal);
 
-        foreach ((ImageRecord_LAMBDA record, HashSet<string> profile) in matchedProfiles)
-        {
+        foreach ((ImageRecord_LAMBDA record, HashSet<string> profile) in matchedProfiles) {
             string key = ProfileKey(profile);
             string family = record.MatchEvidence!.FinalFamilyId!;
 
@@ -132,25 +132,21 @@ internal sealed class SiblingPropagator
     /// </summary>
     private static (string? FamilyId, string? SiblingName) FindLooseRelation(
         HashSet<string> profile,
-        List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> matchedProfiles)
-    {
+        List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> matchedProfiles) {
         string? familyId = null;
         string? siblingName = null;
 
-        foreach ((ImageRecord_LAMBDA sibling, HashSet<string> siblingProfile) in matchedProfiles)
-        {
+        foreach ((ImageRecord_LAMBDA sibling, HashSet<string> siblingProfile) in matchedProfiles) {
             if (!ProfilesAreRelated(profile, siblingProfile))
                 continue;
 
             string siblingFamilyId = sibling.MatchEvidence!.FinalFamilyId!;
 
-            if (familyId is null)
-            {
+            if (familyId is null) {
                 familyId = siblingFamilyId;
                 siblingName = Path.GetFileName(sibling.InitialFullName ?? string.Empty);
             }
-            else if (!familyId.Equals(siblingFamilyId, StringComparison.OrdinalIgnoreCase))
-            {
+            else if (!familyId.Equals(siblingFamilyId, StringComparison.OrdinalIgnoreCase)) {
                 return (null, null); // related siblings disagree → refuse
             }
         }
@@ -159,23 +155,21 @@ internal sealed class SiblingPropagator
     }
 
     /// <summary>Writes the sibling-propagation match evidence onto a record.</summary>
-    private static void AssignSibling(ImageRecord_LAMBDA record, string familyId, HashSet<string> profile, string reason)
-    {
+    private static void AssignSibling(ImageRecord_LAMBDA record, string familyId, HashSet<string> profile, string reason) {
         string filename = record.MatchingName;
         string stem = Path.GetFileNameWithoutExtension(filename);
         const string matcherName = "SiblingPropagator";
 
-        record.MatchEvidence = new MatchEvidence
-        {
-            ImageId             = stem,
-            SourceFilename      = record.InitialFullName ?? filename,
-            FinalFamilyId       = familyId,
-            FinalScore          = 0.9,
-            IsKo                = false,
+        record.MatchEvidence = new MatchEvidence {
+            ImageId = stem,
+            SourceFilename = record.InitialFullName ?? filename,
+            FinalFamilyId = familyId,
+            FinalScore = SiblingPropagationConfidence,
+            IsKo = false,
             AcceptedMatcherName = matcherName,
-            TopCandidates       = [new CandidateSummary(familyId, 0.9, matcherName)],
-            ImageNgpSummary     = record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}",
-            SafeExplanation     = $"SiblingPropagation: rare token profile [{string.Join(", ", profile.OrderBy(t => t, StringComparer.Ordinal))}] {reason}."
+            TopCandidates = [new CandidateSummary(familyId, SiblingPropagationConfidence, matcherName)],
+            ImageNgpSummary = record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}",
+            SafeExplanation = $"SiblingPropagation: rare token profile [{string.Join(", ", profile.OrderBy(t => t, StringComparer.Ordinal))}] {reason}."
         };
     }
 
@@ -187,15 +181,12 @@ internal sealed class SiblingPropagator
     /// Reduces a filename stem to its rare-token identity profile: lowercased, diacritics stripped,
     /// split on separators and letter↔digit boundaries, shot descriptors and short digit runs removed.
     /// </summary>
-    private static HashSet<string> BuildProfile(string filename)
-    {
+    private static HashSet<string> BuildProfile(string filename) {
         string stem = NormalizeDiacritics(Path.GetFileNameWithoutExtension(filename).ToLowerInvariant());
         HashSet<string> profile = new(StringComparer.Ordinal);
 
-        foreach (string raw in TokenSplitPattern.Split(stem))
-        {
-            foreach (string part in AlphaDigitBoundaryPattern.Split(raw))
-            {
+        foreach (string raw in TokenSplitPattern.Split(stem)) {
+            foreach (string part in AlphaDigitBoundaryPattern.Split(raw)) {
                 if (part.Length < 2 || ShotSuffixPattern.IsMatch(part))
                     continue;
 
@@ -207,14 +198,11 @@ internal sealed class SiblingPropagator
     }
 
     /// <summary>Counts how many batch images carry each profile token, for common-token removal.</summary>
-    private static Dictionary<string, int> CountBatchTokens(List<ImageRecord_LAMBDA> allRecords)
-    {
+    private static Dictionary<string, int> CountBatchTokens(List<ImageRecord_LAMBDA> allRecords) {
         Dictionary<string, int> counts = new(StringComparer.Ordinal);
 
-        foreach (ImageRecord_LAMBDA record in allRecords)
-        {
-            foreach (string token in BuildProfile(record.MatchingName))
-            {
+        foreach (ImageRecord_LAMBDA record in allRecords) {
+            foreach (string token in BuildProfile(record.MatchingName)) {
                 counts[token] = counts.TryGetValue(token, out int count) ? count + 1 : 1;
             }
         }
@@ -226,8 +214,7 @@ internal sealed class SiblingPropagator
     /// Removes tokens present in more than CommonTokenRatio of the batch (brand/collection noise).
     /// Never removes below CommonTokenFloor carriers, so sibling-shared tokens survive in small batches.
     /// </summary>
-    private static void RemoveBatchCommonTokens(HashSet<string> profile, Dictionary<string, int> batchTokenCounts, int batchSize)
-    {
+    private static void RemoveBatchCommonTokens(HashSet<string> profile, Dictionary<string, int> batchTokenCounts, int batchSize) {
         double threshold = Math.Max(CommonTokenFloor, batchSize * CommonTokenRatio);
         profile.RemoveWhere(token =>
             batchTokenCounts.TryGetValue(token, out int count) && count > threshold);
@@ -237,8 +224,7 @@ internal sealed class SiblingPropagator
     /// True when one profile contains the other and they share enough identity: at least two common
     /// tokens, or one common token of five characters or more (a reference-grade token).
     /// </summary>
-    private static bool ProfilesAreRelated(HashSet<string> profile, HashSet<string> siblingProfile)
-    {
+    private static bool ProfilesAreRelated(HashSet<string> profile, HashSet<string> siblingProfile) {
         if (profile.Count == 0 || siblingProfile.Count == 0)
             return false;
 
@@ -247,16 +233,14 @@ internal sealed class SiblingPropagator
             return false;
 
         int common = profile.Count(siblingProfile.Contains);
-        return common >= 2 || profile.Any(t => t.Length >= 5 && siblingProfile.Contains(t));
+        return common >= MinCommonTokens || profile.Any(t => t.Length >= ReferenceGradeTokenLength && siblingProfile.Contains(t));
     }
 
-    private static string NormalizeDiacritics(string input)
-    {
+    private static string NormalizeDiacritics(string input) {
         string decomposed = input.Normalize(NormalizationForm.FormD);
         StringBuilder builder = new(decomposed.Length);
 
-        foreach (char ch in decomposed)
-        {
+        foreach (char ch in decomposed) {
             if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
                 builder.Append(ch);
         }

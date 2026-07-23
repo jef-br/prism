@@ -6,72 +6,40 @@ using System.Text;
 
 namespace Prism.Lib.Zip;
 
-/// <summary>
-/// Reads central-directory metadata needed by the zip foundation module.
-/// </summary>
-internal static class ZipCentralDirectoryReader
-{
-    private const uint EndOfCentralDirectorySignature = 0x06054B50;
-    private const uint CentralDirectoryHeaderSignature = 0x02014B50;
-    private const uint Zip64EndOfCentralDirectoryLocatorSignature = 0x07064B50;
-    private const uint Zip64EndOfCentralDirectorySignature = 0x06064B50;
-    private const ushort EncryptedEntryFlag = 0x0001;
-    private const ushort Utf8EntryNameFlag = 0x0800;
-    private const int EndOfCentralDirectoryMinimumLength = 22;
-    private const int Zip64EndOfCentralDirectoryLocatorLength = 20;
-    private const int Zip64EndOfCentralDirectoryFixedLength = 56;
-    private const int MaximumZipCommentBytes = 65_535;
-    private const int CentralDirectoryFixedHeaderLength = 46;
+/// <summary> Reads central-directory metadata needed by the zip foundation module. </summary>
+internal static class ZipCentralDirectoryReader {
 
-    /// <summary>
-    /// Reads encryption flags by entry name from a zip file central directory.
-    /// </summary>
+    /// <summary> Reads encryption flags by entry name from a zip file central directory. </summary>
     /// <param name="zipFilePath">Path to the zip archive.</param>
     /// <returns>A dictionary where each key is an entry name and each value indicates encryption.</returns>
-    public static IReadOnlyDictionary<string, bool> ReadEncryptionFlagsByEntryName(string zipFilePath)
-    {
+    public static IReadOnlyDictionary<string, bool> ReadEncryptionFlagsByEntryName(string zipFilePath) {
         using FileStream zipStream = File.OpenRead(zipFilePath);
         long centralDirectoryOffset = FindCentralDirectoryOffset(zipStream);
         return ReadCentralDirectoryEntries(zipStream, centralDirectoryOffset);
     }
 
-    /// <summary>
-    /// Finds the central-directory offset by reading the end-of-central-directory record.
-    /// </summary>
+    /// <summary> Finds the central-directory offset by reading the end-of-central-directory record. </summary>
     /// <param name="zipStream">Seekable zip file stream.</param>
     /// <returns>The central-directory offset.</returns>
-    private static long FindCentralDirectoryOffset(FileStream zipStream)
-    {
-        if (zipStream.Length < EndOfCentralDirectoryMinimumLength)
-        {
-            throw new InvalidDataException("The zip archive is too small to contain a central directory.");
-        }
+    private static long FindCentralDirectoryOffset(FileStream zipStream) {
 
-        int bytesToRead = (int)Math.Min(
-            zipStream.Length,
-            EndOfCentralDirectoryMinimumLength + MaximumZipCommentBytes);
-
+#pragma warning disable S109
+        if (zipStream.Length < 22) throw new InvalidDataException("The zip archive is too small to contain a central directory.");
+        int maxCommentBytes = 65_535;
+        int bytesToRead = (int)Math.Min(zipStream.Length, 22 + maxCommentBytes);
         byte[] tailBytes = new byte[bytesToRead];
         zipStream.Seek(zipStream.Length - bytesToRead, SeekOrigin.Begin);
         ReadExactly(zipStream, tailBytes);
 
-        for (int offset = tailBytes.Length - EndOfCentralDirectoryMinimumLength; offset >= 0; offset--)
-        {
+#pragma warning disable S109
+        for (int offset = tailBytes.Length - 22; offset >= 0; offset--) {
+
             uint signature = BinaryPrimitives.ReadUInt32LittleEndian(tailBytes.AsSpan(offset, 4));
-            if (signature != EndOfCentralDirectorySignature)
-            {
-                continue;
-            }
+            if (signature != 0x06054B50) continue;
 
-            uint centralDirectoryOffset = BinaryPrimitives.ReadUInt32LittleEndian(
-                tailBytes.AsSpan(offset + 16, 4));
-
-            if (centralDirectoryOffset == uint.MaxValue)
-            {
-                // ZIP64 archive: the real offset lives in the ZIP64 end-of-central-directory
-                // record, located via the 20-byte locator that immediately precedes the EOCD.
-                return FindZip64CentralDirectoryOffset(zipStream, tailBytes, offset);
-            }
+            uint centralDirectoryOffset = BinaryPrimitives.ReadUInt32LittleEndian(tailBytes.AsSpan(offset + 16, 4));
+            // ZIP64 archive: the real offset lives in the ZIP64 end-of-central-directory record, located via the 20-byte locator that immediately precedes the EOCD.
+            if (centralDirectoryOffset == uint.MaxValue) return FindZip64CentralDirectoryOffset(zipStream, tailBytes, offset);
 
             return centralDirectoryOffset;
         }
@@ -79,82 +47,59 @@ internal static class ZipCentralDirectoryReader
         throw new InvalidDataException("The zip archive does not contain a central directory.");
     }
 
-    /// <summary>
-    /// Resolves the central-directory offset of a ZIP64 archive by following the ZIP64
-    /// end-of-central-directory locator to the ZIP64 end-of-central-directory record.
-    /// </summary>
+    /// <summary> Resolves the central-directory offset of a ZIP64 archive by following the ZIP64 end-of-central-directory locator to the ZIP64 end-of-central-directory record./// </summary>
     /// <param name="zipStream">Seekable zip file stream.</param>
     /// <param name="tailBytes">Tail bytes already read from the stream.</param>
     /// <param name="endOfCentralDirectoryOffset">Offset of the classic EOCD record inside <paramref name="tailBytes"/>.</param>
     /// <returns>The 64-bit central-directory offset.</returns>
-    private static long FindZip64CentralDirectoryOffset(FileStream zipStream, byte[] tailBytes, int endOfCentralDirectoryOffset)
-    {
-        int locatorOffset = endOfCentralDirectoryOffset - Zip64EndOfCentralDirectoryLocatorLength;
-        if (locatorOffset < 0 ||
-            BinaryPrimitives.ReadUInt32LittleEndian(tailBytes.AsSpan(locatorOffset, 4)) != Zip64EndOfCentralDirectoryLocatorSignature)
-        {
-            throw new InvalidDataException("The ZIP64 end-of-central-directory locator is missing.");
-        }
+    private static long FindZip64CentralDirectoryOffset(FileStream zipStream, byte[] tailBytes, int endOfCentralDirectoryOffset) {
+        int locatorOffset = endOfCentralDirectoryOffset - 20;
 
-        long zip64RecordOffset = checked((long)BinaryPrimitives.ReadUInt64LittleEndian(
-            tailBytes.AsSpan(locatorOffset + 8, 8)));
+#pragma warning disable S109
+        if (locatorOffset < 0 || BinaryPrimitives.ReadUInt32LittleEndian(tailBytes.AsSpan(locatorOffset, 4)) != 0x07064B50) throw new InvalidDataException("The ZIP64 end-of-central-directory locator is missing.");
+        long zip64RecordOffset = checked((long)BinaryPrimitives.ReadUInt64LittleEndian(tailBytes.AsSpan(locatorOffset + 8, 8)));
 
-        if (zip64RecordOffset < 0 || zip64RecordOffset + Zip64EndOfCentralDirectoryFixedLength > zipStream.Length)
-        {
-            throw new InvalidDataException("The ZIP64 end-of-central-directory record offset is out of range.");
-        }
+        if (zip64RecordOffset < 0 || zip64RecordOffset + 56 > zipStream.Length) throw new InvalidDataException("The ZIP64 end-of-central-directory record offset is out of range.");
+        byte[] zip64RecordBytes = new byte[56];
 
-        byte[] zip64RecordBytes = new byte[Zip64EndOfCentralDirectoryFixedLength];
         zipStream.Seek(zip64RecordOffset, SeekOrigin.Begin);
         ReadExactly(zipStream, zip64RecordBytes);
 
-        if (BinaryPrimitives.ReadUInt32LittleEndian(zip64RecordBytes.AsSpan(0, 4)) != Zip64EndOfCentralDirectorySignature)
-        {
-            throw new InvalidDataException("The ZIP64 end-of-central-directory record is malformed.");
-        }
+#pragma warning disable S109
+        if (BinaryPrimitives.ReadUInt32LittleEndian(zip64RecordBytes.AsSpan(0, 4)) != 0x06064B50) throw new InvalidDataException("The ZIP64 end-of-central-directory record is malformed.");
 
         return checked((long)BinaryPrimitives.ReadUInt64LittleEndian(zip64RecordBytes.AsSpan(48, 8)));
     }
 
-    /// <summary>
-    /// Reads central-directory file headers and extracts encryption flags.
-    /// </summary>
+    /// <summary> Reads central-directory file headers and extracts encryption flags. </summary>
     /// <param name="zipStream">Seekable zip file stream.</param>
     /// <param name="centralDirectoryOffset">Central-directory offset in the zip stream.</param>
     /// <returns>A dictionary of entry names and encryption flags.</returns>
     private static IReadOnlyDictionary<string, bool> ReadCentralDirectoryEntries(
         FileStream zipStream,
-        long centralDirectoryOffset)
-    {
+        long centralDirectoryOffset) {
         Dictionary<string, bool> encryptedEntriesByName = new(StringComparer.Ordinal);
 
         zipStream.Seek(centralDirectoryOffset, SeekOrigin.Begin);
 
-        while (zipStream.Position + CentralDirectoryFixedHeaderLength <= zipStream.Length)
-        {
-            byte[] fixedHeaderBytes = new byte[CentralDirectoryFixedHeaderLength];
+        while (zipStream.Position + 46 <= zipStream.Length) {
+            byte[] fixedHeaderBytes = new byte[46];
             ReadExactly(zipStream, fixedHeaderBytes);
 
             uint signature = BinaryPrimitives.ReadUInt32LittleEndian(fixedHeaderBytes.AsSpan(0, 4));
-            if (signature != CentralDirectoryHeaderSignature)
-            {
-                break;
-            }
+            if (signature != 0x02014B50) break;
 
-            ushort generalPurposeFlags = BinaryPrimitives.ReadUInt16LittleEndian(
-                fixedHeaderBytes.AsSpan(8, 2));
-            ushort fileNameLength = BinaryPrimitives.ReadUInt16LittleEndian(
-                fixedHeaderBytes.AsSpan(28, 2));
-            ushort extraFieldLength = BinaryPrimitives.ReadUInt16LittleEndian(
-                fixedHeaderBytes.AsSpan(30, 2));
-            ushort fileCommentLength = BinaryPrimitives.ReadUInt16LittleEndian(
-                fixedHeaderBytes.AsSpan(32, 2));
+
+            ushort generalPurposeFlags = BinaryPrimitives.ReadUInt16LittleEndian(fixedHeaderBytes.AsSpan(8, 2));
+            ushort fileNameLength = BinaryPrimitives.ReadUInt16LittleEndian(fixedHeaderBytes.AsSpan(28, 2));
+            ushort extraFieldLength = BinaryPrimitives.ReadUInt16LittleEndian(fixedHeaderBytes.AsSpan(30, 2));
+            ushort fileCommentLength = BinaryPrimitives.ReadUInt16LittleEndian(fixedHeaderBytes.AsSpan(32, 2));
 
             byte[] fileNameBytes = new byte[fileNameLength];
             ReadExactly(zipStream, fileNameBytes);
 
             string entryName = DecodeEntryName(fileNameBytes, generalPurposeFlags);
-            bool isEncrypted = (generalPurposeFlags & EncryptedEntryFlag) == EncryptedEntryFlag;
+            bool isEncrypted = (generalPurposeFlags & 0x0001) == 0x0001;
             encryptedEntriesByName[entryName] = isEncrypted;
 
             long metadataBytesToSkip = extraFieldLength + fileCommentLength;
@@ -164,35 +109,21 @@ internal static class ZipCentralDirectoryReader
         return encryptedEntriesByName;
     }
 
-    /// <summary>
-    /// Decodes an entry name from central-directory bytes.
-    /// </summary>
+    /// <summary> Decodes an entry name from central-directory bytes. </summary>
     /// <param name="fileNameBytes">Raw filename bytes.</param>
     /// <param name="generalPurposeFlags">Zip general-purpose bit flags.</param>
     /// <returns>The decoded entry name.</returns>
-    private static string DecodeEntryName(byte[] fileNameBytes, ushort generalPurposeFlags)
-    {
-        bool isUtf8 = (generalPurposeFlags & Utf8EntryNameFlag) == Utf8EntryNameFlag;
+    private static string DecodeEntryName(byte[] fileNameBytes, ushort generalPurposeFlags) {
+        bool isUtf8 = (generalPurposeFlags & 0x0800) == 0x0800;
         Encoding encoding = isUtf8 ? Encoding.UTF8 : Encoding.ASCII;
         return encoding.GetString(fileNameBytes);
     }
-
-    /// <summary>
-    /// Reads exactly the requested number of bytes into a buffer.
-    /// </summary>
-    /// <param name="stream">Stream to read from.</param>
-    /// <param name="buffer">Destination buffer.</param>
-    private static void ReadExactly(Stream stream, byte[] buffer)
-    {
+    private static void ReadExactly(Stream stream, byte[] buffer) {
         int totalReadBytes = 0;
 
-        while (totalReadBytes < buffer.Length)
-        {
+        while (totalReadBytes < buffer.Length) {
             int readBytes = stream.Read(buffer, totalReadBytes, buffer.Length - totalReadBytes);
-            if (readBytes == 0)
-            {
-                throw new EndOfStreamException("Unexpected end of zip metadata.");
-            }
+            if (readBytes == 0) throw new EndOfStreamException("Unexpected end of zip metadata.");
 
             totalReadBytes += readBytes;
         }

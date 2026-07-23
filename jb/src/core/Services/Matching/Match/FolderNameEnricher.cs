@@ -40,6 +40,8 @@ internal sealed class FolderNameEnricher
     // A bare (all-digit) folder token counts as meaning only when at least this long — short numbers
     // are sequence indices; long ones are product numbers or references.
     private const int MinBareNumberLength = 5;
+    private const int MinTokenLengthFloor = 2;
+    private const int MinPerItemSiblings = 2;
 
     private readonly int minMeaningfulTokenLength;
 
@@ -47,7 +49,7 @@ internal sealed class FolderNameEnricher
     /// <param name="minMeaningfulTokenLength">Shortest folder token that may count as Excel-relevant meaning.</param>
     internal FolderNameEnricher(int minMeaningfulTokenLength = 3)
     {
-        this.minMeaningfulTokenLength = Math.Max(2, minMeaningfulTokenLength);
+        this.minMeaningfulTokenLength = Math.Max(MinTokenLengthFloor, minMeaningfulTokenLength);
     }
 
     /// <summary>
@@ -130,7 +132,7 @@ internal sealed class FolderNameEnricher
         // Sibling pattern: the parent must hold several per-item folders, not two or three format
         // buckets. A lone product folder, or a set of only-noise folders, does not qualify.
         int perItemSiblings = siblings.Count(sib => MeaningfulTokens(sib).Count > 0);
-        if (perItemSiblings < 2)
+        if (perItemSiblings < MinPerItemSiblings)
             return false;
 
         // Excel relevance: at least one meaningful folder token must appear in the Excel data.

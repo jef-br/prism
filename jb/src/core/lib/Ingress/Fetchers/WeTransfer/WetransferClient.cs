@@ -9,9 +9,20 @@ namespace Prism.Lib.Ingress;
 internal class WetransferClient
 {
     private readonly CancellationToken _defaultCt;
+    private readonly int _consentClickTimeoutMs;
+    private readonly int _consentHiddenWaitTimeoutMs;
+    private readonly int _consentSettleDelayMs;
+    private readonly int _downloadButtonClickTimeoutMs;
+    private readonly int _downloadWaitTimeoutMs;
+    private readonly int _streamBufferSizeBytes;
+
+    private const int BytesPerGigabyte = 1024 * 1024 * 1024;
 
     /// <summary>Maximum download size enforced during streaming (10 GB).</summary>
-    private const long MaxDownloadBytes = 10L * 1024 * 1024 * 1024;
+    private const long MaxDownloadBytes = 10L * BytesPerGigabyte;
+
+    /// <summary>Number of consent-banner dismissal passes attempted (a second banner can appear once the first is dismissed).</summary>
+    private const int ConsentBannerPasses = 2;
 
     private static readonly string[] ConsentLabels =
     {
@@ -40,14 +51,24 @@ internal class WetransferClient
     private static readonly bool _isDebugging = System.Diagnostics.Debugger.IsAttached;
 
     /// <summary>Creates a client with no default cancellation token.</summary>
-    public WetransferClient() : this(CancellationToken.None) { }
+    public WetransferClient(int consentClickTimeoutMs, int consentHiddenWaitTimeoutMs, int consentSettleDelayMs, int downloadButtonClickTimeoutMs, int downloadWaitTimeoutMs, int streamBufferSizeBytes)
+        : this(consentClickTimeoutMs, consentHiddenWaitTimeoutMs, consentSettleDelayMs, downloadButtonClickTimeoutMs, downloadWaitTimeoutMs, streamBufferSizeBytes, CancellationToken.None) { }
 
     /// <summary>
     /// Creates a client with an instance-level cancellation token.
     /// The token is linked into every <c>DownloadAsync</c> call, so cancelling it
     /// aborts any in-progress download regardless of the per-call token.
     /// </summary>
-    public WetransferClient(CancellationToken cancellationToken) => _defaultCt = cancellationToken;
+    public WetransferClient(int consentClickTimeoutMs, int consentHiddenWaitTimeoutMs, int consentSettleDelayMs, int downloadButtonClickTimeoutMs, int downloadWaitTimeoutMs, int streamBufferSizeBytes, CancellationToken cancellationToken)
+    {
+        _consentClickTimeoutMs = consentClickTimeoutMs;
+        _consentHiddenWaitTimeoutMs = consentHiddenWaitTimeoutMs;
+        _consentSettleDelayMs = consentSettleDelayMs;
+        _downloadButtonClickTimeoutMs = downloadButtonClickTimeoutMs;
+        _downloadWaitTimeoutMs = downloadWaitTimeoutMs;
+        _streamBufferSizeBytes = streamBufferSizeBytes;
+        _defaultCt = cancellationToken;
+    }
 
     /// <summary>Downloads the file at <paramref name="url"/>.</summary>
     public Task<WeTransferDownloadResult> DownloadAsync(string url) => DownloadAsync(url, null, _defaultCt);
@@ -100,13 +121,13 @@ internal class WetransferClient
                 var oneTrustBtn = page.Locator("#onetrust-accept-btn-handler");
                 if (await oneTrustBtn.IsVisibleAsync()) {
                     try {
-                        await oneTrustBtn.ClickAsync(new() { Timeout = 5_000 });
+                        await oneTrustBtn.ClickAsync(new() { Timeout = _consentClickTimeoutMs });
                     }
                     catch { }
                 }
 
                 try {
-                    await oneTrustSdk.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 10_000 });
+                    await oneTrustSdk.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = _consentHiddenWaitTimeoutMs });
                 } catch { }
             }
 
@@ -118,7 +139,7 @@ internal class WetransferClient
                     foreach (var b in buttons) {
                         if (!await b.IsVisibleAsync()) continue;
                         any = true;
-                        try { await b.ClickAsync(new() { Timeout = 5_000 }); await page.WaitForTimeoutAsync(300); } catch { }
+                        try { await b.ClickAsync(new() { Timeout = _consentClickTimeoutMs }); await page.WaitForTimeoutAsync(_consentSettleDelayMs); } catch { }
                     }
                     return any;
                 } catch {
@@ -127,7 +148,7 @@ internal class WetransferClient
             }
 
             // Two passes: a second banner can appear once the first is dismissed
-            for (int pass = 1; pass <= 2; pass++) {
+            for (int pass = 1; pass <= ConsentBannerPasses; pass++) {
                 bool clickedThisPass = false;
                 foreach (string label in ConsentLabels) {
                     if (await TryClickConsentAsync(label)) {
@@ -186,7 +207,7 @@ internal class WetransferClient
                     foreach (string label in continueBtnLabels) {
                         var btn = page.GetByRole(AriaRole.Button, new() { Name = label, Exact = true });
                         if (await btn.IsVisibleAsync()) {
-                            await btn.ClickAsync(new() { Timeout = 5_000 });
+                            await btn.ClickAsync(new() { Timeout = _consentClickTimeoutMs });
                             break;
                         }
                     }
@@ -222,23 +243,23 @@ internal class WetransferClient
 
             var download = await page.RunAndWaitForDownloadAsync( async () => {
                     try {
-                        await downloadBtn.ClickAsync(new() { Timeout = 10_000 });
+                        await downloadBtn.ClickAsync(new() { Timeout = _downloadButtonClickTimeoutMs });
                     } catch { }
                 },
-                new PageRunAndWaitForDownloadOptions { Timeout = 60_000 }
+                new PageRunAndWaitForDownloadOptions { Timeout = _downloadWaitTimeoutMs }
             );
 
             string resolvedFileName = download.SuggestedFilename is { Length: > 0 } s ? s : tempName;
             long? totalBytes = await TryGetContentLengthAsync(download.Url, ct);
 
             if (totalBytes.HasValue && totalBytes.Value > MaxDownloadBytes){
-                throw new InvalidOperationException($"File too large: {totalBytes.Value / (1024d * 1024d * 1024d):0.##} GB. Limit is 10 GB.");
+                throw new InvalidOperationException($"File too large: {totalBytes.Value / (double)BytesPerGigabyte:0.##} GB. Limit is 10 GB.");
             }
 
             {
                 await using var source = await download.CreateReadStreamAsync();
-                await using var target = new FileStream(downloadPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 81920, useAsync: true);
-                byte[] buffer = new byte[81920];
+                await using var target = new FileStream(downloadPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: _streamBufferSizeBytes, useAsync: true);
+                byte[] buffer = new byte[_streamBufferSizeBytes];
                 long totalRead = 0;
                 int read;
                 while ((read = await source.ReadAsync(buffer.AsMemory(), ct)) > 0) {
@@ -250,7 +271,7 @@ internal class WetransferClient
                 }
             }
 
-            var fileStream = new FileStream(downloadPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 81920, useAsync: true);
+            var fileStream = new FileStream(downloadPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: _streamBufferSizeBytes, useAsync: true);
             return new WeTransferDownloadResult(fileStream, resolvedFileName, totalBytes, downloadPath);
         } catch {
             if (File.Exists(downloadPath)) {

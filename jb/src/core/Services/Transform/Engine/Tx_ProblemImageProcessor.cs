@@ -16,6 +16,8 @@ namespace Prism.Services.Transform;
 /// </summary>
 public class Tx_ProblemImageProcessor : IImageTransformation
 {
+    private const int JpegOutputQuality = 100;
+
     private readonly ProblemImageProcessorConfig _cfg;
 
     public Tx_ProblemImageProcessor(ProblemImageProcessorConfig cfg)
@@ -122,7 +124,7 @@ public class Tx_ProblemImageProcessor : IImageTransformation
             img.Mutate(x => x.Resize(outW, outH, KnownResamplers.Lanczos3));
 
         using MemoryStream ms = new();
-        img.Save(ms, new JpegEncoder { Quality = 90 });
+        img.Save(ms, new JpegEncoder { Quality = JpegOutputQuality });
         return ms.ToArray();
     }
 

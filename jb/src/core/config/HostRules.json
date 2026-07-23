@@ -18,6 +18,14 @@
     "idleReadSeconds": 15,
     "totalFetchSeconds": 120
   },
+  "weTransferPolling": {
+    "consentClickTimeoutMs": 5000,
+    "consentHiddenWaitTimeoutMs": 10000,
+    "consentSettleDelayMs": 300,
+    "downloadButtonClickTimeoutMs": 10000,
+    "downloadWaitTimeoutMs": 60000,
+    "streamBufferSizeBytes": 81920
+  },
   "testing": {
     "allowLocalhost": false
   }

@@ -25,6 +25,17 @@ internal sealed class NumericMatcher
     // backward compatibility with pipe-joined EAN columns).
     private const int MaxIndexedWholeValueDigits = 18;
 
+    // Minimum tokens a permuted-subset candidate must combine — a single token is not a permutation.
+    private const int MinPermutedSubsetTokens = 2;
+
+    // SubstringRescue match confidence — empirical calibration, see Match/jbtodo.md.
+    private const double SubstringRescueConfidence = 0.9;
+
+    // Fallback MaxDistance when no numeric rule is configured — empirical calibration.
+    private const double DefaultMaxDistanceFallback = 1.478;
+
+    private const int DecimalDigitCount = 10;
+
     private readonly string familyIdColumnName;
     private readonly int minTokenLength;
     private readonly bool indexAllColumns;
@@ -227,7 +238,7 @@ internal sealed class NumericMatcher
 
             for (int mask = 0; mask < fullMask; mask++)
             {
-                if (BitOperations.PopCount((uint)mask) < 2)
+                if (BitOperations.PopCount((uint)mask) < MinPermutedSubsetTokens)
                     continue;
 
                 string[] subset = Enumerable.Range(0, tokens.Length)
@@ -483,11 +494,11 @@ internal sealed class NumericMatcher
                 ImageId              = stem,
                 SourceFilename       = filename,
                 FinalFamilyId        = familyId,
-                FinalScore           = 0.9,
+                FinalScore           = SubstringRescueConfidence,
                 IsKo                 = false,
                 AcceptedMatcherName  = matcherName,
-                TopCandidates        = [new CandidateSummary(familyId, 0.9, matcherName)],
-                NumericTokenEvidence = [new TokenEvidenceItem(token, matchedTarget!, matchedField!, familyId, 0.9)],
+                TopCandidates        = [new CandidateSummary(familyId, SubstringRescueConfidence, matcherName)],
+                NumericTokenEvidence = [new TokenEvidenceItem(token, matchedTarget!, matchedField!, familyId, SubstringRescueConfidence)],
                 ImageNgpSummary      = BuildNgpSummary(record),
                 SafeExplanation      = $"SubstringRescue: token '{token}' is contained in target '{matchedTarget}' of family {familyId}."
             }, []);
@@ -637,7 +648,7 @@ internal sealed class NumericMatcher
             Type                = "numeric",
             Strategy            = "NumericalMatcher",
             Weight              = first?.Weight ?? 1.0,
-            MaxDistance         = first?.MaxDistance ?? 1.478,
+            MaxDistance         = first?.MaxDistance ?? DefaultMaxDistanceFallback,
             MaxDistancePermuted = first?.MaxDistancePermuted ?? 0.0
         };
     }
@@ -680,7 +691,7 @@ internal sealed class NumericMatcher
         foreach (char ch in target)
             if (ch is >= '0' and <= '9') counts[ch - '0']++;
 
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < DecimalDigitCount; i++)
             if (counts[i] != subsetCounts[i]) return false;
         return true;
     }

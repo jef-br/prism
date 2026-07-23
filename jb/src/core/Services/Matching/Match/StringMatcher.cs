@@ -10,6 +10,9 @@ namespace Prism.Services.Matching;
 /// </summary>
 internal sealed class StringMatcher
 {
+    // Non-exact (synonym/fuzzy) token-match confidence — empirical calibration, see Match/jbtodo.md.
+    private const double NonExactTokenMatchConfidence = 0.85;
+
     private static readonly Regex TokenSplitPattern = new(
         @"[^a-zA-ZÀ-ÖØ-öø-ÿ0-9]+",
         RegexOptions.Compiled);
@@ -238,7 +241,7 @@ internal sealed class StringMatcher
                         posting.FamilyToken,
                         posting.PropertyName,
                         posting.FamilyId,
-                        isExact ? 1.0 : 0.85));
+                        isExact ? 1.0 : NonExactTokenMatchConfidence));
                 }
             }
 
