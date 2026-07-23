@@ -63,7 +63,7 @@ public sealed class SubjectEdgeDetectorRealImageTests
     {
         string path = FixtureImage(FixtureImageNames[0]);
 
-        EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
 
         Assert.InRange(r.IntersectionCount, 0, 4);
         Assert.Equal(r.FullyInFrame, r.IntersectionCount == 0);
@@ -76,8 +76,8 @@ public sealed class SubjectEdgeDetectorRealImageTests
     {
         string path = FixtureImage(FixtureImageNames[0]);
 
-        EdgeIntersectionResult r1 = SubjectEdgeDetector.Detect(path);
-        EdgeIntersectionResult r2 = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r1 = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r2 = SubjectEdgeDetector.Detect(path);
 
         Assert.Equal(r1, r2);
     }

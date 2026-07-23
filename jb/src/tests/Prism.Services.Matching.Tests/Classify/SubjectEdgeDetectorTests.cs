@@ -48,7 +48,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
             Fill(img, 80, 80, 240, 240, Dark);
         });
 
-        EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
 
         Assert.Equal(0,     r.IntersectionCount);
         Assert.True(        r.FullyInFrame);
@@ -72,7 +72,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
             Fill(img, 50, 0, W - 100, 200, Dark);
         });
 
-        EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
 
         Assert.Equal(1, r.IntersectionCount);
         Assert.True(    r.IntersectsTop);
@@ -90,7 +90,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
             Fill(img, 80, 80, 240, H - 80, Dark);   // reaches bottom
         });
 
-        EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
 
         Assert.Equal(1, r.IntersectionCount);
         Assert.True(    r.IntersectsBottom);
@@ -109,7 +109,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
             RestoreCorners(img);
         });
 
-        EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
 
         Assert.Equal(1, r.IntersectionCount);
         Assert.True(    r.IntersectsLeft);
@@ -128,7 +128,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
             RestoreCorners(img);
         });
 
-        EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
 
         Assert.Equal(1, r.IntersectionCount);
         Assert.True(    r.IntersectsRight);
@@ -149,7 +149,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
             RestoreCorners(img);
         });
 
-        EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
 
         Assert.Equal(4, r.IntersectionCount);
         Assert.False(   r.FullyInFrame);
@@ -174,7 +174,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
             img[W - 1, H / 2]  = Dark;   // right edge centre
         });
 
-        EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
 
         Assert.Equal(0, r.IntersectionCount);
         Assert.True(    r.FullyInFrame);
@@ -191,7 +191,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
             img[W / 2 + 1, 0] = Dark;
         });
 
-        EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
 
         Assert.False(r.IntersectsTop);
         Assert.Equal(0, r.IntersectionCount);
@@ -213,7 +213,7 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
                     img[x, y] = Dark;   // skip x=0-39 and x=360-399 to keep corners white
         });
 
-        EdgeIntersectionResult r = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
 
         Assert.False(r.IntersectsTop);
     }
@@ -230,8 +230,8 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
             RestoreCorners(img);
         });
 
-        EdgeIntersectionResult r1 = SubjectEdgeDetector.Detect(path);
-        EdgeIntersectionResult r2 = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r1 = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult r2 = SubjectEdgeDetector.Detect(path);
 
         Assert.Equal(r1, r2);
     }
@@ -247,10 +247,10 @@ public sealed class SubjectEdgeDetectorTests : IDisposable
             Fill(img, 80, 80, 240, H - 80, Dark);   // bottom intersection only
         });
 
-        EdgeIntersectionResult fromFile = SubjectEdgeDetector.Detect(path);
+        SubjectEdgeDetectionResult fromFile = SubjectEdgeDetector.Detect(path);
 
         using var img = Image.Load<Rgba32>(path);
-        EdgeIntersectionResult fromImage = SubjectEdgeDetector.Detect(img);
+        SubjectEdgeDetectionResult fromImage = SubjectEdgeDetector.Detect(img);
 
         Assert.Equal(fromFile, fromImage);
     }

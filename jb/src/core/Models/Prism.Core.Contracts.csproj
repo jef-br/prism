@@ -34,7 +34,7 @@
     <Compile Include="..\lib\Export\ManifestImageRow.cs" Link="ManifestImageRow.cs" />
     <Compile Include="..\Pipeline\PipelineProgressEvent.cs" Link="PipelineProgressEvent.cs" />
     <Compile Include="..\Services\Matching\Classify\ClassificationToken.cs" Link="ClassificationToken.cs" />
-    <Compile Include="..\Services\Matching\Classify\EdgeIntersectionResult.cs" Link="EdgeIntersectionResult.cs" />
+    <Compile Include="..\Services\Matching\Classify\SubjectEdgeDetectionResult.cs" Link="SubjectEdgeDetectionResult.cs" />
     <Compile Include="..\Services\Matching\Classify\ImageFeatureValue.cs" Link="ImageFeatureValue.cs" />
     <Compile Include="..\Services\Matching\Classify\ImageFeatureSnapshot.cs" Link="ImageFeatureSnapshot.cs" />
     <Compile Include="..\Services\Matching\Match\MatchEvidence.cs" Link="MatchEvidence.cs" />
