@@ -52,7 +52,7 @@ public class AnalyzerConfigTests : IDisposable {
         string fileName = WriteConfig("""{ "Interior": { "MinAreaFraction": 0.04, "MinEdgeStrength": 0.1176 } }""");
 
         PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
-            () => ConfigLoader.Section<InteriorAnalyzerConfig>(fileName, "Interior"));
+            () => ConfigLoader.Section<Analyzer_Interior.Config>(fileName, "Interior"));
         Assert.Contains("TextureDiffMin", ex.Message);
     }
 
@@ -70,7 +70,7 @@ public class AnalyzerConfigTests : IDisposable {
         string fileName = WriteConfig("""{ "MultipleProducts": { "OverlapIou": 1.5, "Confidence": 0.70 } }""");
 
         PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
-            () => ConfigLoader.Section<MultipleProductsAnalyzerConfig>(fileName, "MultipleProducts"));
+            () => ConfigLoader.Section<Analyzer_MultipleProducts.Config>(fileName, "MultipleProducts"));
         Assert.Contains("MultipleProducts.OverlapIou", ex.Message);
     }
 
@@ -83,7 +83,7 @@ public class AnalyzerConfigTests : IDisposable {
         """);
 
         PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
-            () => ConfigLoader.Section<ExposureAnalyzerConfig>(fileName, "Exposure"));
+            () => ConfigLoader.Section<Analyzer_Exposure.Config>(fileName, "Exposure"));
         Assert.Contains("Exposure.LowLuminance", ex.Message);
     }
 
@@ -103,7 +103,7 @@ public class AnalyzerConfigTests : IDisposable {
     [Fact]
     public void Section_MissingFile_ThrowsFailLoud() {
         PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
-            () => ConfigLoader.Section<InteriorAnalyzerConfig>($"analyzer_Config_missing_{Guid.NewGuid():N}.json", "Interior"));
+            () => ConfigLoader.Section<Analyzer_Interior.Config>($"analyzer_Config_missing_{Guid.NewGuid():N}.json", "Interior"));
         Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 }

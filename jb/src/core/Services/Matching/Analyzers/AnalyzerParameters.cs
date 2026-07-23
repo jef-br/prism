@@ -13,14 +13,15 @@ public sealed class AnalyzerParameters
 {
     internal const string ConfigFile = "analyzer_Config.json";
 
-    public required InteriorAnalyzerConfig Interior { get; init; }
-    public required IllustrationAnalyzerConfig IsIllustration { get; init; }
+    public required Analyzer_Interior.Config Interior { get; init; }
+    public required Analyzer_IsIllustration.Config IsIllustration { get; init; }
     public required YoloAnalyzerConfig Yolo { get; init; }
-    public required FilenameAnalyzerConfig Filename { get; init; }
-    public required SubjectGeometryAnalyzerConfig SubjectGeometry { get; init; }
+    public required Analyzer_FilenameEvidence.Config Filename { get; init; }
+    public required Analyzer_SubjectGeometry.Config SubjectGeometry { get; init; }
     public required ColorAnalyzerConfig Colors { get; init; }
-    public required ExposureAnalyzerConfig Exposure { get; init; }
-    public required MultipleProductsAnalyzerConfig MultipleProducts { get; init; }
+    public required Analyzer_Exposure.Config Exposure { get; init; }
+    public required Analyzer_MultipleProducts.Config MultipleProducts { get; init; }
+    public required SkinToneAnalyzerConfig SkinTone { get; init; }
 
     /// <summary>
     /// Loads every analyzer_Config.json section, then composes them. A missing file, a misspelled key,
@@ -29,13 +30,14 @@ public sealed class AnalyzerParameters
     /// </summary>
     public static AnalyzerParameters FromConfig() => new()
     {
-        Interior         = ConfigLoader.Section<InteriorAnalyzerConfig>(ConfigFile, "Interior"),
-        IsIllustration   = ConfigLoader.Section<IllustrationAnalyzerConfig>(ConfigFile, "IsIllustration"),
+        Interior         = ConfigLoader.Section<Analyzer_Interior.Config>(ConfigFile, "Interior"),
+        IsIllustration   = ConfigLoader.Section<Analyzer_IsIllustration.Config>(ConfigFile, "IsIllustration"),
         Yolo             = ConfigLoader.Section<YoloAnalyzerConfig>(ConfigFile, "Yolo"),
-        Filename         = ConfigLoader.Section<FilenameAnalyzerConfig>(ConfigFile, "Filename"),
-        SubjectGeometry  = ConfigLoader.Section<SubjectGeometryAnalyzerConfig>(ConfigFile, "SubjectGeometry"),
+        Filename         = ConfigLoader.Section<Analyzer_FilenameEvidence.Config>(ConfigFile, "Filename"),
+        SubjectGeometry  = ConfigLoader.Section<Analyzer_SubjectGeometry.Config>(ConfigFile, "SubjectGeometry"),
         Colors           = ConfigLoader.Section<ColorAnalyzerConfig>(ConfigFile, "Colors"),
-        Exposure         = ConfigLoader.Section<ExposureAnalyzerConfig>(ConfigFile, "Exposure"),
-        MultipleProducts = ConfigLoader.Section<MultipleProductsAnalyzerConfig>(ConfigFile, "MultipleProducts")
+        Exposure         = ConfigLoader.Section<Analyzer_Exposure.Config>(ConfigFile, "Exposure"),
+        MultipleProducts = ConfigLoader.Section<Analyzer_MultipleProducts.Config>(ConfigFile, "MultipleProducts"),
+        SkinTone         = ConfigLoader.Section<SkinToneAnalyzerConfig>(ConfigFile, "SkinTone")
     };
 }

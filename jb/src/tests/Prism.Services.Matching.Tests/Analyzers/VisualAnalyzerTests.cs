@@ -13,11 +13,12 @@ namespace PrismCoreTests.Analyzers;
 public class VisualAnalyzerTests
 {
     // Mirrors the shipped analyzer_Config.json sections exercised below.
-    private static readonly SubjectGeometryAnalyzerConfig SubjectGeometryCfg = new()
+    private static readonly Analyzer_SubjectGeometry.Config SubjectGeometryCfg = new()
     {
         ForegroundColorDistance = 0.15f,
         MinForegroundFraction = 0.005f,
-        FallbackConfidence = 0.60f
+        FallbackConfidence = 0.60f,
+        BoxAreaCoverageConfidenceDiscount = 0.9f
     };
 
     private static readonly ColorAnalyzerConfig ColorsCfg = new()
@@ -39,7 +40,7 @@ public class VisualAnalyzerTests
         }
     };
 
-    private static readonly ExposureAnalyzerConfig ExposureCfg = new()
+    private static readonly Analyzer_Exposure.Config ExposureCfg = new()
     {
         HighLuminance = 0.98f,
         LowLuminance = 0.02f,
@@ -47,7 +48,7 @@ public class VisualAnalyzerTests
         Confidence = 0.70f
     };
 
-    private static readonly MultipleProductsAnalyzerConfig MultipleProductsCfg = new()
+    private static readonly Analyzer_MultipleProducts.Config MultipleProductsCfg = new()
     {
         OverlapIou = 0.10f,
         Confidence = 0.70f
@@ -60,6 +61,16 @@ public class VisualAnalyzerTests
         HumanMinConfidence = 0.50f,
         AbsenceConfidence = 0.60f,
         HeroPersonMinArea = 0.15f
+    };
+
+    private static readonly SkinToneAnalyzerConfig SkinToneCfg = new()
+    {
+        LumaMin = 0.10f,
+        LumaMax = 0.95f,
+        CbMin = 0.30f,
+        CbMax = 0.53f,
+        CrMin = 0.52f,
+        CrMax = 0.68f
     };
 
     // A 200×200 white canvas with a centered 100×100 solid square of the given color.
@@ -115,7 +126,7 @@ public class VisualAnalyzerTests
         var cfg = ColorsCfg;
         SubjectBox subject = new(0.25f, 0.25f, 0.75f, 0.75f, 0.9f, "foreground");
 
-        IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, snapshot, cfg);
+        IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, snapshot, cfg, SkinToneCfg);
 
         Assert.NotEmpty(buckets);
         Assert.True(buckets[0].R > 0.6f && buckets[0].G < 0.35f);
@@ -133,7 +144,7 @@ public class VisualAnalyzerTests
         var snapshot = new ImageFeatureSnapshot();
         SubjectBox subject = new(0.25f, 0.25f, 0.75f, 0.75f, 0.6f, "foreground");
 
-        IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, snapshot, ColorsCfg);
+        IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, snapshot, ColorsCfg, SkinToneCfg);
 
         Assert.Empty(buckets);
         Assert.Equal("UNKNOWN", snapshot.GetValue("dominant-colors"));

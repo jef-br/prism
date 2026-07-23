@@ -10,7 +10,7 @@ namespace PrismCoreTests.Analyzers;
 public class ProductTypeResolverTests
 {
     // Mirrors the shipped analyzer_Config.json Filename section.
-    private static readonly FilenameAnalyzerConfig FilenameCfg = new() { OrientationConfidence = 0.75f };
+    private static readonly Analyzer_FilenameEvidence.Config FilenameCfg = new() { OrientationConfidence = 0.75f };
 
     private static ProductTypeResolver LoadResolver()
     {
