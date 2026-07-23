@@ -13,12 +13,14 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService
     private const string YoloModelRelativePath = "Services/Matching/Analyzers/ONNX/yolo26s.onnx";
 
     private readonly AnalyzerParameters analyzerParameters;
+    private readonly ClassifyParameters classifyParameters;
     private readonly ProductTypeResolver productTypes;
     private readonly string? yoloModelPath;
 
     public FeatureAnalysisService()
     {
         analyzerParameters = AnalyzerParameters.FromConfig();
+        classifyParameters = ClassifyParameters.FromConfig();
 
         productTypes = ProductTypeResolver.Load(ConfigLoader.RequireFile("ProductTypeMap.json"));
 
@@ -33,7 +35,7 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService
 
     /// <inheritdoc/>
     public void Analyze(Image<Rgba32> image, ImageFeatureSnapshot target)
-        => ImageFeatureAnalyzer.Analyze(image, target, analyzerParameters);
+        => ImageFeatureAnalyzer.Analyze(image, target, analyzerParameters, classifyParameters.ImageFeatureAnalyzer);
 
     /// <inheritdoc/>
     public void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet)

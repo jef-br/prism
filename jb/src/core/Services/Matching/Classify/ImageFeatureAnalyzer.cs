@@ -18,23 +18,101 @@ namespace Prism.Services.Matching;
 /// </summary>
 public static class ImageFeatureAnalyzer
 {
-    // Background analysis
-    private const float BackgroundVarianceSolidColorMax = 0.012f;
-    private const float BackgroundVarianceLifestyleMin  = 0.040f;
-    private const float NearWhiteChannelMin             = 0.90f;
+    /// <summary>
+    /// Thresholds and confidence weights for ImageFeatureAnalyzer, bound from the
+    /// "ImageFeatureAnalyzer" section of ClassifyConfig.json. No defaults — every value must be
+    /// present in the JSON or deserialization fails loud.
+    /// </summary>
+    public sealed class Config : IValidatableConfig
+    {
+        // Validation bound, not tunable: AlphaOpaqueThreshold is a byte-range alpha value.
+        private const int AlphaThresholdUpperBound = 255;
+
+        /// <summary>Corner-sample color variance below which the background counts as a flat solid.</summary>
+        public required float BackgroundVarianceSolidColorMax { get; init; }
+
+        /// <summary>Corner-sample color variance above which the background counts as a real-life scene.</summary>
+        public required float BackgroundVarianceLifestyleMin { get; init; }
+
+        /// <summary>Per-channel minimum on the [0,1] scale for the sampled background to count as near-white.</summary>
+        public required float NearWhiteChannelMin { get; init; }
+
+        /// <summary>Alpha value (0-255) at or above which a pixel counts as opaque.</summary>
+        public required int AlphaOpaqueThreshold { get; init; }
+
+        /// <summary>Maximum raw 8-bit channel value, used to normalize R/G/B into [0,1].</summary>
+        public required float MaxChannelValueF { get; init; }
+
+        /// <summary>Row/column stride used when sampling pixels for skin-tone detection.</summary>
+        public required int PixelSampleStride { get; init; }
+
+        /// <summary>Number of color channels averaged into the background-variance statistic.</summary>
+        public required int ChannelCount { get; init; }
+
+        /// <summary>Confidence written on clipping-path.</summary>
+        public required double ClippingPathConfidence { get; init; }
+
+        /// <summary>Confidence written on white-background.</summary>
+        public required double WhiteBackgroundConfidence { get; init; }
+
+        /// <summary>Confidence written on lifestyle-background=false when transparency is present.</summary>
+        public required double LifestyleBackgroundAlphaConfidence { get; init; }
+
+        /// <summary>Confidence written on lifestyle-background=false from low corner variance.</summary>
+        public required double LifestyleBackgroundSolidConfidence { get; init; }
+
+        /// <summary>Confidence written on lifestyle-background=true from high corner variance.</summary>
+        public required double LifestyleBackgroundRealLifeConfidence { get; init; }
+
+        /// <summary>Confidence written on background-type.</summary>
+        public required double BackgroundTypeConfidence { get; init; }
+
+        /// <summary>Confidence written on every intersects-* / intersection-count / fully-in-frame feature.</summary>
+        public required double EdgeIntersectionConfidence { get; init; }
+
+        /// <summary>Confidence written on occlusion-level.</summary>
+        public required double OcclusionLevelConfidence { get; init; }
+
+        /// <summary>Confidence written on skin-tone-area.</summary>
+        public required double SkinToneAreaConfidence { get; init; }
+
+        public void Validate()
+        {
+            List<string> problems = [];
+
+            if (BackgroundVarianceSolidColorMax <= 0f) problems.Add("ImageFeatureAnalyzer.BackgroundVarianceSolidColorMax must be > 0");
+            if (BackgroundVarianceLifestyleMin <= BackgroundVarianceSolidColorMax) problems.Add("ImageFeatureAnalyzer.BackgroundVarianceLifestyleMin must be > BackgroundVarianceSolidColorMax");
+            if (NearWhiteChannelMin is <= 0f or > 1f) problems.Add("ImageFeatureAnalyzer.NearWhiteChannelMin must be in (0,1]");
+            if (AlphaOpaqueThreshold is < 0 or > AlphaThresholdUpperBound) problems.Add("ImageFeatureAnalyzer.AlphaOpaqueThreshold must be in [0,255]");
+            if (MaxChannelValueF <= 0f) problems.Add("ImageFeatureAnalyzer.MaxChannelValueF must be > 0");
+            if (PixelSampleStride < 1) problems.Add("ImageFeatureAnalyzer.PixelSampleStride must be >= 1");
+            if (ChannelCount < 1) problems.Add("ImageFeatureAnalyzer.ChannelCount must be >= 1");
+            if (ClippingPathConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.ClippingPathConfidence must be in [0,1]");
+            if (WhiteBackgroundConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.WhiteBackgroundConfidence must be in [0,1]");
+            if (LifestyleBackgroundAlphaConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundAlphaConfidence must be in [0,1]");
+            if (LifestyleBackgroundSolidConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundSolidConfidence must be in [0,1]");
+            if (LifestyleBackgroundRealLifeConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundRealLifeConfidence must be in [0,1]");
+            if (BackgroundTypeConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.BackgroundTypeConfidence must be in [0,1]");
+            if (EdgeIntersectionConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.EdgeIntersectionConfidence must be in [0,1]");
+            if (OcclusionLevelConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.OcclusionLevelConfidence must be in [0,1]");
+            if (SkinToneAreaConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.SkinToneAreaConfidence must be in [0,1]");
+
+            if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
+        }
+    }
 
     /// <summary>
     /// Analyzes the pre-loaded <paramref name="image"/> and writes all detectable
     /// feature values into <paramref name="snapshot"/>.
     /// Features that cannot be determined are recorded as UNKNOWN.
     /// </summary>
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot, AnalyzerParameters parameters)
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot, AnalyzerParameters parameters, Config cfg)
     {
         AnalyzeGeometry(image, snapshot);
-        AnalyzeBackground(image, snapshot, out _, out _, out _);
-        WriteEdgeIntersections(SubjectEdgeDetector.Detect(image), snapshot);
-        DeriveOcclusionLevel(snapshot);
-        AnalyzeSkinTone(image, snapshot);
+        AnalyzeBackground(image, snapshot, out _, out _, out _, cfg);
+        WriteEdgeIntersections(SubjectEdgeDetector.Detect(image), snapshot, cfg);
+        DeriveOcclusionLevel(snapshot, cfg);
+        AnalyzeSkinTone(image, snapshot, parameters.SkinTone, cfg);
         AnalyzeInterior(image, snapshot, parameters.Interior);
         AnalyzeIllustration(image, snapshot, parameters.IsIllustration);
         RecordUnknownFeatures(snapshot);
@@ -73,7 +151,7 @@ public static class ImageFeatureAnalyzer
             // Wave 3 — remaining visual analyzers: geometry from the shared subject box, then
             // colors sampling the same box, exposure, detection-count features, and the stubs.
             SubjectBox? subject = Analyzer_SubjectGeometry.Analyze(image, detections, lambda.Features, parameters.SubjectGeometry);
-            IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, lambda.Features, parameters.Colors);
+            IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, lambda.Features, parameters.Colors, parameters.SkinTone);
             Analyzer_ProductColor.Analyze(buckets, lambda.Features, parameters.Colors);
             Analyzer_BackgroundColor.Analyze(image, lambda.Features, parameters.Colors);
             Analyzer_Exposure.Analyze(image, lambda.Features, parameters.Exposure, parameters.Colors);
@@ -127,37 +205,35 @@ public static class ImageFeatureAnalyzer
 
     //  Background 
 
-    private static void AnalyzeBackground(
-        Image<Rgba32> image, ImageFeatureSnapshot snapshot,
-        out float bgR, out float bgG, out float bgB)
+    private static void AnalyzeBackground(Image<Rgba32> image, ImageFeatureSnapshot snapshot, out float bgR, out float bgG, out float bgB, Config cfg)
     {
         // JPEG carries no alpha channel, and Import normalizes every pipeline input to a flat JPEG —
         // for JPEG-decoded images the alpha scan is skipped outright. Other sources (in-memory,
         // PNG paths outside the pipeline) keep the scan, now row-span based with early exit.
-        bool hasAlpha = image.Metadata.DecodedImageFormat != JpegFormat.Instance && HasTransparentPixels(image);
+        bool hasAlpha = image.Metadata.DecodedImageFormat != JpegFormat.Instance && HasTransparentPixels(image, cfg);
         snapshot.Set("transparent-background", hasAlpha ? "true" : "false", 1.0, "imagesharp");
-        snapshot.Set("clipping-path",          hasAlpha ? "true" : "false", 0.90, "imagesharp");
+        snapshot.Set("clipping-path",          hasAlpha ? "true" : "false", cfg.ClippingPathConfidence, "imagesharp");
 
-        SampleCorners(image, out bgR, out bgG, out bgB, out float variance);
+        SampleCorners(image, out bgR, out bgG, out bgB, out float variance, cfg);
 
-        bool nearWhite = bgR > NearWhiteChannelMin && bgG > NearWhiteChannelMin && bgB > NearWhiteChannelMin;
-        snapshot.Set("white-background", nearWhite ? "true" : "false", 0.92, "imagesharp");
+        bool nearWhite = bgR > cfg.NearWhiteChannelMin && bgG > cfg.NearWhiteChannelMin && bgB > cfg.NearWhiteChannelMin;
+        snapshot.Set("white-background", nearWhite ? "true" : "false", cfg.WhiteBackgroundConfidence, "imagesharp");
 
         string bgType;
         if (hasAlpha)
         {
             bgType = "SOLIDCOLOR";
-            snapshot.Set("lifestyle-background", "false", 0.95, "imagesharp");
+            snapshot.Set("lifestyle-background", "false", cfg.LifestyleBackgroundAlphaConfidence, "imagesharp");
         }
-        else if (variance < BackgroundVarianceSolidColorMax)
+        else if (variance < cfg.BackgroundVarianceSolidColorMax)
         {
             bgType = "SOLIDCOLOR";
-            snapshot.Set("lifestyle-background", "false", 0.85, "imagesharp");
+            snapshot.Set("lifestyle-background", "false", cfg.LifestyleBackgroundSolidConfidence, "imagesharp");
         }
-        else if (variance > BackgroundVarianceLifestyleMin)
+        else if (variance > cfg.BackgroundVarianceLifestyleMin)
         {
             bgType = "REALLIFE";
-            snapshot.Set("lifestyle-background", "true", 0.72, "heuristic");
+            snapshot.Set("lifestyle-background", "true", cfg.LifestyleBackgroundRealLifeConfidence, "heuristic");
         }
         else
         {
@@ -165,24 +241,24 @@ public static class ImageFeatureAnalyzer
             snapshot.Set("lifestyle-background", "UNKNOWN", 0.0, "heuristic");
         }
 
-        snapshot.Set("background-type", bgType, 0.82, "imagesharp");
+        snapshot.Set("background-type", bgType, cfg.BackgroundTypeConfidence, "imagesharp");
     }
 
     //  Border intersections 
 
-    private static void WriteEdgeIntersections(EdgeIntersectionResult r, ImageFeatureSnapshot snapshot)
+    private static void WriteEdgeIntersections(SubjectEdgeDetectionResult r, ImageFeatureSnapshot snapshot, Config cfg)
     {
-        snapshot.Set("intersects-top",     r.IntersectsTop    ? "true" : "false", 0.85, "heuristic");
-        snapshot.Set("intersects-bottom",  r.IntersectsBottom ? "true" : "false", 0.85, "heuristic");
-        snapshot.Set("intersects-left",    r.IntersectsLeft   ? "true" : "false", 0.85, "heuristic");
-        snapshot.Set("intersects-right",   r.IntersectsRight  ? "true" : "false", 0.85, "heuristic");
-        snapshot.Set("intersection-count", r.IntersectionCount.ToString(CultureInfo.InvariantCulture), 0.85, "heuristic");
-        snapshot.Set("fully-in-frame",     r.FullyInFrame     ? "true" : "false", 0.85, "heuristic");
+        snapshot.Set("intersects-top",     r.IntersectsTop    ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
+        snapshot.Set("intersects-bottom",  r.IntersectsBottom ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
+        snapshot.Set("intersects-left",    r.IntersectsLeft   ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
+        snapshot.Set("intersects-right",   r.IntersectsRight  ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
+        snapshot.Set("intersection-count", r.IntersectionCount.ToString(CultureInfo.InvariantCulture), cfg.EdgeIntersectionConfidence, "heuristic");
+        snapshot.Set("fully-in-frame",     r.FullyInFrame     ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
     }
 
     //  Occlusion level (derived) 
 
-    private static void DeriveOcclusionLevel(ImageFeatureSnapshot snapshot)
+    private static void DeriveOcclusionLevel(ImageFeatureSnapshot snapshot, Config cfg)
     {
         string countStr = snapshot.GetValue("intersection-count");
         if (countStr == "UNKNOWN") return;
@@ -198,12 +274,12 @@ public static class ImageFeatureAnalyzer
             _     => "UNKNOWN"
         };
 
-        snapshot.Set("occlusion-level", level, 0.68, "heuristic");
+        snapshot.Set("occlusion-level", level, cfg.OcclusionLevelConfidence, "heuristic");
     }
 
     //  Skin tone 
 
-    private static void AnalyzeSkinTone(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
+    private static void AnalyzeSkinTone(Image<Rgba32> image, ImageFeatureSnapshot snapshot, SkinToneAnalyzerConfig skinCfg, Config cfg)
     {
         int total = 0;
         int skinPx = 0;
@@ -211,27 +287,27 @@ public static class ImageFeatureAnalyzer
         // Sample every other pixel for performance; row spans instead of the per-pixel indexer.
         image.ProcessPixelRows(accessor =>
         {
-            for (int y = 0; y < accessor.Height; y += 2)
+            for (int y = 0; y < accessor.Height; y += cfg.PixelSampleStride)
             {
                 Span<Rgba32> row = accessor.GetRowSpan(y);
-                for (int x = 0; x < row.Length; x += 2)
+                for (int x = 0; x < row.Length; x += cfg.PixelSampleStride)
                 {
                     Rgba32 px = row[x];
-                    if (px.A < 128) continue;
+                    if (px.A < cfg.AlphaOpaqueThreshold) continue;
                     total++;
-                    if (AnalyzerMath.IsSkinTone(px)) skinPx++;
+                    if (AnalyzerMath.IsSkinTone(px, skinCfg)) skinPx++;
                 }
             }
         });
 
         float ratio = total == 0 ? 0f : (float)skinPx / total;
         snapshot.Set("skin-tone-area",
-            ratio.ToString("F4", CultureInfo.InvariantCulture), 0.75, "imagesharp");
+            ratio.ToString("F4", CultureInfo.InvariantCulture), cfg.SkinToneAreaConfidence, "imagesharp");
     }
 
     //  Interior detection
 
-    private static void AnalyzeInterior(Image<Rgba32> image, ImageFeatureSnapshot snapshot, InteriorAnalyzerConfig cfg)
+    private static void AnalyzeInterior(Image<Rgba32> image, ImageFeatureSnapshot snapshot, Analyzer_Interior.Config cfg)
     {
         bool detected = Analyzer_Interior.Analyze(image, cfg);
         snapshot.Set("interior-detected", detected ? "true" : "false", 1.0, "geometry");
@@ -239,7 +315,7 @@ public static class ImageFeatureAnalyzer
 
     //  Illustration / technical drawing detection
 
-    private static void AnalyzeIllustration(Image<Rgba32> image, ImageFeatureSnapshot snapshot, IllustrationAnalyzerConfig cfg)
+    private static void AnalyzeIllustration(Image<Rgba32> image, ImageFeatureSnapshot snapshot, Analyzer_IsIllustration.Config cfg)
     {
         bool detected = Analyzer_IsIllustration.Analyze(image, cfg);
         snapshot.Set("is-illustration", detected ? "true" : "false", 1.0, "topology");
@@ -296,7 +372,7 @@ public static class ImageFeatureAnalyzer
 
     //  Pixel helpers 
 
-    private static bool HasTransparentPixels(Image<Rgba32> image)
+    private static bool HasTransparentPixels(Image<Rgba32> image, Config cfg)
     {
         bool found = false;
         image.ProcessPixelRows(accessor =>
@@ -305,16 +381,14 @@ public static class ImageFeatureAnalyzer
             {
                 foreach (Rgba32 px in accessor.GetRowSpan(y))
                 {
-                    if (px.A < 128) { found = true; break; }
+                    if (px.A < cfg.AlphaOpaqueThreshold) { found = true; break; }
                 }
             }
         });
         return found;
     }
 
-    private static void SampleCorners(
-        Image<Rgba32> image,
-        out float avgR, out float avgG, out float avgB, out float variance)
+    private static void SampleCorners(Image<Rgba32> image, out float avgR, out float avgG, out float avgB, out float variance, Config cfg)
     {
         int cw = Math.Max(1, image.Width  / 10);
         int ch = Math.Max(1, image.Height / 10);
@@ -333,8 +407,8 @@ public static class ImageFeatureAnalyzer
 
             void AddPixel(Rgba32 px)
             {
-                if (px.A < 128) return;
-                float r = px.R / 255f, g = px.G / 255f, b = px.B / 255f;
+                if (px.A < cfg.AlphaOpaqueThreshold) return;
+                float r = px.R / cfg.MaxChannelValueF, g = px.G / cfg.MaxChannelValueF, b = px.B / cfg.MaxChannelValueF;
                 sumR += r; sumG += g; sumB += b;
                 sumR2 += r * r; sumG2 += g * g; sumB2 += b * b;
                 n++;
@@ -364,7 +438,7 @@ public static class ImageFeatureAnalyzer
         avgB = (float)(sumB / n);
 
         double varSum = (sumR2 - sumR * sumR / n) + (sumG2 - sumG * sumG / n) + (sumB2 - sumB * sumB / n);
-        variance = (float)(varSum / (n * 3));
+        variance = (float)(varSum / (n * cfg.ChannelCount));
     }
 
 }

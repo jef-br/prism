@@ -9,42 +9,97 @@ using SixLabors.ImageSharp.Processing;
 namespace Prism.Services.Matching;
 
 /// <summary>Detects whether the image subject intersects one or more image boundaries.
-/// <para> Fast path (JPEG only): parses the EXIF APP1 block to extract the embedded IFD1 thumbnail without decoding the main image. Falls back to a full load capped at <c>MaxAnalysisSize</c> on the longest side.</para>
-/// <para>All tuning constants are compile-time values; no runtime configuration is required.</para>
+/// <para> Fast path (JPEG only): parses the EXIF APP1 block to extract the embedded IFD1 thumbnail without decoding the main image. Falls back to a full load capped at <c>Config.MaxAnalysisSize</c> on the longest side.</para>
+/// <para>Border/foreground tuning values load from the "SubjectEdgeDetector" section of ClassifyConfig.json via <see cref="Config"/>, fetched once at the top of each public <c>Detect</c> overload. JPEG/EXIF/TIFF structural constants stay compile-time — they encode a file-format spec, not a tunable threshold.</para>
 /// </summary>
 public static class SubjectEdgeDetector {
-    // Longest side (px) of the image used for analysis in the fallback path.
-    private const int MaxAnalysisSize = 512;
-    private const int MinEXIFThumbnailSize = 64;
     private const int MaxExifSearchBytes = 65536;
 
-    // Border strip depth = this fraction of min(W, H) of the analysis image.
-    private const float StripDepthFraction = 0.08f;
-    // Euclidean RGB distance -> Used to categorize a pixel as foreground or background.
-    private const float BgColorDiffThreshold = 0.15f;
-    // Percentage of pixels that must belong to the expected foreground to flag an intersection.
-    private const float IntersectionFraction = 0.20f;
-    // Minimum consecutive foreground pixels in a row to count as subject contact (noise filter).
-    private const int MinRunLength = 3;
+    private const int AlphaOpaqueThreshold = 128;
+    private const float MaxChannelValueF = 255f;
 
-    // --- Public API 
+    /// <summary>
+    /// Tuning values for SubjectEdgeDetector, bound from the "SubjectEdgeDetector" section of
+    /// ClassifyConfig.json. No defaults — every value must be present in the JSON or deserialization
+    /// fails loud.
+    /// </summary>
+    public sealed class Config : IValidatableConfig {
+        // Validation bound, not tunable: StripDepthFraction is a fraction of the short image side, so
+        // it must stay below half.
+        private const float StripDepthFractionUpperBound = 0.5f;
+
+        /// <summary>Longest side (px) of the image used for analysis in the fallback path.</summary>
+        public required int MaxAnalysisSize { get; init; }
+
+        /// <summary>Minimum embedded EXIF thumbnail size (px, shortest side) trusted over a full decode.</summary>
+        public required int MinEXIFThumbnailSize { get; init; }
+
+        /// <summary>Border strip depth as a fraction of min(W, H) of the analysis image.</summary>
+        public required float StripDepthFraction { get; init; }
+
+        /// <summary>Euclidean RGB distance above which a pixel counts as foreground rather than background.</summary>
+        public required float BgColorDiffThreshold { get; init; }
+
+        /// <summary>Fraction of a strip's pixels that must belong to the foreground to flag a boundary intersection.</summary>
+        public required float IntersectionFraction { get; init; }
+
+        /// <summary>Minimum consecutive foreground pixels in a row to count as subject contact (noise filter).</summary>
+        public required int MinRunLength { get; init; }
+
+        public void Validate() {
+            List<string> problems = [];
+
+            if (MaxAnalysisSize < 1) problems.Add("SubjectEdgeDetector.MaxAnalysisSize must be >= 1");
+            if (MinEXIFThumbnailSize < 1) problems.Add("SubjectEdgeDetector.MinEXIFThumbnailSize must be >= 1");
+            if (StripDepthFraction is <= 0f or >= StripDepthFractionUpperBound) problems.Add("SubjectEdgeDetector.StripDepthFraction must be in (0,0.5)");
+            if (BgColorDiffThreshold <= 0f) problems.Add("SubjectEdgeDetector.BgColorDiffThreshold must be > 0");
+            if (IntersectionFraction is <= 0f or > 1f) problems.Add("SubjectEdgeDetector.IntersectionFraction must be in (0,1]");
+            if (MinRunLength < 1) problems.Add("SubjectEdgeDetector.MinRunLength must be >= 1");
+
+            if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
+        }
+    }
+
+    // JPEG/EXIF/TIFF structural constants (file-format spec, not tunable).
+    private const byte JpegMarkerPrefix = 0xFF;
+    private const byte JpegSoiMarker = 0xD8;
+    private const byte JpegEoiMarker = 0xD9;
+    private const byte JpegApp1Marker = 0xE1;
+    private const byte JpegRestartMarkerRangeStart = 0xD0;
+    private const byte JpegRestartMarkerRangeEnd = 0xD7;
+    private const int JpegSegmentLengthFieldSize = 2;
+    private const int ExifSignatureLength = 6;
+    private static readonly byte[] ExifSignatureBytes = { (byte) 'E', (byte) 'x', (byte) 'i', (byte) 'f', 0, 0 };
+    private const int TiffHeaderLength = 8;
+    private const int TiffMagicNumber = 42;
+    private const int TiffUInt16FieldLength = 2;
+    private const int TiffUInt32FieldLength = 4;
+    private const int IfdEntryLength = 12;
+    private const int IfdEntryValueFieldOffset = 8;
+    private const int JpegInterchangeFormatOffsetTag = 0x0201;
+    private const int JpegInterchangeFormatLengthTag = 0x0202;
+    private const byte TiffLittleEndianMarker = 0x49; // "II"
+
+    // --- Public API
 
     /// <summary> Detects subject-to-edge intersections for the image at <paramref name="imagePath"/>. For JPEG files, attempts to use the embedded EXIF thumbnail to avoid a full decode. </summary>
-    public static EdgeIntersectionResult Detect( string imagePath ) {
-        using Image<Rgba32> analysis = AcquireAnalysisImage(imagePath);
-        return DetectOnImage(analysis);
+    public static SubjectEdgeDetectionResult Detect(string imagePath) {
+        Config cfg = ConfigLoader.Section<Config>("ClassifyConfig.json", "SubjectEdgeDetector");
+        using Image<Rgba32> analysis = AcquireAnalysisImage(imagePath, cfg);
+        return DetectOnImage(analysis, cfg);
     }
 
-    /// <summary> Detects subject-to-edge intersections on an image already in memory. When the image exceeds <c>MaxAnalysisSize</c> a scaled-down clone is used internally. Preferred when the caller has already loaded the image to avoid a redundant file read. </summary>
-    public static EdgeIntersectionResult Detect( Image<Rgba32> image ) {
-        if (Math.Max(image.Width, image.Height) <= MaxAnalysisSize) return DetectOnImage(image);
+    /// <summary> Detects subject-to-edge intersections on an image already in memory. When the image exceeds <c>Config.MaxAnalysisSize</c> a scaled-down clone is used internally. Preferred when the caller has already loaded the image to avoid a redundant file read. </summary>
+    public static SubjectEdgeDetectionResult Detect(Image<Rgba32> image) {
+        Config cfg = ConfigLoader.Section<Config>("ClassifyConfig.json", "SubjectEdgeDetector");
+        if (Math.Max(image.Width, image.Height) <= cfg.MaxAnalysisSize) return DetectOnImage(image, cfg);
 
-        using Image<Rgba32> small = ScaleDown(image);
-        return DetectOnImage(small);
+        using Image<Rgba32> small = ScaleDown(image, cfg);
+        return DetectOnImage(small, cfg);
     }
 
-    // --- Image acquisition 
-    private static Image<Rgba32> AcquireAnalysisImage( string imagePath ) {
+    // --- Image acquisition
+    private static Image<Rgba32> AcquireAnalysisImage( string imagePath, Config cfg ) {
         string ext = Path.GetExtension(imagePath);
         bool isJpeg = ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
                    || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase);
@@ -55,7 +110,7 @@ public static class SubjectEdgeDetector {
                 try {
                     using var ms = new MemoryStream(thumbBytes);
                     var thumb = Image.Load<Rgba32>(ms);
-                    if (Math.Min(thumb.Width, thumb.Height) >= MinEXIFThumbnailSize) {
+                    if (Math.Min(thumb.Width, thumb.Height) >= cfg.MinEXIFThumbnailSize) {
                         return thumb;   // Fast path: main image never opened.
                     }
                     thumb.Dispose();
@@ -65,14 +120,14 @@ public static class SubjectEdgeDetector {
         }
 
         var full = Image.Load<Rgba32>(imagePath);
-        if (Math.Max(full.Width, full.Height) <= MaxAnalysisSize)
+        if (Math.Max(full.Width, full.Height) <= cfg.MaxAnalysisSize)
             return full;
 
-        using (full) return ScaleDown(full);
+        using (full) return ScaleDown(full, cfg);
     }
 
-    private static Image<Rgba32> ScaleDown( Image<Rgba32> source ) {
-        float scale = (float) MaxAnalysisSize / Math.Max(source.Width, source.Height);
+    private static Image<Rgba32> ScaleDown( Image<Rgba32> source, Config cfg ) {
+        float scale = (float) cfg.MaxAnalysisSize / Math.Max(source.Width, source.Height);
         int newW = Math.Max(1, (int) (source.Width * scale));
         int newH = Math.Max(1, (int) (source.Height * scale));
         return source.Clone(ctx => ctx.Resize(newW, newH, KnownResamplers.Box));
@@ -80,25 +135,25 @@ public static class SubjectEdgeDetector {
 
     // --- Core detection 
 
-    private static EdgeIntersectionResult DetectOnImage( Image<Rgba32> image ) {
+    private static SubjectEdgeDetectionResult DetectOnImage(Image<Rgba32> image, Config cfg) {
         SampleBackground(image, out float bgR, out float bgG, out float bgB);
 
-        int stripPx = Math.Max(2, (int) (Math.Min(image.Width, image.Height) * StripDepthFraction));
+        int stripPx = Math.Max(2, (int) (Math.Min(image.Width, image.Height) * cfg.StripDepthFraction));
 
-        bool top = StripIntersects(image, 0, 0, image.Width, stripPx, bgR, bgG, bgB);
-        bool bottom = StripIntersects(image, 0, image.Height - stripPx, image.Width, stripPx, bgR, bgG, bgB);
-        bool left = StripIntersects(image, 0, 0, stripPx, image.Height, bgR, bgG, bgB);
-        bool right = StripIntersects(image, image.Width - stripPx, 0, stripPx, image.Height, bgR, bgG, bgB);
+        bool top = StripIntersects(image, 0, 0, image.Width, stripPx, bgR, bgG, bgB, cfg);
+        bool bottom = StripIntersects(image, 0, image.Height - stripPx, image.Width, stripPx, bgR, bgG, bgB, cfg);
+        bool left = StripIntersects(image, 0, 0, stripPx, image.Height, bgR, bgG, bgB, cfg);
+        bool right = StripIntersects(image, image.Width - stripPx, 0, stripPx, image.Height, bgR, bgG, bgB, cfg);
 
         int count = (top ? 1 : 0) + (bottom ? 1 : 0) + (left ? 1 : 0) + (right ? 1 : 0);
-        return new EdgeIntersectionResult(top, bottom, left, right, count);
+        return new SubjectEdgeDetectionResult(top, bottom, left, right, count);
     }
 
-    /// <summary> Counts foreground pixels within a strip that form horizontal runs of at least <c>MinRunLength</c> pixels. The edge is flagged when the qualifying-run total exceeds <c>IntersectionFraction</c> of the strip area. Isolated pixels and short runs (JPEG artifacts, drop-shadow tails) are excluded. </summary>
+    /// <summary> Counts foreground pixels within a strip that form horizontal runs of at least <c>Config.MinRunLength</c> pixels. The edge is flagged when the qualifying-run total exceeds <c>Config.IntersectionFraction</c> of the strip area. Isolated pixels and short runs (JPEG artifacts, drop-shadow tails) are excluded. </summary>
     private static bool StripIntersects(
         Image<Rgba32> image,
         int x0, int y0, int width, int height,
-        float bgR, float bgG, float bgB ) {
+        float bgR, float bgG, float bgB, Config cfg ) {
         int endX = Math.Min(x0 + width, image.Width);
         int endY = Math.Min(y0 + height, image.Height);
         int totalPixels = (endX - x0) * (endY - y0);
@@ -110,31 +165,31 @@ public static class SubjectEdgeDetector {
             int runLen = 0;
             for (int x = x0; x < endX; x++) {
                 Rgba32 px = image[x, y];
-                if (px.A >= 128 && IsForeground(px, bgR, bgG, bgB)) {
+                if (px.A >= AlphaOpaqueThreshold && IsForeground(px, bgR, bgG, bgB, cfg)) {
                     runLen++;
                 }
                 else {
-                    CommitRun(ref runLen, ref fgRunPixels);
+                    CommitRun(ref runLen, ref fgRunPixels, cfg);
                 }
             }
-            CommitRun(ref runLen, ref fgRunPixels);
+            CommitRun(ref runLen, ref fgRunPixels, cfg);
         }
 
-        return (float) fgRunPixels / totalPixels > IntersectionFraction;
+        return (float) fgRunPixels / totalPixels > cfg.IntersectionFraction;
     }
 
-    private static void CommitRun( ref int runLen, ref int fgRunPixels ) {
-        if (runLen >= MinRunLength) {
+    private static void CommitRun( ref int runLen, ref int fgRunPixels, Config cfg ) {
+        if (runLen >= cfg.MinRunLength) {
             fgRunPixels += runLen;
         }
         runLen = 0;
     }
 
-    private static bool IsForeground( Rgba32 px, float bgR, float bgG, float bgB ) {
-        float dr = (px.R / 255f) - bgR;
-        float dg = (px.G / 255f) - bgG;
-        float db = (px.B / 255f) - bgB;
-        return MathF.Sqrt(dr * dr + dg * dg + db * db) > BgColorDiffThreshold;
+    private static bool IsForeground( Rgba32 px, float bgR, float bgG, float bgB, Config cfg ) {
+        float dr = (px.R / MaxChannelValueF) - bgR;
+        float dg = (px.G / MaxChannelValueF) - bgG;
+        float db = (px.B / MaxChannelValueF) - bgB;
+        return MathF.Sqrt(dr * dr + dg * dg + db * db) > cfg.BgColorDiffThreshold;
     }
 
     // --- Background estimation 
@@ -167,10 +222,10 @@ public static class SubjectEdgeDetector {
         Image<Rgba32> image, int x, int y,
         ref float sumR, ref float sumG, ref float sumB, ref int n ) {
         Rgba32 px = image[x, y];
-        if (px.A < 128) return;
-        sumR += px.R / 255f;
-        sumG += px.G / 255f;
-        sumB += px.B / 255f;
+        if (px.A < AlphaOpaqueThreshold) return;
+        sumR += px.R / MaxChannelValueF;
+        sumG += px.G / MaxChannelValueF;
+        sumB += px.B / MaxChannelValueF;
         n++;
     }
 
@@ -182,30 +237,30 @@ public static class SubjectEdgeDetector {
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read,
                 FileShare.Read, bufferSize: 4096);
 
-            if (fs.ReadByte() != 0xFF || fs.ReadByte() != 0xD8) return null;
+            if (fs.ReadByte() != JpegMarkerPrefix || fs.ReadByte() != JpegSoiMarker) return null;
 
             while (fs.Position < MaxExifSearchBytes) {
-                if (fs.ReadByte() != 0xFF) return null;
+                if (fs.ReadByte() != JpegMarkerPrefix) return null;
                 int marker = fs.ReadByte();
                 if (marker < 0) return null;
 
-                if (marker == 0xE1) {
+                if (marker == JpegApp1Marker) {
                     byte[]? thumb = TryParseApp1ForThumbnail(fs);
                     if (thumb != null) return thumb;
                     continue; // Non-EXIF APP1: already skipped by TryParseApp1ForThumbnail.
                 }
 
-                if (marker == 0xD9) return null; // EOI - no EXIF found.
+                if (marker == JpegEoiMarker) return null; // EOI - no EXIF found.
 
                 // RST0–RST7 and nested SOI carry no length field.
-                if ((marker >= 0xD0 && marker <= 0xD7) || marker == 0xD8) continue;
+                if ((marker >= JpegRestartMarkerRangeStart && marker <= JpegRestartMarkerRangeEnd) || marker == JpegSoiMarker) continue;
 
                 // All other markers: 2-byte big-endian length (includes the 2 bytes).
                 int lenHi = fs.ReadByte(), lenLo = fs.ReadByte();
                 if (lenHi < 0 || lenLo < 0) return null;
                 int segLen = (lenHi << 8) | lenLo;
-                if (segLen < 2) return null;
-                fs.Seek(segLen - 2, SeekOrigin.Current);
+                if (segLen < JpegSegmentLengthFieldSize) return null;
+                fs.Seek(segLen - JpegSegmentLengthFieldSize, SeekOrigin.Current);
             }
 
             return null;
@@ -218,15 +273,15 @@ public static class SubjectEdgeDetector {
     private static byte[]? TryParseApp1ForThumbnail( FileStream fs ) {
         int lenHi = fs.ReadByte(), lenLo = fs.ReadByte();
         if (lenHi < 0 || lenLo < 0) return null;
-        int app1Len = (lenHi << 8) | lenLo; // Includes the 2 length bytes.
+        int app1Len = (lenHi << 8) | lenLo; // Includes the length field bytes.
 
-        // Read the "Exif\0\0" signature (6 bytes).
-        Span<byte> sig = stackalloc byte[6];
-        if (fs.Read(sig) != 6) return null;
+        // Read the "Exif\0\0" signature.
+        Span<byte> sig = stackalloc byte[ExifSignatureLength];
+        if (fs.Read(sig) != ExifSignatureLength) return null;
 
-        if (sig[0] != 'E' || sig[1] != 'x' || sig[2] != 'i' || sig[3] != 'f' || sig[4] != 0 || sig[5] != 0) {
+        if (!sig.SequenceEqual(ExifSignatureBytes)) {
             // Not an EXIF APP1 - skip the remainder of this segment.
-            int remaining = app1Len - 2 - 6; // subtract length field (2) and sig (6)
+            int remaining = app1Len - JpegSegmentLengthFieldSize - ExifSignatureLength;
             if (remaining > 0) fs.Seek(remaining, SeekOrigin.Current);
             return null;
         }
@@ -234,13 +289,13 @@ public static class SubjectEdgeDetector {
         long tiffBase = fs.Position;
 
         // TIFF header: byte-order (2) + magic 42 (2) + IFD0 offset (4).
-        Span<byte> hdr = stackalloc byte[8];
-        if (fs.Read(hdr) != 8) return null;
+        Span<byte> hdr = stackalloc byte[TiffHeaderLength];
+        if (fs.Read(hdr) != TiffHeaderLength) return null;
 
-        bool le = hdr[0] == 0x49; // "II" = little-endian; "MM" = big-endian.
+        bool le = hdr[0] == TiffLittleEndianMarker; // "II" = little-endian; "MM" = big-endian.
         int magic = le ? BinaryPrimitives.ReadUInt16LittleEndian(hdr[2..])
                        : BinaryPrimitives.ReadUInt16BigEndian(hdr[2..]);
-        if (magic != 42) return null;
+        if (magic != TiffMagicNumber) return null;
 
         int ifd0Offset = le ? BinaryPrimitives.ReadInt32LittleEndian(hdr[4..])
                             : BinaryPrimitives.ReadInt32BigEndian(hdr[4..]);
@@ -248,15 +303,15 @@ public static class SubjectEdgeDetector {
         // Seek to IFD0, read entry count, skip entries, read IFD1 offset.
         fs.Seek(tiffBase + ifd0Offset, SeekOrigin.Begin);
 
-        Span<byte> u16Buf = stackalloc byte[2];
-        if (fs.Read(u16Buf) != 2) return null;
+        Span<byte> u16Buf = stackalloc byte[TiffUInt16FieldLength];
+        if (fs.Read(u16Buf) != TiffUInt16FieldLength) return null;
         int ifd0Count = le ? BinaryPrimitives.ReadUInt16LittleEndian(u16Buf)
                            : BinaryPrimitives.ReadUInt16BigEndian(u16Buf);
 
-        fs.Seek(ifd0Count * 12L, SeekOrigin.Current); // 12 bytes per IFD entry.
+        fs.Seek(ifd0Count * IfdEntryLength, SeekOrigin.Current);
 
-        Span<byte> u32Buf = stackalloc byte[4];
-        if (fs.Read(u32Buf) != 4) return null;
+        Span<byte> u32Buf = stackalloc byte[TiffUInt32FieldLength];
+        if (fs.Read(u32Buf) != TiffUInt32FieldLength) return null;
         int ifd1Offset = le ? BinaryPrimitives.ReadInt32LittleEndian(u32Buf)
                             : BinaryPrimitives.ReadInt32BigEndian(u32Buf);
         if (ifd1Offset == 0) return null;
@@ -264,24 +319,24 @@ public static class SubjectEdgeDetector {
         // Parse IFD1 to find JPEGInterchangeFormat (0x0201) and its length (0x0202).
         fs.Seek(tiffBase + ifd1Offset, SeekOrigin.Begin);
 
-        if (fs.Read(u16Buf) != 2) return null;
+        if (fs.Read(u16Buf) != TiffUInt16FieldLength) return null;
         int ifd1Count = le ? BinaryPrimitives.ReadUInt16LittleEndian(u16Buf)
                            : BinaryPrimitives.ReadUInt16BigEndian(u16Buf);
 
         int thumbOffset = -1, thumbLength = -1;
-        Span<byte> entry = stackalloc byte[12];
+        Span<byte> entry = stackalloc byte[IfdEntryLength];
 
         for (int i = 0; i < ifd1Count; i++) {
-            if (fs.Read(entry) != 12) return null;
+            if (fs.Read(entry) != IfdEntryLength) return null;
             int tag = le ? BinaryPrimitives.ReadUInt16LittleEndian(entry)
                          : BinaryPrimitives.ReadUInt16BigEndian(entry);
 
-            if (tag == 0x0201)       // JPEGInterchangeFormat: offset of thumbnail data.
-                thumbOffset = le ? BinaryPrimitives.ReadInt32LittleEndian(entry[8..])
-                                 : BinaryPrimitives.ReadInt32BigEndian(entry[8..]);
-            else if (tag == 0x0202)  // JPEGInterchangeFormatLength: byte count.
-                thumbLength = le ? BinaryPrimitives.ReadInt32LittleEndian(entry[8..])
-                                 : BinaryPrimitives.ReadInt32BigEndian(entry[8..]);
+            if (tag == JpegInterchangeFormatOffsetTag)       // JPEGInterchangeFormat: offset of thumbnail data.
+                thumbOffset = le ? BinaryPrimitives.ReadInt32LittleEndian(entry[IfdEntryValueFieldOffset..])
+                                 : BinaryPrimitives.ReadInt32BigEndian(entry[IfdEntryValueFieldOffset..]);
+            else if (tag == JpegInterchangeFormatLengthTag)  // JPEGInterchangeFormatLength: byte count.
+                thumbLength = le ? BinaryPrimitives.ReadInt32LittleEndian(entry[IfdEntryValueFieldOffset..])
+                                 : BinaryPrimitives.ReadInt32BigEndian(entry[IfdEntryValueFieldOffset..]);
         }
 
         if (thumbOffset <= 0 || thumbLength <= 0) return null;

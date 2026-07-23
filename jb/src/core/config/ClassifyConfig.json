@@ -1,0 +1,49 @@
+{
+    "_comment": "Classify chain thresholds. One section per consuming class in jb/src/core/Services/Matching/Classify/, plus ImagePreProcessor (lives in Services/Matching/ but loads this file's ImagePreProcessor section directly — see ClassifyParameters.cs for the project-boundary reason). All edge/channel thresholds use the normalized [0,1] pixel scale unless noted.",
+
+    "ImageFeatureAnalyzer": {
+        "BackgroundVarianceSolidColorMax": 0.012,
+        "BackgroundVarianceLifestyleMin": 0.040,
+        "NearWhiteChannelMin": 0.90,
+        "AlphaOpaqueThreshold": 128,
+        "MaxChannelValueF": 255,
+        "PixelSampleStride": 2,
+        "ChannelCount": 3,
+        "ClippingPathConfidence": 0.90,
+        "WhiteBackgroundConfidence": 0.92,
+        "LifestyleBackgroundAlphaConfidence": 0.95,
+        "LifestyleBackgroundSolidConfidence": 0.85,
+        "LifestyleBackgroundRealLifeConfidence": 0.72,
+        "BackgroundTypeConfidence": 0.82,
+        "EdgeIntersectionConfidence": 0.85,
+        "OcclusionLevelConfidence": 0.68,
+        "SkinToneAreaConfidence": 0.75
+    },
+
+    "SubjectEdgeDetector": {
+        "MaxAnalysisSize": 512,
+        "MinEXIFThumbnailSize": 64,
+        "StripDepthFraction": 0.08,
+        "BgColorDiffThreshold": 0.15,
+        "IntersectionFraction": 0.20,
+        "MinRunLength": 3
+    },
+
+    "VisualHasher": {
+        "HashWidth": 17,
+        "HashHeight": 8
+    },
+
+    "ImagePreProcessor": {
+        "MaxAnalysisSize": 512,
+        "CannyThreshold1": 80,
+        "CannyThreshold2": 160,
+        "SigmoidCenter": 0.5,
+        "SigmoidSlope": 0.15,
+        "EdgeThreshold": 0.2,
+        "MinBboxAreaRatio": 0.01,
+        "MaxChannelValueD": 255.0,
+        "CannySobelApertureSize": 3,
+        "DilationKernelSize": 7
+    }
+}

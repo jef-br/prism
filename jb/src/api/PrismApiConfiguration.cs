@@ -46,6 +46,8 @@ internal sealed record PrismApiConfiguration {
         // above.
         TransformParameters.FromConfig();
         AnalyzerParameters.FromConfig();
+        ClassifyParameters.FromConfig();
+        ConfigLoader.Section<ImagePreProcessor.Config>("ClassifyConfig.json", "ImagePreProcessor");
 
         if (!Directory.Exists(Path.GetTempPath())) {
             throw new PrismConfigurationException(
