@@ -20,7 +20,7 @@ public class SubstringRescuePerfMeasurement
     }
 
     [Theory]
-    [InlineData(250)]   // generous slice of a 2,500-image heavy batch reaching Bracket 5 rescue
+    [InlineData(250)]   // generous slice of a 2,500-image heavy batch reaching substring rescue
     [InlineData(2500)]  // pathological upper bound: every image in the heaviest documented batch unmatched
     public void TryMatchBySubstringRescue_HeavyBatchScale_ReportsElapsedTime(int unmatchedImageCount)
     {

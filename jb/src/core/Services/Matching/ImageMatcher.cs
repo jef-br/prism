@@ -2,11 +2,17 @@ namespace Prism.Services.Matching;
 
 /// <summary>
 /// Waterfall matching orchestrator for the Matched pipeline stage.
-/// Runs numeric (brackets 1–2), string (bracket 3), semantic combined (bracket 4), and
-/// CLIP label enrichment in sequence. Matched images are removed from subsequent brackets.
-/// Remaining images are KO'd in bracket 5.
+/// Runs numeric (brackets 1–2), string (bracket 3), then semantic combined (bracket 4) plus its
+/// three continuation passes (filename-to-cell, substring rescue, sibling propagation) for whatever
+/// Bracket 4 alone didn't resolve. Matched images are removed from subsequent brackets. Remaining
+/// images are KO'd once the waterfall completes.
 /// </summary>
 internal sealed class ImageMatcher {
+    // Converges() requires at least this many of the 3 independent evidence types (numeric token,
+    // string token, CLIP classification label) to agree before ApplyConvergenceBonus applies the
+    // convergence-confidence bonus.
+    private const int MinAgreeingEvidenceTypes = 2;
+
     private readonly MatchingConfig matchingConfig;
     private readonly NumericMatcher numericMatcher;
     private readonly StringMatcher stringMatcher;
@@ -16,7 +22,7 @@ internal sealed class ImageMatcher {
     private readonly SiblingPropagator siblingPropagator;
     private readonly FolderNameEnricher folderNameEnricher;
 
-    private ImageMatcher( MatchingConfig matchingConfig, TranslationConfig translationConfig, string familyIdColumnName ) {
+    private ImageMatcher(MatchingConfig matchingConfig, TranslationConfig translationConfig, string familyIdColumnName) {
         this.matchingConfig = matchingConfig;
         numericMatcher = new NumericMatcher(
             familyIdColumnName,
@@ -50,11 +56,11 @@ internal sealed class ImageMatcher {
     /// <param name="records">LAMBDA records to match against the family catalogue.</param>
     /// <param name="families">Family records resolved from the Internal Excel Model.</param>
     /// <returns>Number of records KO'd because no FamilyID match was found.</returns>
-    internal static int Run( List<ImageRecord_LAMBDA> records, IReadOnlyList<FamilyIDRecord> families ) {
-        MatchingConfig matchingConfig       = MatchingConfig.Load(ConfigLoader.RequireFile("MatchingConfig.json"));
+    internal static int Run(List<ImageRecord_LAMBDA> records, IReadOnlyList<FamilyIDRecord> families) {
+        MatchingConfig matchingConfig = MatchingConfig.Load(ConfigLoader.RequireFile("MatchingConfig.json"));
         TranslationConfig translationConfig = TranslationConfig.Load(ConfigLoader.RequireFile("TranslationDictionary.json"));
-        ExcelConfig excelConfig             = ExcelConfig.Load(ConfigLoader.RequireFile("ExcelConfig.json"));
-        PrismConfiguration prismConfig      = PrismConfiguration.LoadPrismConfig(ConfigLoader.RequireFile(PrismConfiguration.FileName));
+        ExcelConfig excelConfig = ExcelConfig.Load(ConfigLoader.RequireFile("ExcelConfig.json"));
+        PrismConfiguration prismConfig = PrismConfiguration.LoadPrismConfig(ConfigLoader.RequireFile(PrismConfiguration.FileName));
 
         ImageMatcher matcher = new(matchingConfig, translationConfig, excelConfig.RecordPrimaryKey);
         return matcher.RunWaterfall(records, families, prismConfig.Weight_MatchingSignalsConverging);
@@ -65,7 +71,7 @@ internal sealed class ImageMatcher {
     private int RunWaterfall(
         List<ImageRecord_LAMBDA> allRecords,
         IReadOnlyList<FamilyIDRecord> families,
-        double convergenceWeight ) {
+        double convergenceWeight) {
         IReadOnlyList<MatchingRule> numericRules = matchingConfig.NumericRules;
         IReadOnlyList<MatchingRule> labelRules = matchingConfig.LabelRules;
 
@@ -101,28 +107,30 @@ internal sealed class ImageMatcher {
         // every candidate for an untagged record today. If those two rules are ever both removed from
         // MatchingConfig.json, re-verify this gate's safety.
         bool hasClassificationSignal = allRecords.Any(r => r.Tags.Influential.Length > 0);
-        unmatched = hasClassificationSignal
-            ? RunBracket4(unmatched, allRecords, families, numericRules, labelRules, rejectedNearTies, crossBracketCandidates)
-            : unmatched;
+        unmatched = hasClassificationSignal ? RunBracket4(unmatched, allRecords, families, numericRules, labelRules, rejectedNearTies, crossBracketCandidates) : unmatched;
 
-        // Bracket 5: image filename named verbatim in an Excel cell (exact, unique)
+        // Bracket 4 continued — filename named verbatim in an Excel cell (exact, unique). Not a
+        // bracket of its own: same "0-image families" remit as Bracket 4, just a different signal.
         unmatched = RunBracket5FilenameToCell(unmatched, families, rejectedNearTies, crossBracketCandidates);
 
-        // Substring rescue: unique family whose digit target contains a long filename token
+        // Bracket 4 continued — substring rescue: unique family whose digit target contains a long
+        // filename token.
         unmatched = RunSubstringRescue(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
 
-        // Sibling propagation: inherit the FamilyID of the unique matched sibling image
+        // Bracket 4 continued — sibling propagation: inherit the FamilyID of the unique matched
+        // sibling image.
         if (matchingConfig.EnableSiblingPropagation)
             unmatched = siblingPropagator.Run(unmatched, allRecords);
 
         // Add CLIP label evidence to already-matched records (no new assignments)
         AddClipLabelEvidence(allRecords, families, labelRules);
 
-        // Bracket 6 cleanup: KO any image still without a FamilyID assignment
+        // Cleanup (not a bracket): KO any image still without a FamilyID assignment
         int koAdded = KoUnmatched(unmatched, crossBracketCandidates, families);
 
-        // Bracket 7: finalize clustering (single-pass waterfall means no structural ties)
-        FinalizeMatches(allRecords, convergenceWeight);
+        // Finalize (not a bracket): apply the convergence bonus. Single-pass waterfall means no
+        // structural ties survive to this point.
+        ApplyConvergenceBonus(allRecords, convergenceWeight);
 
         return koAdded;
     }
@@ -138,7 +146,7 @@ internal sealed class ImageMatcher {
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules,
         Dictionary<string, List<CandidateSummary>> rejectedNearTies,
-        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
+        Dictionary<string, HashSet<string>> crossBracketCandidates) {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
         double numericWeight = numericRules.Count > 0 ? numericRules[0].Weight : 1.0;
 
@@ -169,7 +177,7 @@ internal sealed class ImageMatcher {
 
     /// <summary>Returns the rejected near-tie list for <paramref name="key"/>, or an empty list.</summary>
     private static IReadOnlyList<CandidateSummary> GetRejectedTies(
-        Dictionary<string, List<CandidateSummary>> rejectedNearTies, string key ) =>
+        Dictionary<string, List<CandidateSummary>> rejectedNearTies, string key) =>
         rejectedNearTies.TryGetValue(key, out List<CandidateSummary>? ties) ? ties : [];
 
     //  Bracket 2 
@@ -183,7 +191,7 @@ internal sealed class ImageMatcher {
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules,
         Dictionary<string, List<CandidateSummary>> rejectedNearTies,
-        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
+        Dictionary<string, HashSet<string>> crossBracketCandidates) {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
         double numericWeight = numericRules.Count > 0 ? numericRules[0].Weight : 1.0;
 
@@ -223,7 +231,7 @@ internal sealed class ImageMatcher {
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules,
         Dictionary<string, List<CandidateSummary>> rejectedNearTies,
-        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
+        Dictionary<string, HashSet<string>> crossBracketCandidates) {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
         double numericWeight = numericRules.Count > 0 ? numericRules[0].Weight : 1.0;
 
@@ -263,7 +271,7 @@ internal sealed class ImageMatcher {
         List<ImageRecord_LAMBDA> allRecords,
         IReadOnlyList<FamilyIDRecord> families,
         Dictionary<string, List<CandidateSummary>> rejectedNearTies,
-        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
+        Dictionary<string, HashSet<string>> crossBracketCandidates) {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
 
         // (FamilyId, Phenotype) -> count of already-matched, non-KO records with that phenotype in
@@ -327,7 +335,7 @@ internal sealed class ImageMatcher {
     private static bool HasDuplicatePhenotypeInFamily(
         string? familyId,
         string? phenotype,
-        Dictionary<(string FamilyId, string Phenotype), int> phenotypeCounts ) {
+        Dictionary<(string FamilyId, string Phenotype), int> phenotypeCounts) {
         if (familyId is null || phenotype is null)
             return false;
 
@@ -347,7 +355,7 @@ internal sealed class ImageMatcher {
         IReadOnlyList<MatchingRule> numericRules,
         IReadOnlyList<MatchingRule> labelRules,
         Dictionary<string, List<CandidateSummary>> rejectedNearTies,
-        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
+        Dictionary<string, HashSet<string>> crossBracketCandidates) {
         HashSet<string> assignedFamilyIds = allRecords
             .Where(r => !r.IsKo && r.MatchEvidence?.FinalFamilyId is not null)
             .Select(r => r.MatchEvidence!.FinalFamilyId!)
@@ -388,7 +396,7 @@ internal sealed class ImageMatcher {
         return stillUnmatched;
     }
 
-    //  Bracket 5: filename present in an Excel cell
+    //  Bracket 4 continued — filename present in an Excel cell
 
     /// <summary>
     /// Runs FilenameToCellMatcher: assigns an image to the unique FamilyID whose Excel row names
@@ -399,7 +407,7 @@ internal sealed class ImageMatcher {
         List<ImageRecord_LAMBDA> candidates,
         IReadOnlyList<FamilyIDRecord> families,
         Dictionary<string, List<CandidateSummary>> rejectedNearTies,
-        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
+        Dictionary<string, HashSet<string>> crossBracketCandidates) {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
 
         foreach (ImageRecord_LAMBDA record in candidates) {
@@ -424,7 +432,7 @@ internal sealed class ImageMatcher {
         return stillUnmatched;
     }
 
-    //  Substring rescue
+    //  Bracket 4 continued — substring rescue
 
     /// <summary>
     /// Runs NumericMatcher substring rescue: accepts the unique family one of whose digit targets
@@ -435,7 +443,7 @@ internal sealed class ImageMatcher {
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules,
         Dictionary<string, List<CandidateSummary>> rejectedNearTies,
-        Dictionary<string, HashSet<string>> crossBracketCandidates ) {
+        Dictionary<string, HashSet<string>> crossBracketCandidates) {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
 
         foreach (ImageRecord_LAMBDA record in candidates) {
@@ -470,7 +478,7 @@ internal sealed class ImageMatcher {
     private void AddClipLabelEvidence(
         List<ImageRecord_LAMBDA> allRecords,
         IReadOnlyList<FamilyIDRecord> families,
-        IReadOnlyList<MatchingRule> labelRules ) {
+        IReadOnlyList<MatchingRule> labelRules) {
         if (labelRules.Count == 0)
             return;
 
@@ -494,16 +502,16 @@ internal sealed class ImageMatcher {
         }
     }
 
-    //  Bracket 5 cleanup 
+    //  Cleanup
 
     /// <summary>
-    /// KOs any image that was not matched by brackets 1–5.
+    /// KOs any image that was not matched by Brackets 1–4 (including Bracket 4's continuation passes).
     /// Images that were candidates for 2+ FamilyIDs receive <c>MATCHES_MULTIPLE_FAMILYIDS</c>;
     /// images whose stem carries a well-formed FamilyID that the catalogue simply does not contain
     /// receive <c>NOT_IN_CATALOG</c>; images with no signal at all receive <c>MATCH_NOT_FOUND</c>.
     /// </summary>
     /// <returns>Number of records KO'd.</returns>
-    private static int KoUnmatched( List<ImageRecord_LAMBDA> unmatched, IReadOnlyDictionary<string, HashSet<string>> crossBracketCandidates, IReadOnlyList<FamilyIDRecord> families ) {
+    private static int KoUnmatched(List<ImageRecord_LAMBDA> unmatched, IReadOnlyDictionary<string, HashSet<string>> crossBracketCandidates, IReadOnlyList<FamilyIDRecord> families) {
         HashSet<string> knownFamilyIds = families
             .Select(f => f.FamilyID)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -544,7 +552,7 @@ internal sealed class ImageMatcher {
     /// True when the stem contains an 8-digit run that looks like a PRISM FamilyID but is absent
     /// from the supplied families — the image belongs to a product outside this batch's catalogue.
     /// </summary>
-    private static bool StemCarriesUnknownFamilyId( string imageId, HashSet<string> knownFamilyIds ) {
+    private static bool StemCarriesUnknownFamilyId(string imageId, HashSet<string> knownFamilyIds) {
         foreach (System.Text.RegularExpressions.Match run in System.Text.RegularExpressions.Regex.Matches(imageId, @"\d+")) {
             if (run.Value.Length == 8 && !knownFamilyIds.Contains(run.Value))
                 return true;
@@ -554,27 +562,27 @@ internal sealed class ImageMatcher {
     }
 
     /// <summary>Adds all FamilyIds from <paramref name="candidates"/> to the cross-bracket accumulator for <paramref name="key"/>.</summary>
-    private static void AccumulateCandidates( Dictionary<string, HashSet<string>> accumulator, string key, IEnumerable<CandidateSummary> candidates ) {
+    private static void AccumulateCandidates(Dictionary<string, HashSet<string>> accumulator, string key, IEnumerable<CandidateSummary> candidates) {
         if (!accumulator.TryGetValue(key, out HashSet<string>? set))
             accumulator[key] = set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (CandidateSummary c in candidates) set.Add(c.FamilyId);
     }
 
     /// <summary>Adds a single <paramref name="familyId"/> to the cross-bracket accumulator for <paramref name="key"/>.</summary>
-    private static void AccumulateCandidates( Dictionary<string, HashSet<string>> accumulator, string key, string familyId ) {
+    private static void AccumulateCandidates(Dictionary<string, HashSet<string>> accumulator, string key, string familyId) {
         if (!accumulator.TryGetValue(key, out HashSet<string>? set))
             accumulator[key] = set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         set.Add(familyId);
     }
 
-    //  Bracket 6: finalize 
+    //  Finalize
 
     /// <summary>
-    /// Finalizes FamilyID clusters. Applies the convergence bonus to matched records whose
-    /// evidence spans at least two distinct signal types (NumericToken, StringToken, ClassificationLabel).
+    /// Applies the convergence bonus to matched records whose evidence spans at least two distinct
+    /// signal types (NumericToken, StringToken, ClassificationLabel).
     /// T-700 reads record.MatchEvidence.FinalFamilyId to build det-order clusters.
     /// </summary>
-    private static void FinalizeMatches( List<ImageRecord_LAMBDA> allRecords, double convergenceWeight ) {
+    private static void ApplyConvergenceBonus(List<ImageRecord_LAMBDA> allRecords, double convergenceWeight) {
         foreach (ImageRecord_LAMBDA record in allRecords) {
             if (record.IsKo || record.MatchEvidence is null)
                 continue;
@@ -590,12 +598,12 @@ internal sealed class ImageMatcher {
     }
 
     /// <summary>Returns true when the evidence contains at least two distinct signal types.</summary>
-    private static bool Converges( MatchEvidence me ) {
+    private static bool Converges(MatchEvidence me) {
         int signalCount = 0;
         if (me.NumericTokenEvidence.Count > 0) signalCount++;
         if (me.StringTokenEvidence.Count > 0) signalCount++;
         if (me.ClassificationLabelEvidence.Count > 0) signalCount++;
-        return signalCount >= 2;
+        return signalCount >= MinAgreeingEvidenceTypes;
     }
 
 }

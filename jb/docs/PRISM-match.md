@@ -23,8 +23,8 @@ Single pass. Matched images removed from consideration after each bracket.
 - **Weighting:** All three signals use `SemanticWeight` (`MatchingConfig.json`) when computing `MatchEvidence.FinalScore`.
 - **String signal precision (T-3800, fixed 2026-07-14):** `stringSignal = matched string-token evidence ÷ totalImageTokens`, where `totalImageTokens` is the real count of meaningful filename tokens (`StringMatcher.CountFilenameTokens` — the same tokenizer Brackets 3/4 use to extract evidence), not a mix of matched-token count and how many candidate families happened to reach the scoring step that round. The candidate-pool size no longer leaks into the ratio.
 
-**Bracket 5 cleanup:** KO remaining unmatched images. Not renamed; kept in manifest with original filename.
-**Bracket 6 finalize:** Finalize image→FID assignments; cluster into FID groups → move to DO.
+**Cleanup (not a bracket):** KO remaining unmatched images. Not renamed; kept in manifest with original filename.
+**Finalize (not a bracket):** Finalize image→FID assignments; cluster into FID groups → move to DO.
 
 **Tie-breaking:** Image remains candidate for multiple FIDs after all brackets → KO with reason `MATCHES_MULTIPLE_FAMILYIDS`. No det-position comparison is performed. V1 decision — behavior will be revised in a future milestone.
 
