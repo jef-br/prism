@@ -23,9 +23,38 @@ namespace Prism.Services.Matching;
 /// Measures subject-box geometry features. Returns the resolved subject box so the color
 /// analyzers can sample the same region.
 /// </summary>
-internal static class Analyzer_SubjectGeometry
+public static class Analyzer_SubjectGeometry
 {
-    public static SubjectBox? Analyze(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot, SubjectGeometryAnalyzerConfig cfg)
+    /// <summary>
+    /// Thresholds for Analyzer_SubjectGeometry, bound from the "SubjectGeometry" section of
+    /// analyzer_Config.json. No defaults — every value must be present in the JSON or deserialization
+    /// fails loud.
+    /// </summary>
+    public sealed class Config : IValidatableConfig
+    {
+        /// <summary>Euclidean RGB distance ([0,1] channels) from the background estimate above which a pixel counts as foreground.</summary>
+        public required float ForegroundColorDistance { get; init; }
+
+        /// <summary>Minimum foreground pixel fraction for the fallback box to be trusted.</summary>
+        public required float MinForegroundFraction { get; init; }
+
+        /// <summary>Confidence recorded on features measured from the color-distance fallback box (YOLO boxes carry the detection confidence).</summary>
+        public required float FallbackConfidence { get; init; }
+
+        /// <summary>
+        /// Confidence discount applied to product-coverage-ratio: box-area coverage is an
+        /// approximation until a segmentation model provides pixel masks, see T-2600.
+        /// </summary>
+        public required float BoxAreaCoverageConfidenceDiscount { get; init; }
+
+        public void Validate()
+        {
+            if (ForegroundColorDistance is <= 0f or >= 1f)
+                throw new PrismConfigurationException("SubjectGeometry.ForegroundColorDistance must be in (0,1)");
+        }
+    }
+
+    public static SubjectBox? Analyze(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot, Config cfg)
     {
         SubjectBox? subject = ResolveSubjectBox(image, detections, cfg);
         if (subject is null) return null;
@@ -37,7 +66,7 @@ internal static class Analyzer_SubjectGeometry
 
         snapshot.Set("salient-bbox", FormatBox(subject), conf, source);
         snapshot.Set("image-occupancy", F4(subject.Area), conf, source);
-        snapshot.Set("product-coverage-ratio", F4(subject.Area), conf * 0.9, source);
+        snapshot.Set("product-coverage-ratio", F4(subject.Area), conf * cfg.BoxAreaCoverageConfidenceDiscount, source);
         snapshot.Set("crop-tightness", F4(MathF.Max(subject.Width, subject.Height)), conf, source);
         snapshot.Set("product-aspect-ratio", F4(boxAspect), conf, source);
         snapshot.Set("vertical-centering", F4(1f - 2f * MathF.Abs(subject.CenterY - 0.5f)), conf, source);
@@ -46,7 +75,7 @@ internal static class Analyzer_SubjectGeometry
         return subject;
     }
 
-    private static SubjectBox? ResolveSubjectBox(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, SubjectGeometryAnalyzerConfig cfg)
+    private static SubjectBox? ResolveSubjectBox(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, Config cfg)
     {
         YoloDetection? best = detections.OrderByDescending(d => d.Confidence).FirstOrDefault();
         if (best is not null)

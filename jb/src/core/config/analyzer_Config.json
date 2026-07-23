@@ -33,7 +33,17 @@
     "SubjectGeometry": {
         "ForegroundColorDistance": 0.15,
         "MinForegroundFraction": 0.005,
-        "FallbackConfidence": 0.60
+        "FallbackConfidence": 0.60,
+        "BoxAreaCoverageConfidenceDiscount": 0.9
+    },
+
+    "SkinTone": {
+        "LumaMin": 0.10,
+        "LumaMax": 0.95,
+        "CbMin": 0.30,
+        "CbMax": 0.53,
+        "CrMin": 0.52,
+        "CrMax": 0.68
     },
 
     "Colors": {

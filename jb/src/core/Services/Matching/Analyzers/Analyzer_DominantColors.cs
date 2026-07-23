@@ -24,7 +24,7 @@ namespace Prism.Services.Matching;
 /// </summary>
 internal static class Analyzer_DominantColors
 {
-    public static IReadOnlyList<ColorBucket> Analyze(Image<Rgba32> image, SubjectBox? subject, ImageFeatureSnapshot snapshot, ColorAnalyzerConfig cfg)
+    public static IReadOnlyList<ColorBucket> Analyze(Image<Rgba32> image, SubjectBox? subject, ImageFeatureSnapshot snapshot, ColorAnalyzerConfig cfg, SkinToneAnalyzerConfig skinCfg)
     {
         if (subject is null) return [];
 
@@ -54,7 +54,7 @@ internal static class Analyzer_DominantColors
 
                     float r = p.R / 255f, g = p.G / 255f, b = p.B / 255f;
                     if (AnalyzerMath.ColorDistance(r, g, b, bgR, bgG, bgB) < cfg.BackgroundDistance) continue;
-                    if (AnalyzerMath.IsSkinTone(p)) continue;
+                    if (AnalyzerMath.IsSkinTone(p, skinCfg)) continue;
 
                     survived++;
                     int idx = Math.Min((int)(r * bins), bins - 1) * bins * bins
