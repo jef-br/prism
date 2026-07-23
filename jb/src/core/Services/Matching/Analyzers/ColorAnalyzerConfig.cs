@@ -9,6 +9,9 @@ namespace Prism.Services.Matching;
 /// </summary>
 public sealed class ColorAnalyzerConfig : IValidatableConfig
 {
+    // BinsPerChannel needs at least 2 bins to quantize anything — validation bound, not tunable.
+    private const int MinBinsPerChannel = 2;
+
     /// <summary>Number of dominant color buckets reported (user decision: 4).</summary>
     public required int BucketCount { get; init; }
 
@@ -41,7 +44,7 @@ public sealed class ColorAnalyzerConfig : IValidatableConfig
         List<string> problems = [];
 
         if (BucketCount < 1) problems.Add("Colors.BucketCount must be >= 1");
-        if (BinsPerChannel < 2) problems.Add("Colors.BinsPerChannel must be >= 2");
+        if (BinsPerChannel < MinBinsPerChannel) problems.Add("Colors.BinsPerChannel must be >= 2");
         if (Palette.Count == 0) problems.Add("Colors.Palette must define at least one named color");
 
         if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));

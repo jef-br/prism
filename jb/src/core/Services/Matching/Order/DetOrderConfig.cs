@@ -6,8 +6,10 @@ namespace Prism.Services.Matching;
 /// Loaded configuration for det-slot ordering rules and filename keyword stems.
 /// Parses DetOrderRules.json and DetOrderKeywordStems.json on construction.
 /// </summary>
-public sealed class DetOrderConfig
-{
+public sealed class DetOrderConfig {
+    // Length of the "det" prefix in a slot name ("det0", "det1", …).
+    private const int DetSlotPrefixLength = 3;
+
     // productTypeId (lowercase) → ordered list of slot rules
     private readonly Dictionary<string, List<DetSlotRule>> slotsByProductType;
 
@@ -24,12 +26,11 @@ public sealed class DetOrderConfig
         Dictionary<string, List<DetSlotRule>> slotsByProductType,
         Dictionary<string, List<string>> stemsByKeyword,
         double overflowUnhintedAnchor,
-        bool overflowOnModelFirst)
-    {
+        bool overflowOnModelFirst) {
         this.slotsByProductType = slotsByProductType;
-        this.stemsByKeyword     = stemsByKeyword;
-        OverflowUnhintedAnchor  = overflowUnhintedAnchor;
-        OverflowOnModelFirst    = overflowOnModelFirst;
+        this.stemsByKeyword = stemsByKeyword;
+        OverflowUnhintedAnchor = overflowUnhintedAnchor;
+        OverflowOnModelFirst = overflowOnModelFirst;
     }
 
     //  Factory 
@@ -40,8 +41,7 @@ public sealed class DetOrderConfig
     /// </summary>
     /// <param name="rulesPath">Absolute path to DetOrderRules.json.</param>
     /// <param name="stemsPath">Absolute path to DetOrderKeywordStems.json.</param>
-    public static DetOrderConfig Load(string rulesPath, string stemsPath)
-    {
+    public static DetOrderConfig Load(string rulesPath, string stemsPath) {
         var slots = ParseRules(rulesPath);
         var stems = ParseStems(stemsPath);
         (double unhintedAnchor, bool onModelFirst) = ParseOverflowPolicy(rulesPath);
@@ -55,11 +55,9 @@ public sealed class DetOrderConfig
     /// Falls back to "default" when <paramref name="productTypeId"/> is not in the config.
     /// </summary>
     /// <param name="productTypeId">Product type id (e.g. "clothing-tops"), or null.</param>
-    public IReadOnlyList<DetSlotRule> GetSlots(string? productTypeId)
-    {
+    public IReadOnlyList<DetSlotRule> GetSlots(string? productTypeId) {
         if (productTypeId is not null &&
-            slotsByProductType.TryGetValue(productTypeId, out List<DetSlotRule>? found))
-        {
+            slotsByProductType.TryGetValue(productTypeId, out List<DetSlotRule>? found)) {
             return found;
         }
 
@@ -81,16 +79,14 @@ public sealed class DetOrderConfig
     /// </summary>
     /// <param name="filename">Original filename (may include extension).</param>
     /// <param name="keyword">Keyword from a slot rule (e.g. "front", "back").</param>
-    public bool FilenameMatchesSlotKeyword(string filename, string keyword)
-    {
+    public bool FilenameMatchesSlotKeyword(string filename, string keyword) {
         if (!stemsByKeyword.TryGetValue(keyword, out List<string>? stems))
             return false;
 
         string stemName = Path.GetFileNameWithoutExtension(filename);
         string[] tokens = stemName.Split(['_', '-', ' ', '.'], StringSplitOptions.RemoveEmptyEntries);
 
-        foreach (string token in tokens)
-        {
+        foreach (string token in tokens) {
             if (stems.Contains(token.ToLowerInvariant()))
                 return true;
         }
@@ -105,8 +101,7 @@ public sealed class DetOrderConfig
     /// Expected structure:
     /// <code>{ "productTypes": { "clothing-tops": { "det0": { "keyword": "front", "phenotypes": [...] }, ... }, ... } }</code>
     /// </summary>
-    private static Dictionary<string, List<DetSlotRule>> ParseRules(string path)
-    {
+    private static Dictionary<string, List<DetSlotRule>> ParseRules(string path) {
         string json = ReadJsonFile(path);
         using JsonDocument doc = ParseJsonDocument(json, path);
 
@@ -116,13 +111,11 @@ public sealed class DetOrderConfig
 
         var result = new Dictionary<string, List<DetSlotRule>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (JsonProperty productType in productTypesEl.EnumerateObject())
-        {
+        foreach (JsonProperty productType in productTypesEl.EnumerateObject()) {
             string typeId = productType.Name.ToLowerInvariant();
             var slotRules = new List<DetSlotRule>();
 
-            foreach (JsonProperty slotEntry in productType.Value.EnumerateObject())
-            {
+            foreach (JsonProperty slotEntry in productType.Value.EnumerateObject()) {
                 int slotIndex = ParseSlotIndex(slotEntry.Name, path);
 
                 string keyword = slotEntry.Value.TryGetProperty("keyword", out JsonElement kwEl)
@@ -130,10 +123,8 @@ public sealed class DetOrderConfig
                     : string.Empty;
 
                 List<string> phenotypes = [];
-                if (slotEntry.Value.TryGetProperty("phenotypes", out JsonElement phenotypesEl))
-                {
-                    foreach (JsonElement phenotype in phenotypesEl.EnumerateArray())
-                    {
+                if (slotEntry.Value.TryGetProperty("phenotypes", out JsonElement phenotypesEl)) {
+                    foreach (JsonElement phenotype in phenotypesEl.EnumerateArray()) {
                         string? id = phenotype.GetString();
                         if (!string.IsNullOrWhiteSpace(id))
                             phenotypes.Add(id);
@@ -154,16 +145,14 @@ public sealed class DetOrderConfig
     /// Parses the optional "overflowPolicy" object in DetOrderRules.json.
     /// Missing object or members fall back to unhintedAnchor 2.5 / onModelFirst true.
     /// </summary>
-    private static (double UnhintedAnchor, bool OnModelFirst) ParseOverflowPolicy(string path)
-    {
+    private static (double UnhintedAnchor, bool OnModelFirst) ParseOverflowPolicy(string path) {
         string json = ReadJsonFile(path);
         using JsonDocument doc = ParseJsonDocument(json, path);
 
         double unhintedAnchor = 2.5;
         bool onModelFirst = true;
 
-        if (doc.RootElement.TryGetProperty("overflowPolicy", out JsonElement policy))
-        {
+        if (doc.RootElement.TryGetProperty("overflowPolicy", out JsonElement policy)) {
             if (policy.TryGetProperty("unhintedAnchor", out JsonElement anchorEl) && anchorEl.TryGetDouble(out double anchor))
                 unhintedAnchor = anchor;
             if (policy.TryGetProperty("onModelFirst", out JsonElement onModelEl))
@@ -178,25 +167,21 @@ public sealed class DetOrderConfig
     /// Expected structure:
     /// <code>{ "DetOrderKeywordStems": { "front": [...stems...], ... } }</code>
     /// </summary>
-    private static Dictionary<string, List<string>> ParseStems(string path)
-    {
+    private static Dictionary<string, List<string>> ParseStems(string path) {
         string json = ReadJsonFile(path);
         using JsonDocument doc = ParseJsonDocument(json, path);
 
-        if (!doc.RootElement.TryGetProperty("DetOrderKeywordStems", out JsonElement stemsEl))
-            throw new PrismConfigurationException(
-                $"DetOrderKeywordStems.json at '{path}' is missing required 'DetOrderKeywordStems' property.");
+        if (!doc.RootElement.TryGetProperty("DetOrderKeywordStems", out JsonElement stemsEl)) {
+            throw new PrismConfigurationException($"DetOrderKeywordStems.json at '{path}' is missing required 'DetOrderKeywordStems' property.");
+        }
 
         var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (JsonProperty keyword in stemsEl.EnumerateObject())
-        {
+        foreach (JsonProperty keyword in stemsEl.EnumerateObject()) {
             var stemList = new List<string>();
-            foreach (JsonElement stem in keyword.Value.EnumerateArray())
-            {
+            foreach (JsonElement stem in keyword.Value.EnumerateArray()) {
                 string? s = stem.GetString();
-                if (!string.IsNullOrWhiteSpace(s))
-                    stemList.Add(s.ToLowerInvariant());
+                if (!string.IsNullOrWhiteSpace(s)) stemList.Add(s.ToLowerInvariant());
             }
             result[keyword.Name.ToLowerInvariant()] = stemList;
         }
@@ -206,38 +191,28 @@ public sealed class DetOrderConfig
 
     //  Helpers 
 
-    private static string ReadJsonFile(string path)
-    {
-        if (!File.Exists(path))
-            throw new PrismConfigurationException($"Config file not found: '{path}'.");
+    private static string ReadJsonFile(string path) {
+        if (!File.Exists(path)) throw new PrismConfigurationException($"Config file not found: '{path}'.");
         return File.ReadAllText(path, System.Text.Encoding.UTF8);
     }
 
-    private static JsonDocument ParseJsonDocument(string json, string path)
-    {
-        try
-        {
+    private static JsonDocument ParseJsonDocument(string json, string path) {
+        try {
             return JsonDocument.Parse(json);
         }
-        catch (JsonException ex)
-        {
+        catch (JsonException ex) {
             throw new PrismConfigurationException(
                 $"Failed to parse JSON at '{path}': {ex.Message}", ex);
         }
     }
 
     /// <summary>
-    /// Parses slot name in the form "det0", "det1", … into an integer index.
+    /// Slots have to start with "det" followed by a non-negative integer.
+    /// Returns just the index. Throws PrismConfigurationException on any other format.
     /// </summary>
-    private static int ParseSlotIndex(string slotName, string sourcePath)
-    {
-        if (slotName.StartsWith("det", StringComparison.OrdinalIgnoreCase) &&
-            int.TryParse(slotName[3..], out int index))
-        {
-            return index;
-        }
+    private static int ParseSlotIndex(string slotName, string sourcePath) {
+        if (slotName.StartsWith("det", StringComparison.OrdinalIgnoreCase) && int.TryParse(slotName[DetSlotPrefixLength..], out int index)) return index;
 
-        throw new PrismConfigurationException(
-            $"Unexpected slot name '{slotName}' in '{sourcePath}'. Expected format: det0, det1, …");
+        throw new PrismConfigurationException($"Unexpected slot name '{slotName}' in '{sourcePath}'. Expected format: det0, det1, …");
     }
 }

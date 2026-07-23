@@ -18,6 +18,11 @@ namespace Prism.Services.Upscale;
 public static class Upscaler {
     private const double SrScale = 2.0;
     private const int SrScaleInt = 2;
+    private const int TensorHeightDimIndex = 2;
+    private const int TensorWidthDimIndex = 3;
+    private const double RaisedCosineHalfAmplitude = 0.5;
+    private const float MaxChannelValueF = 255f;
+    private const int BgrThirdChannelIndex = 2;
 
     private static readonly bool GpuAvailable = GpuProbe.HasHardwareDirectMLAdapter();
 
@@ -68,8 +73,8 @@ public static class Upscaler {
                 InferenceSession session = OnnxSessionFactory.Create(modelPath);
 
                 int[] inputDims = session.InputMetadata[TensorInput].Dimensions;
-                _tileHeight = inputDims[2] > 0 ? inputDims[2] : 0;
-                _tileWidth  = inputDims[3] > 0 ? inputDims[3] : 0;
+                _tileHeight = inputDims[TensorHeightDimIndex] > 0 ? inputDims[TensorHeightDimIndex] : 0;
+                _tileWidth  = inputDims[TensorWidthDimIndex] > 0 ? inputDims[TensorWidthDimIndex] : 0;
 
                 LoadTilingConfig(configPath);
 
@@ -245,8 +250,8 @@ public static class Upscaler {
         int rel = distFromEdge - discardOut;
         if (rel >= rampWidth) return 1f;
 
-        double t = (rel + 0.5) / rampWidth;
-        return (float)(0.5 - 0.5 * Math.Cos(Math.PI * t));
+        double t = (rel + RaisedCosineHalfAmplitude) / rampWidth;
+        return (float)(RaisedCosineHalfAmplitude - RaisedCosineHalfAmplitude * Math.Cos(Math.PI * t));
     }
 
     /// <summary>Divides the weighted color accumulator by the accumulated weight to produce the final stitched BGR uint8 image.</summary>
@@ -258,9 +263,9 @@ public static class Upscaler {
                 float w = weightSum.Get<float>(y, x);
                 Vec3f sum = colorSum.Get<Vec3f>(y, x);
                 output.Set<Vec3b>(y, x, new Vec3b(
-                    (byte)Math.Clamp(sum.Item0 / w, 0f, 255f),
-                    (byte)Math.Clamp(sum.Item1 / w, 0f, 255f),
-                    (byte)Math.Clamp(sum.Item2 / w, 0f, 255f)));
+                    (byte)Math.Clamp(sum.Item0 / w, 0f, MaxChannelValueF),
+                    (byte)Math.Clamp(sum.Item1 / w, 0f, MaxChannelValueF),
+                    (byte)Math.Clamp(sum.Item2 / w, 0f, MaxChannelValueF)));
             }
         }
 
@@ -303,9 +308,9 @@ public static class Upscaler {
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 Vec3b px = bgrUint8.At<Vec3b>(y, x);
-                tensor[0, 0, y, x] = px.Item0 / 255f;  // B
-                tensor[0, 1, y, x] = px.Item1 / 255f;  // G
-                tensor[0, 2, y, x] = px.Item2 / 255f;  // R
+                tensor[0, 0, y, x] = px.Item0 / MaxChannelValueF;  // B
+                tensor[0, 1, y, x] = px.Item1 / MaxChannelValueF;  // G
+                tensor[0, BgrThirdChannelIndex, y, x] = px.Item2 / MaxChannelValueF;  // R
             }
         }
 
@@ -324,9 +329,9 @@ public static class Upscaler {
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 // Clamp [0, 1] → scale to [0, 255] → cast to byte.
-                byte b = (byte)(Math.Clamp(outputTensor[0, 0, y, x], 0f, 1f) * 255f);
-                byte g = (byte)(Math.Clamp(outputTensor[0, 1, y, x], 0f, 1f) * 255f);
-                byte r = (byte)(Math.Clamp(outputTensor[0, 2, y, x], 0f, 1f) * 255f);
+                byte b = (byte)(Math.Clamp(outputTensor[0, 0, y, x], 0f, 1f) * MaxChannelValueF);
+                byte g = (byte)(Math.Clamp(outputTensor[0, 1, y, x], 0f, 1f) * MaxChannelValueF);
+                byte r = (byte)(Math.Clamp(outputTensor[0, BgrThirdChannelIndex, y, x], 0f, 1f) * MaxChannelValueF);
                 bgrUint8Out.At<Vec3b>(y, x) = new Vec3b(b, g, r);
             }
         }
