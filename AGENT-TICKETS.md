@@ -119,39 +119,6 @@ Tracks three open items, each fully detailed (impact, industry-standard framing,
 
 ---
 
-
-
-### T-4400 · Adopt Roslyn analyzers: SA1402/SA1649/SA1101/SA1633/S109 (S109 priority), suppress SA1500/SA1025/SA1503
-**Status:** Done | **Profile:** P1-feature-worker
-**Review (phase 1, 2026-07-20):** Approve. StyleCop.Analyzers/SonarAnalyzer.CSharp wired into every production project, curated root `.editorconfig`, `SonarLint.xml`, SA1402/SA1649 fixed to zero and CI-gated — verified internally consistent (no type compiled twice or dropped across the Prism.Core/Prism.Core.Contracts Include/Remove split), package versions confirmed real/current on nuget.org, SonarLint.xml schema confirmed correct for sonar-dotnet, CI `-warnaserror:SA1402,SA1649` confirmed to actually fail the build on regression. Two non-blocking follow-ups for Planner: (1) `Prism.Tests.Shared` is excluded from analyzer coverage by the `*Tests*` name match even though CLAUDE.md documents it as a non-test fixture classlib — debatable but defensible; (2) the ticket's own "verify the global `none` floor doesn't mute IDE0xxx hints" caveat was never checked, and user has since said to drop it — not pursued. S109/SA1633/SA1101 correctly left warn-only (not silently suppressed, not prematurely gated) pending phases 2-4.
-**Phase 2 done (2026-07-23):** S109 triaged to zero across the solution (real baseline was ~163 unique warnings across ~30 files, not the stale 98 estimate — a clean analyzer rebuild had never actually been re-measured since the phase-1 baseline). Nearly everything was structural (file-format magic bytes, RGB/luma/CHW-tensor math, alpha thresholds, pixel-sample strides, switch-pattern case values, config-validation bounds) and got named `private const`s at point of use — zero behavior change. One genuine infra-tuning file (`WetransferClient.cs`) got promoted to `HostRules.json`'s new `weTransferPolling` config section instead, per the shadow-defaults rule. Per-feature confidence weights (CLIP/heuristic calibration in `ImageFeatureAnalyzer.cs`, `NumericMatcher.cs`, `SiblingPropagator.cs`, `StringMatcher.cs`) were deliberately named-const'd, **not** moved to config — calibration is an open product question tracked by [[T-2600]]; see `AGENTFEEDBACK.md`'s S109 entry for the standing rule on any newly-discovered confidence literal. `-warnaserror:SA1402,SA1649,S109` gates CI.
-**Phase 4 done (2026-07-24):** SA1101 (472+ `this.`-prefix warnings, later re-measured at 878 on a true clean build) fixed solution-wide via `dotnet format jb/src/PRISM.sln analyzers --diagnostics SA1101` — purely mechanical, 94 files, zero behavior change (verified: 799 insertions/799 deletions, identical line counts). `-warnaserror:SA1402,SA1649,S109,SA1101` now gates CI. **SA1633 (phase 3) resolved by permanent suppression, not fix**: per user decision, `dotnet_diagnostic.SA1633.severity = none` in `.editorconfig`, same treatment as SA1500 — this repo's doc-comment convention (class-level `/// <summary>` only, CLAUDE.md) makes a per-file header pure noise, not a real gap. Final verification: clean non-incremental Release build with all 4 gated rules as errors → 0 errors, 11 residual warnings (pre-existing SA0001/CS0414/CS8602/CS8600, outside this ticket's scope); full test suite 408/408 passing.
-**Found by:** 2026-07-12 analyzer baseline trial (StyleCop.Analyzers + SonarAnalyzer.CSharp on Prism.Core: 2,699 unique warnings).
-
-**Problem:** Style/config rules are enforced only at edit time (conventions hook) and by review — nothing compiler-grade catches violations from non-Claude edits or agents that bypass process. The baseline trial measured per-rule cost in Prism.Core: SA1402 (one type per file) = 9, SA1649 (file name matches type) = 1, SA1101 (`this.` prefix) = 472, SA1633 (file header) = 113, SA1025 (whitespace) = 424, SA1503 (braces required) = 320, S109 (magic numbers) = 98.
-
-**Pre-existing state (verified 2026-07-14):** `jb/src/Directory.Build.props` **already exists** (committed in `06e09ca` "First agentic wave") and currently sets `TargetFramework` / `ImplicitUsings` / `Nullable` / `LangVersion` / `Deterministic` for every project under `jb/src/`. This ticket **extends** that file — it does not create it. Nothing else is in place: no `StyleCop.Analyzers` or `SonarAnalyzer.CSharp` package reference exists anywhere in the repo, and there is no `SonarLint.xml`.
-
-**What to do:**
-1. Add `StyleCop.Analyzers` (prerelease, for modern C#) + `SonarAnalyzer.CSharp` to all production projects — via the existing `Directory.Build.props` at `jb/src/`, scoped to exclude the test project (S109 on test literals would be pure noise; decide test-project treatment explicitly).
-2. Curated severities in the root `.editorconfig`: `dotnet_analyzer_diagnostic.severity = none` as the floor, then explicitly:
-   - `warning`: SA1402, SA1649, SA1101, SA1633, **S109 (priority — this is the config-driven-design rule at compiler grade)**. S109 needs `dotnet_diagnostic.S109.severity = warning` (off by default) plus a `SonarLint.xml` AdditionalFile to set its allowed-values parameter (0, 1, -1 at minimum) so structural constants don't drown the empirical ones.
-   - `none` **permanently**: SA1500 — it enforces Allman brace placement, the exact opposite of the house K&R rule (`csharp_new_line_before_open_brace = none` in `.editorconfig`). Comment the suppression with this reason.
-   - `none` **for now (deferred, not rejected)**: SA1025, SA1503 — enable in a later phase once the 424 + 320 baseline is burned down (large mechanical cleanups; `dotnet format` handles most of SA1025).
-   - Caveat to verify: the global `none` floor also mutes IDE analyzer hints (IDE0xxx) in C# Dev Kit — if that proves annoying, replace the floor with per-category StyleCop/Sonar disables.
-3. Burn down in phases, gating each finished rule in CI (`-warnaserror:RULE` in the ci.yml build step): phase 1 SA1402 (9) + SA1649 (1); phase 2 S109 triage (98 in core — each is either moved to config per the shadow-defaults rule or explicitly justified as structural); phase 3 SA1633 (113 — decide the header template first; house style is token-lean, so keep it minimal); phase 4 SA1101 (472 mechanical `this.` insertions).
-   - SA1101 direction check before phase 4: SA1101 *requires* the `this.` prefix; StyleCop's inverse rule is SX1101 (forbid it). Current code omits `this.` everywhere — confirm with the user that adding 472 prefixes is really the wanted direction, since it contradicts the "short, practical" style line.
-4. Keep the conventions hook as-is — it stays the edit-time delta layer (catches new violations instantly, judgment-friendly); the analyzers are the build-time backstop that sees every edit from anyone.
-
-**Acceptance:** Packages active in all production projects; curated `.editorconfig` severities in place with suppression reasons commented; SA1402/SA1649/S109 at zero warnings and CI-gated; SA1633/SA1101 either at zero or split into follow-up tickets; SA1500 suppressed with the K&R rationale; full suite green.
-
-**Files:** `jb/src/Directory.Build.props` (exists — extend), `.editorconfig` (root, exists — extend), `SonarLint.xml` (new), `.github/workflows/ci.yml`, phased cleanup edits across `jb/src`.
-
----
-
-
-
-
 ## Verification Rules
 
 - After project/solution setup: `dotnet build jb/src/PRISM.sln`, API run smoke, web `npm run typecheck` + `npm run build`.
