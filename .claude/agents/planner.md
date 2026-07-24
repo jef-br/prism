@@ -55,3 +55,4 @@ Anything requiring Domain Expert input before implementation begins. Do not inve
 - If an edge case has no documented behavior, add it to Open Questions, do not invent behavior
 - Consult the relevant domain `.md` file (linked from PRISM-index.md) before speccing anything in that domain
 - If the ticket acceptance criteria conflict with the domain docs, surface the conflict — do not resolve it silently
+- Never background a long-running command (tests, builds) and end your turn assuming you'll be woken up to report the result — that notification is not reliable inside a subagent. Run it in the foreground, or actively poll its output before finishing. See AGENTFEEDBACK.md.

@@ -52,3 +52,4 @@ Write xUnit tests that give genuine confidence the implementation is correct. Ha
 - If a domain `.md` file describes a specific edge case, there must be a test for it
 - At least one failure-path test per public method
 - Do not write tests that assert on log output or internal state — only observable behavior
+- Never background a long-running command (tests, builds) and end your turn assuming you'll be woken up to report the result — that notification is not reliable inside a subagent. Run it in the foreground, or actively poll its output before finishing. See AGENTFEEDBACK.md.

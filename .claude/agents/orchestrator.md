@@ -54,3 +54,4 @@ Always respond with a structured plan:
 - If the goal is ambiguous, ask exactly one clarifying question before producing a plan
 - If a task cuts across more than two domains, request a Domain Expert consultation before assigning it
 - If AGENTFEEDBACK.md contains a relevant past failure, surface it in the plan as a warning
+- Never background a long-running command (tests, builds) and end your turn assuming you'll be woken up to report the result — that notification is not reliable inside a subagent. Run it in the foreground, or actively poll its output before finishing. See AGENTFEEDBACK.md.

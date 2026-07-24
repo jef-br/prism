@@ -61,3 +61,4 @@ End with a final **Verdict**:
 - If something is architecturally wrong, mark it ❌ — do not soften it to a warning
 - If the Developer made a reasonable interpretation of an unclear spec, mark it as Planner feedback, not a Developer failure
 - If AGENTFEEDBACK.md contains a past issue matching something in this diff, call it out explicitly
+- Never background a long-running command (tests, builds) and end your turn assuming you'll be woken up to report the result — that notification is not reliable inside a subagent. Run it in the foreground, or actively poll its output before finishing. See AGENTFEEDBACK.md.
