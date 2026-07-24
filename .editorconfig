@@ -15,7 +15,6 @@ dotnet_analyzer_diagnostic.severity = none
 dotnet_diagnostic.SA1402.severity = warning
 dotnet_diagnostic.SA1649.severity = warning
 dotnet_diagnostic.SA1101.severity = warning
-dotnet_diagnostic.SA1633.severity = warning
 
 # Config-driven-design rule (no magic values inline) at compiler grade. Allowed literals are set
 # via SonarLint.xml (0, 1, -1 minimum) so structural constants don't drown empirical ones.
@@ -24,6 +23,11 @@ dotnet_diagnostic.S109.severity = warning
 # --- Suppressed permanently ---
 # SA1500 enforces Allman brace placement, the opposite of the house K&R rule above. Never enable.
 dotnet_diagnostic.SA1500.severity = none
+
+# SA1633 requires a per-file header block. This repo's doc-comment convention (PRISM CLAUDE.md) is
+# class-level /// <summary> only, deliberately token-lean — a per-file header is pure noise on top
+# of that, not a gap. Never enable.
+dotnet_diagnostic.SA1633.severity = none
 
 # --- Suppressed for now (deferred, not rejected) ---
 # SA1025 (whitespace) and SA1503 (braces required) baselines are large mechanical cleanups

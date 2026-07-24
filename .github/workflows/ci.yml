@@ -23,9 +23,11 @@ jobs:
         shell: pwsh
         # T-4400 phase 1: SA1402 (one type per file) and SA1649 (file name matches type) are
         # CI-gated as errors now that both are at zero warnings. T-4400 phase 2: S109 (magic
-        # numbers) joins the gate now that the repo-wide triage is complete. Later phases
-        # (SA1633, SA1101) get their own -warnaserror once each is burned down.
-        run: dotnet build jb/src/PRISM.sln -c Release --nologo -warnaserror:SA1402,SA1649,S109
+        # numbers) joins the gate now that the repo-wide triage is complete. T-4400 phase 4:
+        # SA1101 (this. prefix) joins the gate now that the repo-wide fix is complete. SA1633
+        # is permanently suppressed (see .editorconfig) rather than fixed — no per-file-header
+        # convention in this repo.
+        run: dotnet build jb/src/PRISM.sln -c Release --nologo -warnaserror:SA1402,SA1649,S109,SA1101
 
       - name: Unit tests (xUnit)
         shell: pwsh
