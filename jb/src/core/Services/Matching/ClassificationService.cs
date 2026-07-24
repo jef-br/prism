@@ -22,13 +22,13 @@ public sealed class ClassificationService : IClassificationService
     }
 
     /// <inheritdoc/>
-    public bool IsReady => classifier.IsReady;
+    public bool IsReady => this.classifier.IsReady;
 
     /// <inheritdoc/>
     public void ApplyClipTags(Image<Rgba32> image, ImageRecord_LAMBDA lambda, double influentialThreshold, double cutoffThreshold)
     {
-        ClassificationToken[] logitTokens = classifier.ClassifyImage(image, promptCatalog.BuildPrompts());
-        ApplyTokens(logitTokens, lambda, influentialThreshold, cutoffThreshold);
+        ClassificationToken[] logitTokens = this.classifier.ClassifyImage(image, this.promptCatalog.BuildPrompts());
+        this.ApplyTokens(logitTokens, lambda, influentialThreshold, cutoffThreshold);
     }
 
     /// <inheritdoc/>
@@ -36,11 +36,11 @@ public sealed class ClassificationService : IClassificationService
     {
         if (items.Count == 0) return;
 
-        ClassificationToken[][] tokenSets = classifier.ClassifyImages(
-            [.. items.Select(item => item.Image)], promptCatalog.BuildPrompts());
+        ClassificationToken[][] tokenSets = this.classifier.ClassifyImages(
+            [.. items.Select(item => item.Image)], this.promptCatalog.BuildPrompts());
 
         for (int i = 0; i < items.Count; i++)
-            ApplyTokens(tokenSets[i], items[i].Lambda, influentialThreshold, cutoffThreshold);
+            this.ApplyTokens(tokenSets[i], items[i].Lambda, influentialThreshold, cutoffThreshold);
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ public sealed class ClassificationService : IClassificationService
         var resolved = new List<(ClassificationToken Token, string Feature, string Value)>();
         foreach (ClassificationToken token in logitTokens)
         {
-            if (promptCatalog.TryResolve(token.Label, out string feature, out string value))
+            if (this.promptCatalog.TryResolve(token.Label, out string feature, out string value))
                 resolved.Add((token, feature, value));
         }
 
@@ -83,7 +83,7 @@ public sealed class ClassificationService : IClassificationService
                 Value      = best.Value
             };
 
-            double featureThreshold = configuration.InfluentialThresholdsByFeature.TryGetValue(best.Feature, out double overrideThreshold)
+            double featureThreshold = this.configuration.InfluentialThresholdsByFeature.TryGetValue(best.Feature, out double overrideThreshold)
                 ? overrideThreshold
                 : influentialThreshold;
 
@@ -133,7 +133,7 @@ public sealed class ClassificationService : IClassificationService
 
     /// <inheritdoc/>
     public IReadOnlyList<DedupGroup> FindDuplicates(IReadOnlyList<(ImageRecord_INPUT Record, UInt128 Hash)> entries)
-        => new VisualHasher(configuration.MaxHammingDistance).FindDuplicates(entries);
+        => new VisualHasher(this.configuration.MaxHammingDistance).FindDuplicates(entries);
 
     /// <inheritdoc/>
     public void Dispose() { }

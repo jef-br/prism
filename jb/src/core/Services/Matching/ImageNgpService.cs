@@ -14,5 +14,5 @@ public sealed class ImageNgpService : IImageNgpService
 
     /// <inheritdoc/>
     public string[] EvaluateCandidates(ImageFeatureSnapshot features)
-        => ruleSet.EvaluateCandidates(features);
+        => this.ruleSet.EvaluateCandidates(features);
 }

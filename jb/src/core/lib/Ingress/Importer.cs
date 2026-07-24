@@ -44,8 +44,8 @@ public sealed class Importer
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         this.modelBuilder  = modelBuilder  ?? throw new ArgumentNullException(nameof(modelBuilder));
 
-        acceptedImageExtensions = new HashSet<string>(configuration.AcceptedImageExtensions, StringComparer.OrdinalIgnoreCase);
-        acceptedExcelExtensions = new HashSet<string>(configuration.AcceptedExcelExtensions, StringComparer.OrdinalIgnoreCase);
+        this.acceptedImageExtensions = new HashSet<string>(configuration.AcceptedImageExtensions, StringComparer.OrdinalIgnoreCase);
+        this.acceptedExcelExtensions = new HashSet<string>(configuration.AcceptedExcelExtensions, StringComparer.OrdinalIgnoreCase);
     }
 
     // -------------------------------------------------------------------------
@@ -83,11 +83,11 @@ public sealed class Importer
         // be captured inside the Parallel.ForEach lambdas below, but an array reference can.
         int[] normalizedFileNameCounter = [0];
 
-        ProcessZipRecords(zipRecords, jobTempFolder, normalizedImages, excelFilePaths, imageKoRecords, zipKoRecords, normalizedFileNameCounter);
-        ProcessDirectImageRecords(imageRecords, jobTempFolder, normalizedImages, imageKoRecords, normalizedFileNameCounter);
-        ProcessDirectExcelRecords(excelRecords, excelFilePaths);
+        this.ProcessZipRecords(zipRecords, jobTempFolder, normalizedImages, excelFilePaths, imageKoRecords, zipKoRecords, normalizedFileNameCounter);
+        this.ProcessDirectImageRecords(imageRecords, jobTempFolder, normalizedImages, imageKoRecords, normalizedFileNameCounter);
+        this.ProcessDirectExcelRecords(excelRecords, excelFilePaths);
 
-        IReadOnlyList<FamilyIDRecord> familyRecords = BuildFamilyRecords(excelFilePaths, excelDiagnostics);
+        IReadOnlyList<FamilyIDRecord> familyRecords = this.BuildFamilyRecords(excelFilePaths, excelDiagnostics);
 
         // ConcurrentBag enumeration order varies per run (per-thread stacks). Sort into a stable
         // order so every downstream stage — matching aggregation, det-order tie-breaking, manifest
@@ -150,7 +150,7 @@ public sealed class Importer
             ZipExtractionResult extraction = ZipHandler.ExtractProcessableMembers(
                 zipFilePath,
                 zipExtractionRoot,
-                BuildZipPolicy());
+                this.BuildZipPolicy());
 
             zipKoRecords.AddRange(extraction.KoRecords);
 
@@ -166,7 +166,7 @@ public sealed class Importer
 
             Parallel.ForEach(imageMembers, parallelOptions, member =>
             {
-                NormalizeAndRecord(
+                this.NormalizeAndRecord(
                     member.ExtractedFilePath,
                     member.OriginalFileName,
                     ImageSourceKind.ZipMember,
@@ -212,7 +212,7 @@ public sealed class Importer
 
             string extension = Path.GetExtension(record.InitialFullName);
 
-            if (!acceptedImageExtensions.Contains(extension))
+            if (!this.acceptedImageExtensions.Contains(extension))
             {
                 imageKoRecords.Add(ImportKoRecord.UnsupportedFormat(
                     record.InitialFullName,
@@ -222,7 +222,7 @@ public sealed class Importer
 
             long byteLength = record.ByteLength ?? new FileInfo(sourcePath).Length;
 
-            if (byteLength < configuration.MinBytesPerImg)
+            if (byteLength < this.configuration.MinBytesPerImg)
             {
                 imageKoRecords.Add(new ImportKoRecord
                 {
@@ -236,7 +236,7 @@ public sealed class Importer
                 return;
             }
 
-            if (byteLength > configuration.MaxBytesPerImg)
+            if (byteLength > this.configuration.MaxBytesPerImg)
             {
                 imageKoRecords.Add(new ImportKoRecord
                 {
@@ -250,7 +250,7 @@ public sealed class Importer
                 return;
             }
 
-            NormalizeAndRecord(
+            this.NormalizeAndRecord(
                 sourcePath,
                 record.InitialFullName,
                 record.SourceKind == ImageSourceKind.Unknown ? ImageSourceKind.LocalPath : record.SourceKind,
@@ -279,7 +279,7 @@ public sealed class Importer
             string readablePath = ResolveReadablePath(excelRecord.TempFilePath, excelRecord.SourceReference);
 
             if (File.Exists(readablePath)
-                && acceptedExcelExtensions.Contains(Path.GetExtension(readablePath)))
+                && this.acceptedExcelExtensions.Contains(Path.GetExtension(readablePath)))
             {
                 excelFilePaths.Add(readablePath);
             }
@@ -303,7 +303,7 @@ public sealed class Importer
             return [];
         }
 
-        ExcelModelBuildResult buildResult = modelBuilder.BuildFromExcelFiles(excelFilePaths);
+        ExcelModelBuildResult buildResult = this.modelBuilder.BuildFromExcelFiles(excelFilePaths);
         diagnostics.AddRange(buildResult.Diagnostics);
         return buildResult.FamilyRecords;
     }
@@ -335,7 +335,7 @@ public sealed class Importer
         string normalizedFileName = BuildNormalizedFileName(originalFileName, uniqueIndex);
         string normalizedPath     = Path.Combine(normalizedFolder, normalizedFileName);
 
-        bool normalizedSuccessfully = TryNormalizeToJpeg(
+        bool normalizedSuccessfully = this.TryNormalizeToJpeg(
             sourcePath,
             originalFileName,
             normalizedPath,
@@ -356,7 +356,7 @@ public sealed class Importer
 
         // The salient object can never reach MinInputSizeInPixels when the whole image is smaller —
         // KO here instead of spending classify/match/order effort before Transform rejects it anyway.
-        if (Math.Max(normalizedWidth, normalizedHeight) < configuration.MinInputSizeInPixels)
+        if (Math.Max(normalizedWidth, normalizedHeight) < this.configuration.MinInputSizeInPixels)
         {
             imageKoRecords.Add(new ImportKoRecord
             {
@@ -364,7 +364,7 @@ public sealed class Importer
                 SourceProvenance = sourcePath,
                 ReasonCode       = ImportKoRecord.ImageTooSmallReason,
                 KoGroup          = ImportKoRecord.UndersizedKoGroup,
-                SafeMessage      = $"Image is {normalizedWidth}x{normalizedHeight}px; the accepted input minimum is {configuration.MinInputSizeInPixels}px on the longest side.",
+                SafeMessage      = $"Image is {normalizedWidth}x{normalizedHeight}px; the accepted input minimum is {this.configuration.MinInputSizeInPixels}px on the longest side.",
                 BatchContinues   = true
             });
             return;
@@ -612,10 +612,10 @@ public sealed class Importer
     private ZipExtractionPolicy BuildZipPolicy()
     {
         return new ZipExtractionPolicy(
-            MaxZipArchiveBytes   : configuration.MaxZipBytes,
-            MaxImageMemberBytes  : configuration.MaxBytesPerImg,
-            MaxExcelMemberBytes  : configuration.MaxXLSBytes,
-            MaxNestedZipDepth    : configuration.MaxNestDepthZip,
+            MaxZipArchiveBytes   : this.configuration.MaxZipBytes,
+            MaxImageMemberBytes  : this.configuration.MaxBytesPerImg,
+            MaxExcelMemberBytes  : this.configuration.MaxXLSBytes,
+            MaxNestedZipDepth    : this.configuration.MaxNestDepthZip,
             HeaderProbeBytes     : 16);
     }
 }

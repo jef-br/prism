@@ -12,7 +12,7 @@ public sealed class InternalExcelModel
     /// <summary>
     /// All deduplicated family records keyed by FamilyID.
     /// </summary>
-    public IReadOnlyDictionary<string, FamilyIDRecord> RecordsByFamilyID => recordsByFamilyID;
+    public IReadOnlyDictionary<string, FamilyIDRecord> RecordsByFamilyID => this.recordsByFamilyID;
 
     /// <summary>
     /// Token index used by matchers to resolve normalized Excel evidence quickly.
@@ -37,7 +37,7 @@ public sealed class InternalExcelModel
             throw new ArgumentException("FamilyID is required.", nameof(familyID));
         }
 
-        FamilyIDRecord familyIDRecord = GetOrCreateFamilyRecord(familyID.Trim());
+        FamilyIDRecord familyIDRecord = this.GetOrCreateFamilyRecord(familyID.Trim());
 
         foreach (ExcelPropertyValue propertyValue in propertyValues)
         {
@@ -48,7 +48,7 @@ public sealed class InternalExcelModel
             familyIDRecord.MergeProperty(propertyValue, classification);
         }
 
-        TokenStore.RefreshFromRecord(familyIDRecord);
+        this.TokenStore.RefreshFromRecord(familyIDRecord);
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public sealed class InternalExcelModel
     /// <returns>One FamilyIDRecord per valid FamilyID.</returns>
     public IReadOnlyList<FamilyIDRecord> ToFamilyRecords()
     {
-        return recordsByFamilyID.Values
+        return this.recordsByFamilyID.Values
             .OrderBy(record => record.FamilyID, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
@@ -75,7 +75,7 @@ public sealed class InternalExcelModel
         // all-blank column that survived the per-worksheet fill gate registers a classification but no
         // canonical value). Union all property-name-keyed dictionaries so we prune that bloat too.
         HashSet<string> candidateNames = new(StringComparer.OrdinalIgnoreCase);
-        foreach (FamilyIDRecord record in recordsByFamilyID.Values)
+        foreach (FamilyIDRecord record in this.recordsByFamilyID.Values)
         {
             foreach (string propertyName in record.CanonicalProperties.Keys
                 .Concat(record.ColumnClassifications.Keys)
@@ -90,7 +90,7 @@ public sealed class InternalExcelModel
         }
 
         string[] emptyNames = candidateNames
-            .Where(name => recordsByFamilyID.Values.All(record =>
+            .Where(name => this.recordsByFamilyID.Values.All(record =>
                 !record.CanonicalProperties.TryGetValue(name, out string? value) || string.IsNullOrWhiteSpace(value)))
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -100,14 +100,14 @@ public sealed class InternalExcelModel
             return emptyNames;
         }
 
-        foreach (FamilyIDRecord record in recordsByFamilyID.Values)
+        foreach (FamilyIDRecord record in this.recordsByFamilyID.Values)
         {
             foreach (string emptyName in emptyNames)
             {
                 record.RemoveProperty(emptyName);
             }
 
-            TokenStore.RefreshFromRecord(record);
+            this.TokenStore.RefreshFromRecord(record);
         }
 
         return emptyNames;
@@ -115,13 +115,13 @@ public sealed class InternalExcelModel
 
     private FamilyIDRecord GetOrCreateFamilyRecord(string familyID)
     {
-        if (recordsByFamilyID.TryGetValue(familyID, out FamilyIDRecord? existingRecord))
+        if (this.recordsByFamilyID.TryGetValue(familyID, out FamilyIDRecord? existingRecord))
         {
             return existingRecord;
         }
 
         FamilyIDRecord familyIDRecord = new(familyID);
-        recordsByFamilyID.Add(familyID, familyIDRecord);
+        this.recordsByFamilyID.Add(familyID, familyIDRecord);
 
         return familyIDRecord;
     }

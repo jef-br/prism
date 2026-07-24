@@ -20,8 +20,8 @@ internal sealed record PrismMatchLiteIngressResult
     /// <summary>Deletes the temp folder that holds spilled Excel files.</summary>
     public void CleanUp()
     {
-        if (JobTempDir is null) return;
-        try { if (Directory.Exists(JobTempDir)) Directory.Delete(JobTempDir, recursive: true); }
+        if (this.JobTempDir is null) return;
+        try { if (Directory.Exists(this.JobTempDir)) Directory.Delete(this.JobTempDir, recursive: true); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }

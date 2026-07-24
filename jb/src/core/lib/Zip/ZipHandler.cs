@@ -876,7 +876,7 @@ public static class ZipHandler {
         /// <param name="observedByteLength">Observed expanded bytes before extraction stopped.</param>
         public ZipMemberOversizedException( long observedByteLength )
             : base("Zip member expanded beyond the configured byte limit.") {
-            ObservedByteLength = observedByteLength;
+            this.ObservedByteLength = observedByteLength;
         }
 
         /// <summary>

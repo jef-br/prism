@@ -14,17 +14,17 @@ public sealed class PhenotypePool
     public PhenotypePool(PhenotypeRuleSet ruleSet)
     {
         this.ruleSet = ruleSet;
-        candidates = [.. ruleSet.PhenotypeIds];
+        this.candidates = [.. ruleSet.PhenotypeIds];
     }
 
     /// <summary>Remaining candidate phenotype ids, in rule evaluation order.</summary>
-    public IReadOnlyList<string> Candidates => candidates;
+    public IReadOnlyList<string> Candidates => this.candidates;
 
     /// <summary>Removes every candidate contradicted by the current feature measurements.</summary>
     public void Eliminate(ImageFeatureSnapshot features)
-        => candidates.RemoveAll(id => ruleSet.IsContradicted(id, features));
+        => this.candidates.RemoveAll(id => this.ruleSet.IsContradicted(id, features));
 
     /// <summary>True when the phenotype id is still in the pool.</summary>
     public bool Contains(string phenotypeId)
-        => candidates.Contains(phenotypeId, StringComparer.OrdinalIgnoreCase);
+        => this.candidates.Contains(phenotypeId, StringComparer.OrdinalIgnoreCase);
 }

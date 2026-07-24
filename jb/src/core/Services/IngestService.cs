@@ -26,7 +26,7 @@ public sealed class IngestService : IIngestService
     {
         await StageProgress.EmitStarted(progress, request.JobID, PipelineStageNames.Imported, cancellationToken);
 
-        Importer importer = new(configuration, modelBuilder);
+        Importer importer = new(this.configuration, this.modelBuilder);
         ImportStageResult import = importer.Run(
             request.JobID,
             request.ImageRecords,

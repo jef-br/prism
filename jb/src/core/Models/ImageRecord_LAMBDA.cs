@@ -59,7 +59,7 @@ public class ImageRecord_LAMBDA : ImageRecord_Base
     public string? MatchingAlias { get; set; }
 
     /// <summary>The name token-based matchers read: <see cref="MatchingAlias"/> when set, else the raw filename.</summary>
-    public string MatchingName => MatchingAlias ?? InitialFullName;
+    public string MatchingName => this.MatchingAlias ?? this.InitialFullName;
 
     // -------------------------------------------------------------------------
     // Matching outputs — populated by the Matched stage

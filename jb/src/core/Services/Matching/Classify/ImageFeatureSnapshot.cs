@@ -15,7 +15,7 @@ public sealed class ImageFeatureSnapshot
 
     /// <summary>Creates an empty snapshot.</summary>
     public ImageFeatureSnapshot()
-        => features = new Dictionary<string, ImageFeatureValue>(StringComparer.OrdinalIgnoreCase);
+        => this.features = new Dictionary<string, ImageFeatureValue>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Rehydrates a snapshot from a persisted LAMBDA document. Matches the <see cref="All"/> property
@@ -23,7 +23,7 @@ public sealed class ImageFeatureSnapshot
     /// </summary>
     [JsonConstructor]
     public ImageFeatureSnapshot(IReadOnlyDictionary<string, ImageFeatureValue>? all)
-        => features = all is null
+        => this.features = all is null
             ? new Dictionary<string, ImageFeatureValue>(StringComparer.OrdinalIgnoreCase)
             : new Dictionary<string, ImageFeatureValue>(all, StringComparer.OrdinalIgnoreCase);
 
@@ -35,21 +35,21 @@ public sealed class ImageFeatureSnapshot
     /// <param name="confidence">Detector confidence [0.0–1.0].</param>
     /// <param name="source">Measurement source identifier.</param>
     public void Set(string featureId, string value, double confidence, string source)
-        => features[featureId] = new ImageFeatureValue { Value = value, Confidence = confidence, Source = source };
+        => this.features[featureId] = new ImageFeatureValue { Value = value, Confidence = confidence, Source = source };
 
     /// <summary>
     /// Returns the value string for a feature, or <c>"UNKNOWN"</c> when the feature
     /// has not been measured. This is the contract used by the phenotype rule evaluator.
     /// </summary>
     public string GetValue(string featureId)
-        => features.TryGetValue(featureId, out ImageFeatureValue? v) ? v.Value : "UNKNOWN";
+        => this.features.TryGetValue(featureId, out ImageFeatureValue? v) ? v.Value : "UNKNOWN";
 
     /// <summary>
     /// Returns true and populates <paramref name="value"/> when the feature has been set.
     /// </summary>
     public bool TryGet(string featureId, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out ImageFeatureValue? value)
-        => features.TryGetValue(featureId, out value);
+        => this.features.TryGetValue(featureId, out value);
 
     /// <summary>All measured features, keyed by feature id.</summary>
-    public IReadOnlyDictionary<string, ImageFeatureValue> All => features;
+    public IReadOnlyDictionary<string, ImageFeatureValue> All => this.features;
 }

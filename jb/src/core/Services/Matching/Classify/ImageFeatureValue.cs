@@ -29,5 +29,5 @@ public sealed record ImageFeatureValue
     /// True when <see cref="Value"/> is <c>"UNKNOWN"</c> (case-insensitive).
     /// Unknown features do not qualify an image for any phenotype role.
     /// </summary>
-    public bool IsUnknown => string.Equals(Value, "UNKNOWN", StringComparison.OrdinalIgnoreCase);
+    public bool IsUnknown => string.Equals(this.Value, "UNKNOWN", StringComparison.OrdinalIgnoreCase);
 }

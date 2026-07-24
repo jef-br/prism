@@ -15,7 +15,7 @@ public sealed class DetailCropperConfig : IValidatableConfig
 
     public void Validate()
     {
-        if (AdjacentCropCap is <= 0.0 or >= 1.0)
+        if (this.AdjacentCropCap is <= 0.0 or >= 1.0)
             throw new PrismConfigurationException("DetailCropper.AdjacentCropCap must be in (0,1)");
     }
 }

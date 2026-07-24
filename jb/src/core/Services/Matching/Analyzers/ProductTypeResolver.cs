@@ -57,11 +57,11 @@ public sealed class ProductTypeResolver
     public string? ResolveFromFamily(FamilyIDRecord family)
     {
         if (family.CanonicalProperties.TryGetValue("producttype", out string? productType)
-            && ResolveValue(productType) is string fromProductType)
+            && this.ResolveValue(productType) is string fromProductType)
             return fromProductType;
 
         if (family.CanonicalProperties.TryGetValue("ngp", out string? ngp)
-            && ResolveValue(ngp) is string fromNgp)
+            && this.ResolveValue(ngp) is string fromNgp)
             return fromNgp;
 
         return null;
@@ -76,12 +76,12 @@ public sealed class ProductTypeResolver
         if (string.IsNullOrWhiteSpace(value)) return null;
 
         string kebab = value.Trim().ToLowerInvariant().Replace(' ', '-').Replace('_', '-');
-        if (slugs.Contains(kebab)) return slugs.First(s => string.Equals(s, kebab, StringComparison.OrdinalIgnoreCase));
+        if (this.slugs.Contains(kebab)) return this.slugs.First(s => string.Equals(s, kebab, StringComparison.OrdinalIgnoreCase));
 
         string phrase = NormalizeTerm(value);
-        if (termToSlug.TryGetValue(phrase, out string? phraseSlug)) return phraseSlug;
+        if (this.termToSlug.TryGetValue(phrase, out string? phraseSlug)) return phraseSlug;
 
-        return ResolveTokens(Tokenize(value));
+        return this.ResolveTokens(Tokenize(value));
     }
 
     /// <summary>Resolves the first token that maps to a term, or null.</summary>
@@ -90,7 +90,7 @@ public sealed class ProductTypeResolver
         foreach (string token in tokens)
         {
             string normalized = NormalizeTerm(token);
-            if (normalized.Length > 0 && termToSlug.TryGetValue(normalized, out string? slug)) return slug;
+            if (normalized.Length > 0 && this.termToSlug.TryGetValue(normalized, out string? slug)) return slug;
         }
         return null;
     }

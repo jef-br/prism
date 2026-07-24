@@ -32,8 +32,8 @@ internal sealed class ClipTokenizer
     /// </summary>
     public ClipTokenizer(string vocabPath, string mergesPath)
     {
-        vocab      = LoadVocab(vocabPath);
-        mergeRanks = LoadMerges(mergesPath);
+        this.vocab      = LoadVocab(vocabPath);
+        this.mergeRanks = LoadMerges(mergesPath);
     }
 
     /// <summary>
@@ -51,12 +51,12 @@ internal sealed class ClipTokenizer
 
             // Convert to byte-level unicode then apply BPE.
             byte[]   bytes     = Encoding.UTF8.GetBytes(word);
-            string   bpeInput  = string.Concat(bytes.Select(b => byteEncoder[b]));
-            string[] bpeTokens = BpeEncode(bpeInput);
+            string   bpeInput  = string.Concat(bytes.Select(b => this.byteEncoder[b]));
+            string[] bpeTokens = this.BpeEncode(bpeInput);
 
             foreach (string t in bpeTokens)
             {
-                if (vocab.TryGetValue(t, out int id))
+                if (this.vocab.TryGetValue(t, out int id))
                     tokens.Add(id);
             }
         }
@@ -95,7 +95,7 @@ internal sealed class ClipTokenizer
 
             for (int i = 0; i < chars.Count - 1; i++)
             {
-                if (mergeRanks.TryGetValue((chars[i], chars[i + 1]), out int rank) && rank < bestRank)
+                if (this.mergeRanks.TryGetValue((chars[i], chars[i + 1]), out int rank) && rank < bestRank)
                 {
                     bestRank = rank;
                     bestIdx  = i;

@@ -8,7 +8,7 @@ public sealed class FetchDispatcher
 {
     private readonly IReadOnlyList<IFetchStrategy> _strategies;
 
-    internal FetchDispatcher(IReadOnlyList<IFetchStrategy> strategies) => _strategies = strategies;
+    internal FetchDispatcher(IReadOnlyList<IFetchStrategy> strategies) => this._strategies = strategies;
 
     /// <summary>
     /// Creates a dispatcher backed by all registered fetch strategies, using HostRules.json
@@ -33,10 +33,10 @@ public sealed class FetchDispatcher
     ]);
 
     /// <summary>Returns true when at least one strategy can handle the given URL.</summary>
-    public bool CanHandle(string url) => _strategies.Any(s => s.CanHandle(url));
+    public bool CanHandle(string url) => this._strategies.Any(s => s.CanHandle(url));
 
     /// <summary>Fetches the URL using the first matching strategy.</summary>
     public Task<ImageRecord_INPUT> FetchAsync(
         string url, string jobTempFolder, string jobID, CancellationToken ct) =>
-        _strategies.First(s => s.CanHandle(url)).FetchAsync(url, jobTempFolder, jobID, ct);
+        this._strategies.First(s => s.CanHandle(url)).FetchAsync(url, jobTempFolder, jobID, ct);
 }

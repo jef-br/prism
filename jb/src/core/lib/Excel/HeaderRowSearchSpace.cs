@@ -30,12 +30,12 @@ public sealed record HeaderRowSearchSpace
     /// </summary>
     public void Validate()
     {
-        if (FirstRow < 0 || LastRow < FirstRow)
+        if (this.FirstRow < 0 || this.LastRow < this.FirstRow)
         {
             throw new PrismConfigurationException("ExcelConfig.HeaderRowSearchSpace rows must be zero-based and ordered.");
         }
 
-        if (FirstColumn < 0 || LastColumn < FirstColumn)
+        if (this.FirstColumn < 0 || this.LastColumn < this.FirstColumn)
         {
             throw new PrismConfigurationException("ExcelConfig.HeaderRowSearchSpace columns must be zero-based and ordered.");
         }

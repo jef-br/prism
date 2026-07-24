@@ -22,8 +22,8 @@ public sealed class PrismService : IDisposable
     /// </summary>
     public PrismService()
     {
-        (configuration, modelBuilder) = Initialize();
-        pipeline = new Pipeline(configuration, modelBuilder);
+        (this.configuration, this.modelBuilder) = Initialize();
+        this.pipeline = new Pipeline(this.configuration, this.modelBuilder);
     }
 
     /// <summary>
@@ -36,11 +36,11 @@ public sealed class PrismService : IDisposable
     {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         this.modelBuilder  = modelBuilder  ?? throw new ArgumentNullException(nameof(modelBuilder));
-        pipeline = new Pipeline(this.configuration, this.modelBuilder);
+        this.pipeline = new Pipeline(this.configuration, this.modelBuilder);
     }
 
     /// <summary>Disposes the pipeline and its owned resources (CLIP ONNX session).</summary>
-    public void Dispose() => pipeline.Dispose();
+    public void Dispose() => this.pipeline.Dispose();
 
     // -------------------------------------------------------------------------
     // Entry point — Process
@@ -65,12 +65,12 @@ public sealed class PrismService : IDisposable
 
         try
         {
-            IngestResult    normalizedImagesAndFamilies   = await Import(request, progress, cancellationToken);
-            MatchingResult  matchedImages                 = await Match(normalizedImagesAndFamilies, progress, cancellationToken);
+            IngestResult    normalizedImagesAndFamilies   = await this.Import(request, progress, cancellationToken);
+            MatchingResult  matchedImages                 = await this.Match(normalizedImagesAndFamilies, progress, cancellationToken);
             (MatchingResult matchedWithGenerations, IReadOnlyList<ImageRecord_GENERATED> generatedImages)
-                                                          = await GenerateSupplementalImages(matchedImages, progress, cancellationToken);
-            TransformResult transformedImages             = await TransformImages(matchedWithGenerations, progress, cancellationToken);
-            ExportArtifacts manifestAndZip                = await Export(transformedImages, generatedImages, request, progress, cancellationToken);
+                                                          = await this.GenerateSupplementalImages(matchedImages, progress, cancellationToken);
+            TransformResult transformedImages             = await this.TransformImages(matchedWithGenerations, progress, cancellationToken);
+            ExportArtifacts manifestAndZip                = await this.Export(transformedImages, generatedImages, request, progress, cancellationToken);
 
             return BuildSuccessResult(request, manifestAndZip);
         }
@@ -94,11 +94,11 @@ public sealed class PrismService : IDisposable
         CancellationToken cancellationToken = default)
     {
         ValidateRequest(request);
-        IngestResult ingest   = await Import(request, null, cancellationToken);
-        MatchingResult matched = await Match(ingest, null, cancellationToken);
+        IngestResult ingest   = await this.Import(request, null, cancellationToken);
+        MatchingResult matched = await this.Match(ingest, null, cancellationToken);
 
         // Mirror the export-time det-gap policy so match-only filenames match the full pipeline.
-        if (!configuration.DetOrderGapsAllowed)
+        if (!this.configuration.DetOrderGapsAllowed)
             ImageOrderer.CompactDetOrder(matched.LambdaRecords);
 
         return BuildMatchOnlyResult(matched.LambdaRecords);
@@ -118,7 +118,7 @@ public sealed class PrismService : IDisposable
             .Where(e => e.TempFilePath is not null)
             .Select(e => e.TempFilePath!);
 
-        ExcelModelBuildResult built = modelBuilder.BuildFromExcelFiles(excelPaths);
+        ExcelModelBuildResult built = this.modelBuilder.BuildFromExcelFiles(excelPaths);
 
         List<ImageRecord_LAMBDA> lambdas = imageInputs
             .Select(r => new ImageRecord_LAMBDA { InitialFullName = r.InitialFullName })
@@ -129,7 +129,7 @@ public sealed class PrismService : IDisposable
         ImageRenamer.Run(lambdas);
 
         // Mirror the export-time det-gap policy so MatchLite filenames match the full pipeline.
-        if (!configuration.DetOrderGapsAllowed)
+        if (!this.configuration.DetOrderGapsAllowed)
             ImageOrderer.CompactDetOrder(lambdas);
 
         return BuildMatchOnlyResult(lambdas);
@@ -160,14 +160,14 @@ public sealed class PrismService : IDisposable
         PrismJobRequest request,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => pipeline.ImportAsync(request, progress, cancellationToken);
+        => this.pipeline.ImportAsync(request, progress, cancellationToken);
 
     /// <summary>Converts every normalized image into an enriched LAMBDA (classify → match → order → rename).</summary>
     private Task<MatchingResult> Match(
         IngestResult normalizedImagesAndFamilies,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => pipeline.MatchAsync(normalizedImagesAndFamilies, progress, cancellationToken);
+        => this.pipeline.MatchAsync(normalizedImagesAndFamilies, progress, cancellationToken);
 
     /// <summary>
     /// Generates supplemental images. Returns both outputs explicitly: the LAMBDA collection enriched in
@@ -177,14 +177,14 @@ public sealed class PrismService : IDisposable
         MatchingResult matchedImages,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => pipeline.GenerateAsync(matchedImages, matchedImages.Ingest.Parameters.Generation, progress, cancellationToken);
+        => this.pipeline.GenerateAsync(matchedImages, matchedImages.Ingest.Parameters.Generation, progress, cancellationToken);
 
     /// <summary>Transforms each non-KO image, attaching an OutputRecord carrying the transform outcome.</summary>
     private Task<TransformResult> TransformImages(
         MatchingResult matchedWithGenerations,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => pipeline.TransformAsync(
+        => this.pipeline.TransformAsync(
             matchedWithGenerations,
             matchedWithGenerations.Ingest.Parameters.Transform,
             matchedWithGenerations.Ingest.Parameters.Headcut,
@@ -198,7 +198,7 @@ public sealed class PrismService : IDisposable
         PrismJobRequest request,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => pipeline.ExportAsync(transformedImages, generatedImages, request, progress, cancellationToken);
+        => this.pipeline.ExportAsync(transformedImages, generatedImages, request, progress, cancellationToken);
 
     // -------------------------------------------------------------------------
     // Helpers — called by Initialize

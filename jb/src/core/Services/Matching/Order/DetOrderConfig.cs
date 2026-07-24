@@ -29,8 +29,8 @@ public sealed class DetOrderConfig {
         bool overflowOnModelFirst) {
         this.slotsByProductType = slotsByProductType;
         this.stemsByKeyword = stemsByKeyword;
-        OverflowUnhintedAnchor = overflowUnhintedAnchor;
-        OverflowOnModelFirst = overflowOnModelFirst;
+        this.OverflowUnhintedAnchor = overflowUnhintedAnchor;
+        this.OverflowOnModelFirst = overflowOnModelFirst;
     }
 
     //  Factory 
@@ -57,11 +57,11 @@ public sealed class DetOrderConfig {
     /// <param name="productTypeId">Product type id (e.g. "clothing-tops"), or null.</param>
     public IReadOnlyList<DetSlotRule> GetSlots(string? productTypeId) {
         if (productTypeId is not null &&
-            slotsByProductType.TryGetValue(productTypeId, out List<DetSlotRule>? found)) {
+            this.slotsByProductType.TryGetValue(productTypeId, out List<DetSlotRule>? found)) {
             return found;
         }
 
-        return slotsByProductType.TryGetValue("default", out List<DetSlotRule>? fallback)
+        return this.slotsByProductType.TryGetValue("default", out List<DetSlotRule>? fallback)
             ? fallback
             : [];
     }
@@ -70,7 +70,7 @@ public sealed class DetOrderConfig {
     /// Returns true when the given product type id is present in the loaded rules.
     /// </summary>
     public bool HasProductType(string key)
-        => slotsByProductType.ContainsKey(key);
+        => this.slotsByProductType.ContainsKey(key);
 
     /// <summary>
     /// Returns true when any token in the filename stem matches a known stem for the keyword.
@@ -80,7 +80,7 @@ public sealed class DetOrderConfig {
     /// <param name="filename">Original filename (may include extension).</param>
     /// <param name="keyword">Keyword from a slot rule (e.g. "front", "back").</param>
     public bool FilenameMatchesSlotKeyword(string filename, string keyword) {
-        if (!stemsByKeyword.TryGetValue(keyword, out List<string>? stems))
+        if (!this.stemsByKeyword.TryGetValue(keyword, out List<string>? stems))
             return false;
 
         string stemName = Path.GetFileNameWithoutExtension(filename);

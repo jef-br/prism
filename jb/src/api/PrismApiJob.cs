@@ -12,8 +12,8 @@ internal sealed class PrismApiJob
 
     public PrismApiJob(PrismJobRequest request, PrismJobUrls urls)
     {
-        Request = request;
-        Urls = urls;
+        this.Request = request;
+        this.Urls = urls;
     }
 
     public PrismJobRequest Request { get; }
@@ -22,40 +22,40 @@ internal sealed class PrismApiJob
     public PrismJobResult? Result { get; private set; }
     public DateTimeOffset CreatedAt { get; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? CompletedAt { get; private set; }
-    public bool IsTerminal => CompletedAt.HasValue;
+    public bool IsTerminal => this.CompletedAt.HasValue;
 
     public void MarkRunning()
     {
-        Status = "Running";
+        this.Status = "Running";
     }
 
     public void MarkCompleted(PrismJobResult result)
     {
-        Result = result;
-        Status = result.Status;
-        CompletedAt = DateTimeOffset.UtcNow;
+        this.Result = result;
+        this.Status = result.Status;
+        this.CompletedAt = DateTimeOffset.UtcNow;
     }
 
     public void AddSubscriber(Channel<PipelineProgressEvent> subscriber)
     {
-        lock (subscriberLock)
+        lock (this.subscriberLock)
         {
-            if (IsTerminal)
+            if (this.IsTerminal)
             {
                 subscriber.Writer.TryComplete();
                 return;
             }
 
-            subscribers.Add(subscriber);
+            this.subscribers.Add(subscriber);
         }
     }
 
     public async Task Publish(PipelineProgressEvent progressEvent)
     {
         Channel<PipelineProgressEvent>[] currentSubscribers;
-        lock (subscriberLock)
+        lock (this.subscriberLock)
         {
-            currentSubscribers = subscribers.ToArray();
+            currentSubscribers = this.subscribers.ToArray();
         }
 
         foreach (Channel<PipelineProgressEvent> subscriber in currentSubscribers)
@@ -66,14 +66,14 @@ internal sealed class PrismApiJob
 
     public void CompleteSubscribers()
     {
-        lock (subscriberLock)
+        lock (this.subscriberLock)
         {
-            foreach (Channel<PipelineProgressEvent> subscriber in subscribers)
+            foreach (Channel<PipelineProgressEvent> subscriber in this.subscribers)
             {
                 subscriber.Writer.TryComplete();
             }
 
-            subscribers.Clear();
+            this.subscribers.Clear();
         }
     }
 }

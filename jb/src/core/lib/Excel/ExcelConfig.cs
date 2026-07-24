@@ -91,22 +91,22 @@ public sealed record ExcelConfig
     /// </summary>
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(RecordPrimaryKey))
+        if (string.IsNullOrWhiteSpace(this.RecordPrimaryKey))
         {
             throw new PrismConfigurationException("ExcelConfig.RecordPrimaryKey is required.");
         }
 
-        if (HeaderRowIndicators.Count == 0 || HeaderRowIndicators.Any(string.IsNullOrWhiteSpace))
+        if (this.HeaderRowIndicators.Count == 0 || this.HeaderRowIndicators.Any(string.IsNullOrWhiteSpace))
         {
             throw new PrismConfigurationException("ExcelConfig.HeaderRowIndicators must contain at least one non-empty value.");
         }
 
-        HeaderRowSearchSpace.Validate();
-        FamilyIDProperties.Validate();
-        HeaderDetection.Validate();
-        ColumnValidity.Validate();
-        DuplicateColumnHandling.Validate();
-        ColumnClassification.Validate();
+        this.HeaderRowSearchSpace.Validate();
+        this.FamilyIDProperties.Validate();
+        this.HeaderDetection.Validate();
+        this.ColumnValidity.Validate();
+        this.DuplicateColumnHandling.Validate();
+        this.ColumnClassification.Validate();
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()

@@ -12,7 +12,7 @@ public sealed class HttpTransformService : ITransformService
 
     /// <summary>Creates the client targeting the remote Transform host base address.</summary>
     public HttpTransformService(Uri baseAddress)
-        => client = ServiceHttp.CreateClient(baseAddress);
+        => this.client = ServiceHttp.CreateClient(baseAddress);
 
     /// <summary>Creates the client over an externally-managed <see cref="HttpClient"/>.</summary>
     public HttpTransformService(HttpClient client)
@@ -28,6 +28,6 @@ public sealed class HttpTransformService : ITransformService
     {
         await StageProgress.EmitStarted(progress, matched.Ingest.JobID, PipelineStageNames.Transformed, cancellationToken);
         return await ServiceHttp.PostJson<MatchingResult, TransformResult>(
-            client, PrismServiceRoutes.Transform, matched, cancellationToken);
+            this.client, PrismServiceRoutes.Transform, matched, cancellationToken);
     }
 }

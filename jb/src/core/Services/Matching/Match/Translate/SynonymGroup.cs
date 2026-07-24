@@ -31,8 +31,8 @@ public sealed record SynonymGroup
     /// <returns>True when both tokens belong to this synonym group.</returns>
     public bool ContainsBoth(string normalizedLeftToken, string normalizedRightToken)
     {
-        bool hasLeftToken = Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedLeftToken);
-        bool hasRightToken = Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedRightToken);
+        bool hasLeftToken = this.Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedLeftToken);
+        bool hasRightToken = this.Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedRightToken);
 
         return hasLeftToken && hasRightToken;
     }

@@ -19,15 +19,15 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService
 
     public FeatureAnalysisService()
     {
-        analyzerParameters = AnalyzerParameters.FromConfig();
-        classifyParameters = ClassifyParameters.FromConfig();
+        this.analyzerParameters = AnalyzerParameters.FromConfig();
+        this.classifyParameters = ClassifyParameters.FromConfig();
 
-        productTypes = ProductTypeResolver.Load(ConfigLoader.RequireFile("ProductTypeMap.json"));
+        this.productTypes = ProductTypeResolver.Load(ConfigLoader.RequireFile("ProductTypeMap.json"));
 
         // The 37 MB detector is not copied into build outputs; ModelAssetLocator resolves it from the
         // deployed location, the PRISM_ONNX_MODEL_DIR override, or the single source-tree copy.
-        yoloModelPath = ModelAssetLocator.Find(YoloModelRelativePath);
-        if (yoloModelPath is null)
+        this.yoloModelPath = ModelAssetLocator.Find(YoloModelRelativePath);
+        if (this.yoloModelPath is null)
             throw new PrismConfigurationException(
                 "YOLO26 ONNX model not found. Deploy Services/Matching/Analyzers/ONNX/yolo26s.onnx next to " +
                 "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
@@ -35,9 +35,9 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService
 
     /// <inheritdoc/>
     public void Analyze(Image<Rgba32> image, ImageFeatureSnapshot target)
-        => ImageFeatureAnalyzer.Analyze(image, target, analyzerParameters, classifyParameters.ImageFeatureAnalyzer);
+        => ImageFeatureAnalyzer.Analyze(image, target, this.analyzerParameters, this.classifyParameters.ImageFeatureAnalyzer);
 
     /// <inheritdoc/>
     public void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet)
-        => ImageFeatureAnalyzer.Refine(lambda, family, imagePath, ruleSet, analyzerParameters, yoloModelPath, productTypes);
+        => ImageFeatureAnalyzer.Refine(lambda, family, imagePath, ruleSet, this.analyzerParameters, this.yoloModelPath, this.productTypes);
 }

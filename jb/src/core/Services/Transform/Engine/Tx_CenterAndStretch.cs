@@ -17,18 +17,18 @@ public class Tx_CenterAndStretch : IImageTransformation
     /// <summary>Creates the transformer with margin fraction, headcut flag, pre-decoded BGR Mat, and config sections.</summary>
     public Tx_CenterAndStretch(double margin, bool headcut, Mat? colorMat, BgStretchConfig bgStretch, HeadCutterConfig headCutter)
     {
-        _margin     = margin;
-        _headcut    = headcut;
-        _colorMat   = colorMat;
-        _bgStretch  = bgStretch;
-        _headCutter = headCutter;
+        this._margin     = margin;
+        this._headcut    = headcut;
+        this._colorMat   = colorMat;
+        this._bgStretch  = bgStretch;
+        this._headCutter = headCutter;
     }
 
     /// <inheritdoc/>
     public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage)
     {
-        if (_headcut && _colorMat is not null)
-            Tx_util_HeadCutter.Analyze(InputImage, _colorMat, _headCutter);
+        if (this._headcut && this._colorMat is not null)
+            Tx_util_HeadCutter.Analyze(InputImage, this._colorMat, this._headCutter);
 
         byte[]?     bytes = InputImage.ProcessedBytes;
         BoundingBox bbox  = InputImage.BoundingBox!.Value;   // null-bbox routed to Tx_ProblemImageProcessor
@@ -47,11 +47,11 @@ public class Tx_CenterAndStretch : IImageTransformation
             return InputImage;
         }
 
-        (byte[] result, int canvasSize, double scaleFactor) = CropResizeAndStretch(bytes, bbox, _margin, _bgStretch);
+        (byte[] result, int canvasSize, double scaleFactor) = CropResizeAndStretch(bytes, bbox, this._margin, this._bgStretch);
         InputImage.ProcessedBytes = result;
 
         var warnings = new System.Collections.Generic.List<string>();
-        if (_headcut) warnings.Add("Headcut applied.");
+        if (this._headcut) warnings.Add("Headcut applied.");
 
         InputImage.OutputRecord = new ImageRecord_OUTPUT
         {
@@ -76,7 +76,7 @@ public class Tx_CenterAndStretch : IImageTransformation
     {
         BoundingBox bbox = FullImageBounds(arr);
 
-        (byte[] result, int canvasSize, _) = CropResizeAndStretch(arr, bbox, _margin, _bgStretch);
+        (byte[] result, int canvasSize, _) = CropResizeAndStretch(arr, bbox, this._margin, this._bgStretch);
 
         if (upscale_factor is not 0f and not 1f)
         {

@@ -24,16 +24,16 @@ internal sealed class ImageMatcher {
 
     private ImageMatcher(MatchingConfig matchingConfig, TranslationConfig translationConfig, string familyIdColumnName) {
         this.matchingConfig = matchingConfig;
-        numericMatcher = new NumericMatcher(familyIdColumnName, matchingConfig.Match.NumericMatcher);
-        stringMatcher = new StringMatcher(translationConfig, matchingConfig.Match.StringMatcher);
-        clipLabelEnricher = new ClipLabelEnricher();
-        filenameToCellMatcher = new FilenameToCellMatcher();
-        siblingPropagator = new SiblingPropagator(matchingConfig.Match.SiblingPropagator);
-        folderNameEnricher = new FolderNameEnricher(matchingConfig.Match.FolderNameEnricher);
-        semanticMatcher = new SemanticMatcher(
-            numericMatcher,
-            stringMatcher,
-            clipLabelEnricher,
+        this.numericMatcher = new NumericMatcher(familyIdColumnName, matchingConfig.Match.NumericMatcher);
+        this.stringMatcher = new StringMatcher(translationConfig, matchingConfig.Match.StringMatcher);
+        this.clipLabelEnricher = new ClipLabelEnricher();
+        this.filenameToCellMatcher = new FilenameToCellMatcher();
+        this.siblingPropagator = new SiblingPropagator(matchingConfig.Match.SiblingPropagator);
+        this.folderNameEnricher = new FolderNameEnricher(matchingConfig.Match.FolderNameEnricher);
+        this.semanticMatcher = new SemanticMatcher(
+            this.numericMatcher,
+            this.stringMatcher,
+            this.clipLabelEnricher,
             matchingConfig.Match.Shared.SemanticThreshold,
             matchingConfig.Match.Shared.SemanticWeight);
     }
@@ -61,8 +61,8 @@ internal sealed class ImageMatcher {
         List<ImageRecord_LAMBDA> allRecords,
         IReadOnlyList<FamilyIDRecord> families,
         double convergenceWeight) {
-        IReadOnlyList<MatchingRule> numericRules = matchingConfig.NumericRules;
-        IReadOnlyList<MatchingRule> labelRules = matchingConfig.LabelRules;
+        IReadOnlyList<MatchingRule> numericRules = this.matchingConfig.NumericRules;
+        IReadOnlyList<MatchingRule> labelRules = this.matchingConfig.LabelRules;
 
         // Keyed by InitialFullName; holds tied candidates passed over in Brackets 1–2.
         Dictionary<string, List<CandidateSummary>> rejectedNearTies = new(StringComparer.OrdinalIgnoreCase);
@@ -71,22 +71,22 @@ internal sealed class ImageMatcher {
         Dictionary<string, HashSet<string>> crossBracketCandidates = new(StringComparer.OrdinalIgnoreCase);
 
         // Give meaningless filenames a matchable name from their folder before any bracket runs.
-        if (matchingConfig.Match.Shared.EnableFolderNameEnrichment)
-            folderNameEnricher.Enrich(allRecords, families);
+        if (this.matchingConfig.Match.Shared.EnableFolderNameEnrichment)
+            this.folderNameEnricher.Enrich(allRecords, families);
 
         List<ImageRecord_LAMBDA> unmatched = allRecords.Where(r => !r.IsKo).ToList();
 
         // Bracket 1: single numeric token, TCD = 0
-        unmatched = RunBracket1(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
+        unmatched = this.RunBracket1(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
 
         // Bracket 2: multi-token numeric concatenation, TCD ≤ maxDistance
-        unmatched = RunBracket2(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
+        unmatched = this.RunBracket2(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
 
         // Bracket 2-Intersect: per-token candidate sets intersect to exactly one FamilyID
-        unmatched = RunBracket2Intersect(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
+        unmatched = this.RunBracket2Intersect(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
 
         // Bracket 3: string tokens, exactly-1-FamilyID
-        unmatched = RunBracket3(unmatched, allRecords, families, rejectedNearTies, crossBracketCandidates);
+        unmatched = this.RunBracket3(unmatched, allRecords, families, rejectedNearTies, crossBracketCandidates);
 
         // Bracket 4: semantic combined (CLIP + numeric + string) for 0-image families.
         // Skip entirely when no image in the batch carries CLIP classification signal at all.
@@ -96,23 +96,23 @@ internal sealed class ImageMatcher {
         // every candidate for an untagged record today. If those two rules are ever both removed from
         // MatchingConfig.json, re-verify this gate's safety.
         bool hasClassificationSignal = allRecords.Any(r => r.Tags.Influential.Length > 0);
-        unmatched = hasClassificationSignal ? RunBracket4(unmatched, allRecords, families, numericRules, labelRules, rejectedNearTies, crossBracketCandidates) : unmatched;
+        unmatched = hasClassificationSignal ? this.RunBracket4(unmatched, allRecords, families, numericRules, labelRules, rejectedNearTies, crossBracketCandidates) : unmatched;
 
         // Bracket 4 continued — filename named verbatim in an Excel cell (exact, unique). Not a
         // bracket of its own: same "0-image families" remit as Bracket 4, just a different signal.
-        unmatched = RunBracket5FilenameToCell(unmatched, families, rejectedNearTies, crossBracketCandidates);
+        unmatched = this.RunBracket5FilenameToCell(unmatched, families, rejectedNearTies, crossBracketCandidates);
 
         // Bracket 4 continued — substring rescue: unique family whose digit target contains a long
         // filename token.
-        unmatched = RunSubstringRescue(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
+        unmatched = this.RunSubstringRescue(unmatched, families, numericRules, rejectedNearTies, crossBracketCandidates);
 
         // Bracket 4 continued — sibling propagation: inherit the FamilyID of the unique matched
         // sibling image.
-        if (matchingConfig.Match.Shared.EnableSiblingPropagation)
-            unmatched = siblingPropagator.Run(unmatched, allRecords);
+        if (this.matchingConfig.Match.Shared.EnableSiblingPropagation)
+            unmatched = this.siblingPropagator.Run(unmatched, allRecords);
 
         // Add CLIP label evidence to already-matched records (no new assignments)
-        AddClipLabelEvidence(allRecords, families, labelRules);
+        this.AddClipLabelEvidence(allRecords, families, labelRules);
 
         // Cleanup (not a bracket): KO any image still without a FamilyID assignment
         int koAdded = KoUnmatched(unmatched, crossBracketCandidates, families);
@@ -142,7 +142,7 @@ internal sealed class ImageMatcher {
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
             (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) =
-                numericMatcher.TryMatchBracket1WithTies(record, families, numericRules);
+                this.numericMatcher.TryMatchBracket1WithTies(record, families, numericRules);
 
             if (tiedCandidates.Count > 1) {
                 rejectedNearTies[key] = tiedCandidates;
@@ -151,7 +151,7 @@ internal sealed class ImageMatcher {
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {
-                    ThresholdStatus = evidence.FinalScore >= matchingConfig.Match.Shared.SemanticThreshold,
+                    ThresholdStatus = evidence.FinalScore >= this.matchingConfig.Match.Shared.SemanticThreshold,
                     RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
                     MatcherWeights = [new MatcherContribution("NumericMatcher.Bracket1", numericWeight, evidence.FinalScore)]
                 };
@@ -187,7 +187,7 @@ internal sealed class ImageMatcher {
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
             (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) =
-                numericMatcher.TryMatchBracket2WithTies(record, families, numericRules);
+                this.numericMatcher.TryMatchBracket2WithTies(record, families, numericRules);
 
             if (tiedCandidates.Count > 1) {
                 rejectedNearTies[key] = tiedCandidates;
@@ -196,7 +196,7 @@ internal sealed class ImageMatcher {
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {
-                    ThresholdStatus = evidence.FinalScore >= matchingConfig.Match.Shared.SemanticThreshold,
+                    ThresholdStatus = evidence.FinalScore >= this.matchingConfig.Match.Shared.SemanticThreshold,
                     RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
                     MatcherWeights = [new MatcherContribution("NumericMatcher.Bracket2", numericWeight, evidence.FinalScore)]
                 };
@@ -227,14 +227,14 @@ internal sealed class ImageMatcher {
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
             (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) =
-                numericMatcher.TryMatchByTokenIntersection(record, families, numericRules);
+                this.numericMatcher.TryMatchByTokenIntersection(record, families, numericRules);
 
             if (tiedCandidates.Count > 1)
                 AccumulateCandidates(crossBracketCandidates, key, tiedCandidates);
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {
-                    ThresholdStatus = evidence.FinalScore >= matchingConfig.Match.Shared.SemanticThreshold,
+                    ThresholdStatus = evidence.FinalScore >= this.matchingConfig.Match.Shared.SemanticThreshold,
                     RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
                     MatcherWeights = [new MatcherContribution("NumericMatcher.Bracket2-Intersect", numericWeight, evidence.FinalScore)]
                 };
@@ -270,7 +270,7 @@ internal sealed class ImageMatcher {
 
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
-            MatchEvidence? evidence = stringMatcher.TryMatch(record, families);
+            MatchEvidence? evidence = this.stringMatcher.TryMatch(record, families);
 
             if (evidence is not null && HasDuplicatePhenotypeInFamily(
                     evidence.FinalFamilyId, record.SelectedPhenotype, phenotypeCounts)) {
@@ -281,7 +281,7 @@ internal sealed class ImageMatcher {
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {
-                    ThresholdStatus = evidence.FinalScore >= matchingConfig.Match.Shared.SemanticThreshold,
+                    ThresholdStatus = evidence.FinalScore >= this.matchingConfig.Match.Shared.SemanticThreshold,
                     RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
                     MatcherWeights = [new MatcherContribution("StringMatcher.Bracket3", 1.0, evidence.FinalScore)]
                 };
@@ -361,7 +361,7 @@ internal sealed class ImageMatcher {
 
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
-            (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) = semanticMatcher.TryMatch(
+            (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) = this.semanticMatcher.TryMatch(
                 record, unassignedFamilies, numericRules, labelRules);
 
             if (tiedCandidates.Count > 1)
@@ -369,11 +369,11 @@ internal sealed class ImageMatcher {
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {
-                    ThresholdStatus = evidence.FinalScore >= matchingConfig.Match.Shared.SemanticThreshold,
+                    ThresholdStatus = evidence.FinalScore >= this.matchingConfig.Match.Shared.SemanticThreshold,
                     RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
                     MatcherWeights =
                     [
-                        new MatcherContribution("SemanticMatcher.Bracket4", matchingConfig.Match.Shared.SemanticWeight, evidence.FinalScore)
+                        new MatcherContribution("SemanticMatcher.Bracket4", this.matchingConfig.Match.Shared.SemanticWeight, evidence.FinalScore)
                     ]
                 };
             }
@@ -401,14 +401,14 @@ internal sealed class ImageMatcher {
 
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
-            (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) = filenameToCellMatcher.TryMatch(record, families);
+            (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) = this.filenameToCellMatcher.TryMatch(record, families);
 
             if (tiedCandidates.Count > 1)
                 AccumulateCandidates(crossBracketCandidates, key, tiedCandidates);
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {
-                    ThresholdStatus = evidence.FinalScore >= matchingConfig.Match.Shared.SemanticThreshold,
+                    ThresholdStatus = evidence.FinalScore >= this.matchingConfig.Match.Shared.SemanticThreshold,
                     RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
                     MatcherWeights = [new MatcherContribution("FilenameToCellMatcher", 1.0, evidence.FinalScore)]
                 };
@@ -438,14 +438,14 @@ internal sealed class ImageMatcher {
         foreach (ImageRecord_LAMBDA record in candidates) {
             string key = record.InitialFullName ?? string.Empty;
             (MatchEvidence? evidence, List<CandidateSummary> tiedCandidates) =
-                numericMatcher.TryMatchBySubstringRescue(record, families, numericRules);
+                this.numericMatcher.TryMatchBySubstringRescue(record, families, numericRules);
 
             if (tiedCandidates.Count > 1)
                 AccumulateCandidates(crossBracketCandidates, key, tiedCandidates);
 
             if (evidence is not null) {
                 record.MatchEvidence = evidence with {
-                    ThresholdStatus = evidence.FinalScore >= matchingConfig.Match.Shared.SemanticThreshold,
+                    ThresholdStatus = evidence.FinalScore >= this.matchingConfig.Match.Shared.SemanticThreshold,
                     RejectedNearTieEvidence = GetRejectedTies(rejectedNearTies, key),
                     MatcherWeights = [new MatcherContribution("NumericMatcher.SubstringRescue", 1.0, evidence.FinalScore)]
                 };
@@ -476,7 +476,7 @@ internal sealed class ImageMatcher {
                 continue;
 
             IReadOnlyList<LabelEvidenceItem> clipEvidence =
-                clipLabelEnricher.BuildEvidence(record, families, labelRules);
+                this.clipLabelEnricher.BuildEvidence(record, families, labelRules);
 
             if (clipEvidence.Count == 0)
                 continue;

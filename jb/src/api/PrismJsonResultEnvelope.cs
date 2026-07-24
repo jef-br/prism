@@ -7,11 +7,11 @@ namespace Prism.Api;
 /// </summary>
 internal sealed record PrismJsonResultEnvelope(PrismJobResult? Result)
 {
-    public BatchManifest? Manifest => Result?.Manifest;
+    public BatchManifest? Manifest => this.Result?.Manifest;
     public PrismJsonImagesEnvelope Images => new()
     {
-        Ok = Result?.OkImages ?? [],
-        Ko = Result?.KoImages ?? []
+        Ok = this.Result?.OkImages ?? [],
+        Ko = this.Result?.KoImages ?? []
     };
     public object? OriginalImages => null;
 }

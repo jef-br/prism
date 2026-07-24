@@ -20,25 +20,25 @@ internal sealed class WeTransferDownloadResult : IAsyncDisposable
 
     internal WeTransferDownloadResult(Stream content, string fileName, long? totalBytes, string tempFilePath)
     {
-        Content = content;
-        FileName = fileName;
-        TotalBytes = totalBytes;
-        _tempFilePath = tempFilePath;
+        this.Content = content;
+        this.FileName = fileName;
+        this.TotalBytes = totalBytes;
+        this._tempFilePath = tempFilePath;
     }
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_disposed)
+        if (this._disposed)
         {
             return;
         }
 
-        _disposed = true;
-        await Content.DisposeAsync();
+        this._disposed = true;
+        await this.Content.DisposeAsync();
         try
         {
-            File.Delete(_tempFilePath);
+            File.Delete(this._tempFilePath);
         }
         catch { }
     }

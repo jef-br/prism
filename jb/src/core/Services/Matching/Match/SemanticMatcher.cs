@@ -50,11 +50,11 @@ internal sealed class SemanticMatcher
         List<FamilyIDRecord> candidates = [..unassignedFamilies];
 
         // Step 1: CLIP ProductType hard filter
-        (candidates, bool typeFilterApplied) = FilterByClipProductType(record, candidates, labelRules);
+        (candidates, bool typeFilterApplied) = this.FilterByClipProductType(record, candidates, labelRules);
         if (candidates.Count == 0) return (null, []);
 
         // Step 2: CLIP ProductColor hard filter (conditional — only when some candidates carry color)
-        (candidates, bool colorFilterApplied) = FilterByClipProductColor(record, candidates, labelRules);
+        (candidates, bool colorFilterApplied) = this.FilterByClipProductColor(record, candidates, labelRules);
         if (candidates.Count == 0) return (null, []);
 
         // With per-dimension gating, "survived the CLIP filters" only means something when a filter
@@ -63,7 +63,7 @@ internal sealed class SemanticMatcher
 
         // Step 3: Numeric token candidate reduction
         bool hadMultipleBeforeNumeric = candidates.Count > 1;
-        candidates = [..numericMatcher.ReduceCandidatesByNumericTokens(filename, candidates, numericRules)];
+        candidates = [..this.numericMatcher.ReduceCandidatesByNumericTokens(filename, candidates, numericRules)];
         bool numericReduced = hadMultipleBeforeNumeric && candidates.Count == 1;
 
         if (candidates.Count == 0) return (null, []);
@@ -71,12 +71,12 @@ internal sealed class SemanticMatcher
         // Step 4: String token scoring — keep only the candidate(s) with the most matching tokens.
         // indexScope is unassignedFamilies (the stable superset for this whole Bracket 4 run), so the
         // inverted token index is built/cached once per bracket run, not once per image.
-        var scored = stringMatcher.ScoreCandidatesByStringTokens(filename, candidates, unassignedFamilies);
+        var scored = this.stringMatcher.ScoreCandidatesByStringTokens(filename, candidates, unassignedFamilies);
 
         // Real filename-token count (StringMatcher's own tokenizer) — independent of how many
         // candidate families happened to be in the pool this round, so stringSignal below reflects
         // only "how much of this filename did we actually explain."
-        int totalImageTokens = stringMatcher.CountFilenameTokens(filename);
+        int totalImageTokens = this.stringMatcher.CountFilenameTokens(filename);
 
         FamilyIDRecord winner;
         List<TokenEvidenceItem> stringEvidence;
@@ -124,12 +124,12 @@ internal sealed class SemanticMatcher
 
         double combinedScore = (clipSignal + numericSignal + stringSignal) / 3.0;
 
-        if (combinedScore < semanticThreshold) return (null, []);
+        if (combinedScore < this.semanticThreshold) return (null, []);
 
-        double finalScore = combinedScore * semanticWeight;
+        double finalScore = combinedScore * this.semanticWeight;
 
         IReadOnlyList<LabelEvidenceItem> clipEvidence =
-            clipLabelEnricher.BuildEvidence(record, [winner], labelRules);
+            this.clipLabelEnricher.BuildEvidence(record, [winner], labelRules);
 
         return (new MatchEvidence
         {
@@ -175,7 +175,7 @@ internal sealed class SemanticMatcher
         if (!ClipLabelEnricher.HasTagForRule(record, productTypeRule)) return (candidates, false);
 
         List<FamilyIDRecord> filtered = candidates
-            .Where(f => clipLabelEnricher.BuildEvidence(record, [f], [productTypeRule]).Count > 0)
+            .Where(f => this.clipLabelEnricher.BuildEvidence(record, [f], [productTypeRule]).Count > 0)
             .ToList();
         return (filtered, true);
     }
@@ -207,7 +207,7 @@ internal sealed class SemanticMatcher
             .Where(f => {
                 bool hasColorColumn = f.NormalizedTokens.TryGetValue(colorRule.ExcelField, out var tokens) && tokens.Count > 0;
                 if (!hasColorColumn) return true; // no color to contradict → keep
-                return clipLabelEnricher.BuildEvidence(record, [f], [colorRule]).Count > 0;
+                return this.clipLabelEnricher.BuildEvidence(record, [f], [colorRule]).Count > 0;
             })
             .ToList();
         return (filtered, true);

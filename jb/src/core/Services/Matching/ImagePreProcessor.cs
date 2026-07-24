@@ -54,15 +54,15 @@ public static class ImagePreProcessor {
         public void Validate() {
             List<string> problems = [];
 
-            if (MaxAnalysisSize < 1) problems.Add("ImagePreProcessor.MaxAnalysisSize must be >= 1");
-            if (CannyThreshold1 <= 0f) problems.Add("ImagePreProcessor.CannyThreshold1 must be > 0");
-            if (CannyThreshold2 <= CannyThreshold1) problems.Add("ImagePreProcessor.CannyThreshold2 must be > CannyThreshold1");
-            if (SigmoidSlope <= 0f) problems.Add("ImagePreProcessor.SigmoidSlope must be > 0");
-            if (EdgeThreshold is <= 0f or >= 1f) problems.Add("ImagePreProcessor.EdgeThreshold must be in (0,1)");
-            if (MinBboxAreaRatio is <= 0f or >= 1f) problems.Add("ImagePreProcessor.MinBboxAreaRatio must be in (0,1)");
-            if (MaxChannelValueD <= 0.0) problems.Add("ImagePreProcessor.MaxChannelValueD must be > 0");
-            if (CannySobelApertureSize < 1) problems.Add("ImagePreProcessor.CannySobelApertureSize must be >= 1");
-            if (DilationKernelSize < 1) problems.Add("ImagePreProcessor.DilationKernelSize must be >= 1");
+            if (this.MaxAnalysisSize < 1) problems.Add("ImagePreProcessor.MaxAnalysisSize must be >= 1");
+            if (this.CannyThreshold1 <= 0f) problems.Add("ImagePreProcessor.CannyThreshold1 must be > 0");
+            if (this.CannyThreshold2 <= this.CannyThreshold1) problems.Add("ImagePreProcessor.CannyThreshold2 must be > CannyThreshold1");
+            if (this.SigmoidSlope <= 0f) problems.Add("ImagePreProcessor.SigmoidSlope must be > 0");
+            if (this.EdgeThreshold is <= 0f or >= 1f) problems.Add("ImagePreProcessor.EdgeThreshold must be in (0,1)");
+            if (this.MinBboxAreaRatio is <= 0f or >= 1f) problems.Add("ImagePreProcessor.MinBboxAreaRatio must be in (0,1)");
+            if (this.MaxChannelValueD <= 0.0) problems.Add("ImagePreProcessor.MaxChannelValueD must be > 0");
+            if (this.CannySobelApertureSize < 1) problems.Add("ImagePreProcessor.CannySobelApertureSize must be >= 1");
+            if (this.DilationKernelSize < 1) problems.Add("ImagePreProcessor.DilationKernelSize must be >= 1");
 
             if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
         }

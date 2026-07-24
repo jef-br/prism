@@ -15,7 +15,7 @@ public sealed record ColumnValidityConfig
     /// </summary>
     public void Validate()
     {
-        if (MinimumUsefulValueRatio <= 0 || MinimumUsefulValueRatio > 1)
+        if (this.MinimumUsefulValueRatio <= 0 || this.MinimumUsefulValueRatio > 1)
         {
             throw new PrismConfigurationException("ExcelConfig.ColumnValidity.MinimumUsefulValueRatio must be greater than zero and less than or equal to one.");
         }

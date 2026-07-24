@@ -12,7 +12,7 @@ internal sealed class Fetch_DropBox : IFetchStrategy
 
     private readonly IFetchStrategy _directFile;
 
-    internal Fetch_DropBox(IFetchStrategy directFile) => _directFile = directFile;
+    internal Fetch_DropBox(IFetchStrategy directFile) => this._directFile = directFile;
 
     public static IFetchStrategy Create(string configDirectory) =>
         new Fetch_DropBox(Fetch_HTTPS_DirectFile.CreateForDelegate(configDirectory));
@@ -29,7 +29,7 @@ internal sealed class Fetch_DropBox : IFetchStrategy
     public Task<ImageRecord_INPUT> FetchAsync(string url, string jobTempFolder, string jobID, CancellationToken cancellationToken)
     {
         string normalized = NormalizeUrl(url);
-        return _directFile.FetchAsync(normalized, jobTempFolder, jobID, cancellationToken);
+        return this._directFile.FetchAsync(normalized, jobTempFolder, jobID, cancellationToken);
     }
 
     // -------------------------------------------------------------------------

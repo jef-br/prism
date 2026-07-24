@@ -20,12 +20,12 @@ public sealed record FamilyIdProperties
     /// </summary>
     public void Validate()
     {
-        if (!IsNumeric.HasValue)
+        if (!this.IsNumeric.HasValue)
         {
             throw new PrismConfigurationException("ExcelConfig.FamilyIDProperties.IsNumeric is required.");
         }
 
-        if (Length <= 0)
+        if (this.Length <= 0)
         {
             throw new PrismConfigurationException("ExcelConfig.FamilyIDProperties.Length must be greater than zero.");
         }

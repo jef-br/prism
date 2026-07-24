@@ -10,5 +10,5 @@ public sealed record ExcelModelBuildResult(
     /// <summary>
     /// FamilyIDRecord projection consumed by downstream matching.
     /// </summary>
-    public IReadOnlyList<FamilyIDRecord> FamilyRecords => Model.ToFamilyRecords();
+    public IReadOnlyList<FamilyIDRecord> FamilyRecords => this.Model.ToFamilyRecords();
 }

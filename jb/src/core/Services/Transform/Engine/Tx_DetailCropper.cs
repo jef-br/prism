@@ -22,19 +22,19 @@ public class Tx_DetailCropper : IImageTransformation {
 
     /// <summary>Creates the transformer with crop-sizing budgets, headcut flag, pre-decoded BGR Mat, and config sections.</summary>
     public Tx_DetailCropper(double coverage, double extensionOneSided, double extensionBiDirectional, bool headcut, Mat? colorMat, DetailCropperConfig detailCropper, BgStretchConfig bgStretch, HeadCutterConfig headCutter) {
-        _coverage = coverage;
-        _extensionOneSided = extensionOneSided;
-        _extensionBiDirectional = extensionBiDirectional;
-        _headcut = headcut;
-        _colorMat = colorMat;
-        _detailCropper = detailCropper;
-        _bgStretch = bgStretch;
-        _headCutter = headCutter;
+        this._coverage = coverage;
+        this._extensionOneSided = extensionOneSided;
+        this._extensionBiDirectional = extensionBiDirectional;
+        this._headcut = headcut;
+        this._colorMat = colorMat;
+        this._detailCropper = detailCropper;
+        this._bgStretch = bgStretch;
+        this._headCutter = headCutter;
     }
 
     /// <inheritdoc/>
     public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage) {
-        if (_headcut && _colorMat is not null) Tx_util_HeadCutter.Analyze(InputImage, _colorMat, _headCutter);
+        if (this._headcut && this._colorMat is not null) Tx_util_HeadCutter.Analyze(InputImage, this._colorMat, this._headCutter);
 
         byte[]? bytes = InputImage.ProcessedBytes;
         if (bytes is null) {
@@ -60,11 +60,11 @@ public class Tx_DetailCropper : IImageTransformation {
             InputImage.Features.GetValue("intersects-left") == "true",
             InputImage.Features.GetValue("intersects-right") == "true");
 
-        (byte[] result, int side, bool extended, string warning) = ApplyDecisionTree(bytes, bbox, imgW, imgH, intersects);
+        (byte[] result, int side, bool extended, string warning) = this.ApplyDecisionTree(bytes, bbox, imgW, imgH, intersects);
         InputImage.ProcessedBytes = result;
 
         var warnings = new System.Collections.Generic.List<string> { warning };
-        if (_headcut) warnings.Add("Headcut applied.");
+        if (this._headcut) warnings.Add("Headcut applied.");
 
         InputImage.OutputRecord = new ImageRecord_OUTPUT {
             TransformStatus = TransformationStatus.Ok,
@@ -110,7 +110,7 @@ public class Tx_DetailCropper : IImageTransformation {
                 bbox.Left <= 0, bbox.Right >= imgW, bbox.Top <= 0, bbox.Bottom >= imgH);
         }
 
-        (byte[] result, int side, _, _) = ApplyDecisionTree(arr, bbox, imgW, imgH, intersects);
+        (byte[] result, int side, _, _) = this.ApplyDecisionTree(arr, bbox, imgW, imgH, intersects);
 
         if (upscale_factor is not 0f and not 1f) {
             int scaledSide = (int)Math.Round(side * upscale_factor);
@@ -129,7 +129,7 @@ public class Tx_DetailCropper : IImageTransformation {
 
     /// <summary>Edge-intersection pattern for the salient bounding box against the current frame.</summary>
     private readonly record struct EdgeIntersects(bool Top, bool Bottom, bool Left, bool Right) {
-        public int Count => (Top ? 1 : 0) + (Bottom ? 1 : 0) + (Left ? 1 : 0) + (Right ? 1 : 0);
+        public int Count => (this.Top ? 1 : 0) + (this.Bottom ? 1 : 0) + (this.Left ? 1 : 0) + (this.Right ? 1 : 0);
     }
 
     /// <summary> Routes to the branch matching the bbox's edge-intersection count/pattern and returns
@@ -141,20 +141,20 @@ public class Tx_DetailCropper : IImageTransformation {
         // labels are that count, not tunable thresholds.
 #pragma warning disable S109
         return intersects.Count switch {
-            0 => ZeroEdges(sourceJpeg, bbox, imgW, imgH),
-            1 => OneEdge(sourceJpeg, bbox, imgW, imgH, intersects),
-            2 when intersects.Top && intersects.Bottom => TwoOpposing(sourceJpeg, bbox, imgW, imgH, verticalPinned: true),
-            2 when intersects.Left && intersects.Right => TwoOpposing(sourceJpeg, bbox, imgW, imgH, verticalPinned: false),
-            2 => TwoAdjacent(sourceJpeg, bbox, imgW, imgH, intersects),
-            3 => ThreeEdges(sourceJpeg, bbox, imgW, imgH, intersects),
-            _ => FourEdges(sourceJpeg, bbox, imgW, imgH)
+            0 => this.ZeroEdges(sourceJpeg, bbox, imgW, imgH),
+            1 => this.OneEdge(sourceJpeg, bbox, imgW, imgH, intersects),
+            2 when intersects.Top && intersects.Bottom => this.TwoOpposing(sourceJpeg, bbox, imgW, imgH, verticalPinned: true),
+            2 when intersects.Left && intersects.Right => this.TwoOpposing(sourceJpeg, bbox, imgW, imgH, verticalPinned: false),
+            2 => this.TwoAdjacent(sourceJpeg, bbox, imgW, imgH, intersects),
+            3 => this.ThreeEdges(sourceJpeg, bbox, imgW, imgH, intersects),
+            _ => this.FourEdges(sourceJpeg, bbox, imgW, imgH)
         };
 #pragma warning restore S109
     }
 
     // 0 edges — greedy-crop toward the bbox, never below the Coverage floor.
     private (byte[], int, bool, string) ZeroEdges(byte[] sourceJpeg, BoundingBox bbox, int imgW, int imgH) {
-        int side = ComputeIdealSide(bbox, imgW, imgH);
+        int side = this.ComputeIdealSide(bbox, imgW, imgH);
         side = Math.Min(side, Math.Min(imgW, imgH));
 
         int cx = bbox.X + bbox.Width / 2;
@@ -168,7 +168,7 @@ public class Tx_DetailCropper : IImageTransformation {
     // 1 edge — the touched edge pins the crop; the perpendicular axis may extend; the far edge
     // crops toward the bbox subject to the same Coverage floor as the 0-edge case.
     private (byte[], int, bool, string) OneEdge(byte[] sourceJpeg, BoundingBox bbox, int imgW, int imgH, EdgeIntersects intersects) {
-        int side = ComputeIdealSide(bbox, imgW, imgH);
+        int side = this.ComputeIdealSide(bbox, imgW, imgH);
         bool verticalTouch = intersects.Top || intersects.Bottom;
 
         // Pinned axis: bounded by the original extent — it can only shrink toward the bbox
@@ -202,7 +202,7 @@ public class Tx_DetailCropper : IImageTransformation {
                 ? CenteredRect(freeCenter, pinnedSide / 2, side, pinnedSide, preCropRect.Width, preCropRect.Height)
                 : CenteredRect(pinnedSide / 2, freeCenter, pinnedSide, side, preCropRect.Width, preCropRect.Height);
             byte[] finalBytes = CropLocal(preCropped, finalRect);
-            return (finalBytes, side, false, $"1-edge crop, far edge trimmed to Coverage floor ({_coverage:P0}).");
+            return (finalBytes, side, false, $"1-edge crop, far edge trimmed to Coverage floor ({this._coverage:P0}).");
         }
 
         // Extend the free axis via Tx_util_BgStretch to reach `side`. Clamp to the valid placement
@@ -214,7 +214,7 @@ public class Tx_DetailCropper : IImageTransformation {
         int clampedOffset = Math.Clamp(idealOffset, 0, maxOffset);
         int srcX = verticalTouch ? clampedOffset : 0;
         int srcY = verticalTouch ? 0 : clampedOffset;
-        byte[] extendedBytes = Tx_util_BgStretch.Stretch(preCropped, side, side, srcX, srcY, _bgStretch);
+        byte[] extendedBytes = Tx_util_BgStretch.Stretch(preCropped, side, side, srcX, srcY, this._bgStretch);
         string touchedEdge = intersects.Top ? "top" : intersects.Bottom ? "bottom" : intersects.Left ? "left" : "right";
         return (extendedBytes, side, true, $"1-edge extension applied to the free axis opposite the pinned {touchedEdge} edge (uncapped, not explicitly specified).");
     }
@@ -236,27 +236,27 @@ public class Tx_DetailCropper : IImageTransformation {
             return (cropped, pinnedSide, false, "2-opposing crop: free axis trimmed to match the pinned axis.");
         }
 
-        if ((double)delta / currentFreeSide <= _extensionBiDirectional) {
+        if ((double)delta / currentFreeSide <= this._extensionBiDirectional) {
             // Extend the free axis symmetrically to pinnedSide.
             int offset = (pinnedSide - currentFreeSide) / 2;
             int srcX = verticalPinned ? 0 : offset;
             int srcY = verticalPinned ? offset : 0;
-            byte[] extendedBytes = Tx_util_BgStretch.Stretch(sourceJpeg, pinnedSide, pinnedSide, srcX, srcY, _bgStretch);
-            return (extendedBytes, pinnedSide, true, $"2-opposing bidirectional extension applied ({(double)delta / currentFreeSide:P1} of {_extensionBiDirectional:P0} budget).");
+            byte[] extendedBytes = Tx_util_BgStretch.Stretch(sourceJpeg, pinnedSide, pinnedSide, srcX, srcY, this._bgStretch);
+            return (extendedBytes, pinnedSide, true, $"2-opposing bidirectional extension applied ({(double)delta / currentFreeSide:P1} of {this._extensionBiDirectional:P0} budget).");
         }
 
         // Exceeds the BiDirectional budget — local square crop centered on the bbox.
         int side = Math.Min(imgW, imgH);
         Rect fallbackRect = CenteredRect(bbox.X + bbox.Width / 2, bbox.Y + bbox.Height / 2, side, side, imgW, imgH);
         byte[] fallback = CropLocal(sourceJpeg, fallbackRect);
-        return (fallback, side, false, $"2-opposing fallback: required extension {(double)delta / currentFreeSide:P1} exceeds {_extensionBiDirectional:P0} budget; local square crop applied.");
+        return (fallback, side, false, $"2-opposing fallback: required extension {(double)delta / currentFreeSide:P1} exceeds {this._extensionBiDirectional:P0} budget; local square crop applied.");
     }
 
     // 2 adjacent edges — the shared corner is a directional anchor: crop the larger dimension
     // toward the smaller (capped at 14%), then stretch the smaller dimension to square, then
     // fall back to a corner-anchored local square crop if still not square.
     private (byte[], int, bool, string) TwoAdjacent(byte[] sourceJpeg, BoundingBox bbox, int imgW, int imgH, EdgeIntersects intersects) {
-        double adjacentCropCap = _detailCropper.AdjacentCropCap;
+        double adjacentCropCap = this._detailCropper.AdjacentCropCap;
         bool anchorTop = intersects.Top;
         bool anchorLeft = intersects.Left;
 
@@ -283,7 +283,7 @@ public class Tx_DetailCropper : IImageTransformation {
         int side = Math.Max(curW, curH);
         int srcX = anchorLeft ? 0 : side - curW;
         int srcY = anchorTop ? 0 : side - curH;
-        byte[] step2Bytes = Tx_util_BgStretch.Stretch(step1Bytes, side, side, srcX, srcY, _bgStretch);
+        byte[] step2Bytes = Tx_util_BgStretch.Stretch(step1Bytes, side, side, srcX, srcY, this._bgStretch);
 
         using Mat verify = Cv2.ImDecode(step2Bytes, ImreadModes.Color);
         if (verify.Cols == verify.Rows)
@@ -319,21 +319,21 @@ public class Tx_DetailCropper : IImageTransformation {
             return (cropped, pinnedSide, false, "3-edge crop: open side trimmed to match the pinned axis.");
         }
 
-        if ((double)delta / currentOpenSide <= _extensionOneSided) {
+        if ((double)delta / currentOpenSide <= this._extensionOneSided) {
             // Extend on the open side only — the source sits flush against the three pinned
             // edges, and new pixels appear only on the open side.
             int srcX = openLeft ? pinnedSide - currentOpenSide : 0;   // Left open → push right, grow left
             int srcY = openTop ? pinnedSide - currentOpenSide : 0;    // Top open → push down, grow up
-            byte[] extendedBytes = Tx_util_BgStretch.Stretch(sourceJpeg, pinnedSide, pinnedSide, srcX, srcY, _bgStretch);
+            byte[] extendedBytes = Tx_util_BgStretch.Stretch(sourceJpeg, pinnedSide, pinnedSide, srcX, srcY, this._bgStretch);
             string openEdgeName = openTop ? "top" : openBottom ? "bottom" : openLeft ? "left" : "right";
-            return (extendedBytes, pinnedSide, true, $"3-edge one-sided extension applied to the {openEdgeName} edge ({(double)delta / currentOpenSide:P1} of {_extensionOneSided:P0} budget).");
+            return (extendedBytes, pinnedSide, true, $"3-edge one-sided extension applied to the {openEdgeName} edge ({(double)delta / currentOpenSide:P1} of {this._extensionOneSided:P0} budget).");
         }
 
         // Exceeds the OneSided budget — local square crop centered on the bbox.
         int side = Math.Min(imgW, imgH);
         Rect fallbackRect = CenteredRect(bbox.X + bbox.Width / 2, bbox.Y + bbox.Height / 2, side, side, imgW, imgH);
         byte[] fallback = CropLocal(sourceJpeg, fallbackRect);
-        return (fallback, side, false, $"3-edge fallback: required extension {(double)delta / currentOpenSide:P1} exceeds {_extensionOneSided:P0} budget; local square crop applied.");
+        return (fallback, side, false, $"3-edge fallback: required extension {(double)delta / currentOpenSide:P1} exceeds {this._extensionOneSided:P0} budget; local square crop applied.");
     }
 
     // 4 edges — no open side exists; always a local square crop centered on the bbox.
@@ -356,10 +356,10 @@ public class Tx_DetailCropper : IImageTransformation {
         int idealSide = Math.Max(bbox.Width, bbox.Height);
         long tightRemovedArea = imgArea - (long)idealSide * idealSide;
 
-        if (tightRemovedArea <= imgArea * (1.0 - _coverage))
+        if (tightRemovedArea <= imgArea * (1.0 - this._coverage))
             return idealSide;
 
-        return (int)Math.Ceiling(Math.Sqrt(imgArea * _coverage));
+        return (int)Math.Ceiling(Math.Sqrt(imgArea * this._coverage));
     }
 
     /// <summary>Builds a <paramref name="w"/>×<paramref name="h"/> rectangle centered on (<paramref name="cx"/>, <paramref name="cy"/>), clamped to stay within the frame.</summary>

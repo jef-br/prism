@@ -38,5 +38,5 @@ public sealed class FeatureCondition
 
     /// <summary>True when this condition is an OR group rather than a direct feature comparison.</summary>
     [JsonIgnore]
-    public bool IsAnyOfGroup => AnyOf is { Length: > 0 };
+    public bool IsAnyOfGroup => this.AnyOf is { Length: > 0 };
 }

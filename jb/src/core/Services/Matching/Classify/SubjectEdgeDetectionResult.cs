@@ -11,5 +11,5 @@ public readonly record struct SubjectEdgeDetectionResult(
     int  IntersectionCount)
 {
     /// <summary>True when the subject does not intersect any image edge.</summary>
-    public bool FullyInFrame => IntersectionCount == 0;
+    public bool FullyInFrame => this.IntersectionCount == 0;
 }

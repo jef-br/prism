@@ -12,7 +12,7 @@ public sealed class HttpGenerateService : IGenerateService
 
     /// <summary>Creates the client targeting the remote Generate host base address.</summary>
     public HttpGenerateService(Uri baseAddress)
-        => client = ServiceHttp.CreateClient(baseAddress);
+        => this.client = ServiceHttp.CreateClient(baseAddress);
 
     /// <summary>Creates the client over an externally-managed <see cref="HttpClient"/>.</summary>
     public HttpGenerateService(HttpClient client)
@@ -27,6 +27,6 @@ public sealed class HttpGenerateService : IGenerateService
     {
         await StageProgress.EmitStarted(progress, matched.Ingest.JobID, PipelineStageNames.Generated, cancellationToken);
         return await ServiceHttp.PostJson<MatchingResult, GenerateResult>(
-            client, PrismServiceRoutes.Generate, matched, cancellationToken);
+            this.client, PrismServiceRoutes.Generate, matched, cancellationToken);
     }
 }

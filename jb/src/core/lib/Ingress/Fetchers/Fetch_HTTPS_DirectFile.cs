@@ -29,9 +29,9 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// </summary>
     internal Fetch_HTTPS_DirectFile(HostRules_Config rules, HttpClient http, bool isFetcherOwned = false)
     {
-        _rules          = rules;
-        _http           = http;
-        _isFetcherOwned = isFetcherOwned;
+        this._rules          = rules;
+        this._http           = http;
+        this._isFetcherOwned = isFetcherOwned;
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
             return false;
         }
 
-        return _rules.AllowedSchemes.Any(s => string.Equals(s, uri.Scheme, StringComparison.OrdinalIgnoreCase));
+        return this._rules.AllowedSchemes.Any(s => string.Equals(s, uri.Scheme, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -86,22 +86,22 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
             return KoRecord(url, KoReasonBlocked, "The URL is not well-formed.");
         }
 
-        string? blockReason = CheckUrlBlocked(startUri);
+        string? blockReason = this.CheckUrlBlocked(startUri);
         if (blockReason is not null) {
             return KoRecord(url, KoReasonBlocked, blockReason);
         }
 
         using var totalCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        totalCts.CancelAfter(TimeSpan.FromSeconds(_rules.Timeouts.TotalFetchSeconds));
+        totalCts.CancelAfter(TimeSpan.FromSeconds(this._rules.Timeouts.TotalFetchSeconds));
         var ct = totalCts.Token;
 
         try {
-            Uri resolvedUri = await FollowRedirectsAsync(startUri, url, ct);
-            return await DownloadToTempAsync(resolvedUri, url, jobTempFolder, ct);
+            Uri resolvedUri = await this.FollowRedirectsAsync(startUri, url, ct);
+            return await this.DownloadToTempAsync(resolvedUri, url, jobTempFolder, ct);
         } catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
             // Total-fetch timeout fired (not the external caller's cancellation).
             return KoRecord(url, KoReasonTimeout,
-                $"The download did not complete within the configured {_rules.Timeouts.TotalFetchSeconds}-second limit.");
+                $"The download did not complete within the configured {this._rules.Timeouts.TotalFetchSeconds}-second limit.");
         } catch (OperationCanceledException) {
             // Caller cancelled — propagate normally.
             throw;
@@ -131,11 +131,11 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
         while (true) {
             using var req = new HttpRequestMessage(HttpMethod.Head, uri);
             using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts2.CancelAfter(TimeSpan.FromSeconds(_rules.Timeouts.ResponseHeaderSeconds));
+            cts2.CancelAfter(TimeSpan.FromSeconds(this._rules.Timeouts.ResponseHeaderSeconds));
 
             HttpResponseMessage resp;
             try {
-                resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts2.Token);
+                resp = await this._http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts2.Token);
             } catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
                 throw new OperationCanceledException(ct); // treat response-header timeout as overall timeout
             }
@@ -152,8 +152,8 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
                     return uri;
                 }
 
-                bool redirectAllowed = _rules.Redirects.AllowGenericDirectFileRedirects
-                    || (_isFetcherOwned && _rules.Redirects.AllowFetcherOwnedRedirects);
+                bool redirectAllowed = this._rules.Redirects.AllowGenericDirectFileRedirects
+                    || (this._isFetcherOwned && this._rules.Redirects.AllowFetcherOwnedRedirects);
                 if (!redirectAllowed) {
                     throw new InvalidOperationException(
                         "The server issued a redirect, but HostRules.json prohibits this type of redirect.");
@@ -169,7 +169,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
                     location = new Uri(uri, location);
                 }
 
-                string? blockReason = CheckUrlBlocked(location);
+                string? blockReason = this.CheckUrlBlocked(location);
                 if (blockReason is not null) {
                     throw new InvalidOperationException($"Redirect target blocked: {blockReason}");
                 }
@@ -202,8 +202,8 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
         HttpResponseMessage resp;
         try {
             var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts2.CancelAfter(TimeSpan.FromSeconds(_rules.Timeouts.ResponseHeaderSeconds));
-            resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts2.Token);
+            cts2.CancelAfter(TimeSpan.FromSeconds(this._rules.Timeouts.ResponseHeaderSeconds));
+            resp = await this._http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts2.Token);
         } catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
             throw new OperationCanceledException(ct);
         }
@@ -222,7 +222,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
             await using var dest = new FileStream(destPath, FileMode.Create, FileAccess.Write,
                 FileShare.None, bufferSize: 81_920, useAsync: true);
 
-            await StreamWithIdleTimeoutAsync(src, dest, _rules.Timeouts.IdleReadSeconds, ct);
+            await StreamWithIdleTimeoutAsync(src, dest, this._rules.Timeouts.IdleReadSeconds, ct);
 
             ImageRecord_INPUT record = new();
             record.InitialFullName = fileName;
@@ -244,25 +244,25 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// </summary>
     private string? CheckUrlBlocked(Uri uri)
     {
-        if (!_rules.AllowedSchemes.Any(s => string.Equals(s, uri.Scheme, StringComparison.OrdinalIgnoreCase))) {
+        if (!this._rules.AllowedSchemes.Any(s => string.Equals(s, uri.Scheme, StringComparison.OrdinalIgnoreCase))) {
             return $"URL scheme '{uri.Scheme}' is not in the HostRules allowedSchemes list.";
         }
 
-        if (_rules.BlockedSchemes.Any(s => string.Equals(s, uri.Scheme, StringComparison.OrdinalIgnoreCase))) {
+        if (this._rules.BlockedSchemes.Any(s => string.Equals(s, uri.Scheme, StringComparison.OrdinalIgnoreCase))) {
             return $"URL scheme '{uri.Scheme}' is explicitly blocked by HostRules.";
         }
 
         string host = uri.Host;
 
-        if (!_rules.NetworkRanges.AllowLoopback && IsLoopback(host)) {
+        if (!this._rules.NetworkRanges.AllowLoopback && IsLoopback(host)) {
             return $"Loopback addresses are not permitted by HostRules (host: {host}).";
         }
 
-        if (!_rules.Testing.AllowLocalhost && IsLocalhost(host)) {
+        if (!this._rules.Testing.AllowLocalhost && IsLocalhost(host)) {
             return $"Localhost is not permitted by HostRules (host: {host}).";
         }
 
-        if (_rules.NetworkRanges.RejectAnyLoopbackDnsResult) {
+        if (this._rules.NetworkRanges.RejectAnyLoopbackDnsResult) {
             // Synchronous DNS check — performed before the actual TCP connect.
             // Prevents SSRF via DNS rebinding to 127.x addresses.
             if (ResolvesToLoopback(host)) {
@@ -270,7 +270,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
             }
         }
 
-        foreach (string pattern in _rules.BlockedHostPatterns) {
+        foreach (string pattern in this._rules.BlockedHostPatterns) {
             if (MatchesHostPattern(host, pattern)) {
                 return $"Host '{host}' matches the blocked pattern '{pattern}'.";
             }

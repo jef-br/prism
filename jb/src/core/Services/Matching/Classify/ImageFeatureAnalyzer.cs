@@ -80,22 +80,22 @@ public static class ImageFeatureAnalyzer
         {
             List<string> problems = [];
 
-            if (BackgroundVarianceSolidColorMax <= 0f) problems.Add("ImageFeatureAnalyzer.BackgroundVarianceSolidColorMax must be > 0");
-            if (BackgroundVarianceLifestyleMin <= BackgroundVarianceSolidColorMax) problems.Add("ImageFeatureAnalyzer.BackgroundVarianceLifestyleMin must be > BackgroundVarianceSolidColorMax");
-            if (NearWhiteChannelMin is <= 0f or > 1f) problems.Add("ImageFeatureAnalyzer.NearWhiteChannelMin must be in (0,1]");
-            if (AlphaOpaqueThreshold is < 0 or > AlphaThresholdUpperBound) problems.Add("ImageFeatureAnalyzer.AlphaOpaqueThreshold must be in [0,255]");
-            if (MaxChannelValueF <= 0f) problems.Add("ImageFeatureAnalyzer.MaxChannelValueF must be > 0");
-            if (PixelSampleStride < 1) problems.Add("ImageFeatureAnalyzer.PixelSampleStride must be >= 1");
-            if (ChannelCount < 1) problems.Add("ImageFeatureAnalyzer.ChannelCount must be >= 1");
-            if (ClippingPathConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.ClippingPathConfidence must be in [0,1]");
-            if (WhiteBackgroundConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.WhiteBackgroundConfidence must be in [0,1]");
-            if (LifestyleBackgroundAlphaConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundAlphaConfidence must be in [0,1]");
-            if (LifestyleBackgroundSolidConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundSolidConfidence must be in [0,1]");
-            if (LifestyleBackgroundRealLifeConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundRealLifeConfidence must be in [0,1]");
-            if (BackgroundTypeConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.BackgroundTypeConfidence must be in [0,1]");
-            if (EdgeIntersectionConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.EdgeIntersectionConfidence must be in [0,1]");
-            if (OcclusionLevelConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.OcclusionLevelConfidence must be in [0,1]");
-            if (SkinToneAreaConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.SkinToneAreaConfidence must be in [0,1]");
+            if (this.BackgroundVarianceSolidColorMax <= 0f) problems.Add("ImageFeatureAnalyzer.BackgroundVarianceSolidColorMax must be > 0");
+            if (this.BackgroundVarianceLifestyleMin <= this.BackgroundVarianceSolidColorMax) problems.Add("ImageFeatureAnalyzer.BackgroundVarianceLifestyleMin must be > BackgroundVarianceSolidColorMax");
+            if (this.NearWhiteChannelMin is <= 0f or > 1f) problems.Add("ImageFeatureAnalyzer.NearWhiteChannelMin must be in (0,1]");
+            if (this.AlphaOpaqueThreshold is < 0 or > AlphaThresholdUpperBound) problems.Add("ImageFeatureAnalyzer.AlphaOpaqueThreshold must be in [0,255]");
+            if (this.MaxChannelValueF <= 0f) problems.Add("ImageFeatureAnalyzer.MaxChannelValueF must be > 0");
+            if (this.PixelSampleStride < 1) problems.Add("ImageFeatureAnalyzer.PixelSampleStride must be >= 1");
+            if (this.ChannelCount < 1) problems.Add("ImageFeatureAnalyzer.ChannelCount must be >= 1");
+            if (this.ClippingPathConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.ClippingPathConfidence must be in [0,1]");
+            if (this.WhiteBackgroundConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.WhiteBackgroundConfidence must be in [0,1]");
+            if (this.LifestyleBackgroundAlphaConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundAlphaConfidence must be in [0,1]");
+            if (this.LifestyleBackgroundSolidConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundSolidConfidence must be in [0,1]");
+            if (this.LifestyleBackgroundRealLifeConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundRealLifeConfidence must be in [0,1]");
+            if (this.BackgroundTypeConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.BackgroundTypeConfidence must be in [0,1]");
+            if (this.EdgeIntersectionConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.EdgeIntersectionConfidence must be in [0,1]");
+            if (this.OcclusionLevelConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.OcclusionLevelConfidence must be in [0,1]");
+            if (this.SkinToneAreaConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.SkinToneAreaConfidence must be in [0,1]");
 
             if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
         }

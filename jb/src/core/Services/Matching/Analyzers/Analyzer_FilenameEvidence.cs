@@ -35,7 +35,7 @@ public static class Analyzer_FilenameEvidence
 
         public void Validate()
         {
-            if (OrientationConfidence is <= 0f or > 1f)
+            if (this.OrientationConfidence is <= 0f or > 1f)
                 throw new PrismConfigurationException("Filename.OrientationConfidence must be in (0,1]");
         }
     }

@@ -55,11 +55,11 @@ public sealed class ImageNgpVocabulary
 
     /// <summary>True when the feature id is defined in the taxonomy (case-insensitive).</summary>
     public bool HasFeature(string featureId)
-        => featuresById.ContainsKey(featureId);
+        => this.featuresById.ContainsKey(featureId);
 
     /// <summary>True when the phenotype id is in the taxonomy catalogue (case-insensitive).</summary>
     public bool HasPhenotype(string phenotypeId)
-        => phenotypeIds.Contains(phenotypeId);
+        => this.phenotypeIds.Contains(phenotypeId);
 
     /// <summary>
     /// True when <paramref name="value"/> is acceptable for the given feature.
@@ -69,7 +69,7 @@ public sealed class ImageNgpVocabulary
     /// </summary>
     public bool IsAllowedValue(string featureId, string value)
     {
-        if (!featuresById.TryGetValue(featureId, out FeatureDefinition? def))
+        if (!this.featuresById.TryGetValue(featureId, out FeatureDefinition? def))
             return false;
 
         if (string.Equals(value, "UNKNOWN", StringComparison.OrdinalIgnoreCase))

@@ -17,7 +17,7 @@ public sealed class OutputConfig : IValidatableConfig
 
     public void Validate()
     {
-        if (JpegOutputQuality is <= 0 or > MaxJpegQuality)
+        if (this.JpegOutputQuality is <= 0 or > MaxJpegQuality)
             throw new PrismConfigurationException($"Output.JpegOutputQuality must be in (0,{MaxJpegQuality}]");
     }
 }

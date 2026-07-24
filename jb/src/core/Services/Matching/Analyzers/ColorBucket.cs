@@ -9,6 +9,6 @@ public sealed record ColorBucket(float R, float G, float B, float Share) {
     /// <summary>The bucket's mean color as a lowercase #rrggbb hex string.</summary>
     // 255 is the max value of an 8-bit color channel — structural, never tuned.
 #pragma warning disable S109
-    public string Hex => $"#{(int)(R * 255f):x2}{(int)(G * 255f):x2}{(int)(B * 255f):x2}";
+    public string Hex => $"#{(int)(this.R * 255f):x2}{(int)(this.G * 255f):x2}{(int)(this.B * 255f):x2}";
 #pragma warning restore S109
 }

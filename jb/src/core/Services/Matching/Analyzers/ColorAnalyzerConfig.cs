@@ -43,9 +43,9 @@ public sealed class ColorAnalyzerConfig : IValidatableConfig
     {
         List<string> problems = [];
 
-        if (BucketCount < 1) problems.Add("Colors.BucketCount must be >= 1");
-        if (BinsPerChannel < MinBinsPerChannel) problems.Add("Colors.BinsPerChannel must be >= 2");
-        if (Palette.Count == 0) problems.Add("Colors.Palette must define at least one named color");
+        if (this.BucketCount < 1) problems.Add("Colors.BucketCount must be >= 1");
+        if (this.BinsPerChannel < MinBinsPerChannel) problems.Add("Colors.BinsPerChannel must be >= 2");
+        if (this.Palette.Count == 0) problems.Add("Colors.Palette must define at least one named color");
 
         if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }

@@ -28,6 +28,6 @@ public sealed record HeaderGroup
     /// <returns>True when the token is configured for this group.</returns>
     public bool ContainsTerm(string normalizedToken)
     {
-        return Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedToken);
+        return this.Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedToken);
     }
 }

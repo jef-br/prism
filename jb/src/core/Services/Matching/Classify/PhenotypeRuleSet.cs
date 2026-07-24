@@ -54,7 +54,7 @@ public sealed class PhenotypeRuleSet
     /// </summary>
     public string? Assign(ImageFeatureSnapshot features)
     {
-        foreach (PhenotypeRule rule in rules)
+        foreach (PhenotypeRule rule in this.rules)
         {
             if (AllConditionsMet(rule.Required, features))
                 return rule.Id;
@@ -63,7 +63,7 @@ public sealed class PhenotypeRuleSet
     }
 
     /// <summary>All phenotype ids in rule evaluation order.</summary>
-    public IReadOnlyList<string> PhenotypeIds => rules.Select(r => r.Id).ToArray();
+    public IReadOnlyList<string> PhenotypeIds => this.rules.Select(r => r.Id).ToArray();
 
     /// <summary>
     /// Returns true when the phenotype is definitively ruled out by the measured features:
@@ -73,7 +73,7 @@ public sealed class PhenotypeRuleSet
     /// </summary>
     public bool IsContradicted(string phenotypeId, ImageFeatureSnapshot features)
     {
-        foreach (PhenotypeRule rule in rules)
+        foreach (PhenotypeRule rule in this.rules)
         {
             if (!string.Equals(rule.Id, phenotypeId, StringComparison.OrdinalIgnoreCase)) continue;
             return rule.Required.Any(c => ConditionDefinitivelyFails(c, features));
@@ -88,7 +88,7 @@ public sealed class PhenotypeRuleSet
     public string[] EvaluateCandidates(ImageFeatureSnapshot features)
     {
         List<string> candidates = [];
-        foreach (PhenotypeRule rule in rules)
+        foreach (PhenotypeRule rule in this.rules)
         {
             if (AllConditionsMet(rule.Required, features))
                 candidates.Add(rule.Id);

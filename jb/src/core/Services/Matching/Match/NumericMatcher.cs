@@ -92,9 +92,9 @@ internal sealed class NumericMatcher
     {
         this.familyIdColumnName = familyIdColumnName;
         this.cfg = cfg;
-        minTokenLength = Math.Max(1, cfg.MinNumericTokenLength);
-        indexAllColumns = cfg.IndexDigitRunsAllColumns;
-        substringRescueLength = cfg.MinSubstringRescueLength;
+        this.minTokenLength = Math.Max(1, cfg.MinNumericTokenLength);
+        this.indexAllColumns = cfg.IndexDigitRunsAllColumns;
+        this.substringRescueLength = cfg.MinSubstringRescueLength;
     }
 
     //  Bracket 1
@@ -108,7 +108,7 @@ internal sealed class NumericMatcher
         ImageRecord_LAMBDA record,
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules) =>
-        TryMatchBracket1WithTies(record, families, numericRules).Evidence;
+        this.TryMatchBracket1WithTies(record, families, numericRules).Evidence;
 
     /// <summary>
     /// Attempts Bracket 1 matching, returning both the evidence and any tied candidates for rejection tracking.
@@ -123,17 +123,17 @@ internal sealed class NumericMatcher
     {
         string   filename      = record.MatchingName;
         string   stem          = Path.GetFileNameWithoutExtension(filename);
-        string[] tokens        = GetEligibleTokens(filename);
+        string[] tokens        = this.GetEligibleTokens(filename);
         string   fileDigits    = string.Concat(stem.Where(char.IsDigit));
 
         // Candidate set: individual digit-run tokens + the full monotoken (all digits of stem).
         // Tokens below MinNumericTokenLength are excluded — a shot suffix like "_01" must not act
         // as standalone evidence. Distinct avoids re-testing when the stem is one unbroken run.
-        string[] candidates = fileDigits.Length >= minTokenLength && !tokens.Contains(fileDigits)
+        string[] candidates = fileDigits.Length >= this.minTokenLength && !tokens.Contains(fileDigits)
             ? [..tokens, fileDigits]
             : tokens;
 
-        Dictionary<string, List<DigitPosting>> index = GetOrBuildDigitIndex(families, numericRules);
+        Dictionary<string, List<DigitPosting>> index = this.GetOrBuildDigitIndex(families, numericRules);
 
         // First matching (token, posting) per FamilyID — one index lookup per candidate token.
         Dictionary<string, (string Token, DigitPosting Posting)> matchByFamily = new(StringComparer.OrdinalIgnoreCase);
@@ -197,7 +197,7 @@ internal sealed class NumericMatcher
         ImageRecord_LAMBDA record,
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules) =>
-        TryMatchBracket2WithTies(record, families, numericRules).Evidence;
+        this.TryMatchBracket2WithTies(record, families, numericRules).Evidence;
 
     /// <summary>
     /// Attempts Bracket 2 matching, returning both the evidence and any tied candidates for rejection tracking.
@@ -217,7 +217,7 @@ internal sealed class NumericMatcher
         if (tokens.Length < 2)
             return (null, []);
 
-        Dictionary<string, List<DigitPosting>> index = GetOrBuildDigitIndex(families, numericRules);
+        Dictionary<string, List<DigitPosting>> index = this.GetOrBuildDigitIndex(families, numericRules);
 
         // Collect best TCD per FamilyID
         Dictionary<string, (double Tcd, string[] Subset, string PropertyName)> bestPerFamily =
@@ -259,7 +259,7 @@ internal sealed class NumericMatcher
             numericRules.Any(r => r.MaxDistancePermuted > 0))
         {
             fromPermuted = true;
-            Dictionary<int, List<string>> targetsByLength = GetTargetsByLength(index);
+            Dictionary<int, List<string>> targetsByLength = this.GetTargetsByLength(index);
             int fullMask = 1 << tokens.Length;
 
             for (int mask = 0; mask < fullMask; mask++)
@@ -335,7 +335,7 @@ internal sealed class NumericMatcher
             [
                 new TokenEvidenceItem(
                     string.Join("+", match.Value.Subset),
-                    GetFamilyDigitsForField(FindFamily(families, match.Key)!, match.Value.PropertyName) ?? string.Empty,
+                    this.GetFamilyDigitsForField(FindFamily(families, match.Key)!, match.Value.PropertyName) ?? string.Empty,
                     match.Value.PropertyName,
                     match.Key,
                     confidence)
@@ -365,16 +365,16 @@ internal sealed class NumericMatcher
         string   stem     = Path.GetFileNameWithoutExtension(filename);
         string[] tokens   = GetNumericTokensFromFilename(filename);
 
-        Dictionary<string, List<DigitPosting>> index = GetOrBuildDigitIndex(families, numericRules);
+        Dictionary<string, List<DigitPosting>> index = this.GetOrBuildDigitIndex(families, numericRules);
 
         // One entry per evidence source (token or concatenation) that hit at least one family.
         List<(string Token, HashSet<string> Families)> hitSets = [];
 
-        foreach (string token in GetEligibleTokens(filename))
+        foreach (string token in this.GetEligibleTokens(filename))
             CollectHitSet(index, token, hitSets);
 
         string fileDigits = string.Concat(stem.Where(char.IsDigit));
-        if (fileDigits.Length >= minTokenLength && !tokens.Contains(fileDigits))
+        if (fileDigits.Length >= this.minTokenLength && !tokens.Contains(fileDigits))
             CollectHitSet(index, fileDigits, hitSets);
 
         for (int start = 0; start < tokens.Length; start++)
@@ -382,7 +382,7 @@ internal sealed class NumericMatcher
             for (int length = 2; length <= tokens.Length - start; length++)
             {
                 string concatenated = string.Concat(tokens.Skip(start).Take(length));
-                if (concatenated.Length >= minTokenLength && concatenated != fileDigits)
+                if (concatenated.Length >= this.minTokenLength && concatenated != fileDigits)
                     CollectHitSet(index, concatenated, hitSets);
             }
         }
@@ -467,7 +467,7 @@ internal sealed class NumericMatcher
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
-        if (substringRescueLength <= 0)
+        if (this.substringRescueLength <= 0)
             return (null, []);
 
         string   filename = record.MatchingName;
@@ -477,14 +477,14 @@ internal sealed class NumericMatcher
         string   fileDigits = string.Concat(stem.Where(char.IsDigit));
         string[] rescueTokens = tokens
             .Concat(tokens.Contains(fileDigits) ? Array.Empty<string>() : [fileDigits])
-            .Where(t => t.Length >= substringRescueLength)
+            .Where(t => t.Length >= this.substringRescueLength)
             .OrderByDescending(t => t.Length)
             .ToArray();
 
         if (rescueTokens.Length == 0)
             return (null, []);
 
-        Dictionary<string, List<DigitPosting>> index = GetOrBuildDigitIndex(families, numericRules);
+        Dictionary<string, List<DigitPosting>> index = this.GetOrBuildDigitIndex(families, numericRules);
         const string matcherName = "NumericMatcher.SubstringRescue";
         HashSet<string> ambiguousFamilies = new(StringComparer.OrdinalIgnoreCase);
 
@@ -520,11 +520,11 @@ internal sealed class NumericMatcher
                 ImageId              = stem,
                 SourceFilename       = filename,
                 FinalFamilyId        = familyId,
-                FinalScore           = cfg.SubstringRescueConfidence,
+                FinalScore           = this.cfg.SubstringRescueConfidence,
                 IsKo                 = false,
                 AcceptedMatcherName  = matcherName,
-                TopCandidates        = [new CandidateSummary(familyId, cfg.SubstringRescueConfidence, matcherName)],
-                NumericTokenEvidence = [new TokenEvidenceItem(token, matchedTarget!, matchedField!, familyId, cfg.SubstringRescueConfidence)],
+                TopCandidates        = [new CandidateSummary(familyId, this.cfg.SubstringRescueConfidence, matcherName)],
+                NumericTokenEvidence = [new TokenEvidenceItem(token, matchedTarget!, matchedField!, familyId, this.cfg.SubstringRescueConfidence)],
                 ImageNgpSummary      = BuildNgpSummary(record),
                 SafeExplanation      = $"SubstringRescue: token '{token}' is contained in target '{matchedTarget}' of family {familyId}."
             }, []);
@@ -557,9 +557,9 @@ internal sealed class NumericMatcher
         // single-slot cache. The cached index from Brackets 1–2 covers the full family superset and
         // the postings are intersected with `remaining` below, so reusing it is equivalent.
         Dictionary<string, List<DigitPosting>> index =
-            digitIndex is not null && ReferenceEquals(indexedRules, numericRules)
-                ? digitIndex
-                : BuildDigitIndex(candidates, numericRules);
+            this.digitIndex is not null && ReferenceEquals(this.indexedRules, numericRules)
+                ? this.digitIndex
+                : this.BuildDigitIndex(candidates, numericRules);
 
         List<FamilyIDRecord> remaining = [..candidates];
 
@@ -594,16 +594,16 @@ internal sealed class NumericMatcher
         IReadOnlyList<FamilyIDRecord> families,
         IReadOnlyList<MatchingRule> numericRules)
     {
-        if (digitIndex is not null &&
-            ReferenceEquals(indexedFamilies, families) &&
-            ReferenceEquals(indexedRules, numericRules))
-            return digitIndex;
+        if (this.digitIndex is not null &&
+            ReferenceEquals(this.indexedFamilies, families) &&
+            ReferenceEquals(this.indexedRules, numericRules))
+            return this.digitIndex;
 
-        digitIndex = BuildDigitIndex(families, numericRules);
-        digitTargetsByLength = null;
-        indexedFamilies = families;
-        indexedRules = numericRules;
-        return digitIndex;
+        this.digitIndex = this.BuildDigitIndex(families, numericRules);
+        this.digitTargetsByLength = null;
+        this.indexedFamilies = families;
+        this.indexedRules = numericRules;
+        return this.digitIndex;
     }
 
     /// <summary>
@@ -616,34 +616,34 @@ internal sealed class NumericMatcher
         IReadOnlyList<MatchingRule> numericRules)
     {
         Dictionary<string, List<DigitPosting>> index = new(StringComparer.Ordinal);
-        MatchingRule runRule = BuildRunIndexRule(numericRules);
+        MatchingRule runRule = this.BuildRunIndexRule(numericRules);
 
         foreach (FamilyIDRecord family in families)
         {
             foreach (MatchingRule rule in numericRules)
             {
-                string? target = GetFamilyDigitsForField(family, rule.ExcelField);
-                if (target is null || target.Length < minTokenLength)
+                string? target = this.GetFamilyDigitsForField(family, rule.ExcelField);
+                if (target is null || target.Length < this.minTokenLength)
                     continue;
 
                 AddPosting(index, target, new DigitPosting(family.FamilyID, rule.ExcelField, rule));
             }
 
-            if (!indexAllColumns)
+            if (!this.indexAllColumns)
                 continue;
 
             foreach (KeyValuePair<string, string> property in family.CanonicalProperties)
             {
                 string? wholeDigits = DigitsOnly(property.Value);
                 if (wholeDigits is not null &&
-                    wholeDigits.Length >= minTokenLength && wholeDigits.Length <= MaxIndexedWholeValueDigits)
+                    wholeDigits.Length >= this.minTokenLength && wholeDigits.Length <= MaxIndexedWholeValueDigits)
                 {
                     AddPosting(index, wholeDigits, new DigitPosting(family.FamilyID, property.Key, runRule));
                 }
 
                 foreach (Match run in DigitSequencePattern.Matches(property.Value))
                 {
-                    if (run.Value.Length >= minTokenLength && run.Value != wholeDigits)
+                    if (run.Value.Length >= this.minTokenLength && run.Value != wholeDigits)
                         AddPosting(index, run.Value, new DigitPosting(family.FamilyID, property.Key, runRule));
                 }
             }
@@ -674,7 +674,7 @@ internal sealed class NumericMatcher
             Type                = "numeric",
             Strategy            = "NumericalMatcher",
             Weight              = first?.Weight ?? 1.0,
-            MaxDistance         = first?.MaxDistance ?? cfg.DefaultMaxDistanceFallback,
+            MaxDistance         = first?.MaxDistance ?? this.cfg.DefaultMaxDistanceFallback,
             MaxDistancePermuted = first?.MaxDistancePermuted ?? 0.0
         };
     }
@@ -682,8 +682,8 @@ internal sealed class NumericMatcher
     /// <summary>Distinct index targets grouped by string length, for the permuted fallback.</summary>
     private Dictionary<int, List<string>> GetTargetsByLength(Dictionary<string, List<DigitPosting>> index)
     {
-        if (digitTargetsByLength is not null && ReferenceEquals(index, digitIndex))
-            return digitTargetsByLength;
+        if (this.digitTargetsByLength is not null && ReferenceEquals(index, this.digitIndex))
+            return this.digitTargetsByLength;
 
         Dictionary<int, List<string>> byLength = [];
         foreach (string target in index.Keys)
@@ -693,7 +693,7 @@ internal sealed class NumericMatcher
             list.Add(target);
         }
 
-        digitTargetsByLength = byLength;
+        this.digitTargetsByLength = byLength;
         return byLength;
     }
 
@@ -741,7 +741,7 @@ internal sealed class NumericMatcher
     /// </summary>
     private string[] GetEligibleTokens(string filename) =>
         GetNumericTokensFromFilename(filename)
-            .Where(t => t.Length >= minTokenLength)
+            .Where(t => t.Length >= this.minTokenLength)
             .ToArray();
 
     /// <summary>
@@ -751,7 +751,7 @@ internal sealed class NumericMatcher
     /// </summary>
     private string? GetFamilyDigitsForField(FamilyIDRecord family, string excelField)
     {
-        if (excelField.Equals(familyIdColumnName, StringComparison.OrdinalIgnoreCase))
+        if (excelField.Equals(this.familyIdColumnName, StringComparison.OrdinalIgnoreCase))
             return DigitsOnly(family.FamilyID);
 
         return GetDigitsOfFamilyExcelColumn(family, excelField);

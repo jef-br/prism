@@ -18,10 +18,10 @@ public sealed class BgStretchConfig : IValidatableConfig
     {
         List<string> problems = [];
 
-        if (Tier1MaxRatio <= 1f) problems.Add("BgStretch.Tier1MaxRatio must be > 1");
-        if (Tier2MaxRatio <= Tier1MaxRatio) problems.Add("BgStretch.Tier2MaxRatio must be > Tier1MaxRatio");
-        if (Tier4MinRatio <= Tier2MaxRatio) problems.Add("BgStretch.Tier4MinRatio must be > Tier2MaxRatio");
-        if (FeatherPx < 0) problems.Add("BgStretch.FeatherPx must be >= 0");
+        if (this.Tier1MaxRatio <= 1f) problems.Add("BgStretch.Tier1MaxRatio must be > 1");
+        if (this.Tier2MaxRatio <= this.Tier1MaxRatio) problems.Add("BgStretch.Tier2MaxRatio must be > Tier1MaxRatio");
+        if (this.Tier4MinRatio <= this.Tier2MaxRatio) problems.Add("BgStretch.Tier4MinRatio must be > Tier2MaxRatio");
+        if (this.FeatherPx < 0) problems.Add("BgStretch.FeatherPx must be >= 0");
 
         if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }

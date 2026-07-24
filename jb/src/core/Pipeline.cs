@@ -40,16 +40,16 @@ internal sealed class Pipeline : IDisposable
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        artifactStore       = services.ArtifactStore;
-        ingestService       = services.Ingest;
-        matchingService     = services.Matching;
-        generateService     = services.Generate;
-        transformService    = services.Transform;
+        this.artifactStore       = services.ArtifactStore;
+        this.ingestService       = services.Ingest;
+        this.matchingService     = services.Matching;
+        this.generateService     = services.Generate;
+        this.transformService    = services.Transform;
         this.detOrderGapsAllowed = detOrderGapsAllowed;
     }
 
     /// <summary>Disposes services that own native resources (e.g. the CLIP ONNX session in MatchingService).</summary>
-    public void Dispose() { if (matchingService is IDisposable d) d.Dispose(); }
+    public void Dispose() { if (this.matchingService is IDisposable d) d.Dispose(); }
 
     // -------------------------------------------------------------------------
     // Stage name constants — single source of truth for the immutable stage order.
@@ -77,14 +77,14 @@ internal sealed class Pipeline : IDisposable
         PrismJobRequest request,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => ingestService.ImportAsync(request, artifactStore, progress, cancellationToken);
+        => this.ingestService.ImportAsync(request, this.artifactStore, progress, cancellationToken);
 
     /// <summary>Classified → Matched → Ordered → Renamed: convert every image into an enriched LAMBDA.</summary>
     internal Task<MatchingResult> MatchAsync(
         IngestResult ingest,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => matchingService.MatchAsync(ingest, artifactStore, progress, cancellationToken);
+        => this.matchingService.MatchAsync(ingest, this.artifactStore, progress, cancellationToken);
 
     /// <summary>Generated stage: enrich hero LAMBDAs and create synthetic images.</summary>
     internal Task<GenerateResult> GenerateAsync(
@@ -92,7 +92,7 @@ internal sealed class Pipeline : IDisposable
         bool generationEnabled,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => generateService.GenerateAsync(matched, generationEnabled, progress, cancellationToken);
+        => this.generateService.GenerateAsync(matched, generationEnabled, progress, cancellationToken);
 
     /// <summary>Transformed stage: route each non-KO LAMBDA through its transformation.</summary>
     internal Task<TransformResult> TransformAsync(
@@ -101,7 +101,7 @@ internal sealed class Pipeline : IDisposable
         bool headcut,
         Func<PipelineProgressEvent, Task>? progress,
         CancellationToken cancellationToken)
-        => transformService.TransformAsync(matched, transformEnabled, headcut, progress, cancellationToken);
+        => this.transformService.TransformAsync(matched, transformEnabled, headcut, progress, cancellationToken);
 
     /// <summary>
     /// Exported stage: assemble the canonical manifest (and ZIP when requested) from the final LAMBDA
@@ -115,7 +115,7 @@ internal sealed class Pipeline : IDisposable
         CancellationToken cancellationToken)
     {
         await StageProgress.EmitStarted(progress, request.JobID, PipelineStageNames.Exported, cancellationToken);
-        ExportArtifacts artifacts = Exporter.Run(BuildExportRequest(transformed, generatedImages, request));
+        ExportArtifacts artifacts = Exporter.Run(this.BuildExportRequest(transformed, generatedImages, request));
 
         IReadOnlyList<ImageRecord_LAMBDA> lambdaRecords = transformed.Matched.LambdaRecords;
         int exportedOk = lambdaRecords.Count(l => !l.IsKo);
@@ -151,7 +151,7 @@ internal sealed class Pipeline : IDisposable
             KoRecordCount      = ingest.KoRecordCount + matched.KoRecordCount,
             OkTransformedCount = transformed.OkTransformedCount,
             GeneratedCount     = generatedImages.Count,
-            DetOrderGapsAllowed = detOrderGapsAllowed,
+            DetOrderGapsAllowed = this.detOrderGapsAllowed,
             Warnings           = [.. ingest.Warnings, .. matched.Warnings]
         };
     }

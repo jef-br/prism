@@ -34,8 +34,8 @@ public sealed class VisualHasher {
         public void Validate() {
             List<string> problems = [];
 
-            if (HashWidth <= 1) problems.Add("VisualHasher.HashWidth must be > 1");
-            if (HashHeight <= 1) problems.Add("VisualHasher.HashHeight must be > 1");
+            if (this.HashWidth <= 1) problems.Add("VisualHasher.HashWidth must be > 1");
+            if (this.HashHeight <= 1) problems.Add("VisualHasher.HashHeight must be > 1");
 
             if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
         }
@@ -85,7 +85,7 @@ public sealed class VisualHasher {
     }
 
     /// <summary>True when the two hashes are within the configured Hamming distance.</summary>
-    public bool AreDuplicates(UInt128 hashA, UInt128 hashB) => HammingDistance(hashA, hashB) <= hammingThreshold;
+    public bool AreDuplicates(UInt128 hashA, UInt128 hashB) => HammingDistance(hashA, hashB) <= this.hammingThreshold;
 
     /// <summary>
     /// Groups images by visual similarity using pre-computed perceptual hashes.
@@ -111,7 +111,7 @@ public sealed class VisualHasher {
                 for (int j = i + 1; j < entries.Count; j++) {
                     if (!consumed[j]
                         && entries[j].Hash != UInt128.Zero
-                        && AreDuplicates(entries[i].Hash, entries[j].Hash)
+                        && this.AreDuplicates(entries[i].Hash, entries[j].Hash)
                         && string.Equals(nameI, Path.GetFileName(entries[j].Record.InitialFullName), StringComparison.OrdinalIgnoreCase)) {
                         groupMembers.Add(entries[j].Record);
                         consumed[j] = true;

@@ -28,11 +28,11 @@ public sealed class YoloAnalyzerConfig : IValidatableConfig
     {
         List<string> problems = [];
 
-        if (ConfidenceThreshold is <= 0f or >= 1f) problems.Add("Yolo.ConfidenceThreshold must be in (0,1)");
-        if (MaxDetections < 1) problems.Add("Yolo.MaxDetections must be >= 1");
-        if (HumanMinConfidence is <= 0f or >= 1f) problems.Add("Yolo.HumanMinConfidence must be in (0,1)");
-        if (AbsenceConfidence is <= 0f or > 1f) problems.Add("Yolo.AbsenceConfidence must be in (0,1]");
-        if (HeroPersonMinArea is <= 0f or >= 1f) problems.Add("Yolo.HeroPersonMinArea must be in (0,1)");
+        if (this.ConfidenceThreshold is <= 0f or >= 1f) problems.Add("Yolo.ConfidenceThreshold must be in (0,1)");
+        if (this.MaxDetections < 1) problems.Add("Yolo.MaxDetections must be >= 1");
+        if (this.HumanMinConfidence is <= 0f or >= 1f) problems.Add("Yolo.HumanMinConfidence must be in (0,1)");
+        if (this.AbsenceConfidence is <= 0f or > 1f) problems.Add("Yolo.AbsenceConfidence must be in (0,1]");
+        if (this.HeroPersonMinArea is <= 0f or >= 1f) problems.Add("Yolo.HeroPersonMinArea must be in (0,1)");
 
         if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }

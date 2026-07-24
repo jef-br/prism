@@ -28,7 +28,7 @@ internal sealed record PrismApiConfiguration {
     public IReadOnlyList<string> ImageMediaTypes { get; init; } = [];
     public IReadOnlyList<string> ExcelMediaTypes { get; init; } = [];
     public IReadOnlyList<string> ZipMediaTypes { get; init; } = [];
-    public IReadOnlyList<string> AcceptedMediaTypes => [.. ImageMediaTypes, .. ExcelMediaTypes, .. ZipMediaTypes];
+    public IReadOnlyList<string> AcceptedMediaTypes => [.. this.ImageMediaTypes, .. this.ExcelMediaTypes, .. this.ZipMediaTypes];
     public FetchDispatcher FetchDispatcher { get; init; } = null!;
 
     /// <summary>

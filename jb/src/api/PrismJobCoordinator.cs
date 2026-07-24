@@ -22,43 +22,43 @@ internal sealed class PrismJobCoordinator
     {
         this.prism = prism;
         this.configuration = configuration;
-        MaxQueuedJobs = configuration.MaxQueuedJobs;
-        MaxConcurrentJobs = configuration.MaxConcurrentJobs;
-        queue = Channel.CreateBounded<PrismApiJob>(new BoundedChannelOptions(MaxQueuedJobs)
+        this.MaxQueuedJobs = configuration.MaxQueuedJobs;
+        this.MaxConcurrentJobs = configuration.MaxConcurrentJobs;
+        this.queue = Channel.CreateBounded<PrismApiJob>(new BoundedChannelOptions(this.MaxQueuedJobs)
         {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = false,
             SingleWriter = false
         });
 
-        for (int workerIndex = 0; workerIndex < MaxConcurrentJobs; workerIndex++)
+        for (int workerIndex = 0; workerIndex < this.MaxConcurrentJobs; workerIndex++)
         {
-            _ = Task.Run(ProcessJobs);
+            _ = Task.Run(this.ProcessJobs);
         }
     }
 
     public int MaxQueuedJobs { get; }
     public int MaxConcurrentJobs { get; }
-    public int ActiveJobCount => activeJobCount;
-    public int QueuedJobCount => queuedJobCount;
-    public bool CanAcceptJobs => queuedJobCount < MaxQueuedJobs;
+    public int ActiveJobCount => this.activeJobCount;
+    public int QueuedJobCount => this.queuedJobCount;
+    public bool CanAcceptJobs => this.queuedJobCount < this.MaxQueuedJobs;
 
     /// <summary>
     /// Tries to enqueue one accepted PRISM job.
     /// </summary>
     public bool TryEnqueue(PrismJobRequest request, PrismJobUrls urls, out PrismJobStartEnvelope? envelope)
     {
-        RemoveExpiredJobs();
+        this.RemoveExpiredJobs();
 
         PrismApiJob job = new(request, urls);
-        if (!queue.Writer.TryWrite(job))
+        if (!this.queue.Writer.TryWrite(job))
         {
             envelope = null;
             return false;
         }
 
-        jobs[request.JobID] = job;
-        Interlocked.Increment(ref queuedJobCount);
+        this.jobs[request.JobID] = job;
+        Interlocked.Increment(ref this.queuedJobCount);
 
         envelope = new PrismJobStartEnvelope
         {
@@ -77,7 +77,7 @@ internal sealed class PrismJobCoordinator
     /// </summary>
     public PrismProgressSubscription? Subscribe(Guid jobID)
     {
-        if (!jobs.TryGetValue(jobID, out PrismApiJob? job))
+        if (!this.jobs.TryGetValue(jobID, out PrismApiJob? job))
         {
             return null;
         }
@@ -97,9 +97,9 @@ internal sealed class PrismJobCoordinator
     /// </summary>
     public PrismStoredJobResult? GetResult(Guid jobID)
     {
-        RemoveExpiredJobs();
+        this.RemoveExpiredJobs();
 
-        if (!jobs.TryGetValue(jobID, out PrismApiJob? job))
+        if (!this.jobs.TryGetValue(jobID, out PrismApiJob? job))
         {
             return null;
         }
@@ -112,9 +112,9 @@ internal sealed class PrismJobCoordinator
     /// </summary>
     public IReadOnlyList<PrismJobSummary> ListJobs()
     {
-        RemoveExpiredJobs();
+        this.RemoveExpiredJobs();
 
-        return jobs.Values
+        return this.jobs.Values
             .OrderByDescending(job => job.CreatedAt)
             .Select(job => new PrismJobSummary(
                 job.Request.JobID,
@@ -131,17 +131,17 @@ internal sealed class PrismJobCoordinator
 
     private async Task ProcessJobs()
     {
-        await foreach (PrismApiJob job in queue.Reader.ReadAllAsync())
+        await foreach (PrismApiJob job in this.queue.Reader.ReadAllAsync())
         {
-            Interlocked.Decrement(ref queuedJobCount);
-            Interlocked.Increment(ref activeJobCount);
+            Interlocked.Decrement(ref this.queuedJobCount);
+            Interlocked.Increment(ref this.activeJobCount);
 
             try
             {
                 job.MarkRunning();
                 await job.Publish(CreateJobStatusEvent(job.Request.JobID, "Running", "PRISM job is running."));
 
-                PrismJobResult result = await prism.Process(job.Request, job.Publish);
+                PrismJobResult result = await this.prism.Process(job.Request, job.Publish);
                 job.MarkCompleted(result);
                 await job.Publish(CreateJobStatusEvent(job.Request.JobID, result.Status, "PRISM job reached a terminal state."));
             }
@@ -154,19 +154,19 @@ internal sealed class PrismJobCoordinator
             finally
             {
                 job.CompleteSubscribers();
-                Interlocked.Decrement(ref activeJobCount);
+                Interlocked.Decrement(ref this.activeJobCount);
             }
         }
     }
 
     private void RemoveExpiredJobs()
     {
-        DateTimeOffset expirationCutoff = DateTimeOffset.UtcNow.AddHours(-configuration.JobRetentionPeriodInHours);
-        foreach (KeyValuePair<Guid, PrismApiJob> job in jobs)
+        DateTimeOffset expirationCutoff = DateTimeOffset.UtcNow.AddHours(-this.configuration.JobRetentionPeriodInHours);
+        foreach (KeyValuePair<Guid, PrismApiJob> job in this.jobs)
         {
             if (job.Value.IsTerminal && job.Value.CompletedAt < expirationCutoff)
             {
-                jobs.TryRemove(job.Key, out _);
+                this.jobs.TryRemove(job.Key, out _);
             }
         }
     }

@@ -69,7 +69,7 @@ internal sealed class SiblingPropagator {
                 continue;
 
             HashSet<string> profile = BuildProfile(record.MatchingName);
-            RemoveBatchCommonTokens(profile, batchTokenCounts, allRecords.Count);
+            this.RemoveBatchCommonTokens(profile, batchTokenCounts, allRecords.Count);
 
             if (profile.Count > 0)
                 matchedProfiles.Add((record, profile));
@@ -90,7 +90,7 @@ internal sealed class SiblingPropagator {
 
         foreach (ImageRecord_LAMBDA record in unmatched) {
             HashSet<string> profile = BuildProfile(record.MatchingName);
-            RemoveBatchCommonTokens(profile, batchTokenCounts, allRecords.Count);
+            this.RemoveBatchCommonTokens(profile, batchTokenCounts, allRecords.Count);
 
             if (profile.Count == 0) {
                 stillUnmatched.Add(record);
@@ -100,18 +100,18 @@ internal sealed class SiblingPropagator {
             // Tier 1: exact-profile membership — this photo is another shot of a known product set.
             string profileKey = ProfileKey(profile);
             if (familyByExactProfile.TryGetValue(profileKey, out string? exactFamily)) {
-                AssignSibling(record, exactFamily, profile, $"same shot set as family {exactFamily}");
+                this.AssignSibling(record, exactFamily, profile, $"same shot set as family {exactFamily}");
                 continue;
             }
 
             // Tier 2: loose relation — subset/superset overlap, refused when related siblings disagree.
-            (string? familyId, string? siblingName) = FindLooseRelation(profile, matchedProfiles);
+            (string? familyId, string? siblingName) = this.FindLooseRelation(profile, matchedProfiles);
             if (familyId is null) {
                 stillUnmatched.Add(record);
                 continue;
             }
 
-            AssignSibling(record, familyId, profile, $"matches sibling '{siblingName}' of family {familyId}");
+            this.AssignSibling(record, familyId, profile, $"matches sibling '{siblingName}' of family {familyId}");
         }
 
         return stillUnmatched;
@@ -151,7 +151,7 @@ internal sealed class SiblingPropagator {
         string? siblingName = null;
 
         foreach ((ImageRecord_LAMBDA sibling, HashSet<string> siblingProfile) in matchedProfiles) {
-            if (!ProfilesAreRelated(profile, siblingProfile))
+            if (!this.ProfilesAreRelated(profile, siblingProfile))
                 continue;
 
             string siblingFamilyId = sibling.MatchEvidence!.FinalFamilyId!;
@@ -178,10 +178,10 @@ internal sealed class SiblingPropagator {
             ImageId = stem,
             SourceFilename = record.InitialFullName ?? filename,
             FinalFamilyId = familyId,
-            FinalScore = cfg.SiblingPropagationConfidence,
+            FinalScore = this.cfg.SiblingPropagationConfidence,
             IsKo = false,
             AcceptedMatcherName = matcherName,
-            TopCandidates = [new CandidateSummary(familyId, cfg.SiblingPropagationConfidence, matcherName)],
+            TopCandidates = [new CandidateSummary(familyId, this.cfg.SiblingPropagationConfidence, matcherName)],
             ImageNgpSummary = record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}",
             SafeExplanation = $"SiblingPropagation: rare token profile [{string.Join(", ", profile.OrderBy(t => t, StringComparer.Ordinal))}] {reason}."
         };
@@ -229,7 +229,7 @@ internal sealed class SiblingPropagator {
     /// Never removes below CommonTokenFloor carriers, so sibling-shared tokens survive in small batches.
     /// </summary>
     private void RemoveBatchCommonTokens(HashSet<string> profile, Dictionary<string, int> batchTokenCounts, int batchSize) {
-        double threshold = Math.Max(cfg.CommonTokenFloor, batchSize * cfg.CommonTokenRatio);
+        double threshold = Math.Max(this.cfg.CommonTokenFloor, batchSize * this.cfg.CommonTokenRatio);
         profile.RemoveWhere(token =>
             batchTokenCounts.TryGetValue(token, out int count) && count > threshold);
     }
@@ -247,7 +247,7 @@ internal sealed class SiblingPropagator {
             return false;
 
         int common = profile.Count(siblingProfile.Contains);
-        return common >= cfg.MinCommonTokens || profile.Any(t => t.Length >= cfg.ReferenceGradeTokenLength && siblingProfile.Contains(t));
+        return common >= this.cfg.MinCommonTokens || profile.Any(t => t.Length >= this.cfg.ReferenceGradeTokenLength && siblingProfile.Contains(t));
     }
 
     private static string NormalizeDiacritics(string input) {

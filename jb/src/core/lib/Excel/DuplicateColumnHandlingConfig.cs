@@ -15,7 +15,7 @@ public sealed record DuplicateColumnHandlingConfig
     /// </summary>
     public void Validate()
     {
-        if (OverlapRatioForMerge <= 0 || OverlapRatioForMerge > 1)
+        if (this.OverlapRatioForMerge <= 0 || this.OverlapRatioForMerge > 1)
         {
             throw new PrismConfigurationException("ExcelConfig.DuplicateColumnHandling.OverlapRatioForMerge must be greater than zero and less than or equal to one.");
         }

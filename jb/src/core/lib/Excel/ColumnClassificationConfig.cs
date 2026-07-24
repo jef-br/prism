@@ -20,12 +20,12 @@ public sealed record ColumnClassificationConfig
     /// </summary>
     public void Validate()
     {
-        if (CategoricalMaximumUniqueValues <= 0)
+        if (this.CategoricalMaximumUniqueValues <= 0)
         {
             throw new PrismConfigurationException("ExcelConfig.ColumnClassification.CategoricalMaximumUniqueValues must be greater than zero.");
         }
 
-        if (CategoricalMaximumValueLength <= 0)
+        if (this.CategoricalMaximumValueLength <= 0)
         {
             throw new PrismConfigurationException("ExcelConfig.ColumnClassification.CategoricalMaximumValueLength must be greater than zero.");
         }

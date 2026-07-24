@@ -49,7 +49,7 @@ public static class Analyzer_SubjectGeometry
 
         public void Validate()
         {
-            if (ForegroundColorDistance is <= 0f or >= 1f)
+            if (this.ForegroundColorDistance is <= 0f or >= 1f)
                 throw new PrismConfigurationException("SubjectGeometry.ForegroundColorDistance must be in (0,1)");
         }
     }

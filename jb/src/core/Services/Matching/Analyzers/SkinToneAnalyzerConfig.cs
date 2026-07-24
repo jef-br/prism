@@ -31,9 +31,9 @@ public sealed class SkinToneAnalyzerConfig : IValidatableConfig
     {
         List<string> problems = [];
 
-        if (LumaMin >= LumaMax) problems.Add("SkinTone.LumaMin must be < LumaMax");
-        if (CbMin >= CbMax) problems.Add("SkinTone.CbMin must be < CbMax");
-        if (CrMin >= CrMax) problems.Add("SkinTone.CrMin must be < CrMax");
+        if (this.LumaMin >= this.LumaMax) problems.Add("SkinTone.LumaMin must be < LumaMax");
+        if (this.CbMin >= this.CbMax) problems.Add("SkinTone.CbMin must be < CbMax");
+        if (this.CrMin >= this.CrMax) problems.Add("SkinTone.CrMin must be < CrMax");
 
         if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }

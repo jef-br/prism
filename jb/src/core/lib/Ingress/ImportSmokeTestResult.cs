@@ -31,12 +31,12 @@ public sealed record ImportSmokeTestResult
     /// </summary>
     public override string ToString()
     {
-        if (!CanRun)
+        if (!this.CanRun)
         {
-            return $"SMOKE TEST BLOCKED: {BlockReason}";
+            return $"SMOKE TEST BLOCKED: {this.BlockReason}";
         }
 
-        ImportStageResult r = Result!;
+        ImportStageResult r = this.Result!;
         return
             $"SMOKE TEST COMPLETED\n" +
             $"  Normalized images:  {r.NormalizedImages.Count}\n" +

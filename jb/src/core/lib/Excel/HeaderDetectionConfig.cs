@@ -30,10 +30,10 @@ public sealed record HeaderDetectionConfig
     /// </summary>
     public void Validate()
     {
-        ValidateRatio(MinimumMatchedColumnRatio, "ExcelConfig.HeaderDetection.MinimumMatchedColumnRatio");
-        ValidateRatio(MaximumEditDistanceRatio, "ExcelConfig.HeaderDetection.MaximumEditDistanceRatio");
-        ValidateRatio(EditDistanceOneConfidence, "ExcelConfig.HeaderDetection.EditDistanceOneConfidence");
-        ValidateRatio(EditDistanceTwoConfidence, "ExcelConfig.HeaderDetection.EditDistanceTwoConfidence");
+        ValidateRatio(this.MinimumMatchedColumnRatio, "ExcelConfig.HeaderDetection.MinimumMatchedColumnRatio");
+        ValidateRatio(this.MaximumEditDistanceRatio, "ExcelConfig.HeaderDetection.MaximumEditDistanceRatio");
+        ValidateRatio(this.EditDistanceOneConfidence, "ExcelConfig.HeaderDetection.EditDistanceOneConfidence");
+        ValidateRatio(this.EditDistanceTwoConfidence, "ExcelConfig.HeaderDetection.EditDistanceTwoConfidence");
     }
 
     private static void ValidateRatio(double value, string name)

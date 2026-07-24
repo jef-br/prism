@@ -84,13 +84,13 @@ public sealed class ImageClassifier : IDisposable
     /// True when the ONNX session is loaded and text encoding is available,
     /// enabling full zero-shot classification.
     /// </summary>
-    public bool IsReady => session is not null && tokenizer is not null && supportsTextEncoding;
+    public bool IsReady => this.session is not null && this.tokenizer is not null && this.supportsTextEncoding;
 
     /// <summary>
     /// True when the model's pixel_values batch dimension is dynamic, so multiple images can share
     /// one <see cref="InferenceSession.Run"/> — amortizing the text branch across the batch.
     /// </summary>
-    public bool SupportsImageBatch => IsReady && supportsImageBatch;
+    public bool SupportsImageBatch => this.IsReady && this.supportsImageBatch;
 
     /// <summary>
     /// Loads the CLIP ONNX model and BPE tokenizer from the supplied paths.
@@ -108,31 +108,31 @@ public sealed class ImageClassifier : IDisposable
 
         try
         {
-            session = OnnxSessionFactory.Create(modelPath);
+            this.session = OnnxSessionFactory.Create(modelPath);
 
-            IReadOnlyDictionary<string, NodeMetadata> inputMeta  = session.InputMetadata;
-            IReadOnlyDictionary<string, NodeMetadata> outputMeta = session.OutputMetadata;
+            IReadOnlyDictionary<string, NodeMetadata> inputMeta  = this.session.InputMetadata;
+            IReadOnlyDictionary<string, NodeMetadata> outputMeta = this.session.OutputMetadata;
 
-            supportsTextEncoding =
+            this.supportsTextEncoding =
                 inputMeta.ContainsKey(TensorInputIds) &&
                 inputMeta.ContainsKey(TensorAttentionMask) &&
                 outputMeta.ContainsKey(TensorLogitsPerImage);
 
             // Dynamic batch dims are reported as <= 0; a fixed 1 forces one image per Run.
-            supportsImageBatch =
+            this.supportsImageBatch =
                 inputMeta.TryGetValue(TensorPixelValues, out NodeMetadata? pixelMeta) &&
                 pixelMeta.Dimensions.Length == 4 &&
                 pixelMeta.Dimensions[0] <= 0;
 
             if (File.Exists(vocabPath) && File.Exists(mergesPath))
-                tokenizer = new ClipTokenizer(vocabPath, mergesPath);
+                this.tokenizer = new ClipTokenizer(vocabPath, mergesPath);
         }
         catch (Exception loadException)
         {
-            session?.Dispose();
-            session   = null;
-            tokenizer = null;
-            supportsTextEncoding = false;
+            this.session?.Dispose();
+            this.session   = null;
+            this.tokenizer = null;
+            this.supportsTextEncoding = false;
             throw new PrismConfigurationException(
                 $"CLIP ONNX assets at '{modelPath}' are present but failed to load — a file is " +
                 $"corrupt, truncated, or an incompatible export: {loadException.Message}", loadException);
@@ -149,7 +149,7 @@ public sealed class ImageClassifier : IDisposable
     /// <param name="prompts">Text prompts to score against the image.</param>
     public ClassificationToken[] ClassifyImage(Image<Rgba32> image, string[] prompts)
     {
-        if (!IsReady || prompts.Length == 0)
+        if (!this.IsReady || prompts.Length == 0)
             return [];
 
         // The graph is entangled: one Run must carry the image AND all prompts together.
@@ -157,7 +157,7 @@ public sealed class ImageClassifier : IDisposable
 
         lock (RunLock)
         {
-            (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = GetPromptTensors(prompts);
+            (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = this.GetPromptTensors(prompts);
 
             var inputs = new List<NamedOnnxValue>
             {
@@ -167,7 +167,7 @@ public sealed class ImageClassifier : IDisposable
             };
 
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
-                session!.Run(inputs, [TensorLogitsPerImage]);
+                this.session!.Run(inputs, [TensorLogitsPerImage]);
 
             // logits_per_image is [1, N] — row 0 holds the image-vs-each-prompt logit.
             Tensor<float> logits = outputs.First(o => o.Name == TensorLogitsPerImage).AsTensor<float>();
@@ -190,11 +190,11 @@ public sealed class ImageClassifier : IDisposable
     /// <param name="prompts">Text prompts to score against every image.</param>
     public ClassificationToken[][] ClassifyImages(IReadOnlyList<Image<Rgba32>> images, string[] prompts)
     {
-        if (!IsReady || prompts.Length == 0 || images.Count == 0)
+        if (!this.IsReady || prompts.Length == 0 || images.Count == 0)
             return [.. images.Select(_ => Array.Empty<ClassificationToken>())];
 
-        if (images.Count == 1 || !SupportsImageBatch)
-            return [.. images.Select(image => ClassifyImage(image, prompts))];
+        if (images.Count == 1 || !this.SupportsImageBatch)
+            return [.. images.Select(image => this.ClassifyImage(image, prompts))];
 
         var pixelValues = new DenseTensor<float>([images.Count, 3, InputHeight, InputWidth]);
         for (int b = 0; b < images.Count; b++)
@@ -202,7 +202,7 @@ public sealed class ImageClassifier : IDisposable
 
         lock (RunLock)
         {
-            (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = GetPromptTensors(prompts);
+            (DenseTensor<long> inputIds, DenseTensor<long> attentionMask) = this.GetPromptTensors(prompts);
 
             var inputs = new List<NamedOnnxValue>
             {
@@ -212,7 +212,7 @@ public sealed class ImageClassifier : IDisposable
             };
 
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
-                session!.Run(inputs, [TensorLogitsPerImage]);
+                this.session!.Run(inputs, [TensorLogitsPerImage]);
 
             Tensor<float> logits = outputs.First(o => o.Name == TensorLogitsPerImage).AsTensor<float>();
 
@@ -288,13 +288,13 @@ public sealed class ImageClassifier : IDisposable
     /// </summary>
     private (DenseTensor<long> InputIds, DenseTensor<long> AttentionMask) GetPromptTensors(string[] prompts)
     {
-        if (!ReferenceEquals(cachedPrompts, prompts))
+        if (!ReferenceEquals(this.cachedPrompts, prompts))
         {
-            (cachedInputIds, cachedAttentionMask) = TokenizePrompts(prompts);
-            cachedPrompts = prompts;
+            (this.cachedInputIds, this.cachedAttentionMask) = this.TokenizePrompts(prompts);
+            this.cachedPrompts = prompts;
         }
 
-        return (cachedInputIds!, cachedAttentionMask!);
+        return (this.cachedInputIds!, this.cachedAttentionMask!);
     }
 
     /// <summary>
@@ -303,7 +303,7 @@ public sealed class ImageClassifier : IDisposable
     /// </summary>
     private (DenseTensor<long> InputIds, DenseTensor<long> AttentionMask) TokenizePrompts(string[] prompts)
     {
-        long[][] encoded = prompts.Select(p => tokenizer!.Encode(p)).ToArray();
+        long[][] encoded = prompts.Select(p => this.tokenizer!.Encode(p)).ToArray();
         int rows = encoded.Length;
         int seqLen = encoded[0].Length;
 
@@ -328,8 +328,8 @@ public sealed class ImageClassifier : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (disposed) return;
-        disposed = true;
-        session?.Dispose();
+        if (this.disposed) return;
+        this.disposed = true;
+        this.session?.Dispose();
     }
 }

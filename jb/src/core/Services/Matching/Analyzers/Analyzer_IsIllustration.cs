@@ -54,12 +54,12 @@ public static class Analyzer_IsIllustration
         {
             List<string> problems = [];
 
-            if (MinEdgeDensity is <= 0f or >= 1f) problems.Add("IsIllustration.MinEdgeDensity must be in (0,1)");
-            if (EdgeStrengthThreshold <= 0f) problems.Add("IsIllustration.EdgeStrengthThreshold must be > 0");
-            if (BackgroundFlatnessMin is <= 0f or > 1f) problems.Add("IsIllustration.BackgroundFlatnessMin must be in (0,1]");
-            if (BorderSampleDepth is <= 0f or >= BorderSampleDepthUpperBound) problems.Add("IsIllustration.BorderSampleDepth must be in (0,0.5)");
-            if (ColorBinsPerChannel < MinColorBinsPerChannel) problems.Add("IsIllustration.ColorBinsPerChannel must be >= 2");
-            if (MaxColorClusters < 1) problems.Add("IsIllustration.MaxColorClusters must be >= 1");
+            if (this.MinEdgeDensity is <= 0f or >= 1f) problems.Add("IsIllustration.MinEdgeDensity must be in (0,1)");
+            if (this.EdgeStrengthThreshold <= 0f) problems.Add("IsIllustration.EdgeStrengthThreshold must be > 0");
+            if (this.BackgroundFlatnessMin is <= 0f or > 1f) problems.Add("IsIllustration.BackgroundFlatnessMin must be in (0,1]");
+            if (this.BorderSampleDepth is <= 0f or >= BorderSampleDepthUpperBound) problems.Add("IsIllustration.BorderSampleDepth must be in (0,0.5)");
+            if (this.ColorBinsPerChannel < MinColorBinsPerChannel) problems.Add("IsIllustration.ColorBinsPerChannel must be >= 2");
+            if (this.MaxColorClusters < 1) problems.Add("IsIllustration.MaxColorClusters must be >= 1");
 
             if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
         }

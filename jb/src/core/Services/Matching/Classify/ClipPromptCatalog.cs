@@ -17,7 +17,7 @@ public sealed class ClipPromptCatalog {
 
     private ClipPromptCatalog( Dictionary<string, (string Feature, string Value)> byPrompt ) {
         this.byPrompt = byPrompt;
-        promptArray = [.. byPrompt.Keys];
+        this.promptArray = [.. byPrompt.Keys];
     }
 
     // --- Factory
@@ -64,11 +64,11 @@ public sealed class ClipPromptCatalog {
 
     /// <summary>All prompt strings to feed the CLIP zero-shot classifier. Returns the same cached
     /// array instance on every call — do not mutate.</summary>
-    public string[] BuildPrompts() => promptArray;
+    public string[] BuildPrompts() => this.promptArray;
 
     /// <summary> Maps a CLIP result label back to its feature id and value. Returns false for an unrecognised label.</summary>
     public bool TryResolve( string label, out string feature, out string value ) {
-        if (byPrompt.TryGetValue(label, out (string Feature, string Value) mapping)) {
+        if (this.byPrompt.TryGetValue(label, out (string Feature, string Value) mapping)) {
             feature = mapping.Feature;
             value = mapping.Value;
             return true;

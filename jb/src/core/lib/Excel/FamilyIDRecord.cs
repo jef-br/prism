@@ -21,7 +21,7 @@ public sealed class FamilyIDRecord
             throw new ArgumentException("FamilyID is required.", nameof(familyID));
         }
 
-        FamilyID = familyID.Trim();
+        this.FamilyID = familyID.Trim();
     }
 
     /// <summary>
@@ -60,27 +60,27 @@ public sealed class FamilyIDRecord
     /// <summary>
     /// Canonical dynamic properties derived from accepted Excel columns.
     /// </summary>
-    public IReadOnlyDictionary<string, string> CanonicalProperties => canonicalProperties;
+    public IReadOnlyDictionary<string, string> CanonicalProperties => this.canonicalProperties;
 
     /// <summary>
     /// Dynamic column classifications used by matchers.
     /// </summary>
-    public IReadOnlyDictionary<string, ExcelColumnClassification> ColumnClassifications => columnClassifications;
+    public IReadOnlyDictionary<string, ExcelColumnClassification> ColumnClassifications => this.columnClassifications;
 
     /// <summary>
     /// Normalized tokens by property name.
     /// </summary>
-    public IReadOnlyDictionary<string, IReadOnlyList<string>> NormalizedTokens => normalizedTokens;
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> NormalizedTokens => this.normalizedTokens;
 
     /// <summary>
     /// Original cell values by property name.
     /// </summary>
-    public IReadOnlyDictionary<string, IReadOnlyList<string>> OriginalSourceCellValues => originalSourceCellValues;
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> OriginalSourceCellValues => this.originalSourceCellValues;
 
     /// <summary>
     /// Conflicting row or column values preserved for manifest and workbench review.
     /// </summary>
-    public IReadOnlyList<FamilyConflictEvidence> ConflictEvidence => conflictEvidence;
+    public IReadOnlyList<FamilyConflictEvidence> ConflictEvidence => this.conflictEvidence;
 
     private readonly Dictionary<string, string> canonicalProperties = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ExcelColumnClassification> columnClassifications = new(StringComparer.OrdinalIgnoreCase);
@@ -100,17 +100,17 @@ public sealed class FamilyIDRecord
             throw new ArgumentException("Property name is required.", nameof(propertyValue));
         }
 
-        columnClassifications[propertyValue.PropertyName] = classification;
+        this.columnClassifications[propertyValue.PropertyName] = classification;
 
-        List<string> sourceValues = GetExistingSourceValues(propertyValue.PropertyName);
+        List<string> sourceValues = this.GetExistingSourceValues(propertyValue.PropertyName);
         sourceValues.AddRange(propertyValue.SourceValues.Where(value => !string.IsNullOrWhiteSpace(value)));
-        originalSourceCellValues[propertyValue.PropertyName] = sourceValues.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        this.originalSourceCellValues[propertyValue.PropertyName] = sourceValues.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
-        List<string> mergedTokens = GetExistingTokens(propertyValue.PropertyName);
+        List<string> mergedTokens = this.GetExistingTokens(propertyValue.PropertyName);
         mergedTokens.AddRange(propertyValue.SourceValues.SelectMany(TokenizeCellValue));
-        normalizedTokens[propertyValue.PropertyName] = mergedTokens.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(token => token, StringComparer.OrdinalIgnoreCase).ToArray();
+        this.normalizedTokens[propertyValue.PropertyName] = mergedTokens.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(token => token, StringComparer.OrdinalIgnoreCase).ToArray();
 
-        string currentCanonicalValue = canonicalProperties.TryGetValue(propertyValue.PropertyName, out string? existingValue)
+        string currentCanonicalValue = this.canonicalProperties.TryGetValue(propertyValue.PropertyName, out string? existingValue)
             ? existingValue
             : string.Empty;
 
@@ -118,14 +118,14 @@ public sealed class FamilyIDRecord
 
         if (string.IsNullOrWhiteSpace(currentCanonicalValue))
         {
-            canonicalProperties[propertyValue.PropertyName] = incomingCanonicalValue;
-            AddConflictEvidenceWhenNeeded(propertyValue, "duplicate-column");
+            this.canonicalProperties[propertyValue.PropertyName] = incomingCanonicalValue;
+            this.AddConflictEvidenceWhenNeeded(propertyValue, "duplicate-column");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(incomingCanonicalValue) || ValuesAreEquivalent(currentCanonicalValue, incomingCanonicalValue))
         {
-            AddConflictEvidenceWhenNeeded(propertyValue, "duplicate-column");
+            this.AddConflictEvidenceWhenNeeded(propertyValue, "duplicate-column");
             return;
         }
 
@@ -135,9 +135,9 @@ public sealed class FamilyIDRecord
             .OrderBy(token => token, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        canonicalProperties[propertyValue.PropertyName] = string.Join(" ", allTokens);
-        conflictEvidence.Add(new FamilyConflictEvidence(
-            FamilyID,
+        this.canonicalProperties[propertyValue.PropertyName] = string.Join(" ", allTokens);
+        this.conflictEvidence.Add(new FamilyConflictEvidence(
+            this.FamilyID,
             propertyValue.PropertyName,
             "duplicate-row-or-column",
             [currentCanonicalValue, .. propertyValue.SourceValues.Where(value => !string.IsNullOrWhiteSpace(value))],
@@ -152,22 +152,22 @@ public sealed class FamilyIDRecord
     /// <param name="propertyName">Canonical property name to remove.</param>
     public void RemoveProperty(string propertyName)
     {
-        canonicalProperties.Remove(propertyName);
-        columnClassifications.Remove(propertyName);
-        normalizedTokens.Remove(propertyName);
-        originalSourceCellValues.Remove(propertyName);
+        this.canonicalProperties.Remove(propertyName);
+        this.columnClassifications.Remove(propertyName);
+        this.normalizedTokens.Remove(propertyName);
+        this.originalSourceCellValues.Remove(propertyName);
     }
 
     private List<string> GetExistingSourceValues(string propertyName)
     {
-        return originalSourceCellValues.TryGetValue(propertyName, out IReadOnlyList<string>? existingValues)
+        return this.originalSourceCellValues.TryGetValue(propertyName, out IReadOnlyList<string>? existingValues)
             ? existingValues.ToList()
             : [];
     }
 
     private List<string> GetExistingTokens(string propertyName)
     {
-        return normalizedTokens.TryGetValue(propertyName, out IReadOnlyList<string>? existingTokens)
+        return this.normalizedTokens.TryGetValue(propertyName, out IReadOnlyList<string>? existingTokens)
             ? existingTokens.ToList()
             : [];
     }
@@ -190,8 +190,8 @@ public sealed class FamilyIDRecord
             .OrderBy(token => token, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        conflictEvidence.Add(new FamilyConflictEvidence(
-            FamilyID,
+        this.conflictEvidence.Add(new FamilyConflictEvidence(
+            this.FamilyID,
             propertyValue.PropertyName,
             reasonCode,
             uniqueValues,

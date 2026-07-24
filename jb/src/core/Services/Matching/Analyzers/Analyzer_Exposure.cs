@@ -40,9 +40,9 @@ public static class Analyzer_Exposure
         {
             List<string> problems = [];
 
-            if (HighLuminance is <= 0f or > 1f) problems.Add("Exposure.HighLuminance must be in (0,1]");
-            if (LowLuminance is < 0f or >= 1f) problems.Add("Exposure.LowLuminance must be in [0,1)");
-            if (FlaggedFraction is <= 0f or > 1f) problems.Add("Exposure.FlaggedFraction must be in (0,1]");
+            if (this.HighLuminance is <= 0f or > 1f) problems.Add("Exposure.HighLuminance must be in (0,1]");
+            if (this.LowLuminance is < 0f or >= 1f) problems.Add("Exposure.LowLuminance must be in [0,1)");
+            if (this.FlaggedFraction is <= 0f or > 1f) problems.Add("Exposure.FlaggedFraction must be in (0,1]");
 
             if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
         }

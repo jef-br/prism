@@ -64,7 +64,7 @@ public sealed class TransformService : ITransformService
             async (lambda, ct) =>
             {
                 inputByName.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input);
-                (byte[]? preprocessed, Mat? colorMat) = await ImagePreProcessor.PreprocessAsync(lambda, input?.NormalizedJpgPath, prismConfig, remoteUpscale, ct);
+                (byte[]? preprocessed, Mat? colorMat) = await ImagePreProcessor.PreprocessAsync(lambda, input?.NormalizedJpgPath, prismConfig, this.remoteUpscale, ct);
 
                 if (lambda.IsKo) { colorMat?.Dispose(); return; }
 

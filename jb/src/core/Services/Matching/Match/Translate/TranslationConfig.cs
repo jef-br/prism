@@ -64,8 +64,8 @@ public sealed record TranslationConfig
 
         string normalizedToken = NormalizeToken(token);
 
-        return StopWords.General.Any(stopWord => NormalizeToken(stopWord) == normalizedToken)
-            || StopWords.Domain.Any(stopWord => NormalizeToken(stopWord) == normalizedToken);
+        return this.StopWords.General.Any(stopWord => NormalizeToken(stopWord) == normalizedToken)
+            || this.StopWords.Domain.Any(stopWord => NormalizeToken(stopWord) == normalizedToken);
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ public sealed record TranslationConfig
 
         string normalizedToken = NormalizeToken(token);
 
-        return StopWords.General.Any(stopWord => NormalizeToken(stopWord) == normalizedToken);
+        return this.StopWords.General.Any(stopWord => NormalizeToken(stopWord) == normalizedToken);
     }
 
     /// <summary>
@@ -108,7 +108,7 @@ public sealed record TranslationConfig
             return true;
         }
 
-        return SynonymGroups.Any(group => group.ContainsBoth(normalizedLeftToken, normalizedRightToken));
+        return this.SynonymGroups.Any(group => group.ContainsBoth(normalizedLeftToken, normalizedRightToken));
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public sealed record TranslationConfig
     /// <returns>True when the token belongs to any header group.</returns>
     public bool IsHeaderTerm(string? token)
     {
-        return TryResolveHeaderCanonical(token, out _);
+        return this.TryResolveHeaderCanonical(token, out _);
     }
 
     /// <summary>
@@ -138,7 +138,7 @@ public sealed record TranslationConfig
 
         string normalizedToken = NormalizeToken(token);
 
-        foreach (HeaderGroup group in HeaderGroups)
+        foreach (HeaderGroup group in this.HeaderGroups)
         {
             if (group.ContainsTerm(normalizedToken))
             {
@@ -175,7 +175,7 @@ public sealed record TranslationConfig
             return false;
         }
 
-        foreach (HeaderGroup group in HeaderGroups)
+        foreach (HeaderGroup group in this.HeaderGroups)
         {
             if (group.Terms.Any(term => NormalizePhrase(term) == normalizedPhrase))
             {

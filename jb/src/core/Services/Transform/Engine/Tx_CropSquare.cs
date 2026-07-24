@@ -20,7 +20,7 @@ public class Tx_CropSquare : IImageTransformation
 
     public Tx_CropSquare(OutputConfig cfg)
     {
-        _cfg = cfg;
+        this._cfg = cfg;
     }
 
     /// <inheritdoc/>
@@ -70,7 +70,7 @@ public class Tx_CropSquare : IImageTransformation
         }
 
         using MemoryStream ms = new();
-        img.Save(ms, new JpegEncoder { Quality = _cfg.JpegOutputQuality });
+        img.Save(ms, new JpegEncoder { Quality = this._cfg.JpegOutputQuality });
         return ms.ToArray();
     }
 

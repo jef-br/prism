@@ -23,7 +23,7 @@ public sealed class LocalArtifactStore : IArtifactStore
     /// <summary>Creates a store rooted at an explicit temp root. Used by tests.</summary>
     public LocalArtifactStore(string jobTempRoot)
     {
-        JobTempRoot = jobTempRoot ?? throw new ArgumentNullException(nameof(jobTempRoot));
+        this.JobTempRoot = jobTempRoot ?? throw new ArgumentNullException(nameof(jobTempRoot));
     }
 
     /// <inheritdoc/>
@@ -32,7 +32,7 @@ public sealed class LocalArtifactStore : IArtifactStore
     /// <inheritdoc/>
     public string JobFolder(Guid jobId)
     {
-        string folder = Path.Combine(JobTempRoot, jobId.ToString("N"));
+        string folder = Path.Combine(this.JobTempRoot, jobId.ToString("N"));
         Directory.CreateDirectory(folder);
         return folder;
     }
@@ -40,7 +40,7 @@ public sealed class LocalArtifactStore : IArtifactStore
     /// <inheritdoc/>
     public string LambdaDocumentPath(Guid jobId, string imageId)
     {
-        string lambdaFolder = Path.Combine(JobFolder(jobId), LambdaSubfolder);
+        string lambdaFolder = Path.Combine(this.JobFolder(jobId), LambdaSubfolder);
         Directory.CreateDirectory(lambdaFolder);
         return Path.Combine(lambdaFolder, $"{SafeImageId(imageId)}.json");
     }
@@ -48,14 +48,14 @@ public sealed class LocalArtifactStore : IArtifactStore
     /// <inheritdoc/>
     public void SaveLambdaDocument(Guid jobId, string imageId, ImageRecord_LAMBDA lambda)
     {
-        string path = LambdaDocumentPath(jobId, imageId);
+        string path = this.LambdaDocumentPath(jobId, imageId);
         File.WriteAllText(path, JsonSerializer.Serialize(lambda, DocumentOptions));
     }
 
     /// <inheritdoc/>
     public ImageRecord_LAMBDA? LoadLambdaDocument(Guid jobId, string imageId)
     {
-        string path = LambdaDocumentPath(jobId, imageId);
+        string path = this.LambdaDocumentPath(jobId, imageId);
         if (!File.Exists(path)) return null;
         return JsonSerializer.Deserialize<ImageRecord_LAMBDA>(File.ReadAllText(path), DocumentOptions);
     }

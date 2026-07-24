@@ -31,9 +31,9 @@ public static class Analyzer_Interior {
         public void Validate() {
             List<string> problems = [];
 
-            if (MinAreaFraction is <= 0f or >= 1f) problems.Add("Interior.MinAreaFraction must be in (0,1)");
-            if (MinEdgeStrength <= 0f) problems.Add("Interior.MinEdgeStrength must be > 0");
-            if (TextureDiffMin <= 0f) problems.Add("Interior.TextureDiffMin must be > 0");
+            if (this.MinAreaFraction is <= 0f or >= 1f) problems.Add("Interior.MinAreaFraction must be in (0,1)");
+            if (this.MinEdgeStrength <= 0f) problems.Add("Interior.MinEdgeStrength must be > 0");
+            if (this.TextureDiffMin <= 0f) problems.Add("Interior.TextureDiffMin must be > 0");
 
             if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
         }

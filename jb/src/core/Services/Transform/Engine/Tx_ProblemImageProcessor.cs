@@ -21,14 +21,14 @@ public class Tx_ProblemImageProcessor : IImageTransformation
 
     public Tx_ProblemImageProcessor(ProblemImageProcessorConfig cfg, OutputConfig outputCfg)
     {
-        _cfg = cfg;
-        _outputCfg = outputCfg;
+        this._cfg = cfg;
+        this._outputCfg = outputCfg;
     }
 
     /// <inheritdoc/>
     public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage)
     {
-        if (IsKoBySize(InputImage, _cfg, out string koReason))
+        if (IsKoBySize(InputImage, this._cfg, out string koReason))
         {
             InputImage.IsKo          = true;
             InputImage.KoReasonCode  = "TRANSFORM_TOO_SMALL";
@@ -52,7 +52,7 @@ public class Tx_ProblemImageProcessor : IImageTransformation
 
         // Compute expected output dimensions for the metadata record.
         // Actual pixel resize is performed by Process() when the image bytes are available.
-        ComputeSafeResizeTarget(InputImage.Width, InputImage.Height, _cfg,
+        ComputeSafeResizeTarget(InputImage.Width, InputImage.Height, this._cfg,
             out int outW, out int outH, out string resizeMode, out double scaleFactor);
 
         int warnCount = unknownFeatures.Length > 0 ? 2 : 1;
@@ -97,12 +97,12 @@ public class Tx_ProblemImageProcessor : IImageTransformation
         int inH    = img.Height;
         int minDim = Math.Min(inW, inH);
 
-        if (minDim < _cfg.MinInputPx)
+        if (minDim < this._cfg.MinInputPx)
         {
-            double requiredScale = (double)_cfg.MinOutputPx / minDim;
-            if (requiredScale > _cfg.MaxUpscale)
+            double requiredScale = (double)this._cfg.MinOutputPx / minDim;
+            if (requiredScale > this._cfg.MaxUpscale)
                 throw new InvalidOperationException(
-                    $"Image too small ({inW}×{inH} px); required upscale {requiredScale:F2}× exceeds maximum {_cfg.MaxUpscale}×.");
+                    $"Image too small ({inW}×{inH} px); required upscale {requiredScale:F2}× exceeds maximum {this._cfg.MaxUpscale}×.");
         }
 
         int outW;
@@ -117,14 +117,14 @@ public class Tx_ProblemImageProcessor : IImageTransformation
         else
         {
             // Auto-scale toward MinOutputPx when the image is below spec.
-            ComputeSafeResizeTarget(inW, inH, _cfg, out outW, out outH, out _, out _);
+            ComputeSafeResizeTarget(inW, inH, this._cfg, out outW, out outH, out _, out _);
         }
 
         if (outW != inW || outH != inH)
             img.Mutate(x => x.Resize(outW, outH, KnownResamplers.Lanczos3));
 
         using MemoryStream ms = new();
-        img.Save(ms, new JpegEncoder { Quality = _outputCfg.JpegOutputQuality });
+        img.Save(ms, new JpegEncoder { Quality = this._outputCfg.JpegOutputQuality });
         return ms.ToArray();
     }
 

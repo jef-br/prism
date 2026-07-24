@@ -32,7 +32,7 @@ public static class Analyzer_MultipleProducts
 
         public void Validate()
         {
-            if (OverlapIou is <= 0f or >= 1f)
+            if (this.OverlapIou is <= 0f or >= 1f)
                 throw new PrismConfigurationException("MultipleProducts.OverlapIou must be in (0,1)");
         }
     }

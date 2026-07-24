@@ -11,7 +11,7 @@ public sealed class HttpMatchingService : IMatchingService
 
     /// <summary>Creates the client targeting the remote Matching host base address.</summary>
     public HttpMatchingService(Uri baseAddress)
-        => client = ServiceHttp.CreateClient(baseAddress);
+        => this.client = ServiceHttp.CreateClient(baseAddress);
 
     /// <summary>Creates the client over an externally-managed <see cref="HttpClient"/>.</summary>
     public HttpMatchingService(HttpClient client)
@@ -30,6 +30,6 @@ public sealed class HttpMatchingService : IMatchingService
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Renamed, cancellationToken);
 
         return await ServiceHttp.PostJson<IngestResult, MatchingResult>(
-            client, PrismServiceRoutes.Match, ingest, cancellationToken);
+            this.client, PrismServiceRoutes.Match, ingest, cancellationToken);
     }
 }

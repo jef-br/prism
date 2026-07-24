@@ -43,10 +43,10 @@ public sealed record MatchingRule
     /// <summary>True when a CLIP tag of <paramref name="feature"/> is eligible for this rule.</summary>
     public bool AppliesToFeature(string feature)
     {
-        if (string.IsNullOrWhiteSpace(ClipFeature))
+        if (string.IsNullOrWhiteSpace(this.ClipFeature))
             return true;
 
-        foreach (string allowed in ClipFeature.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (string allowed in this.ClipFeature.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             if (allowed.Equals(feature, StringComparison.OrdinalIgnoreCase))
                 return true;

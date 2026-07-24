@@ -90,12 +90,12 @@ internal sealed class StringMatcher
     {
         this.translationConfig = translationConfig;
         this.cfg = cfg;
-        bracket3MinDistinctTokens = cfg.Bracket3MinDistinctTokens;
-        identifierTokenMinLength = cfg.IdentifierTokenMinLength;
-        indexExcelTokenBigrams = cfg.IndexExcelTokenBigrams;
-        fuzzyMinTokenLength = cfg.FuzzyMinTokenLength;
-        fuzzyMaxEditDistance = cfg.FuzzyMaxEditDistance;
-        fuzzyMatchScore = cfg.FuzzyMatchScore;
+        this.bracket3MinDistinctTokens = cfg.Bracket3MinDistinctTokens;
+        this.identifierTokenMinLength = cfg.IdentifierTokenMinLength;
+        this.indexExcelTokenBigrams = cfg.IndexExcelTokenBigrams;
+        this.fuzzyMinTokenLength = cfg.FuzzyMinTokenLength;
+        this.fuzzyMaxEditDistance = cfg.FuzzyMaxEditDistance;
+        this.fuzzyMatchScore = cfg.FuzzyMatchScore;
     }
 
     //  Bracket 3 
@@ -112,14 +112,14 @@ internal sealed class StringMatcher
         string sourceFilename = filename;
         string imageId       = Path.GetFileNameWithoutExtension(filename);
 
-        IReadOnlyList<FilenameToken> imageTokens = ExtractImageTokens(filename);
+        IReadOnlyList<FilenameToken> imageTokens = this.ExtractImageTokens(filename);
         if (imageTokens.Count == 0)
             return null;
 
         // Collect token evidence grouped by family via an inverted token index (built once per family
         // set). This replaces an O(images × families × tokens) scan that made large, verbose catalogues
         // (paragraph-length description columns) pathologically slow.
-        Dictionary<string, List<TokenEvidenceItem>> evidenceByFamily = CollectEvidenceByFamily(imageTokens, families);
+        Dictionary<string, List<TokenEvidenceItem>> evidenceByFamily = this.CollectEvidenceByFamily(imageTokens, families);
         if (evidenceByFamily.Count == 0)
             return null;
 
@@ -138,7 +138,7 @@ internal sealed class StringMatcher
         {
             // Top tie: short digit tokens (excluded from string tokens) may still discriminate —
             // "76" picks the family whose columns carry color code 76 over its 13-coded sibling.
-            string? tiebreakWinner = BreakTieWithShortDigitTokens(filename, ranked, families);
+            string? tiebreakWinner = this.BreakTieWithShortDigitTokens(filename, ranked, families);
             if (tiebreakWinner is null)
                 return null;
 
@@ -148,8 +148,8 @@ internal sealed class StringMatcher
         // Precision gate: a winner carried by fewer distinct tokens than configured (e.g. a single
         // shared color word) is not accepted here — later brackets may still assign it — unless one
         // matched token is identifier-grade (letters+digits, unique to this family across the index).
-        if (ranked[0].DistinctMatches < bracket3MinDistinctTokens &&
-            !HasUniqueIdentifierToken(ranked[0].Evidence, ranked[0].FamilyId))
+        if (ranked[0].DistinctMatches < this.bracket3MinDistinctTokens &&
+            !this.HasUniqueIdentifierToken(ranked[0].Evidence, ranked[0].FamilyId))
             return null;
 
         (string matchedFamilyId, List<TokenEvidenceItem> tokenEvidence, int winnerMatches) = ranked[0];
@@ -225,18 +225,18 @@ internal sealed class StringMatcher
     /// </summary>
     private bool HasUniqueIdentifierToken(List<TokenEvidenceItem> evidence, string familyId)
     {
-        if (identifierTokenMinLength <= 0 || tokenIndex is null)
+        if (this.identifierTokenMinLength <= 0 || this.tokenIndex is null)
             return false;
 
         foreach (TokenEvidenceItem item in evidence)
         {
             string normalized = NormalizeDiacritics(item.FilenameToken.ToLowerInvariant());
 
-            if (normalized.Length < identifierTokenMinLength ||
+            if (normalized.Length < this.identifierTokenMinLength ||
                 !normalized.Any(char.IsLetter) || !normalized.Any(char.IsDigit))
                 continue;
 
-            if (!tokenIndex.TryGetValue(normalized, out List<Posting>? postings))
+            if (!this.tokenIndex.TryGetValue(normalized, out List<Posting>? postings))
                 continue;
 
             HashSet<string> holders = postings
@@ -261,15 +261,15 @@ internal sealed class StringMatcher
         IReadOnlyList<FilenameToken> imageTokens,
         IReadOnlyList<FamilyIDRecord> families)
     {
-        Dictionary<string, List<Posting>> index = GetOrBuildTokenIndex(families);
-        Dictionary<string, List<Posting>> categoricalIndex = GetOrBuildCategoricalTokenIndex(families);
+        Dictionary<string, List<Posting>> index = this.GetOrBuildTokenIndex(families);
+        Dictionary<string, List<Posting>> categoricalIndex = this.GetOrBuildCategoricalTokenIndex(families);
         Dictionary<string, List<TokenEvidenceItem>> byFamily = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (FilenameToken imageToken in imageTokens)
         {
             bool anyHit = false;
 
-            foreach (string key in ExpandSynonymKeys(imageToken.Normalized).Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (string key in this.ExpandSynonymKeys(imageToken.Normalized).Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 if (!index.TryGetValue(key, out List<Posting>? postings))
                     continue;
@@ -287,7 +287,7 @@ internal sealed class StringMatcher
                         posting.FamilyToken,
                         posting.PropertyName,
                         posting.FamilyId,
-                        isExact ? 1.0 : cfg.NonExactTokenMatchConfidence));
+                        isExact ? 1.0 : this.cfg.NonExactTokenMatchConfidence));
                 }
             }
 
@@ -295,7 +295,7 @@ internal sealed class StringMatcher
             // scan against categorical-column tokens only, so a typo like "gray"/"grey" still counts as
             // evidence instead of forcing the image into a later bracket or a KO.
             if (!anyHit)
-                CollectFuzzyCategoricalEvidence(imageToken, categoricalIndex, byFamily);
+                this.CollectFuzzyCategoricalEvidence(imageToken, categoricalIndex, byFamily);
         }
 
         return byFamily;
@@ -311,16 +311,16 @@ internal sealed class StringMatcher
         Dictionary<string, List<Posting>> categoricalIndex,
         Dictionary<string, List<TokenEvidenceItem>> byFamily)
     {
-        if (imageToken.Normalized.Length < fuzzyMinTokenLength)
+        if (imageToken.Normalized.Length < this.fuzzyMinTokenLength)
             return;
 
         foreach (KeyValuePair<string, List<Posting>> entry in categoricalIndex)
         {
-            if (entry.Key.Length < fuzzyMinTokenLength ||
-                Math.Abs(entry.Key.Length - imageToken.Normalized.Length) > fuzzyMaxEditDistance)
+            if (entry.Key.Length < this.fuzzyMinTokenLength ||
+                Math.Abs(entry.Key.Length - imageToken.Normalized.Length) > this.fuzzyMaxEditDistance)
                 continue;
 
-            if (ModelBuilder.ComputeLevenshteinDistance(imageToken.Normalized, entry.Key) > fuzzyMaxEditDistance)
+            if (ModelBuilder.ComputeLevenshteinDistance(imageToken.Normalized, entry.Key) > this.fuzzyMaxEditDistance)
                 continue;
 
             foreach (Posting posting in entry.Value)
@@ -333,7 +333,7 @@ internal sealed class StringMatcher
                     posting.FamilyToken,
                     posting.PropertyName,
                     posting.FamilyId,
-                    fuzzyMatchScore));
+                    this.fuzzyMatchScore));
             }
         }
     }
@@ -345,8 +345,8 @@ internal sealed class StringMatcher
     /// </summary>
     private Dictionary<string, List<Posting>> GetOrBuildTokenIndex(IReadOnlyList<FamilyIDRecord> families)
     {
-        if (tokenIndex is not null && ReferenceEquals(indexedFamilies, families))
-            return tokenIndex;
+        if (this.tokenIndex is not null && ReferenceEquals(this.indexedFamilies, families))
+            return this.tokenIndex;
 
         Dictionary<string, List<Posting>> index = new(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, List<Posting>> categorical = new(StringComparer.OrdinalIgnoreCase);
@@ -376,22 +376,22 @@ internal sealed class StringMatcher
                         AddPosting(categorical, familyToken, posting);
                 }
 
-                if (indexExcelTokenBigrams)
-                    IndexAdjacentTokenBigrams(index, family, property.Key);
+                if (this.indexExcelTokenBigrams)
+                    this.IndexAdjacentTokenBigrams(index, family, property.Key);
             }
         }
 
-        tokenIndex = index;
-        categoricalTokenIndex = categorical;
-        indexedFamilies = families;
+        this.tokenIndex = index;
+        this.categoricalTokenIndex = categorical;
+        this.indexedFamilies = families;
         return index;
     }
 
     /// <summary>Categorical-only subset of the token index, built and cached alongside GetOrBuildTokenIndex.</summary>
     private Dictionary<string, List<Posting>> GetOrBuildCategoricalTokenIndex(IReadOnlyList<FamilyIDRecord> families)
     {
-        GetOrBuildTokenIndex(families);
-        return categoricalTokenIndex!;
+        this.GetOrBuildTokenIndex(families);
+        return this.categoricalTokenIndex!;
     }
 
     /// <summary>Appends one posting to the index bucket for <paramref name="key"/>.</summary>
@@ -457,7 +457,7 @@ internal sealed class StringMatcher
     {
         yield return normalizedToken;
 
-        foreach (SynonymGroup group in translationConfig.SynonymGroups)
+        foreach (SynonymGroup group in this.translationConfig.SynonymGroups)
         {
             if (!group.Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedToken))
                 continue;
@@ -513,11 +513,11 @@ internal sealed class StringMatcher
     internal IReadOnlyList<(FamilyIDRecord Family, int MatchCount, List<TokenEvidenceItem> Evidence)>
         ScoreCandidatesByStringTokens(string filename, IReadOnlyList<FamilyIDRecord> candidates, IReadOnlyList<FamilyIDRecord> indexScope)
     {
-        IReadOnlyList<FilenameToken> imageTokens = ExtractImageTokens(filename);
+        IReadOnlyList<FilenameToken> imageTokens = this.ExtractImageTokens(filename);
         if (imageTokens.Count == 0)
             return [];
 
-        Dictionary<string, List<TokenEvidenceItem>> evidenceByFamily = CollectEvidenceByFamily(imageTokens, indexScope);
+        Dictionary<string, List<TokenEvidenceItem>> evidenceByFamily = this.CollectEvidenceByFamily(imageTokens, indexScope);
         if (evidenceByFamily.Count == 0)
             return [];
 
@@ -541,7 +541,7 @@ internal sealed class StringMatcher
     /// matching). Used by SemanticMatcher to compute stringSignal's denominator from the filename
     /// itself, rather than mixing in an unrelated candidate-pool count.
     /// </summary>
-    internal int CountFilenameTokens(string filename) => ExtractImageTokens(filename).Count;
+    internal int CountFilenameTokens(string filename) => this.ExtractImageTokens(filename).Count;
 
     //  Token extraction
 
@@ -564,13 +564,13 @@ internal sealed class StringMatcher
 
         foreach (string raw in TokenSplitPattern.Split(stem))
         {
-            AddImageToken(tokens, raw);
+            this.AddImageToken(tokens, raw);
 
             string[] parts = AlphaDigitBoundaryPattern.Split(raw);
             if (parts.Length > 1)
             {
                 foreach (string part in parts)
-                    AddImageToken(tokens, part);
+                    this.AddImageToken(tokens, part);
             }
         }
 
@@ -583,7 +583,7 @@ internal sealed class StringMatcher
         FilenameToken token = new(raw, NormalizeDiacritics(raw.ToLowerInvariant()));
 
         if (token.Normalized.Length < 2 || IsAllDigits(token.Normalized) ||
-            translationConfig.IsStopWord(token.Normalized))
+            this.translationConfig.IsStopWord(token.Normalized))
             return;
 
         if (!tokens.Any(t => t.Normalized.Equals(token.Normalized, StringComparison.Ordinal)))

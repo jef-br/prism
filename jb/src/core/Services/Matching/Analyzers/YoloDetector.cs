@@ -36,7 +36,7 @@ public sealed class YoloDetector : IDisposable {
     private static readonly object RunLock = new();
 
     /// <summary>True when the ONNX session is loaded and detection is available.</summary>
-    public bool IsReady => session is not null;
+    public bool IsReady => this.session is not null;
 
     /// <summary>
     /// Returns the process-wide shared detector, initializing it from <paramref name="modelPath"/>
@@ -64,12 +64,12 @@ public sealed class YoloDetector : IDisposable {
         if (!File.Exists(modelPath)) return;
 
         try {
-            session = OnnxSessionFactory.Create(modelPath);
-            inputName = session.InputMetadata.Keys.FirstOrDefault() ?? TensorImages;
-            outputName = session.OutputMetadata.Keys.FirstOrDefault() ?? TensorOutput0;
+            this.session = OnnxSessionFactory.Create(modelPath);
+            this.inputName = this.session.InputMetadata.Keys.FirstOrDefault() ?? TensorImages;
+            this.outputName = this.session.OutputMetadata.Keys.FirstOrDefault() ?? TensorOutput0;
         } catch (Exception loadException) {
-            session?.Dispose();
-            session = null;
+            this.session?.Dispose();
+            this.session = null;
             throw new PrismConfigurationException(
                 $"YOLO26 ONNX model at '{modelPath}' is present but failed to load — the file is " +
                 $"corrupt, truncated, or an incompatible export: {loadException.Message}", loadException);
@@ -81,16 +81,16 @@ public sealed class YoloDetector : IDisposable {
     /// normalized [0,1] boxes, strongest first. Empty when the session is unavailable.
     /// </summary>
     public IReadOnlyList<YoloDetection> Detect( Image<Rgba32> image, YoloAnalyzerConfig cfg ) {
-        if (!IsReady) return [];
+        if (!this.IsReady) return [];
 
         DenseTensor<float> input = PreprocessImage(image);
-        var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor(inputName, input) };
+        var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor(this.inputName, input) };
 
         lock (RunLock) {
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
-                session!.Run(inputs, [outputName]);
+                this.session!.Run(inputs, [this.outputName]);
 
-            Tensor<float> prediction = outputs.First(o => o.Name == outputName).AsTensor<float>();
+            Tensor<float> prediction = outputs.First(o => o.Name == this.outputName).AsTensor<float>();
             return Postprocess(prediction, cfg);
         }
     }
@@ -149,9 +149,9 @@ public sealed class YoloDetector : IDisposable {
 
     /// <inheritdoc/>
     public void Dispose() {
-        if (disposed) return;
-        disposed = true;
-        session?.Dispose();
-        session = null;
+        if (this.disposed) return;
+        this.disposed = true;
+        this.session?.Dispose();
+        this.session = null;
     }
 }

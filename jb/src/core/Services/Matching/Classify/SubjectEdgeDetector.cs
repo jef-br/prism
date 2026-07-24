@@ -49,12 +49,12 @@ public static class SubjectEdgeDetector {
         public void Validate() {
             List<string> problems = [];
 
-            if (MaxAnalysisSize < 1) problems.Add("SubjectEdgeDetector.MaxAnalysisSize must be >= 1");
-            if (MinEXIFThumbnailSize < 1) problems.Add("SubjectEdgeDetector.MinEXIFThumbnailSize must be >= 1");
-            if (StripDepthFraction is <= 0f or >= StripDepthFractionUpperBound) problems.Add("SubjectEdgeDetector.StripDepthFraction must be in (0,0.5)");
-            if (BgColorDiffThreshold <= 0f) problems.Add("SubjectEdgeDetector.BgColorDiffThreshold must be > 0");
-            if (IntersectionFraction is <= 0f or > 1f) problems.Add("SubjectEdgeDetector.IntersectionFraction must be in (0,1]");
-            if (MinRunLength < 1) problems.Add("SubjectEdgeDetector.MinRunLength must be >= 1");
+            if (this.MaxAnalysisSize < 1) problems.Add("SubjectEdgeDetector.MaxAnalysisSize must be >= 1");
+            if (this.MinEXIFThumbnailSize < 1) problems.Add("SubjectEdgeDetector.MinEXIFThumbnailSize must be >= 1");
+            if (this.StripDepthFraction is <= 0f or >= StripDepthFractionUpperBound) problems.Add("SubjectEdgeDetector.StripDepthFraction must be in (0,0.5)");
+            if (this.BgColorDiffThreshold <= 0f) problems.Add("SubjectEdgeDetector.BgColorDiffThreshold must be > 0");
+            if (this.IntersectionFraction is <= 0f or > 1f) problems.Add("SubjectEdgeDetector.IntersectionFraction must be in (0,1]");
+            if (this.MinRunLength < 1) problems.Add("SubjectEdgeDetector.MinRunLength must be >= 1");
 
             if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
         }

@@ -12,11 +12,11 @@ internal sealed record MatchingConfig
 
     /// <summary>Rules that drive numeric token matching (familyID, EAN).</summary>
     public IReadOnlyList<MatchingRule> NumericRules =>
-        Match.Shared.Rules.Where(r => r.Type.Equals("numeric", StringComparison.OrdinalIgnoreCase)).ToList();
+        this.Match.Shared.Rules.Where(r => r.Type.Equals("numeric", StringComparison.OrdinalIgnoreCase)).ToList();
 
     /// <summary>Rules that drive CLIP label evidence (ProductColor, ProductType, etc.).</summary>
     public IReadOnlyList<MatchingRule> LabelRules =>
-        Match.Shared.Rules.Where(r => r.Strategy.Equals("ClipLabelEnricher", StringComparison.OrdinalIgnoreCase)).ToList();
+        this.Match.Shared.Rules.Where(r => r.Strategy.Equals("ClipLabelEnricher", StringComparison.OrdinalIgnoreCase)).ToList();
 
     /// <summary>
     /// Loads matching configuration from MatchingConfig.json.

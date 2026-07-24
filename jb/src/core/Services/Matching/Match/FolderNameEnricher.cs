@@ -55,9 +55,9 @@ internal sealed class FolderNameEnricher
     internal FolderNameEnricher(Config cfg)
     {
         this.cfg = cfg;
-        cameraPrefixes = new HashSet<string>(cfg.CameraPrefixes, StringComparer.Ordinal);
-        noiseFolderTokens = new HashSet<string>(cfg.NoiseFolderTokens, StringComparer.Ordinal);
-        minMeaningfulTokenLength = Math.Max(cfg.MinTokenLengthFloor, cfg.MinMeaningfulTokenLength);
+        this.cameraPrefixes = new HashSet<string>(cfg.CameraPrefixes, StringComparer.Ordinal);
+        this.noiseFolderTokens = new HashSet<string>(cfg.NoiseFolderTokens, StringComparer.Ordinal);
+        this.minMeaningfulTokenLength = Math.Max(cfg.MinTokenLengthFloor, cfg.MinMeaningfulTokenLength);
     }
 
     /// <summary>
@@ -67,13 +67,13 @@ internal sealed class FolderNameEnricher
     internal void Enrich(IReadOnlyList<ImageRecord_LAMBDA> records, IReadOnlyList<FamilyIDRecord> families)
     {
         List<ImageRecord_LAMBDA> meaningless = records
-            .Where(r => !r.IsKo && r.MatchingAlias is null && FilenameIsMeaningless(r.InitialFullName))
+            .Where(r => !r.IsKo && r.MatchingAlias is null && this.FilenameIsMeaningless(r.InitialFullName))
             .ToList();
 
         if (meaningless.Count == 0)
             return;
 
-        HashSet<string> excelTokens = BuildExcelTokenVocabulary(families);
+        HashSet<string> excelTokens = this.BuildExcelTokenVocabulary(families);
         if (excelTokens.Count == 0)
             return;
 
@@ -92,7 +92,7 @@ internal sealed class FolderNameEnricher
 
             IReadOnlyList<string> siblings = foldersByParent.TryGetValue(parentPath, out List<string>? s) ? s : [folderName];
 
-            if (!FolderIsMeaningful(folderName, siblings, excelTokens))
+            if (!this.FolderIsMeaningful(folderName, siblings, excelTokens))
                 continue;
 
             string filename = Path.GetFileName(record.InitialFullName);
@@ -117,7 +117,7 @@ internal sealed class FolderNameEnricher
                 if (token.Length < 3 || token.All(char.IsDigit))
                     continue;
 
-                if (!cameraPrefixes.Contains(token))
+                if (!this.cameraPrefixes.Contains(token))
                     return false; // a real word survives → the filename is meaningful, leave it alone
             }
         }
@@ -133,14 +133,14 @@ internal sealed class FolderNameEnricher
     /// </summary>
     private bool FolderIsMeaningful(string folderName, IReadOnlyList<string> siblings, HashSet<string> excelTokens)
     {
-        List<string> folderTokens = MeaningfulTokens(folderName);
+        List<string> folderTokens = this.MeaningfulTokens(folderName);
         if (folderTokens.Count == 0)
             return false; // folder is entirely noise (HD, Web, 800x1200, …)
 
         // Sibling pattern: the parent must hold several per-item folders, not two or three format
         // buckets. A lone product folder, or a set of only-noise folders, does not qualify.
-        int perItemSiblings = siblings.Count(sib => MeaningfulTokens(sib).Count > 0);
-        if (perItemSiblings < cfg.MinPerItemSiblings)
+        int perItemSiblings = siblings.Count(sib => this.MeaningfulTokens(sib).Count > 0);
+        if (perItemSiblings < this.cfg.MinPerItemSiblings)
             return false;
 
         // Excel relevance: at least one meaningful folder token must appear in the Excel data.
@@ -169,7 +169,7 @@ internal sealed class FolderNameEnricher
             bool hasLetter = raw.Any(char.IsLetter);
             bool hasDigit = raw.Any(char.IsDigit);
 
-            if (hasLetter && hasDigit && raw.Length >= minMeaningfulTokenLength && !noiseFolderTokens.Contains(raw))
+            if (hasLetter && hasDigit && raw.Length >= this.minMeaningfulTokenLength && !this.noiseFolderTokens.Contains(raw))
             {
                 tokens.Add(raw);
                 continue;
@@ -177,13 +177,13 @@ internal sealed class FolderNameEnricher
 
             foreach (string piece in AlphaDigitBoundaryPattern.Split(raw))
             {
-                if (piece.Length < minMeaningfulTokenLength)
+                if (piece.Length < this.minMeaningfulTokenLength)
                     continue;
-                if (noiseFolderTokens.Contains(piece))
+                if (this.noiseFolderTokens.Contains(piece))
                     continue;
                 // A short bare number (a sequence index like "800" or "3") is not folder meaning, but a
                 // long bare number is a product number / reference and is one of the strongest keys.
-                if (piece.All(char.IsDigit) && piece.Length < cfg.MinBareNumberLength)
+                if (piece.All(char.IsDigit) && piece.Length < this.cfg.MinBareNumberLength)
                     continue;
 
                 tokens.Add(piece);
@@ -205,15 +205,15 @@ internal sealed class FolderNameEnricher
 
         foreach (FamilyIDRecord family in families)
         {
-            AddToken(vocabulary, family.FamilyID.ToLowerInvariant());
+            this.AddToken(vocabulary, family.FamilyID.ToLowerInvariant());
 
             foreach (string value in family.CanonicalProperties.Values)
             {
                 foreach (string raw in TokenSplitPattern.Split(NormalizeDiacritics(value.ToLowerInvariant())))
                 {
-                    AddToken(vocabulary, raw);
+                    this.AddToken(vocabulary, raw);
                     foreach (string piece in AlphaDigitBoundaryPattern.Split(raw))
-                        AddToken(vocabulary, piece);
+                        this.AddToken(vocabulary, piece);
                 }
             }
         }
@@ -223,7 +223,7 @@ internal sealed class FolderNameEnricher
 
     private void AddToken(HashSet<string> vocabulary, string token)
     {
-        if (token.Length >= minMeaningfulTokenLength && !noiseFolderTokens.Contains(token))
+        if (token.Length >= this.minMeaningfulTokenLength && !this.noiseFolderTokens.Contains(token))
             vocabulary.Add(token);
     }
 

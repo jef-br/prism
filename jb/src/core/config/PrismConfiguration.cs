@@ -43,9 +43,9 @@ public sealed class PrismConfiguration {
 
     /// <summary>The influential threshold for <paramref name="feature"/>: its override, or the global default.</summary>
     public double InfluentialThresholdFor(string feature) =>
-        InfluentialThresholdsByFeature.TryGetValue(feature, out double threshold)
+        this.InfluentialThresholdsByFeature.TryGetValue(feature, out double threshold)
             ? threshold
-            : ThresholdForInfluentialTags;
+            : this.ThresholdForInfluentialTags;
     public bool ShouldDeduplicate { get; private set; }
     public int MaxHammingDistance { get; private set; }
 
@@ -88,7 +88,7 @@ public sealed class PrismConfiguration {
     public IReadOnlyList<string> AcceptedImageExtensions { get; private set; } = [];
     public IReadOnlyList<string> AcceptedExcelExtensions { get; private set; } = [];
     public IReadOnlyList<string> AcceptedZipExtensions { get; private set; } = [];
-    public IReadOnlyList<string> AcceptedMediaTypes => [.. AcceptedImageExtensions, .. AcceptedExcelExtensions, .. AcceptedZipExtensions];
+    public IReadOnlyList<string> AcceptedMediaTypes => [.. this.AcceptedImageExtensions, .. this.AcceptedExcelExtensions, .. this.AcceptedZipExtensions];
 
     // --- Model assets (paths relative to the core root; resolved by ModelAssetLocator.Find)
     public string ClipModelDir { get; private set; } = "";
@@ -228,53 +228,53 @@ public sealed class PrismConfiguration {
     /// </summary>
     /// <param name="cfgPath">Source path used in error messages.</param>
     private void Validate( string cfgPath ) {
-        AssertPositive(MaximumRequestBytes, cfgPath, "Input.MAXIMUM_REQUEST_SIZE");
-        AssertPositive(MinimumImageCountPerJob, cfgPath, "Input.Images.amount.min");
-        AssertPositive(MaximumImageCountPerJob, cfgPath, "Input.Images.amount.max");
-        AssertInRange(MinimumImageCountPerJob, 1, MaximumImageCountPerJob, cfgPath, "Input.Images.amount.min");
-        AssertPositive(MinBytesPerImg, cfgPath, "Input.Images.filesize.min");
-        AssertPositive(MaxBytesPerImg, cfgPath, "Input.Images.filesize.max");
-        AssertPositive(MinXLSCount, cfgPath, "Input.EXCEL.amount.min");
-        AssertPositive(MaxXLSCount, cfgPath, "Input.EXCEL.amount.max");
-        AssertPositive(MaxNestDepthZip, cfgPath, "Input.ZIP.NestDepth");
+        AssertPositive(this.MaximumRequestBytes, cfgPath, "Input.MAXIMUM_REQUEST_SIZE");
+        AssertPositive(this.MinimumImageCountPerJob, cfgPath, "Input.Images.amount.min");
+        AssertPositive(this.MaximumImageCountPerJob, cfgPath, "Input.Images.amount.max");
+        AssertInRange(this.MinimumImageCountPerJob, 1, this.MaximumImageCountPerJob, cfgPath, "Input.Images.amount.min");
+        AssertPositive(this.MinBytesPerImg, cfgPath, "Input.Images.filesize.min");
+        AssertPositive(this.MaxBytesPerImg, cfgPath, "Input.Images.filesize.max");
+        AssertPositive(this.MinXLSCount, cfgPath, "Input.EXCEL.amount.min");
+        AssertPositive(this.MaxXLSCount, cfgPath, "Input.EXCEL.amount.max");
+        AssertPositive(this.MaxNestDepthZip, cfgPath, "Input.ZIP.NestDepth");
 
-        AssertInRange(ThresholdForInfluentialTags, 0.0, 1.0, cfgPath, "Classification.Confidence_Threshold");
-        AssertInRange(ThresholdForDiscardingClassificationTags, 0.0, 1.0, cfgPath, "Classification.Cutoff_Threshold");
+        AssertInRange(this.ThresholdForInfluentialTags, 0.0, 1.0, cfgPath, "Classification.Confidence_Threshold");
+        AssertInRange(this.ThresholdForDiscardingClassificationTags, 0.0, 1.0, cfgPath, "Classification.Cutoff_Threshold");
 
-        if (ThresholdForDiscardingClassificationTags > ThresholdForInfluentialTags) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Classification.Cutoff_Threshold ({ThresholdForDiscardingClassificationTags}) must be <= Classification.Confidence_Threshold ({ThresholdForInfluentialTags}).");}
-        if (MaxHammingDistance < 0) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Classification.Deduplication.HammingThreshold must be >= 0 but was {MaxHammingDistance}.");}
+        if (this.ThresholdForDiscardingClassificationTags > this.ThresholdForInfluentialTags) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Classification.Cutoff_Threshold ({this.ThresholdForDiscardingClassificationTags}) must be <= Classification.Confidence_Threshold ({this.ThresholdForInfluentialTags}).");}
+        if (this.MaxHammingDistance < 0) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Classification.Deduplication.HammingThreshold must be >= 0 but was {this.MaxHammingDistance}.");}
 
-        AssertInRange(Weight_NumTokens, 0.0, 1.0, cfgPath, "Classification.Weights.NumericToken_Weight");
-        AssertInRange(Weight_StringTokens, 0.0, 1.0, cfgPath, "Classification.Weights.StringToken_Weight");
-        AssertInRange(Weight_ClassifyingTags, 0.0, 1.0, cfgPath, "Classification.Weights.Classification_Weight");
-        AssertInRange(Weight_SemanticRelevance, 0.0, 1.0, cfgPath, "Classification.Weights.SemanticalRelevanceWeight");
-        AssertInRange(Weight_MatchingSignalsConverging, 0.0, 1.0, cfgPath, "Classification.Weights.CONVERGENCE_WEIGHT");
+        AssertInRange(this.Weight_NumTokens, 0.0, 1.0, cfgPath, "Classification.Weights.NumericToken_Weight");
+        AssertInRange(this.Weight_StringTokens, 0.0, 1.0, cfgPath, "Classification.Weights.StringToken_Weight");
+        AssertInRange(this.Weight_ClassifyingTags, 0.0, 1.0, cfgPath, "Classification.Weights.Classification_Weight");
+        AssertInRange(this.Weight_SemanticRelevance, 0.0, 1.0, cfgPath, "Classification.Weights.SemanticalRelevanceWeight");
+        AssertInRange(this.Weight_MatchingSignalsConverging, 0.0, 1.0, cfgPath, "Classification.Weights.CONVERGENCE_WEIGHT");
 
-        AssertPositive(MinInputSizeInPixels, cfgPath, "Input.Images.MINIMUM_SIZE_IN_PIXELS");
-        AssertPositive(MinOutputWidth, cfgPath, "Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS.width");
-        AssertPositive(MinOutputHeight, cfgPath, "Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS.height");
-        AssertPositive(MaxOutputWidth, cfgPath, "Output.Images.Processed.MAXIMUM_SIZE_IN_PIXELS.width");
-        AssertPositive(MaxOutputHeight, cfgPath, "Output.Images.Processed.MAXIMUM_SIZE_IN_PIXELS.height");
-        AssertPositive(MaxUpScaleFactor, cfgPath, "Output.Images.Resize.MAXIMUM_UpScale");
-        AssertPositive(MaxDownScaleFactor, cfgPath, "Output.Images.Resize.MAXIMUM_DownScale");
-        AssertPositive(MinGeneratedImgWidth, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.width");
-        AssertPositive(MinGeneratedImgWidthHeight, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.height");
+        AssertPositive(this.MinInputSizeInPixels, cfgPath, "Input.Images.MINIMUM_SIZE_IN_PIXELS");
+        AssertPositive(this.MinOutputWidth, cfgPath, "Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS.width");
+        AssertPositive(this.MinOutputHeight, cfgPath, "Output.Images.Processed.MINIMUM_SIZE_IN_PIXELS.height");
+        AssertPositive(this.MaxOutputWidth, cfgPath, "Output.Images.Processed.MAXIMUM_SIZE_IN_PIXELS.width");
+        AssertPositive(this.MaxOutputHeight, cfgPath, "Output.Images.Processed.MAXIMUM_SIZE_IN_PIXELS.height");
+        AssertPositive(this.MaxUpScaleFactor, cfgPath, "Output.Images.Resize.MAXIMUM_UpScale");
+        AssertPositive(this.MaxDownScaleFactor, cfgPath, "Output.Images.Resize.MAXIMUM_DownScale");
+        AssertPositive(this.MinGeneratedImgWidth, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.width");
+        AssertPositive(this.MinGeneratedImgWidthHeight, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.height");
 
-        if (JobRetries < 0) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Pipeline.JobRetries must be >= 0 but was {JobRetries}.");}
-        if (JobRetentionPeriodInHours <= 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Jobs.JobRetentionPeriodInHours must be > 0 but was {JobRetentionPeriodInHours}.");
+        if (this.JobRetries < 0) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Pipeline.JobRetries must be >= 0 but was {this.JobRetries}.");}
+        if (this.JobRetentionPeriodInHours <= 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Jobs.JobRetentionPeriodInHours must be > 0 but was {this.JobRetentionPeriodInHours}.");
 
-        AssertPositive(MaxQueuedJobs, cfgPath, "Jobs.MaxQueuedJobs");
-        AssertPositive(MaxConcurrentJobs, cfgPath, "Jobs.MaxConcurrentJobs");
+        AssertPositive(this.MaxQueuedJobs, cfgPath, "Jobs.MaxQueuedJobs");
+        AssertPositive(this.MaxConcurrentJobs, cfgPath, "Jobs.MaxConcurrentJobs");
 
-        if (AcceptedImageExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.Images.extensions must contain at least one entry.");
-        if (AcceptedExcelExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.EXCEL.extensions must contain at least one entry.");
-        if (AcceptedZipExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.ZIP.extensions must contain at least one entry.");
+        if (this.AcceptedImageExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.Images.extensions must contain at least one entry.");
+        if (this.AcceptedExcelExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.EXCEL.extensions must contain at least one entry.");
+        if (this.AcceptedZipExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.ZIP.extensions must contain at least one entry.");
 
-        AssertNonEmpty(ClipModelDir, cfgPath, "Models.Clip.Dir");
-        AssertNonEmpty(ClipModelFile, cfgPath, "Models.Clip.Model");
-        AssertNonEmpty(ClipVocabFile, cfgPath, "Models.Clip.Vocab");
-        AssertNonEmpty(ClipMergesFile, cfgPath, "Models.Clip.Merges");
-        AssertNonEmpty(UpscaleModelPath, cfgPath, "Models.Upscale.Path");
+        AssertNonEmpty(this.ClipModelDir, cfgPath, "Models.Clip.Dir");
+        AssertNonEmpty(this.ClipModelFile, cfgPath, "Models.Clip.Model");
+        AssertNonEmpty(this.ClipVocabFile, cfgPath, "Models.Clip.Vocab");
+        AssertNonEmpty(this.ClipMergesFile, cfgPath, "Models.Clip.Merges");
+        AssertNonEmpty(this.UpscaleModelPath, cfgPath, "Models.Upscale.Path");
 
     }
 

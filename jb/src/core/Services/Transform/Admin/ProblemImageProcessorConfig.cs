@@ -17,10 +17,10 @@ public sealed class ProblemImageProcessorConfig : IValidatableConfig
     {
         List<string> problems = [];
 
-        if (MinInputPx <= 0) problems.Add("ProblemImageProcessor.MinInputPx must be > 0");
-        if (MinOutputPx <= 0) problems.Add("ProblemImageProcessor.MinOutputPx must be > 0");
-        if (MinOutputPx < MinInputPx) problems.Add("ProblemImageProcessor.MinOutputPx must be >= MinInputPx");
-        if (MaxUpscale <= 1.0) problems.Add("ProblemImageProcessor.MaxUpscale must be > 1.0");
+        if (this.MinInputPx <= 0) problems.Add("ProblemImageProcessor.MinInputPx must be > 0");
+        if (this.MinOutputPx <= 0) problems.Add("ProblemImageProcessor.MinOutputPx must be > 0");
+        if (this.MinOutputPx < this.MinInputPx) problems.Add("ProblemImageProcessor.MinOutputPx must be >= MinInputPx");
+        if (this.MaxUpscale <= 1.0) problems.Add("ProblemImageProcessor.MaxUpscale must be > 1.0");
 
         if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }

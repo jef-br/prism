@@ -16,8 +16,8 @@ public sealed class LowContrastEnhancementConfig : IValidatableConfig
     {
         List<string> problems = [];
 
-        if (ClipLimit <= 0.0) problems.Add("LowContrastEnhancement.ClipLimit must be > 0");
-        if (TileSize < 1) problems.Add("LowContrastEnhancement.TileSize must be >= 1");
+        if (this.ClipLimit <= 0.0) problems.Add("LowContrastEnhancement.ClipLimit must be > 0");
+        if (this.TileSize < 1) problems.Add("LowContrastEnhancement.TileSize must be >= 1");
 
         if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }

@@ -40,7 +40,7 @@ internal sealed class FilenameToCellMatcher
     /// </returns>
     internal (MatchEvidence? Evidence, List<CandidateSummary> TiedCandidates) TryMatch(ImageRecord_LAMBDA record, IReadOnlyList<FamilyIDRecord> families)
     {
-        Dictionary<string, HashSet<string>> index = GetOrBuildIndex(families);
+        Dictionary<string, HashSet<string>> index = this.GetOrBuildIndex(families);
 
         string sourceFilename = record.InitialFullName ?? string.Empty;
         string basenameKey = Basename(sourceFilename).Trim().ToLowerInvariant();
@@ -53,7 +53,7 @@ internal sealed class FilenameToCellMatcher
         HashSet<string>? matchedFamilies =
             index.TryGetValue(basenameKey, out HashSet<string>? byBasename) ? byBasename
             : index.TryGetValue(stemKey, out HashSet<string>? byStem) ? byStem
-            : collapsedKey.Length > 0 && indexByCollapsedKey!.TryGetValue(collapsedKey, out HashSet<string>? byCollapsed) ? byCollapsed
+            : collapsedKey.Length > 0 && this.indexByCollapsedKey!.TryGetValue(collapsedKey, out HashSet<string>? byCollapsed) ? byCollapsed
             : null;
 
         if (matchedFamilies is null || matchedFamilies.Count == 0)
@@ -92,8 +92,8 @@ internal sealed class FilenameToCellMatcher
     /// </summary>
     private Dictionary<string, HashSet<string>> GetOrBuildIndex(IReadOnlyList<FamilyIDRecord> families)
     {
-        if (indexByFilenameKey is not null && ReferenceEquals(indexedFamilies, families))
-            return indexByFilenameKey;
+        if (this.indexByFilenameKey is not null && ReferenceEquals(this.indexedFamilies, families))
+            return this.indexByFilenameKey;
 
         Dictionary<string, HashSet<string>> index = new(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, HashSet<string>> collapsedIndex = new(StringComparer.OrdinalIgnoreCase);
@@ -124,9 +124,9 @@ internal sealed class FilenameToCellMatcher
             }
         }
 
-        indexByFilenameKey = index;
-        indexByCollapsedKey = collapsedIndex;
-        indexedFamilies = families;
+        this.indexByFilenameKey = index;
+        this.indexByCollapsedKey = collapsedIndex;
+        this.indexedFamilies = families;
         return index;
     }
 

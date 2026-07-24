@@ -23,10 +23,10 @@ public sealed class MatchingService : IMatchingService, IDisposable
     public MatchingService(PrismConfiguration configuration)
     {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _sharedPromptCatalog = ClassificationService.LoadPromptCatalog();
+        this._sharedPromptCatalog = ClassificationService.LoadPromptCatalog();
 
         (string modelPath, string vocabPath, string mergesPath) = ClassificationService.ResolveClassifierPaths(configuration);
-        _sharedClassifier = ImageClassifier.GetShared(modelPath, vocabPath, mergesPath);
+        this._sharedClassifier = ImageClassifier.GetShared(modelPath, vocabPath, mergesPath);
     }
 
     /// <inheritdoc/>
@@ -57,13 +57,13 @@ public sealed class MatchingService : IMatchingService, IDisposable
         // families, matching is impossible, so KO every image immediately instead of decoding and
         // feature-analysing the whole batch only to reject all of it.
         if (ingest.FamilyRecords.Count == 0)
-            return await BuildNoFamiliesResult(ingest, store, okImages, progress, cancellationToken);
+            return await this.BuildNoFamiliesResult(ingest, store, okImages, progress, cancellationToken);
 
         PhenotypeRuleSet ruleSet                 = LoadRuleSet();
         IImageNgpService ngp                     = new ImageNgpService(ruleSet);
         IFeatureAnalysisService featureAnalysis  = new FeatureAnalysisService();
         using IClassificationService classification =
-            new ClassificationService(_sharedClassifier, _sharedPromptCatalog, configuration);
+            new ClassificationService(this._sharedClassifier, this._sharedPromptCatalog, this.configuration);
 
         // Chunked fan-out/fan-in: decode + hash + feature analysis run CPU-parallel per chunk, then
         // the whole chunk classifies in one batched CLIP Run (ImageClassifier serializes Run() calls
@@ -111,8 +111,8 @@ public sealed class MatchingService : IMatchingService, IDisposable
                         // ImageClassifier serializes its own Run() calls internally (RunLock), so no
                         // external lock is needed here even across concurrent MatchingService jobs.
                         classification.ApplyClipTagsBatch(alive,
-                            configuration.ThresholdForInfluentialTags,
-                            configuration.ThresholdForDiscardingClassificationTags);
+                            this.configuration.ThresholdForInfluentialTags,
+                            this.configuration.ThresholdForDiscardingClassificationTags);
                     }
                     catch
                     {
@@ -147,8 +147,8 @@ public sealed class MatchingService : IMatchingService, IDisposable
             hashEntries.Add((source, hash));
         }
 
-        int duplicatesRemoved = configuration.ShouldDeduplicate
-            ? Deduplicate(lambdaByImage, classification, hashEntries)
+        int duplicatesRemoved = this.configuration.ShouldDeduplicate
+            ? this.Deduplicate(lambdaByImage, classification, hashEntries)
             : 0;
 
         //  Matched: resolve a FamilyID for each image via the waterfall
@@ -367,7 +367,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
         IClassificationService classification,
         IReadOnlyList<(ImageRecord_INPUT Record, UInt128 Hash)> hashEntries)
     {
-        HashSet<string> exempt = new(configuration.DeduplicationExemptPhenotypes, StringComparer.OrdinalIgnoreCase);
+        HashSet<string> exempt = new(this.configuration.DeduplicationExemptPhenotypes, StringComparer.OrdinalIgnoreCase);
         IReadOnlyList<DedupGroup> groups = classification.FindDuplicates(hashEntries);
         int removed = 0;
 
@@ -404,7 +404,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
     /// <see cref="ImageClassifier.GetShared"/>) that outlives any individual MatchingService instance,
     /// exactly like nothing disposes YoloDetector's process-wide shared instance.
     /// </summary>
-    public void Dispose() { _disposed = true; }
+    public void Dispose() { this._disposed = true; }
 
     //  Helpers
 
