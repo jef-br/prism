@@ -44,15 +44,15 @@ public static class ImageTransformer {
     private static IImageTransformation SelectTransformer( ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters ) {
         // Step 1 — prerequisites missing: route to conservative processor.
         // The phenotype-null guard is suppressed while phenotypes are bypassed.
-        if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null)) return new Tx_ProblemImageProcessor(parameters.ProblemImageProcessor);
+        if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null)) return new Tx_ProblemImageProcessor(parameters.ProblemImageProcessor, parameters.Output);
 
         // Step 2 — object touches at least one image edge.
         if (hasEdgeIntersect(lambda.Features)) {
             // DetailCropper is phenotype-driven; while bypassing, fall back to the square crop.
-            if (BypassPhenotypes) return new Tx_CropSquare();
+            if (BypassPhenotypes) return new Tx_CropSquare(parameters.Output);
 
             bool isCloseupPhenotype = lambda.SelectedPhenotype is "closeup-image" or "model-detail-closeup";
-            if (!isCloseupPhenotype || IsDetailCropperDetSlotExcluded(lambda)) return new Tx_CropSquare();
+            if (!isCloseupPhenotype || IsDetailCropperDetSlotExcluded(lambda)) return new Tx_CropSquare(parameters.Output);
 
             CropTransformSettings crop = parameters.Crop;
             return new Tx_DetailCropper(crop.CropCoverage, crop.CropExtensionOneSided, crop.CropExtensionBiDirectional, headcut, colorMat, parameters.DetailCropper, parameters.BgStretch, parameters.HeadCutter);

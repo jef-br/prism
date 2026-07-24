@@ -32,5 +32,9 @@
 
     "HeadCutter": {
         "FaceHeightCutFactor": 0.75
+    },
+
+    "Output": {
+        "JpegOutputQuality": 100
     }
 }

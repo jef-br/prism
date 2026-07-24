@@ -25,7 +25,8 @@ public class ImageTransformerTests
         BgStretch              = new() { Tier1MaxRatio = 1.25f, Tier2MaxRatio = 1.42f, Tier4MinRatio = 2.50f, FeatherPx = 16 },
         DetailCropper          = new() { AdjacentCropCap = 0.14 },
         LowContrastEnhancement = new() { ClipLimit = 2.0, TileSize = 8 },
-        HeadCutter             = new() { FaceHeightCutFactor = 0.75 }
+        HeadCutter             = new() { FaceHeightCutFactor = 0.75 },
+        Output                 = new() { JpegOutputQuality = 100 }
     };
 
     //  Routing — problem processor

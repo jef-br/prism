@@ -19,6 +19,7 @@ public sealed class TransformParameters
     public required DetailCropperConfig DetailCropper { get; init; }
     public required LowContrastEnhancementConfig LowContrastEnhancement { get; init; }
     public required HeadCutterConfig HeadCutter { get; init; }
+    public required OutputConfig Output { get; init; }
 
     /// <summary>
     /// Loads every transform_Config.json section, then composes them. A missing file, a misspelled
@@ -32,6 +33,7 @@ public sealed class TransformParameters
         BgStretch             = ConfigLoader.Section<BgStretchConfig>(ConfigFile, "BgStretch"),
         DetailCropper         = ConfigLoader.Section<DetailCropperConfig>(ConfigFile, "DetailCropper"),
         LowContrastEnhancement = ConfigLoader.Section<LowContrastEnhancementConfig>(ConfigFile, "LowContrastEnhancement"),
-        HeadCutter            = ConfigLoader.Section<HeadCutterConfig>(ConfigFile, "HeadCutter")
+        HeadCutter            = ConfigLoader.Section<HeadCutterConfig>(ConfigFile, "HeadCutter"),
+        Output                = ConfigLoader.Section<OutputConfig>(ConfigFile, "Output")
     };
 }

@@ -10,8 +10,6 @@ namespace Prism.Services.Transform;
 /// </summary>
 internal static class Tx_util_HeadCutter
 {
-    private const int MidpointDivisor = 2;
-
     /// <summary>
     /// Detects a human face and crops the image from the nose-to-lips line downward.
     /// Always runs when headcut is requested; branches on has-human feature for search strategy.
@@ -33,10 +31,13 @@ internal static class Tx_util_HeadCutter
         if (faces.Length == 0) return;
 
         // Pick the face furthest from the top edge (lowest centroid Y).
+        // Midpoint math (/2) — structural, never tuned.
+#pragma warning disable S109
         Rect bestFace = faces[0];
         foreach (Rect f in faces)
-            if (f.Y + f.Height / MidpointDivisor > bestFace.Y + bestFace.Height / MidpointDivisor)
+            if (f.Y + f.Height / 2 > bestFace.Y + bestFace.Height / 2)
                 bestFace = f;
+#pragma warning restore S109
 
         int cutY = bestFace.Y + (int)(bestFace.Height * cfg.FaceHeightCutFactor);
         if (cutY <= 0 || cutY >= colorMat.Rows) return;
@@ -77,11 +78,14 @@ internal static class Tx_util_HeadCutter
         int halfHeight = imageHeight / 2;
 
         var qualifying = new System.Collections.Generic.List<Rect>();
+        // Midpoint math (/2) — structural, never tuned.
+#pragma warning disable S109
         foreach (Rect f in allFaces)
         {
-            if (f.Y + f.Height / MidpointDivisor < halfHeight)
+            if (f.Y + f.Height / 2 < halfHeight)
                 qualifying.Add(f);
         }
+#pragma warning restore S109
         return [.. qualifying];
     }
 

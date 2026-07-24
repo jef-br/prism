@@ -28,6 +28,7 @@
     <Compile Include="..\Admin\DetailCropperConfig.cs" Link="Admin\DetailCropperConfig.cs" />
     <Compile Include="..\Admin\LowContrastEnhancementConfig.cs" Link="Admin\LowContrastEnhancementConfig.cs" />
     <Compile Include="..\Admin\HeadCutterConfig.cs" Link="Admin\HeadCutterConfig.cs" />
+    <Compile Include="..\Admin\OutputConfig.cs" Link="Admin\OutputConfig.cs" />
   </ItemGroup>
 
   <ItemGroup>
