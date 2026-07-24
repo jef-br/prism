@@ -55,6 +55,9 @@ public static class Analyzer_Exposure
 
         int counted = 0, high = 0, low = 0;
 
+        // Stride 2 subsamples every other pixel/row (perf, not a tunable threshold); 128 is the
+        // alpha-opaque cutoff on the [0,255] channel scale — both structural, never tuned.
+#pragma warning disable S109
         image.ProcessPixelRows(accessor =>
         {
             for (int y = 0; y < accessor.Height; y += 2)
@@ -75,6 +78,7 @@ public static class Analyzer_Exposure
                 }
             }
         });
+#pragma warning restore S109
 
         if (counted == 0) return;
 

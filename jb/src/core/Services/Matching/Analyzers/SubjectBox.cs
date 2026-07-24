@@ -8,6 +8,10 @@ public sealed record SubjectBox(float X1, float Y1, float X2, float Y2, float Co
     public float Width  => MathF.Max(0f, X2 - X1);
     public float Height => MathF.Max(0f, Y2 - Y1);
     public float Area   => Width * Height;
+
+    // Midpoint math (/2) — structural, never tuned.
+#pragma warning disable S109
     public float CenterX => (X1 + X2) / 2f;
     public float CenterY => (Y1 + Y2) / 2f;
+#pragma warning restore S109
 }

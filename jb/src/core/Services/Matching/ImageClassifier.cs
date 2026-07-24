@@ -268,9 +268,13 @@ public sealed class ImageClassifier : IDisposable
                 {
                     Rgb24 px = row[x];
                     int idx = rowOffset + x;
+                    // Channel index 2 = B (RGB order, matching NormMean/NormStd); 255 is the max
+                    // 8-bit channel value — fixed layout, never changes.
+#pragma warning disable S109
                     data[idx]             = (px.R / 255f - NormMean[0]) / NormStd[0];
                     data[plane + idx]     = (px.G / 255f - NormMean[1]) / NormStd[1];
                     data[2 * plane + idx] = (px.B / 255f - NormMean[2]) / NormStd[2];
+#pragma warning restore S109
                 }
             }
         });

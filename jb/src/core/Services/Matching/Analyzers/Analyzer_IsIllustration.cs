@@ -138,6 +138,8 @@ public static class Analyzer_IsIllustration
         int totalPixels = 0;
         int[] buckets = new int[bins * bins * bins];
 
+        // Stride 2 subsamples every other pixel/row — perf, not a tunable threshold.
+#pragma warning disable S109
         image.ProcessPixelRows(accessor =>
         {
             for (int y = 0; y < h; y += 2) {
@@ -153,6 +155,7 @@ public static class Analyzer_IsIllustration
                 }
             }
         });
+#pragma warning restore S109
 
         if (totalPixels == 0) return false;
         int minPop = Math.Max(1, (int)(totalPixels * cfg.MinClusterPopulation));

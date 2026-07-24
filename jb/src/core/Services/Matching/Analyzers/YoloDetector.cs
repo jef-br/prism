@@ -105,9 +105,12 @@ public sealed class YoloDetector : IDisposable {
                 Span<Rgba32> row = accessor.GetRowSpan(y);
                 for (int x = 0; x < InputWidth; x++) {
                     Rgba32 p = row[x];
+                    // Channel index 2 = B (RGB order); 255 is the max 8-bit channel value — fixed layout, never changes.
+#pragma warning disable S109
                     tensor[0, 0, y, x] = p.R / 255f;
                     tensor[0, 1, y, x] = p.G / 255f;
                     tensor[0, 2, y, x] = p.B / 255f;
+#pragma warning restore S109
                 }
             }
         });

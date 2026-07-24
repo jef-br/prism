@@ -41,6 +41,9 @@ internal static class Analyzer_DominantColors
         int y0 = (int)(subject.Y1 * image.Height);
         int y1 = (int)(subject.Y2 * image.Height);
 
+        // Stride 2 subsamples every other pixel/row (perf, not a tunable threshold); 128 is the
+        // alpha-opaque cutoff on the [0,255] channel scale — both structural, never tuned.
+#pragma warning disable S109
         image.ProcessPixelRows(accessor =>
         {
             for (int y = Math.Max(0, y0); y < Math.Min(accessor.Height, y1); y += 2)
@@ -65,6 +68,7 @@ internal static class Analyzer_DominantColors
                 }
             }
         });
+#pragma warning restore S109
 
         // Too few surviving pixels (white-on-white, skin-colored product): stay UNKNOWN.
         if (sampled == 0 || (float)survived / sampled < cfg.MinSampleFraction) return [];

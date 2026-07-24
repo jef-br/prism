@@ -139,11 +139,12 @@ internal sealed class ClipTokenizer
 
     //  Byte encoder 
 
+    // Replicates OpenAI clip/simple_tokenizer.py bytes_to_unicode() — every literal below (161, 172,
+    // 174, 255, 256) is that spec: printable ASCII 33-126, Latin supplement 161-172 and 174-255 map to
+    // themselves, all other bytes map to chr(256 + n). Fixed by the CLIP tokenizer spec, never tuned.
+#pragma warning disable S109
     private static string[] BuildByteEncoder()
     {
-        // Replicates OpenAI clip/simple_tokenizer.py bytes_to_unicode().
-        // Printable ASCII 33–126, Latin supplement 161–172, 174–255 map to themselves.
-        // All other bytes map to chr(256 + n) for n = 0, 1, 2, ...
         var bs = new List<int>();
         bs.AddRange(Enumerable.Range('!', '~' - '!' + 1));
         bs.AddRange(Enumerable.Range(0xA1, 0xAC - 0xA1 + 1));
@@ -167,6 +168,7 @@ internal sealed class ClipTokenizer
 
         return encoder;
     }
+#pragma warning restore S109
 
     //  Text normalisation 
 

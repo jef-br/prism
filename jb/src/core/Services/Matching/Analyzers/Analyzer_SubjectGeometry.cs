@@ -69,8 +69,11 @@ public static class Analyzer_SubjectGeometry
         snapshot.Set("product-coverage-ratio", F4(subject.Area), conf * cfg.BoxAreaCoverageConfidenceDiscount, source);
         snapshot.Set("crop-tightness", F4(MathF.Max(subject.Width, subject.Height)), conf, source);
         snapshot.Set("product-aspect-ratio", F4(boxAspect), conf, source);
+        // 2f/0.5f: distance-from-center formula (1 - 2*|x-0.5|) — the [0,1] axis's own midline, structural.
+#pragma warning disable S109
         snapshot.Set("vertical-centering", F4(1f - 2f * MathF.Abs(subject.CenterY - 0.5f)), conf, source);
         snapshot.Set("horizontal-centering", F4(1f - 2f * MathF.Abs(subject.CenterX - 0.5f)), conf, source);
+#pragma warning restore S109
 
         return subject;
     }
