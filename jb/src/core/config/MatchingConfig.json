@@ -1,82 +1,108 @@
 {
-  "semanticThreshold": 0.9,
-  "semanticWeight": 0.15,
-  "bracket3MinDistinctTokens": 2,
-  "minNumericTokenLength": 5,
-  "indexDigitRunsAllColumns": true,
-  "minSubstringRescueLength": 7,
-  "identifierTokenMinLength": 4,
-  "indexExcelTokenBigrams": true,
-  "enableSiblingPropagation": true,
-  "enableFolderNameEnrichment": true,
-  "fuzzyMinTokenLength": 4,
-  "fuzzyMaxEditDistance": 1,
-  "fuzzyMatchScore": 0.75,
-  "rules": [
-    {
-      "excelField": "FamilyID",
-      "type": "numeric",
-      "strategy": "NumericalMatcher",
-      "weight": 1,
-      "maxDistance": 1.478,
-      "maxDistancePermuted": 4.5,
-      "candidates": "3"
+  "match": {
+    "shared": {
+      "semanticThreshold": 0.9,
+      "semanticWeight": 0.15,
+      "enableSiblingPropagation": true,
+      "enableFolderNameEnrichment": true,
+      "rules": [
+        {
+          "excelField": "FamilyID",
+          "type": "numeric",
+          "strategy": "NumericalMatcher",
+          "weight": 1,
+          "maxDistance": 1.478,
+          "maxDistancePermuted": 4.5,
+          "candidates": "3"
+        },
+        {
+          "excelField": "RefCo",
+          "type": "numeric",
+          "strategy": "NumericalMatcher",
+          "weight": 1,
+          "maxDistance": 1.478,
+          "maxDistancePermuted": 4.5,
+          "candidates": "3"
+        },
+        {
+          "excelField": "veepee",
+          "type": "numeric",
+          "strategy": "NumericalMatcher",
+          "weight": 1,
+          "maxDistance": 1.478,
+          "maxDistancePermuted": 4.5,
+          "candidates": "3"
+        },
+        {
+          "excelField": "EAN",
+          "type": "numeric",
+          "strategy": "NumericalMatcher",
+          "weight": 1,
+          "maxDistance": 1.478,
+          "maxDistancePermuted": 4.5,
+          "candidates": "3"
+        },
+        {
+          "excelField": "ProductColor",
+          "type": "string",
+          "strategy": "ClipLabelEnricher",
+          "weight": 1.0,
+          "clipFeature": "product-color"
+        },
+        {
+          "excelField": "ProductType",
+          "type": "string",
+          "strategy": "ClipLabelEnricher",
+          "weight": 0.8,
+          "clipFeature": "product-type-label"
+        },
+        {
+          "excelField": "ProductMaterial",
+          "type": "string",
+          "strategy": "ClipLabelEnricher",
+          "weight": 0.5,
+          "clipFeature": "product-material"
+        },
+        {
+          "excelField": "ALL",
+          "type": "image_labels",
+          "strategy": "ClipLabelEnricher",
+          "Overlap": 2,
+          "weight": 0.6,
+          "clipFeature": "product-color,product-type-label"
+        }
+      ]
     },
-    {
-      "excelField": "RefCo",
-      "type": "numeric",
-      "strategy": "NumericalMatcher",
-      "weight": 1,
-      "maxDistance": 1.478,
-      "maxDistancePermuted": 4.5,
-      "candidates": "3"
+    "numericMatcher": {
+      "minNumericTokenLength": 5,
+      "indexDigitRunsAllColumns": true,
+      "minSubstringRescueLength": 7,
+      "substringRescueConfidence": 0.9,
+      "defaultMaxDistanceFallback": 1.478
     },
-    {
-      "excelField": "veepee",
-      "type": "numeric",
-      "strategy": "NumericalMatcher",
-      "weight": 1,
-      "maxDistance": 1.478,
-      "maxDistancePermuted": 4.5,
-      "candidates": "3"
+    "stringMatcher": {
+      "bracket3MinDistinctTokens": 2,
+      "identifierTokenMinLength": 4,
+      "indexExcelTokenBigrams": true,
+      "fuzzyMinTokenLength": 4,
+      "fuzzyMaxEditDistance": 1,
+      "fuzzyMatchScore": 0.75,
+      "nonExactTokenMatchConfidence": 0.85
     },
-    {
-      "excelField": "EAN",
-      "type": "numeric",
-      "strategy": "NumericalMatcher",
-      "weight": 1,
-      "maxDistance": 1.478,
-      "maxDistancePermuted": 4.5,
-      "candidates": "3"
+    "siblingPropagator": {
+      "commonTokenRatio": 0.5,
+      "commonTokenFloor": 10,
+      "siblingPropagationConfidence": 0.9,
+      "minCommonTokens": 2,
+      "referenceGradeTokenLength": 5
     },
-    {
-      "excelField": "ProductColor",
-      "type": "string",
-      "strategy": "ClipLabelEnricher",
-      "weight": 1.0,
-      "clipFeature": "product-color"
-    },
-    {
-      "excelField": "ProductType",
-      "type": "string",
-      "strategy": "ClipLabelEnricher",
-      "weight": 0.8,
-      "clipFeature": "product-type-label"
-    },
-    {
-      "excelField": "ProductMaterial",
-      "type": "string",
-      "strategy": "ClipLabelEnricher",
-      "weight": 0.5,
-      "clipFeature": "product-material"
-    },
-    {
-      "excelField": "ALL",
-      "type": "image_labels",
-      "strategy": "ClipLabelEnricher",
-      "Overlap": 2,
-      "weight": 0.6,
-      "clipFeature": "product-color,product-type-label"
+    "folderNameEnricher": {
+      "cameraPrefixes": [ "dscn", "dsc", "img", "image", "photo", "pic", "picture", "scan", "p", "capture", "shot" ],
+      "noiseFolderTokens": [ "hd", "ld", "sd", "web", "print", "packshot", "packshots", "hero", "heroes", "detail", "details", "front", "back", "side", "top", "model", "onmodel", "ghost", "flat", "still", "lifestyle", "thumb", "thumbs", "thumbnail", "thumbnails", "small", "medium", "large", "xl", "hires", "highres", "lowres", "raw", "final", "finals", "edit", "edited", "retouch", "retouched", "images", "image", "photos", "photo", "pictures", "picture", "visuals", "visual", "media", "jpg", "jpeg", "png", "rgb", "cmyk", "dpi", "px", "new", "old", "copy", "temp", "tmp" ],
+      "minBareNumberLength": 5,
+      "minTokenLengthFloor": 2,
+      "minPerItemSiblings": 2,
+      "minMeaningfulTokenLength": 3
     }
-  ]
+  }
 }

@@ -32,7 +32,15 @@ public class SubstringRescuePerfMeasurement
         MatchingRule eanRule      = new() { ExcelField = "EAN",      Type = "numeric", Strategy = "NumericalMatcher", Weight = 1.0, MaxDistance = 1.478 };
         List<MatchingRule> rules  = [familyIdRule, refCoRule, eanRule];
 
-        NumericMatcher matcher = new("FamilyID", minNumericTokenLength: 5, indexDigitRunsAllColumns: true, minSubstringRescueLength: 7);
+        NumericMatcher.Config cfg = new()
+        {
+            MinNumericTokenLength      = 5,
+            IndexDigitRunsAllColumns   = true,
+            MinSubstringRescueLength   = 7,
+            SubstringRescueConfidence  = 0.9,
+            DefaultMaxDistanceFallback = 1.478
+        };
+        NumericMatcher matcher = new("FamilyID", cfg);
 
         // Warm-up call builds and caches the digit index (excluded from the measured scan time — the
         // index is built once per Matched-stage run, not once per image, so it is not part of the

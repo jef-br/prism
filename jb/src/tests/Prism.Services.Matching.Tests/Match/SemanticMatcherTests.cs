@@ -159,12 +159,25 @@ public class SemanticMatcherTests
 
     // Production-equivalent tuning values (MatchingConfig.json is required-only now — tests supply
     // their own explicit fixture values rather than relying on constructor defaults).
-    private const int DefaultBracket3MinDistinctTokens = 1;
-    private const int DefaultIdentifierTokenMinLength = 0;
-    private const bool DefaultIndexExcelTokenBigrams = false;
-    private const int DefaultFuzzyMinTokenLength = 4;
-    private const int DefaultFuzzyMaxEditDistance = 1;
-    private const double DefaultFuzzyMatchScore = 0.75;
+    private static readonly StringMatcher.Config DefaultStringCfg = new()
+    {
+        Bracket3MinDistinctTokens    = 1,
+        IdentifierTokenMinLength     = 0,
+        IndexExcelTokenBigrams       = false,
+        FuzzyMinTokenLength          = 4,
+        FuzzyMaxEditDistance         = 1,
+        FuzzyMatchScore              = 0.75,
+        NonExactTokenMatchConfidence = 0.85
+    };
+
+    private static readonly NumericMatcher.Config DefaultNumericCfg = new()
+    {
+        MinNumericTokenLength      = 1,
+        IndexDigitRunsAllColumns   = false,
+        MinSubstringRescueLength   = 0,
+        SubstringRescueConfidence  = 0.9,
+        DefaultMaxDistanceFallback = 1.478
+    };
 
     private static readonly IReadOnlyList<MatchingRule> NoNumericRules = [];
     private static readonly IReadOnlyList<MatchingRule> NoLabelRules = [];
@@ -175,9 +188,8 @@ public class SemanticMatcherTests
     ];
 
     private static SemanticMatcher MakeMatcher(double semanticThreshold) =>
-        new(new NumericMatcher("FamilyID"),
-            new StringMatcher(EmptyTranslation, DefaultBracket3MinDistinctTokens, DefaultIdentifierTokenMinLength, DefaultIndexExcelTokenBigrams,
-                DefaultFuzzyMinTokenLength, DefaultFuzzyMaxEditDistance, DefaultFuzzyMatchScore),
+        new(new NumericMatcher("FamilyID", DefaultNumericCfg),
+            new StringMatcher(EmptyTranslation, DefaultStringCfg),
             new ClipLabelEnricher(), semanticThreshold, 0.15);
 
     private static ImageRecord_LAMBDA MakeLambda(string filename, string? influentialLabel = null)

@@ -20,36 +20,44 @@ internal sealed class FolderNameEnricher
     private static readonly Regex AlphaDigitBoundaryPattern = new(@"(?<=\d)(?=\D)|(?<=\D)(?=\d)", RegexOptions.Compiled);
     private static readonly Regex DimensionPattern = new(@"^\d{2,5}\s*[x×]\s*\d{2,5}$", RegexOptions.Compiled);
 
-    // Camera/scanner filename prefixes that carry no product meaning.
-    private static readonly HashSet<string> CameraPrefixes = new(StringComparer.Ordinal)
-    {
-        "dscn", "dsc", "img", "image", "photo", "pic", "picture", "scan", "p", "capture", "shot"
-    };
-
-    // Folder names (and folder tokens) that describe format/quality, not the product.
-    private static readonly HashSet<string> NoiseFolderTokens = new(StringComparer.Ordinal)
-    {
-        "hd", "ld", "sd", "web", "print", "packshot", "packshots", "hero", "heroes", "detail", "details",
-        "front", "back", "side", "top", "model", "onmodel", "ghost", "flat", "still", "lifestyle",
-        "thumb", "thumbs", "thumbnail", "thumbnails", "small", "medium", "large", "xl", "hires", "highres",
-        "lowres", "raw", "final", "finals", "edit", "edited", "retouch", "retouched", "images", "image",
-        "photos", "photo", "pictures", "picture", "visuals", "visual", "media", "jpg", "jpeg", "png",
-        "rgb", "cmyk", "dpi", "px", "new", "old", "copy", "temp", "tmp"
-    };
-
-    // A bare (all-digit) folder token counts as meaning only when at least this long — short numbers
-    // are sequence indices; long ones are product numbers or references.
-    private const int MinBareNumberLength = 5;
-    private const int MinTokenLengthFloor = 2;
-    private const int MinPerItemSiblings = 2;
-
+    private readonly Config cfg;
+    private readonly HashSet<string> cameraPrefixes;
+    private readonly HashSet<string> noiseFolderTokens;
     private readonly int minMeaningfulTokenLength;
 
-    /// <summary>Creates the enricher.</summary>
-    /// <param name="minMeaningfulTokenLength">Shortest folder token that may count as Excel-relevant meaning.</param>
-    internal FolderNameEnricher(int minMeaningfulTokenLength = 3)
+    /// <summary>FolderNameEnricher's tunables, loaded from MatchingConfig.json's match.folderNameEnricher section.</summary>
+    public sealed class Config
     {
-        this.minMeaningfulTokenLength = Math.Max(MinTokenLengthFloor, minMeaningfulTokenLength);
+        /// <summary>Camera/scanner filename prefixes that carry no product meaning.</summary>
+        public required IReadOnlyList<string> CameraPrefixes { get; init; }
+
+        /// <summary>Folder names (and folder tokens) that describe format/quality, not the product.</summary>
+        public required IReadOnlyList<string> NoiseFolderTokens { get; init; }
+
+        /// <summary>
+        /// A bare (all-digit) folder token counts as meaning only when at least this long — short numbers
+        /// are sequence indices; long ones are product numbers or references.
+        /// </summary>
+        public required int MinBareNumberLength { get; init; }
+
+        /// <summary>Floor applied to MinMeaningfulTokenLength.</summary>
+        public required int MinTokenLengthFloor { get; init; }
+
+        /// <summary>Minimum non-noise sibling folders for the parent to count as a per-item pattern.</summary>
+        public required int MinPerItemSiblings { get; init; }
+
+        /// <summary>Shortest folder token that may count as Excel-relevant meaning.</summary>
+        public required int MinMeaningfulTokenLength { get; init; }
+    }
+
+    /// <summary>Creates the enricher.</summary>
+    /// <param name="cfg">FolderNameEnricher's tunables from MatchingConfig.json's match.folderNameEnricher section.</param>
+    internal FolderNameEnricher(Config cfg)
+    {
+        this.cfg = cfg;
+        cameraPrefixes = new HashSet<string>(cfg.CameraPrefixes, StringComparer.Ordinal);
+        noiseFolderTokens = new HashSet<string>(cfg.NoiseFolderTokens, StringComparer.Ordinal);
+        minMeaningfulTokenLength = Math.Max(cfg.MinTokenLengthFloor, cfg.MinMeaningfulTokenLength);
     }
 
     /// <summary>
@@ -98,7 +106,7 @@ internal sealed class FolderNameEnricher
     /// True when the filename stem has no product-bearing content: after removing digits and camera
     /// prefixes, no alphabetic token of at least 3 characters remains.
     /// </summary>
-    private static bool FilenameIsMeaningless(string fullName)
+    private bool FilenameIsMeaningless(string fullName)
     {
         string stem = Path.GetFileNameWithoutExtension(fullName).ToLowerInvariant();
 
@@ -109,7 +117,7 @@ internal sealed class FolderNameEnricher
                 if (token.Length < 3 || token.All(char.IsDigit))
                     continue;
 
-                if (!CameraPrefixes.Contains(token))
+                if (!cameraPrefixes.Contains(token))
                     return false; // a real word survives → the filename is meaningful, leave it alone
             }
         }
@@ -132,7 +140,7 @@ internal sealed class FolderNameEnricher
         // Sibling pattern: the parent must hold several per-item folders, not two or three format
         // buckets. A lone product folder, or a set of only-noise folders, does not qualify.
         int perItemSiblings = siblings.Count(sib => MeaningfulTokens(sib).Count > 0);
-        if (perItemSiblings < MinPerItemSiblings)
+        if (perItemSiblings < cfg.MinPerItemSiblings)
             return false;
 
         // Excel relevance: at least one meaningful folder token must appear in the Excel data.
@@ -161,7 +169,7 @@ internal sealed class FolderNameEnricher
             bool hasLetter = raw.Any(char.IsLetter);
             bool hasDigit = raw.Any(char.IsDigit);
 
-            if (hasLetter && hasDigit && raw.Length >= minMeaningfulTokenLength && !NoiseFolderTokens.Contains(raw))
+            if (hasLetter && hasDigit && raw.Length >= minMeaningfulTokenLength && !noiseFolderTokens.Contains(raw))
             {
                 tokens.Add(raw);
                 continue;
@@ -171,11 +179,11 @@ internal sealed class FolderNameEnricher
             {
                 if (piece.Length < minMeaningfulTokenLength)
                     continue;
-                if (NoiseFolderTokens.Contains(piece))
+                if (noiseFolderTokens.Contains(piece))
                     continue;
                 // A short bare number (a sequence index like "800" or "3") is not folder meaning, but a
                 // long bare number is a product number / reference and is one of the strongest keys.
-                if (piece.All(char.IsDigit) && piece.Length < MinBareNumberLength)
+                if (piece.All(char.IsDigit) && piece.Length < cfg.MinBareNumberLength)
                     continue;
 
                 tokens.Add(piece);
@@ -215,7 +223,7 @@ internal sealed class FolderNameEnricher
 
     private void AddToken(HashSet<string> vocabulary, string token)
     {
-        if (token.Length >= minMeaningfulTokenLength && !NoiseFolderTokens.Contains(token))
+        if (token.Length >= minMeaningfulTokenLength && !noiseFolderTokens.Contains(token))
             vocabulary.Add(token);
     }
 

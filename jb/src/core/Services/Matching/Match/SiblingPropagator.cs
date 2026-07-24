@@ -24,21 +24,35 @@ internal sealed class SiblingPropagator {
         @"^([a-z]|\d{1,3}|[a-z]\d{1,2}|det\d+|ret|retouch(ed)?|copy|front|back|side|top|detail\d*)$",
         RegexOptions.Compiled);
 
-    // A token shared by more than this fraction of the batch is batch noise (brand, collection).
-    private const double CommonTokenRatio = 0.5;
+    private readonly Config cfg;
 
-    // A token is never treated as batch noise below this many carriers — a product's own shots
-    // legitimately share its tokens, and small batches must not have their profiles emptied.
-    private const int CommonTokenFloor = 10;
+    /// <summary>SiblingPropagator's tunables, loaded from MatchingConfig.json's match.siblingPropagator section.</summary>
+    public sealed class Config
+    {
+        /// <summary>A token shared by more than this fraction of the batch is batch noise (brand, collection).</summary>
+        public required double CommonTokenRatio { get; init; }
 
-    // SiblingPropagation match confidence — empirical calibration, see Match/jbtodo.md.
-    private const double SiblingPropagationConfidence = 0.9;
+        /// <summary>
+        /// A token is never treated as batch noise below this many carriers — a product's own shots
+        /// legitimately share its tokens, and small batches must not have their profiles emptied.
+        /// </summary>
+        public required int CommonTokenFloor { get; init; }
 
-    // Minimum shared rare tokens for two profiles to be considered related.
-    private const int MinCommonTokens = 2;
+        /// <summary>SiblingPropagation match confidence — empirical calibration, see Match/jbtodo.md.</summary>
+        public required double SiblingPropagationConfidence { get; init; }
 
-    // A single shared token this long or longer counts as reference-grade identity on its own.
-    private const int ReferenceGradeTokenLength = 5;
+        /// <summary>Minimum shared rare tokens for two profiles to be considered related.</summary>
+        public required int MinCommonTokens { get; init; }
+
+        /// <summary>A single shared token this long or longer counts as reference-grade identity on its own.</summary>
+        public required int ReferenceGradeTokenLength { get; init; }
+    }
+
+    /// <summary>Creates the sibling propagator.</summary>
+    /// <param name="cfg">SiblingPropagator's tunables from MatchingConfig.json's match.siblingPropagator section.</param>
+    internal SiblingPropagator(Config cfg) {
+        this.cfg = cfg;
+    }
 
     /// <summary>
     /// Assigns FamilyIDs to unmatched records whose rare-token profile is a subset or superset of
@@ -130,7 +144,7 @@ internal sealed class SiblingPropagator {
     /// Finds the family of a loosely related matched sibling (subset/superset overlap). Returns null
     /// when nothing relates, or when related siblings belong to different families.
     /// </summary>
-    private static (string? FamilyId, string? SiblingName) FindLooseRelation(
+    private (string? FamilyId, string? SiblingName) FindLooseRelation(
         HashSet<string> profile,
         List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> matchedProfiles) {
         string? familyId = null;
@@ -155,7 +169,7 @@ internal sealed class SiblingPropagator {
     }
 
     /// <summary>Writes the sibling-propagation match evidence onto a record.</summary>
-    private static void AssignSibling(ImageRecord_LAMBDA record, string familyId, HashSet<string> profile, string reason) {
+    private void AssignSibling(ImageRecord_LAMBDA record, string familyId, HashSet<string> profile, string reason) {
         string filename = record.MatchingName;
         string stem = Path.GetFileNameWithoutExtension(filename);
         const string matcherName = "SiblingPropagator";
@@ -164,10 +178,10 @@ internal sealed class SiblingPropagator {
             ImageId = stem,
             SourceFilename = record.InitialFullName ?? filename,
             FinalFamilyId = familyId,
-            FinalScore = SiblingPropagationConfidence,
+            FinalScore = cfg.SiblingPropagationConfidence,
             IsKo = false,
             AcceptedMatcherName = matcherName,
-            TopCandidates = [new CandidateSummary(familyId, SiblingPropagationConfidence, matcherName)],
+            TopCandidates = [new CandidateSummary(familyId, cfg.SiblingPropagationConfidence, matcherName)],
             ImageNgpSummary = record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}",
             SafeExplanation = $"SiblingPropagation: rare token profile [{string.Join(", ", profile.OrderBy(t => t, StringComparer.Ordinal))}] {reason}."
         };
@@ -214,8 +228,8 @@ internal sealed class SiblingPropagator {
     /// Removes tokens present in more than CommonTokenRatio of the batch (brand/collection noise).
     /// Never removes below CommonTokenFloor carriers, so sibling-shared tokens survive in small batches.
     /// </summary>
-    private static void RemoveBatchCommonTokens(HashSet<string> profile, Dictionary<string, int> batchTokenCounts, int batchSize) {
-        double threshold = Math.Max(CommonTokenFloor, batchSize * CommonTokenRatio);
+    private void RemoveBatchCommonTokens(HashSet<string> profile, Dictionary<string, int> batchTokenCounts, int batchSize) {
+        double threshold = Math.Max(cfg.CommonTokenFloor, batchSize * cfg.CommonTokenRatio);
         profile.RemoveWhere(token =>
             batchTokenCounts.TryGetValue(token, out int count) && count > threshold);
     }
@@ -224,7 +238,7 @@ internal sealed class SiblingPropagator {
     /// True when one profile contains the other and they share enough identity: at least two common
     /// tokens, or one common token of five characters or more (a reference-grade token).
     /// </summary>
-    private static bool ProfilesAreRelated(HashSet<string> profile, HashSet<string> siblingProfile) {
+    private bool ProfilesAreRelated(HashSet<string> profile, HashSet<string> siblingProfile) {
         if (profile.Count == 0 || siblingProfile.Count == 0)
             return false;
 
@@ -233,7 +247,7 @@ internal sealed class SiblingPropagator {
             return false;
 
         int common = profile.Count(siblingProfile.Contains);
-        return common >= MinCommonTokens || profile.Any(t => t.Length >= ReferenceGradeTokenLength && siblingProfile.Contains(t));
+        return common >= cfg.MinCommonTokens || profile.Any(t => t.Length >= cfg.ReferenceGradeTokenLength && siblingProfile.Contains(t));
     }
 
     private static string NormalizeDiacritics(string input) {

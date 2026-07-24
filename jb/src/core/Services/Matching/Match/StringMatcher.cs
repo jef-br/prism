@@ -10,9 +10,6 @@ namespace Prism.Services.Matching;
 /// </summary>
 internal sealed class StringMatcher
 {
-    // Non-exact (synonym/fuzzy) token-match confidence — empirical calibration, see Match/jbtodo.md.
-    private const double NonExactTokenMatchConfidence = 0.85;
-
     private static readonly Regex TokenSplitPattern = new(
         @"[^a-zA-ZÀ-ÖØ-öø-ÿ0-9]+",
         RegexOptions.Compiled);
@@ -23,6 +20,7 @@ internal sealed class StringMatcher
         RegexOptions.Compiled);
 
     private readonly TranslationConfig translationConfig;
+    private readonly Config cfg;
     private readonly int bracket3MinDistinctTokens;
     private readonly int identifierTokenMinLength;
     private readonly bool indexExcelTokenBigrams;
@@ -41,15 +39,63 @@ internal sealed class StringMatcher
     // stay exact-match-only (free text is too large/ambiguous for a safe fuzzy scan).
     private Dictionary<string, List<Posting>>? categoricalTokenIndex;
 
-    internal StringMatcher(TranslationConfig translationConfig, int bracket3MinDistinctTokens, int identifierTokenMinLength, bool indexExcelTokenBigrams, int fuzzyMinTokenLength, int fuzzyMaxEditDistance, double fuzzyMatchScore)
+    /// <summary>StringMatcher's tunables, loaded from MatchingConfig.json's match.stringMatcher section.</summary>
+    public sealed class Config
+    {
+        /// <summary>
+        /// Minimum distinct filename tokens the winning family must have matched for a Bracket 3 string
+        /// assignment. 1 preserves the historical behavior; 2 rejects single-common-token matches
+        /// (e.g. one shared color word), trading recall for precision — Brackets 4–5 may still rescue.
+        /// </summary>
+        public required int Bracket3MinDistinctTokens { get; init; }
+
+        /// <summary>
+        /// Minimum length for an identifier-grade filename token (contains both letters and digits,
+        /// occurs in exactly one family) to accept a Bracket 3 match on its own, bypassing
+        /// Bracket3MinDistinctTokens. 0 disables the bypass.
+        /// </summary>
+        public required int IdentifierTokenMinLength { get; init; }
+
+        /// <summary>
+        /// When true, the string token index also contains concatenations of adjacent cell tokens in
+        /// both orders ("palm"+"blue" → "palmblue"/"bluepalm") and filename tokens are additionally
+        /// split at letter↔digit boundaries, so glued compound tokens can match.
+        /// </summary>
+        public required bool IndexExcelTokenBigrams { get; init; }
+
+        /// <summary>
+        /// Minimum token length (both sides) for the Bracket 3 categorical edit-distance fallback to
+        /// consider a fuzzy match. Guards short 2-3 letter words from accidentally matching an unrelated
+        /// short word.
+        /// </summary>
+        public required int FuzzyMinTokenLength { get; init; }
+
+        /// <summary>
+        /// Maximum Levenshtein edit distance for the Bracket 3 categorical fuzzy fallback — bounded
+        /// tolerance for typo/regional spelling variants (e.g. "gray"/"grey").
+        /// </summary>
+        public required int FuzzyMaxEditDistance { get; init; }
+
+        /// <summary>
+        /// Evidence score assigned to a categorical fuzzy match — between the synonym score (0.85) and
+        /// exact score (1.0).
+        /// </summary>
+        public required double FuzzyMatchScore { get; init; }
+
+        /// <summary>Confidence recorded for a non-exact synonym/fuzzy token match, vs. 1.0 for an exact match.</summary>
+        public required double NonExactTokenMatchConfidence { get; init; }
+    }
+
+    internal StringMatcher(TranslationConfig translationConfig, Config cfg)
     {
         this.translationConfig = translationConfig;
-        this.bracket3MinDistinctTokens = bracket3MinDistinctTokens;
-        this.identifierTokenMinLength = identifierTokenMinLength;
-        this.indexExcelTokenBigrams = indexExcelTokenBigrams;
-        this.fuzzyMinTokenLength = fuzzyMinTokenLength;
-        this.fuzzyMaxEditDistance = fuzzyMaxEditDistance;
-        this.fuzzyMatchScore = fuzzyMatchScore;
+        this.cfg = cfg;
+        bracket3MinDistinctTokens = cfg.Bracket3MinDistinctTokens;
+        identifierTokenMinLength = cfg.IdentifierTokenMinLength;
+        indexExcelTokenBigrams = cfg.IndexExcelTokenBigrams;
+        fuzzyMinTokenLength = cfg.FuzzyMinTokenLength;
+        fuzzyMaxEditDistance = cfg.FuzzyMaxEditDistance;
+        fuzzyMatchScore = cfg.FuzzyMatchScore;
     }
 
     //  Bracket 3 
@@ -241,7 +287,7 @@ internal sealed class StringMatcher
                         posting.FamilyToken,
                         posting.PropertyName,
                         posting.FamilyId,
-                        isExact ? 1.0 : NonExactTokenMatchConfidence));
+                        isExact ? 1.0 : cfg.NonExactTokenMatchConfidence));
                 }
             }
 

@@ -28,18 +28,45 @@ internal sealed class NumericMatcher
     // Minimum tokens a permuted-subset candidate must combine — a single token is not a permutation.
     private const int MinPermutedSubsetTokens = 2;
 
-    // SubstringRescue match confidence — empirical calibration, see Match/jbtodo.md.
-    private const double SubstringRescueConfidence = 0.9;
-
-    // Fallback MaxDistance when no numeric rule is configured — empirical calibration.
-    private const double DefaultMaxDistanceFallback = 1.478;
-
-    private const int DecimalDigitCount = 10;
+    // Size of the 0-9 digit frequency table (one bucket per decimal digit).
+    private const int DigitHistogramSize = 10;
 
     private readonly string familyIdColumnName;
+    private readonly Config cfg;
     private readonly int minTokenLength;
     private readonly bool indexAllColumns;
     private readonly int substringRescueLength;
+
+    /// <summary>NumericMatcher's tunables, loaded from MatchingConfig.json's match.numericMatcher section.</summary>
+    public sealed class Config
+    {
+        /// <summary>
+        /// Minimum digit count for a filename token or family digit target to act as standalone numeric
+        /// evidence. 1 preserves the historical behavior; 5 stops shot suffixes (_01) and short RefCo
+        /// digit fragments (e.g. "MGGE073" → "073") from producing false Bracket 1 ties. Shorter tokens
+        /// may still participate in Bracket 2 concatenations whose combined length meets the threshold.
+        /// </summary>
+        public required int MinNumericTokenLength { get; init; }
+
+        /// <summary>
+        /// When true, the numeric digit index additionally covers every digit run (and capped whole-value
+        /// digit string) of every family column — not just the configured numeric rule fields. Lets
+        /// filenames match identifiers embedded in compound cells (e.g. label "MAN-Posy Green-1010930-60105").
+        /// </summary>
+        public required bool IndexDigitRunsAllColumns { get; init; }
+
+        /// <summary>
+        /// Minimum digit count for the numeric substring rescue pass (accepts the unique family whose
+        /// digit target contains the filename token). 0 disables the pass.
+        /// </summary>
+        public required int MinSubstringRescueLength { get; init; }
+
+        /// <summary>SubstringRescue match confidence — empirical calibration, see Match/jbtodo.md.</summary>
+        public required double SubstringRescueConfidence { get; init; }
+
+        /// <summary>Fallback MaxDistance when no numeric rule is configured — empirical calibration.</summary>
+        public required double DefaultMaxDistanceFallback { get; init; }
+    }
 
     // Inverted digit-target index (family target digits → postings), built once per (families, rules)
     // pair so Brackets 1–2 look up tokens/concatenations in O(1) instead of rescanning every family
@@ -60,15 +87,14 @@ internal sealed class NumericMatcher
     /// resolves against the intrinsic <see cref="FamilyIDRecord.FamilyID"/> — the 8-digit PRISM identifier
     /// that is also the image filename stem — rather than an Excel column lookup.
     /// </param>
-    /// <param name="minNumericTokenLength">MatchingConfig.MinNumericTokenLength (1 = legacy behavior).</param>
-    /// <param name="indexDigitRunsAllColumns">MatchingConfig.IndexDigitRunsAllColumns.</param>
-    /// <param name="minSubstringRescueLength">MatchingConfig.MinSubstringRescueLength (0 = disabled).</param>
-    internal NumericMatcher(string familyIdColumnName, int minNumericTokenLength = 1, bool indexDigitRunsAllColumns = false, int minSubstringRescueLength = 0)
+    /// <param name="cfg">NumericMatcher's tunables from MatchingConfig.json's match.numericMatcher section.</param>
+    internal NumericMatcher(string familyIdColumnName, Config cfg)
     {
         this.familyIdColumnName = familyIdColumnName;
-        minTokenLength = Math.Max(1, minNumericTokenLength);
-        indexAllColumns = indexDigitRunsAllColumns;
-        substringRescueLength = minSubstringRescueLength;
+        this.cfg = cfg;
+        minTokenLength = Math.Max(1, cfg.MinNumericTokenLength);
+        indexAllColumns = cfg.IndexDigitRunsAllColumns;
+        substringRescueLength = cfg.MinSubstringRescueLength;
     }
 
     //  Bracket 1
@@ -494,11 +520,11 @@ internal sealed class NumericMatcher
                 ImageId              = stem,
                 SourceFilename       = filename,
                 FinalFamilyId        = familyId,
-                FinalScore           = SubstringRescueConfidence,
+                FinalScore           = cfg.SubstringRescueConfidence,
                 IsKo                 = false,
                 AcceptedMatcherName  = matcherName,
-                TopCandidates        = [new CandidateSummary(familyId, SubstringRescueConfidence, matcherName)],
-                NumericTokenEvidence = [new TokenEvidenceItem(token, matchedTarget!, matchedField!, familyId, SubstringRescueConfidence)],
+                TopCandidates        = [new CandidateSummary(familyId, cfg.SubstringRescueConfidence, matcherName)],
+                NumericTokenEvidence = [new TokenEvidenceItem(token, matchedTarget!, matchedField!, familyId, cfg.SubstringRescueConfidence)],
                 ImageNgpSummary      = BuildNgpSummary(record),
                 SafeExplanation      = $"SubstringRescue: token '{token}' is contained in target '{matchedTarget}' of family {familyId}."
             }, []);
@@ -639,7 +665,7 @@ internal sealed class NumericMatcher
     /// The synthetic rule attached to all-columns run postings: distances copied from the first
     /// configured numeric rule so Bracket 2 TCD gating treats run targets like rule targets.
     /// </summary>
-    private static MatchingRule BuildRunIndexRule(IReadOnlyList<MatchingRule> numericRules)
+    private MatchingRule BuildRunIndexRule(IReadOnlyList<MatchingRule> numericRules)
     {
         MatchingRule? first = numericRules.Count > 0 ? numericRules[0] : null;
         return new MatchingRule
@@ -648,7 +674,7 @@ internal sealed class NumericMatcher
             Type                = "numeric",
             Strategy            = "NumericalMatcher",
             Weight              = first?.Weight ?? 1.0,
-            MaxDistance         = first?.MaxDistance ?? DefaultMaxDistanceFallback,
+            MaxDistance         = first?.MaxDistance ?? cfg.DefaultMaxDistanceFallback,
             MaxDistancePermuted = first?.MaxDistancePermuted ?? 0.0
         };
     }
@@ -691,7 +717,7 @@ internal sealed class NumericMatcher
         foreach (char ch in target)
             if (ch is >= '0' and <= '9') counts[ch - '0']++;
 
-        for (int i = 0; i < DecimalDigitCount; i++)
+        for (int i = 0; i < DigitHistogramSize; i++)
             if (counts[i] != subsetCounts[i]) return false;
         return true;
     }
