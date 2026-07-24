@@ -164,6 +164,40 @@ directly. This is **not** the same as `ConfigLoader`'s internal cache, which sta
 fixed-signature engine `Process()` entry points above self-load **per call**, and that one *is* the
 per-image path.
 
+### S109 (magic-number) treatment: named-const is the default, bare-literal is the narrow exception (accepted 2026-07-24, T-4400 phase 2)
+
+The T-4400 phase 2 S109 pass (~40 files) named every flagged magic number to a `private const` at
+its point of use by default. A follow-up review found some of those extractions hurt readability
+more than they helped — a single-use const for a plain array index or a `/2` midpoint divisor can
+read worse than the literal it replaced, especially when the name barely says more than the number
+did. The resolution, applied via targeted reverts:
+
+- **Named `private const` stays the default treatment** for any flagged literal that doesn't fit
+  the two exemptions below — including values repeated near-identically across several files
+  (e.g. `PixelSampleStride` in `AnalyzerMath.cs`/`Analyzer_Exposure.cs`/`Analyzer_IsIllustration.cs`/
+  `Analyzer_DominantColors.cs`, `NumericMatcher.cs`'s digit-histogram-size loop bound). These were
+  **not** consolidated into one shared location — no cross-file sharing was asked for, and doing so
+  would be a premature abstraction over values that are each correct as an independent per-file
+  constant.
+- **Bare literal + a tightly-scoped `#pragma warning disable S109` / `restore` pair** (with a
+  one-line comment explaining why) is the exception, reserved for exactly two categories:
+  1. **File-format headers/markers that will never change** — JPEG/EXIF/TIFF magic bytes and
+     offsets, ZIP central-directory signatures. Named constants add a naming layer over values that
+     are already unambiguous from the surrounding parse code and will never be tuned.
+  2. **Repeated structural math that's clear from context** — a plain `/2` or `* .5` computing a
+     midpoint, half-amplitude, or an axis's own center — e.g. `SubjectBox.CenterX`/`CenterY`
+     (`(X1 + X2) / 2f`), `Analyzer_SubjectGeometry`'s vertical/horizontal-centering formula
+     (`1f - 2f * MathF.Abs(x - 0.5f)`), `Tx_util_HeadCutter`'s two face-centroid midpoint spots,
+     `Upscaler`'s raised-cosine `0.5` and its NCHW dimension/BGR channel-index literals.
+- The pragma's scope must be **honest** — it brackets only the literals it's actually suppressing,
+  never a whole file by accident (a real bug found and fixed in `ZipCentralDirectoryReader.cs`,
+  where four disable-only markers with no matching `restore` had silently suppressed S109 for the
+  rest of the file).
+- This does **not** apply to genuinely tunable/empirical values (confidence weights, thresholds,
+  calibration constants) — those either move to config (no shadow defaults, see above) or, where
+  calibration itself is an open product question, stay as named consts pending [[T-2600]]. See
+  `AGENTFEEDBACK.md`'s S109 entry for that standing rule.
+
 ---
 
 ## V1 Job Queue

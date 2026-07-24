@@ -54,6 +54,8 @@ public class TransformConfigTests : IDisposable {
         Assert.Equal(8, lowContrast.TileSize);
 
         Assert.Equal(0.75, ConfigLoader.Section<HeadCutterConfig>(ConfigFile, "HeadCutter").FaceHeightCutFactor);
+
+        Assert.Equal(100, ConfigLoader.Section<OutputConfig>(ConfigFile, "Output").JpegOutputQuality);
     }
 
     [Fact]
@@ -67,6 +69,7 @@ public class TransformConfigTests : IDisposable {
         Assert.Equal(0.14, parameters.DetailCropper.AdjacentCropCap);
         Assert.Equal(2.0, parameters.LowContrastEnhancement.ClipLimit);
         Assert.Equal(0.75, parameters.HeadCutter.FaceHeightCutFactor);
+        Assert.Equal(100, parameters.Output.JpegOutputQuality);
     }
 
     [Fact]
@@ -100,6 +103,24 @@ public class TransformConfigTests : IDisposable {
         PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<CropTransformSettings>(fileName, "Crop"));
         Assert.Contains("Crop.WhiteSpaceMargin", ex.Message);
+    }
+
+    [Fact]
+    public void Section_MissingJpegOutputQuality_ThrowsFailLoud() {
+        string fileName = WriteConfig("""{ "Output": {} }""");
+
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
+            () => ConfigLoader.Section<OutputConfig>(fileName, "Output"));
+        Assert.Contains("JpegOutputQuality", ex.Message);
+    }
+
+    [Fact]
+    public void Section_OutOfRangeJpegOutputQuality_ThrowsWithFieldName() {
+        string fileName = WriteConfig("""{ "Output": { "JpegOutputQuality": 101 } }""");
+
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
+            () => ConfigLoader.Section<OutputConfig>(fileName, "Output"));
+        Assert.Contains("Output.JpegOutputQuality", ex.Message);
     }
 
     [Fact]
