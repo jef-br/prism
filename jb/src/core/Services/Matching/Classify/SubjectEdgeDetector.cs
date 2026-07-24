@@ -10,7 +10,7 @@ namespace Prism.Services.Matching;
 
 /// <summary>Detects whether the image subject intersects one or more image boundaries.
 /// <para> Fast path (JPEG only): parses the EXIF APP1 block to extract the embedded IFD1 thumbnail without decoding the main image. Falls back to a full load capped at <c>Config.MaxAnalysisSize</c> on the longest side.</para>
-/// <para>Border/foreground tuning values load from the "SubjectEdgeDetector" section of ClassifyConfig.json via <see cref="Config"/>, fetched once at the top of each public <c>Detect</c> overload. JPEG/EXIF/TIFF structural constants stay compile-time — they encode a file-format spec, not a tunable threshold.</para>
+/// <para>Border/foreground tuning values load from the "SubjectEdgeDetector" section of ClassifyConfig.json via <see cref="Config"/>, fetched once at the top of each public <c>Detect</c> overload. JPEG/EXIF/TIFF marker bytes and offsets in the thumbnail-extraction path stay bare literals (S109 suppressed there) — they encode a file-format spec, not a tunable threshold, and naming them would just restate the spec in English.</para>
 /// </summary>
 public static class SubjectEdgeDetector {
     private const int MaxExifSearchBytes = 65536;
@@ -59,26 +59,6 @@ public static class SubjectEdgeDetector {
             if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
         }
     }
-
-    // JPEG/EXIF/TIFF structural constants (file-format spec, not tunable).
-    private const byte JpegMarkerPrefix = 0xFF;
-    private const byte JpegSoiMarker = 0xD8;
-    private const byte JpegEoiMarker = 0xD9;
-    private const byte JpegApp1Marker = 0xE1;
-    private const byte JpegRestartMarkerRangeStart = 0xD0;
-    private const byte JpegRestartMarkerRangeEnd = 0xD7;
-    private const int JpegSegmentLengthFieldSize = 2;
-    private const int ExifSignatureLength = 6;
-    private static readonly byte[] ExifSignatureBytes = { (byte) 'E', (byte) 'x', (byte) 'i', (byte) 'f', 0, 0 };
-    private const int TiffHeaderLength = 8;
-    private const int TiffMagicNumber = 42;
-    private const int TiffUInt16FieldLength = 2;
-    private const int TiffUInt32FieldLength = 4;
-    private const int IfdEntryLength = 12;
-    private const int IfdEntryValueFieldOffset = 8;
-    private const int JpegInterchangeFormatOffsetTag = 0x0201;
-    private const int JpegInterchangeFormatLengthTag = 0x0202;
-    private const byte TiffLittleEndianMarker = 0x49; // "II"
 
     // --- Public API
 
@@ -232,35 +212,39 @@ public static class SubjectEdgeDetector {
     // --- JPEG EXIF thumbnail extraction 
 
     /// <summary>Reads the embedded JPEG thumbnail from a JPEG file's EXIF IFD1 block without decoding the main image. Returns <c>null</c> when no thumbnail is present or any parsing step fails - the caller falls back to a full image load.</summary>
+    // JPEG/EXIF/TIFF byte markers and offsets below are the file-format spec itself (SOI/EOI/APP1
+    // markers, the TIFF magic number 42, tag IDs, field widths) — they will never change, so they
+    // stay bare literals rather than named constants that would just restate the spec in English.
+#pragma warning disable S109
     internal static byte[]? TryExtractJpegExifThumbnail( string path ) {
         try {
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read,
                 FileShare.Read, bufferSize: 4096);
 
-            if (fs.ReadByte() != JpegMarkerPrefix || fs.ReadByte() != JpegSoiMarker) return null;
+            if (fs.ReadByte() != 0xFF || fs.ReadByte() != 0xD8) return null; // FF D8 = SOI
 
             while (fs.Position < MaxExifSearchBytes) {
-                if (fs.ReadByte() != JpegMarkerPrefix) return null;
+                if (fs.ReadByte() != 0xFF) return null;
                 int marker = fs.ReadByte();
                 if (marker < 0) return null;
 
-                if (marker == JpegApp1Marker) {
+                if (marker == 0xE1) { // APP1
                     byte[]? thumb = TryParseApp1ForThumbnail(fs);
                     if (thumb != null) return thumb;
                     continue; // Non-EXIF APP1: already skipped by TryParseApp1ForThumbnail.
                 }
 
-                if (marker == JpegEoiMarker) return null; // EOI - no EXIF found.
+                if (marker == 0xD9) return null; // EOI - no EXIF found.
 
-                // RST0–RST7 and nested SOI carry no length field.
-                if ((marker >= JpegRestartMarkerRangeStart && marker <= JpegRestartMarkerRangeEnd) || marker == JpegSoiMarker) continue;
+                // RST0–RST7 (D0-D7) and nested SOI (D8) carry no length field.
+                if ((marker >= 0xD0 && marker <= 0xD7) || marker == 0xD8) continue;
 
                 // All other markers: 2-byte big-endian length (includes the 2 bytes).
                 int lenHi = fs.ReadByte(), lenLo = fs.ReadByte();
                 if (lenHi < 0 || lenLo < 0) return null;
                 int segLen = (lenHi << 8) | lenLo;
-                if (segLen < JpegSegmentLengthFieldSize) return null;
-                fs.Seek(segLen - JpegSegmentLengthFieldSize, SeekOrigin.Current);
+                if (segLen < 2) return null;
+                fs.Seek(segLen - 2, SeekOrigin.Current);
             }
 
             return null;
@@ -275,13 +259,14 @@ public static class SubjectEdgeDetector {
         if (lenHi < 0 || lenLo < 0) return null;
         int app1Len = (lenHi << 8) | lenLo; // Includes the length field bytes.
 
-        // Read the "Exif\0\0" signature.
-        Span<byte> sig = stackalloc byte[ExifSignatureLength];
-        if (fs.Read(sig) != ExifSignatureLength) return null;
+        // Read the "Exif\0\0" signature (6 bytes).
+        Span<byte> sig = stackalloc byte[6];
+        if (fs.Read(sig) != 6) return null;
 
-        if (!sig.SequenceEqual(ExifSignatureBytes)) {
+        ReadOnlySpan<byte> exifSignature = "Exif\0\0"u8;
+        if (!sig.SequenceEqual(exifSignature)) {
             // Not an EXIF APP1 - skip the remainder of this segment.
-            int remaining = app1Len - JpegSegmentLengthFieldSize - ExifSignatureLength;
+            int remaining = app1Len - 2 - 6;
             if (remaining > 0) fs.Seek(remaining, SeekOrigin.Current);
             return null;
         }
@@ -289,13 +274,13 @@ public static class SubjectEdgeDetector {
         long tiffBase = fs.Position;
 
         // TIFF header: byte-order (2) + magic 42 (2) + IFD0 offset (4).
-        Span<byte> hdr = stackalloc byte[TiffHeaderLength];
-        if (fs.Read(hdr) != TiffHeaderLength) return null;
+        Span<byte> hdr = stackalloc byte[8];
+        if (fs.Read(hdr) != 8) return null;
 
-        bool le = hdr[0] == TiffLittleEndianMarker; // "II" = little-endian; "MM" = big-endian.
+        bool le = hdr[0] == 0x49; // "II" = little-endian; "MM" = big-endian.
         int magic = le ? BinaryPrimitives.ReadUInt16LittleEndian(hdr[2..])
                        : BinaryPrimitives.ReadUInt16BigEndian(hdr[2..]);
-        if (magic != TiffMagicNumber) return null;
+        if (magic != 42) return null;
 
         int ifd0Offset = le ? BinaryPrimitives.ReadInt32LittleEndian(hdr[4..])
                             : BinaryPrimitives.ReadInt32BigEndian(hdr[4..]);
@@ -303,15 +288,15 @@ public static class SubjectEdgeDetector {
         // Seek to IFD0, read entry count, skip entries, read IFD1 offset.
         fs.Seek(tiffBase + ifd0Offset, SeekOrigin.Begin);
 
-        Span<byte> u16Buf = stackalloc byte[TiffUInt16FieldLength];
-        if (fs.Read(u16Buf) != TiffUInt16FieldLength) return null;
+        Span<byte> u16Buf = stackalloc byte[2];
+        if (fs.Read(u16Buf) != 2) return null;
         int ifd0Count = le ? BinaryPrimitives.ReadUInt16LittleEndian(u16Buf)
                            : BinaryPrimitives.ReadUInt16BigEndian(u16Buf);
 
-        fs.Seek(ifd0Count * IfdEntryLength, SeekOrigin.Current);
+        fs.Seek(ifd0Count * 12, SeekOrigin.Current); // each IFD entry is 12 bytes
 
-        Span<byte> u32Buf = stackalloc byte[TiffUInt32FieldLength];
-        if (fs.Read(u32Buf) != TiffUInt32FieldLength) return null;
+        Span<byte> u32Buf = stackalloc byte[4];
+        if (fs.Read(u32Buf) != 4) return null;
         int ifd1Offset = le ? BinaryPrimitives.ReadInt32LittleEndian(u32Buf)
                             : BinaryPrimitives.ReadInt32BigEndian(u32Buf);
         if (ifd1Offset == 0) return null;
@@ -319,24 +304,24 @@ public static class SubjectEdgeDetector {
         // Parse IFD1 to find JPEGInterchangeFormat (0x0201) and its length (0x0202).
         fs.Seek(tiffBase + ifd1Offset, SeekOrigin.Begin);
 
-        if (fs.Read(u16Buf) != TiffUInt16FieldLength) return null;
+        if (fs.Read(u16Buf) != 2) return null;
         int ifd1Count = le ? BinaryPrimitives.ReadUInt16LittleEndian(u16Buf)
                            : BinaryPrimitives.ReadUInt16BigEndian(u16Buf);
 
         int thumbOffset = -1, thumbLength = -1;
-        Span<byte> entry = stackalloc byte[IfdEntryLength];
+        Span<byte> entry = stackalloc byte[12]; // each IFD entry is 12 bytes
 
         for (int i = 0; i < ifd1Count; i++) {
-            if (fs.Read(entry) != IfdEntryLength) return null;
+            if (fs.Read(entry) != 12) return null;
             int tag = le ? BinaryPrimitives.ReadUInt16LittleEndian(entry)
                          : BinaryPrimitives.ReadUInt16BigEndian(entry);
 
-            if (tag == JpegInterchangeFormatOffsetTag)       // JPEGInterchangeFormat: offset of thumbnail data.
-                thumbOffset = le ? BinaryPrimitives.ReadInt32LittleEndian(entry[IfdEntryValueFieldOffset..])
-                                 : BinaryPrimitives.ReadInt32BigEndian(entry[IfdEntryValueFieldOffset..]);
-            else if (tag == JpegInterchangeFormatLengthTag)  // JPEGInterchangeFormatLength: byte count.
-                thumbLength = le ? BinaryPrimitives.ReadInt32LittleEndian(entry[IfdEntryValueFieldOffset..])
-                                 : BinaryPrimitives.ReadInt32BigEndian(entry[IfdEntryValueFieldOffset..]);
+            if (tag == 0x0201)       // JPEGInterchangeFormat: offset of thumbnail data.
+                thumbOffset = le ? BinaryPrimitives.ReadInt32LittleEndian(entry[8..])
+                                 : BinaryPrimitives.ReadInt32BigEndian(entry[8..]);
+            else if (tag == 0x0202)  // JPEGInterchangeFormatLength: byte count.
+                thumbLength = le ? BinaryPrimitives.ReadInt32LittleEndian(entry[8..])
+                                 : BinaryPrimitives.ReadInt32BigEndian(entry[8..]);
         }
 
         if (thumbOffset <= 0 || thumbLength <= 0) return null;
@@ -345,4 +330,5 @@ public static class SubjectEdgeDetector {
         byte[] thumb = new byte[thumbLength];
         return fs.Read(thumb, 0, thumbLength) == thumbLength ? thumb : null;
     }
+#pragma warning restore S109
 }

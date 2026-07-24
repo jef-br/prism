@@ -18,11 +18,7 @@ namespace Prism.Services.Upscale;
 public static class Upscaler {
     private const double SrScale = 2.0;
     private const int SrScaleInt = 2;
-    private const int TensorHeightDimIndex = 2;
-    private const int TensorWidthDimIndex = 3;
-    private const double RaisedCosineHalfAmplitude = 0.5;
     private const float MaxChannelValueF = 255f;
-    private const int BgrThirdChannelIndex = 2;
 
     private static readonly bool GpuAvailable = GpuProbe.HasHardwareDirectMLAdapter();
 
@@ -73,8 +69,10 @@ public static class Upscaler {
                 InferenceSession session = OnnxSessionFactory.Create(modelPath);
 
                 int[] inputDims = session.InputMetadata[TensorInput].Dimensions;
-                _tileHeight = inputDims[TensorHeightDimIndex] > 0 ? inputDims[TensorHeightDimIndex] : 0;
-                _tileWidth  = inputDims[TensorWidthDimIndex] > 0 ? inputDims[TensorWidthDimIndex] : 0;
+#pragma warning disable S109 // NCHW dims: index 2 = height, 3 = width — fixed ONNX tensor layout, never changes.
+                _tileHeight = inputDims[2] > 0 ? inputDims[2] : 0;
+                _tileWidth  = inputDims[3] > 0 ? inputDims[3] : 0;
+#pragma warning restore S109
 
                 LoadTilingConfig(configPath);
 
@@ -250,8 +248,10 @@ public static class Upscaler {
         int rel = distFromEdge - discardOut;
         if (rel >= rampWidth) return 1f;
 
-        double t = (rel + RaisedCosineHalfAmplitude) / rampWidth;
-        return (float)(RaisedCosineHalfAmplitude - RaisedCosineHalfAmplitude * Math.Cos(Math.PI * t));
+#pragma warning disable S109 // 0.5 is the raised-cosine half-amplitude — the curve's own midline, not a tunable.
+        double t = (rel + 0.5) / rampWidth;
+        return (float)(0.5 - 0.5 * Math.Cos(Math.PI * t));
+#pragma warning restore S109
     }
 
     /// <summary>Divides the weighted color accumulator by the accumulated weight to produce the final stitched BGR uint8 image.</summary>
@@ -310,7 +310,9 @@ public static class Upscaler {
                 Vec3b px = bgrUint8.At<Vec3b>(y, x);
                 tensor[0, 0, y, x] = px.Item0 / MaxChannelValueF;  // B
                 tensor[0, 1, y, x] = px.Item1 / MaxChannelValueF;  // G
-                tensor[0, BgrThirdChannelIndex, y, x] = px.Item2 / MaxChannelValueF;  // R
+#pragma warning disable S109 // channel index 2 = R in BGR order — fixed layout, never changes.
+                tensor[0, 2, y, x] = px.Item2 / MaxChannelValueF;  // R
+#pragma warning restore S109
             }
         }
 
@@ -331,7 +333,9 @@ public static class Upscaler {
                 // Clamp [0, 1] → scale to [0, 255] → cast to byte.
                 byte b = (byte)(Math.Clamp(outputTensor[0, 0, y, x], 0f, 1f) * MaxChannelValueF);
                 byte g = (byte)(Math.Clamp(outputTensor[0, 1, y, x], 0f, 1f) * MaxChannelValueF);
-                byte r = (byte)(Math.Clamp(outputTensor[0, BgrThirdChannelIndex, y, x], 0f, 1f) * MaxChannelValueF);
+#pragma warning disable S109 // channel index 2 = R in BGR order — fixed layout, never changes.
+                byte r = (byte)(Math.Clamp(outputTensor[0, 2, y, x], 0f, 1f) * MaxChannelValueF);
+#pragma warning restore S109
                 bgrUint8Out.At<Vec3b>(y, x) = new Vec3b(b, g, r);
             }
         }
