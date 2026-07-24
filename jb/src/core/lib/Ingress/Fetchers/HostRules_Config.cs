@@ -1,126 +1,52 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Prism.Config;
 
 namespace Prism.Lib.Ingress;
 
-/// <summary> Typed representation of HostRules.json. Controls which URL schemes, hosts, and network ranges are permitted during remote fetch operations.</summary>
+/// <summary> Typed representation of HostRules.json. Controls which URL schemes, hosts, and network ranges are permitted during remote fetch operations. Grouped into nested sections mirroring the JSON structure (redirects, networkRanges, timeouts, weTransferPolling, testing).</summary>
 internal sealed record HostRules_Config {
-    internal string[] AllowedSchemes { get; init; } = [];
-    internal string[] BlockedSchemes { get; init; } = [];
-    internal string[] BlockedHostPatterns { get; init; } = [];
-    internal bool AllowGenericDirectFileRedirects { get; init; }
-    internal bool AllowFetcherOwnedRedirects { get; init; }
-    internal bool AllowPrivate { get; init; }
-    internal bool AllowLinkLocal { get; init; }
-    internal bool AllowLoopback { get; init; }
-    internal bool RejectAnyLoopbackDnsResult { get; init; }
-    internal int ConnectSeconds { get; init; }
-    internal int ResponseHeaderSeconds { get; init; }
-    internal int IdleReadSeconds { get; init; }
-    internal int TotalFetchSeconds { get; init; }
-    internal int ConsentClickTimeoutMs { get; init; }
-    internal int ConsentHiddenWaitTimeoutMs { get; init; }
-    internal int ConsentSettleDelayMs { get; init; }
-    internal int DownloadButtonClickTimeoutMs { get; init; }
-    internal int DownloadWaitTimeoutMs { get; init; }
-    internal int StreamBufferSizeBytes { get; init; }
-    internal bool AllowLocalhost { get; init; }
+    public required string[] AllowedSchemes { get; init; }
+    public required string[] BlockedSchemes { get; init; }
+    public required string[] BlockedHostPatterns { get; init; }
+    public required RedirectsSection Redirects { get; init; }
+    public required NetworkRangesSection NetworkRanges { get; init; }
+    public required TimeoutsSection Timeouts { get; init; }
+    public required WeTransferPollingSection WeTransferPolling { get; init; }
+    public required TestingSection Testing { get; init; }
 
-    /// <summary> Loads and parses HostRules.json from <paramref name="configDirectory"/>. Throws <see cref="PrismConfigurationException"/> if the file is absent or malformed. </summary>
-    internal static HostRules_Config Load(string configDirectory) {
-        string path = Path.Combine(configDirectory, "HostRules.json");
+    /// <summary> Loads and parses HostRules.json. The <paramref name="configDirectory"/> parameter is accepted for call-site compatibility but unused — <see cref="ConfigLoader"/> resolves HostRules.json via its own standard search locations, which always include the same directory. Throws <see cref="PrismConfigurationException"/> if the file is absent or malformed. </summary>
+    internal static HostRules_Config Load(string configDirectory) => ConfigLoader.Root<HostRules_Config>("HostRules.json");
 
-        if (!File.Exists(path)) throw new PrismConfigurationException($"HostRules.json was not found at: {path}");
-        string json;
-
-        try {
-            json = File.ReadAllText(path);
-        }
-        catch (Exception ex) {
-            throw new PrismConfigurationException($"HostRules.json could not be read at: {path}", ex);
-        }
-
-        JsonDocument doc;
-        try {
-            doc = JsonDocument.Parse(json);
-        }
-        catch (JsonException ex) {
-            throw new PrismConfigurationException($"HostRules.json is not valid JSON: {ex.Message}", ex);
-        }
-
-        using (doc) {
-            return Parse(doc.RootElement, path);
-        }
+    internal sealed record RedirectsSection {
+        public required bool AllowGenericDirectFileRedirects { get; init; }
+        public required bool AllowFetcherOwnedRedirects { get; init; }
     }
 
-    private static HostRules_Config Parse(JsonElement root, string path) {
-        HostRules_Config cfg = new();
-
-        cfg = cfg with {
-            AllowedSchemes = ReadStringArray(root, path, "allowedSchemes"),
-            BlockedSchemes = ReadStringArray(root, path, "blockedSchemes"),
-            BlockedHostPatterns = ReadStringArray(root, path, "blockedHostPatterns"),
-            AllowGenericDirectFileRedirects = ReadBool(root, path, "redirects", "allowGenericDirectFileRedirects"),
-            AllowFetcherOwnedRedirects = ReadBool(root, path, "redirects", "allowFetcherOwnedRedirects"),
-            AllowPrivate = ReadBool(root, path, "networkRanges", "allowPrivate"),
-            AllowLinkLocal = ReadBool(root, path, "networkRanges", "allowLinkLocal"),
-            AllowLoopback = ReadBool(root, path, "networkRanges", "allowLoopback"),
-            RejectAnyLoopbackDnsResult = ReadBool(root, path, "networkRanges", "rejectAnyLoopbackDnsResult"),
-            ConnectSeconds = ReadInt(root, path, "timeouts", "connectSeconds"),
-            ResponseHeaderSeconds = ReadInt(root, path, "timeouts", "responseHeaderSeconds"),
-            IdleReadSeconds = ReadInt(root, path, "timeouts", "idleReadSeconds"),
-            TotalFetchSeconds = ReadInt(root, path, "timeouts", "totalFetchSeconds"),
-            ConsentClickTimeoutMs = ReadInt(root, path, "weTransferPolling", "consentClickTimeoutMs"),
-            ConsentHiddenWaitTimeoutMs = ReadInt(root, path, "weTransferPolling", "consentHiddenWaitTimeoutMs"),
-            ConsentSettleDelayMs = ReadInt(root, path, "weTransferPolling", "consentSettleDelayMs"),
-            DownloadButtonClickTimeoutMs = ReadInt(root, path, "weTransferPolling", "downloadButtonClickTimeoutMs"),
-            DownloadWaitTimeoutMs = ReadInt(root, path, "weTransferPolling", "downloadWaitTimeoutMs"),
-            StreamBufferSizeBytes = ReadInt(root, path, "weTransferPolling", "streamBufferSizeBytes"),
-            AllowLocalhost = ReadBool(root, path, "testing", "allowLocalhost")
-        };
-
-        return cfg;
+    internal sealed record NetworkRangesSection {
+        public required bool AllowPrivate { get; init; }
+        public required bool AllowLinkLocal { get; init; }
+        public required bool AllowLoopback { get; init; }
+        public required bool RejectAnyLoopbackDnsResult { get; init; }
     }
 
-    private static string[] ReadStringArray(JsonElement root, string path, string key) {
-        if (!root.TryGetProperty(key, out JsonElement el) || el.ValueKind != JsonValueKind.Array) {
-            return [];
-        }
-
-        List<string> values = [];
-        foreach (JsonElement item in el.EnumerateArray()) {
-            if (item.ValueKind == JsonValueKind.String) {
-                values.Add(item.GetString()!);
-            }
-        }
-
-        return [.. values];
+    internal sealed record TimeoutsSection {
+        public required int ConnectSeconds { get; init; }
+        public required int ResponseHeaderSeconds { get; init; }
+        public required int IdleReadSeconds { get; init; }
+        public required int TotalFetchSeconds { get; init; }
     }
 
-    private static bool ReadBool(JsonElement root, string path, string section, string key) {
-        if (!root.TryGetProperty(section, out JsonElement sec)) {
-            throw new PrismConfigurationException($"HostRules.json at '{path}': missing section '{section}'.");
-        }
-
-        if (!sec.TryGetProperty(key, out JsonElement el)
-            || (el.ValueKind != JsonValueKind.True && el.ValueKind != JsonValueKind.False)) {
-            throw new PrismConfigurationException($"HostRules.json at '{path}': missing or invalid boolean '{section}.{key}'.");
-        }
-
-        return el.GetBoolean();
+    internal sealed record WeTransferPollingSection {
+        public required int ConsentClickTimeoutMs { get; init; }
+        public required int ConsentHiddenWaitTimeoutMs { get; init; }
+        public required int ConsentSettleDelayMs { get; init; }
+        public required int DownloadButtonClickTimeoutMs { get; init; }
+        public required int DownloadWaitTimeoutMs { get; init; }
+        public required int StreamBufferSizeBytes { get; init; }
+        public required int MaxDownloadGb { get; init; }
+        public required int ConsentBannerPasses { get; init; }
     }
 
-    private static int ReadInt(JsonElement root, string path, string section, string key) {
-        if (!root.TryGetProperty(section, out JsonElement sec)) {
-            throw new PrismConfigurationException($"HostRules.json at '{path}': missing section '{section}'.");
-        }
-
-        if (!sec.TryGetProperty(key, out JsonElement el)
-            || el.ValueKind != JsonValueKind.Number
-            || !el.TryGetInt32(out int val)) {
-            throw new PrismConfigurationException($"HostRules.json at '{path}': missing or invalid integer '{section}.{key}'.");
-        }
-
-        return val;
+    internal sealed record TestingSection {
+        public required bool AllowLocalhost { get; init; }
     }
 }

@@ -24,7 +24,9 @@
     "consentSettleDelayMs": 300,
     "downloadButtonClickTimeoutMs": 10000,
     "downloadWaitTimeoutMs": 60000,
-    "streamBufferSizeBytes": 81920
+    "streamBufferSizeBytes": 81920,
+    "maxDownloadGb": 10,
+    "consentBannerPasses": 2
   },
   "testing": {
     "allowLocalhost": false

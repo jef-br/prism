@@ -9,7 +9,7 @@ internal sealed class Fetch_WeTransfer : IFetchStrategy {
     public bool CanHandle(string url) => _hostPatterns.Any(h => url.Contains(h, StringComparison.OrdinalIgnoreCase));
 
     public async Task<ImageRecord_INPUT> FetchAsync(string url, string jobTempFolder, string jobID, CancellationToken cancellationToken) {
-        var client = new WetransferClient(_rules.ConsentClickTimeoutMs, _rules.ConsentHiddenWaitTimeoutMs, _rules.ConsentSettleDelayMs, _rules.DownloadButtonClickTimeoutMs, _rules.DownloadWaitTimeoutMs, _rules.StreamBufferSizeBytes, cancellationToken);
+        var client = new WetransferClient(_rules.WeTransferPolling, cancellationToken);
         await using var result = await client.DownloadAsync(url, password: null, cancellationToken);
         string destPath = Path.Combine(jobTempFolder, result.FileName);
         await using var destStream = File.OpenWrite(destPath);

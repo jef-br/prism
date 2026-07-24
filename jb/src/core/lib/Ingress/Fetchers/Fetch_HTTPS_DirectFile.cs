@@ -92,7 +92,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
         }
 
         using var totalCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        totalCts.CancelAfter(TimeSpan.FromSeconds(_rules.TotalFetchSeconds));
+        totalCts.CancelAfter(TimeSpan.FromSeconds(_rules.Timeouts.TotalFetchSeconds));
         var ct = totalCts.Token;
 
         try {
@@ -101,7 +101,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
         } catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
             // Total-fetch timeout fired (not the external caller's cancellation).
             return KoRecord(url, KoReasonTimeout,
-                $"The download did not complete within the configured {_rules.TotalFetchSeconds}-second limit.");
+                $"The download did not complete within the configured {_rules.Timeouts.TotalFetchSeconds}-second limit.");
         } catch (OperationCanceledException) {
             // Caller cancelled — propagate normally.
             throw;
@@ -131,7 +131,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
         while (true) {
             using var req = new HttpRequestMessage(HttpMethod.Head, uri);
             using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts2.CancelAfter(TimeSpan.FromSeconds(_rules.ResponseHeaderSeconds));
+            cts2.CancelAfter(TimeSpan.FromSeconds(_rules.Timeouts.ResponseHeaderSeconds));
 
             HttpResponseMessage resp;
             try {
@@ -152,8 +152,8 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
                     return uri;
                 }
 
-                bool redirectAllowed = _rules.AllowGenericDirectFileRedirects
-                    || (_isFetcherOwned && _rules.AllowFetcherOwnedRedirects);
+                bool redirectAllowed = _rules.Redirects.AllowGenericDirectFileRedirects
+                    || (_isFetcherOwned && _rules.Redirects.AllowFetcherOwnedRedirects);
                 if (!redirectAllowed) {
                     throw new InvalidOperationException(
                         "The server issued a redirect, but HostRules.json prohibits this type of redirect.");
@@ -202,7 +202,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
         HttpResponseMessage resp;
         try {
             var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts2.CancelAfter(TimeSpan.FromSeconds(_rules.ResponseHeaderSeconds));
+            cts2.CancelAfter(TimeSpan.FromSeconds(_rules.Timeouts.ResponseHeaderSeconds));
             resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts2.Token);
         } catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
             throw new OperationCanceledException(ct);
@@ -222,7 +222,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
             await using var dest = new FileStream(destPath, FileMode.Create, FileAccess.Write,
                 FileShare.None, bufferSize: 81_920, useAsync: true);
 
-            await StreamWithIdleTimeoutAsync(src, dest, _rules.IdleReadSeconds, ct);
+            await StreamWithIdleTimeoutAsync(src, dest, _rules.Timeouts.IdleReadSeconds, ct);
 
             ImageRecord_INPUT record = new();
             record.InitialFullName = fileName;
@@ -254,15 +254,15 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
 
         string host = uri.Host;
 
-        if (!_rules.AllowLoopback && IsLoopback(host)) {
+        if (!_rules.NetworkRanges.AllowLoopback && IsLoopback(host)) {
             return $"Loopback addresses are not permitted by HostRules (host: {host}).";
         }
 
-        if (!_rules.AllowLocalhost && IsLocalhost(host)) {
+        if (!_rules.Testing.AllowLocalhost && IsLocalhost(host)) {
             return $"Localhost is not permitted by HostRules (host: {host}).";
         }
 
-        if (_rules.RejectAnyLoopbackDnsResult) {
+        if (_rules.NetworkRanges.RejectAnyLoopbackDnsResult) {
             // Synchronous DNS check — performed before the actual TCP connect.
             // Prevents SSRF via DNS rebinding to 127.x addresses.
             if (ResolvesToLoopback(host)) {

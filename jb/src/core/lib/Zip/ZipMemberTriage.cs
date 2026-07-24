@@ -3,87 +3,13 @@ using System.IO;
 
 namespace Prism.Lib.Zip;
 
+#pragma warning disable S109
+
 /// <summary>
 /// Classifies zip members by content signature and accepted PRISM filename extensions.
 /// </summary>
 internal static class ZipMemberTriage
 {
-    // Each signature byte is named individually (not just the array) because S109 flags every
-    // numeric literal, including ones inside an array initializer — only a literal assigned
-    // directly to a const field is exempt.
-    private const byte JpegByte0 = 0xFF;
-    private const byte JpegByte1 = 0xD8;
-    private const byte JpegByte2 = 0xFF;
-    private static ReadOnlySpan<byte> JpegSignature => new byte[] { JpegByte0, JpegByte1, JpegByte2 };
-
-    private const byte PngByte0 = 0x89;
-    private const byte PngByte1 = 0x50;
-    private const byte PngByte2 = 0x4E;
-    private const byte PngByte3 = 0x47;
-    private const byte PngByte4 = 0x0D;
-    private const byte PngByte5 = 0x0A;
-    private const byte PngByte6 = 0x1A;
-    private const byte PngByte7 = 0x0A;
-    private static ReadOnlySpan<byte> PngSignature => new byte[] { PngByte0, PngByte1, PngByte2, PngByte3, PngByte4, PngByte5, PngByte6, PngByte7 };
-
-    private const byte GifByte0 = 0x47;
-    private const byte GifByte1 = 0x49;
-    private const byte GifByte2 = 0x46;
-    private const byte GifByte3 = 0x38;
-    private static ReadOnlySpan<byte> GifSignaturePrefix => new byte[] { GifByte0, GifByte1, GifByte2, GifByte3 };
-    private const int GifVersionByteIndex = 4;
-    private const int GifTerminatorByteIndex = 5;
-    private const int GifSignatureLength = 6;
-    private const byte Gif87aVersionByte = 0x37;
-    private const byte Gif89aVersionByte = 0x39;
-    private const byte GifSignatureTerminator = 0x61;
-
-    private const byte BmpByte0 = 0x42;
-    private const byte BmpByte1 = 0x4D;
-    private static ReadOnlySpan<byte> BmpSignature => new byte[] { BmpByte0, BmpByte1 };
-
-    private const byte TiffLeByte0 = 0x49;
-    private const byte TiffLeByte1 = 0x49;
-    private const byte TiffLeByte2 = 0x2A;
-    private const byte TiffLeByte3 = 0x00;
-    private static ReadOnlySpan<byte> TiffLittleEndianSignature => new byte[] { TiffLeByte0, TiffLeByte1, TiffLeByte2, TiffLeByte3 };
-    private const byte TiffBeByte0 = 0x4D;
-    private const byte TiffBeByte1 = 0x4D;
-    private const byte TiffBeByte2 = 0x00;
-    private const byte TiffBeByte3 = 0x2A;
-    private static ReadOnlySpan<byte> TiffBigEndianSignature => new byte[] { TiffBeByte0, TiffBeByte1, TiffBeByte2, TiffBeByte3 };
-
-    private const byte PdfByte0 = 0x25;
-    private const byte PdfByte1 = 0x50;
-    private const byte PdfByte2 = 0x44;
-    private const byte PdfByte3 = 0x46;
-    private static ReadOnlySpan<byte> PdfSignature => new byte[] { PdfByte0, PdfByte1, PdfByte2, PdfByte3 };
-
-    private const byte WebpRiffByte0 = 0x52;
-    private const byte WebpRiffByte1 = 0x49;
-    private const byte WebpRiffByte2 = 0x46;
-    private const byte WebpRiffByte3 = 0x46;
-    private static ReadOnlySpan<byte> WebpRiffPrefix => new byte[] { WebpRiffByte0, WebpRiffByte1, WebpRiffByte2, WebpRiffByte3 };
-    private const byte WebpFormatByte0 = 0x57;
-    private const byte WebpFormatByte1 = 0x45;
-    private const byte WebpFormatByte2 = 0x42;
-    private const byte WebpFormatByte3 = 0x50;
-    private static ReadOnlySpan<byte> WebpFormatMarker => new byte[] { WebpFormatByte0, WebpFormatByte1, WebpFormatByte2, WebpFormatByte3 };
-    private const int WebpFormatMarkerOffset = 8;
-    private const int WebpHeaderLength = 12;
-
-    private const byte ZipMarkerByte0 = 0x50;
-    private const byte ZipMarkerByte1 = 0x4B;
-    private const int ZipSignatureLength = 4;
-    private const int ZipRecordMarkerIndex = 2;
-    private const int ZipRecordVersionIndex = 3;
-    private const byte ZipLocalFileRecordMarker = 0x03;
-    private const byte ZipCentralDirEndMarker = 0x05;
-    private const byte ZipSpannedArchiveMarker = 0x07;
-    private const byte ZipLocalFileRecordVersion = 0x04;
-    private const byte ZipCentralDirEndVersion = 0x06;
-    private const byte ZipSpannedArchiveVersion = 0x08;
-
     /// <summary>
     /// Determines whether a zip member has a filename that PRISM would try to process.
     /// </summary>
@@ -204,8 +130,10 @@ internal static class ZipMemberTriage
     /// <returns>True when the bytes start with a JPEG marker.</returns>
     private static bool HasJpegSignature(ReadOnlySpan<byte> headerBytes)
     {
-        return headerBytes.Length >= JpegSignature.Length
-            && headerBytes[..JpegSignature.Length].SequenceEqual(JpegSignature);
+        return headerBytes.Length >= 3
+            && headerBytes[0] == 0xFF
+            && headerBytes[1] == 0xD8
+            && headerBytes[2] == 0xFF;
     }
 
     /// <summary>
@@ -215,8 +143,15 @@ internal static class ZipMemberTriage
     /// <returns>True when the bytes start with a PNG marker.</returns>
     private static bool HasPngSignature(ReadOnlySpan<byte> headerBytes)
     {
-        return headerBytes.Length >= PngSignature.Length
-            && headerBytes[..PngSignature.Length].SequenceEqual(PngSignature);
+        return headerBytes.Length >= 8
+            && headerBytes[0] == 0x89
+            && headerBytes[1] == 0x50
+            && headerBytes[2] == 0x4E
+            && headerBytes[3] == 0x47
+            && headerBytes[4] == 0x0D
+            && headerBytes[5] == 0x0A
+            && headerBytes[6] == 0x1A
+            && headerBytes[7] == 0x0A;
     }
 
     /// <summary>
@@ -226,10 +161,13 @@ internal static class ZipMemberTriage
     /// <returns>True when the bytes start with a GIF marker.</returns>
     private static bool HasGifSignature(ReadOnlySpan<byte> headerBytes)
     {
-        return headerBytes.Length >= GifSignatureLength
-            && headerBytes[..GifSignaturePrefix.Length].SequenceEqual(GifSignaturePrefix)
-            && (headerBytes[GifVersionByteIndex] == Gif87aVersionByte || headerBytes[GifVersionByteIndex] == Gif89aVersionByte)
-            && headerBytes[GifTerminatorByteIndex] == GifSignatureTerminator;
+        return headerBytes.Length >= 6
+            && headerBytes[0] == 0x47
+            && headerBytes[1] == 0x49
+            && headerBytes[2] == 0x46
+            && headerBytes[3] == 0x38
+            && (headerBytes[4] == 0x37 || headerBytes[4] == 0x39)
+            && headerBytes[5] == 0x61;
     }
 
     /// <summary>
@@ -239,8 +177,9 @@ internal static class ZipMemberTriage
     /// <returns>True when the bytes start with a BMP marker.</returns>
     private static bool HasBmpSignature(ReadOnlySpan<byte> headerBytes)
     {
-        return headerBytes.Length >= BmpSignature.Length
-            && headerBytes[..BmpSignature.Length].SequenceEqual(BmpSignature);
+        return headerBytes.Length >= 2
+            && headerBytes[0] == 0x42
+            && headerBytes[1] == 0x4D;
     }
 
     /// <summary>
@@ -250,11 +189,17 @@ internal static class ZipMemberTriage
     /// <returns>True when the bytes start with a TIFF marker.</returns>
     private static bool HasTiffSignature(ReadOnlySpan<byte> headerBytes)
     {
-        bool littleEndianTiff = headerBytes.Length >= TiffLittleEndianSignature.Length
-            && headerBytes[..TiffLittleEndianSignature.Length].SequenceEqual(TiffLittleEndianSignature);
+        bool littleEndianTiff = headerBytes.Length >= 4
+            && headerBytes[0] == 0x49
+            && headerBytes[1] == 0x49
+            && headerBytes[2] == 0x2A
+            && headerBytes[3] == 0x00;
 
-        bool bigEndianTiff = headerBytes.Length >= TiffBigEndianSignature.Length
-            && headerBytes[..TiffBigEndianSignature.Length].SequenceEqual(TiffBigEndianSignature);
+        bool bigEndianTiff = headerBytes.Length >= 4
+            && headerBytes[0] == 0x4D
+            && headerBytes[1] == 0x4D
+            && headerBytes[2] == 0x00
+            && headerBytes[3] == 0x2A;
 
         return littleEndianTiff || bigEndianTiff;
     }
@@ -266,8 +211,11 @@ internal static class ZipMemberTriage
     /// <returns>True when the bytes start with a PDF marker.</returns>
     private static bool HasPdfSignature(ReadOnlySpan<byte> headerBytes)
     {
-        return headerBytes.Length >= PdfSignature.Length
-            && headerBytes[..PdfSignature.Length].SequenceEqual(PdfSignature);
+        return headerBytes.Length >= 4
+            && headerBytes[0] == 0x25
+            && headerBytes[1] == 0x50
+            && headerBytes[2] == 0x44
+            && headerBytes[3] == 0x46;
     }
 
     /// <summary>
@@ -277,9 +225,15 @@ internal static class ZipMemberTriage
     /// <returns>True when the bytes start with a WebP RIFF marker.</returns>
     private static bool HasWebpSignature(ReadOnlySpan<byte> headerBytes)
     {
-        return headerBytes.Length >= WebpHeaderLength
-            && headerBytes[..WebpRiffPrefix.Length].SequenceEqual(WebpRiffPrefix)
-            && headerBytes[WebpFormatMarkerOffset..WebpHeaderLength].SequenceEqual(WebpFormatMarker);
+        return headerBytes.Length >= 12
+            && headerBytes[0] == 0x52
+            && headerBytes[1] == 0x49
+            && headerBytes[2] == 0x46
+            && headerBytes[3] == 0x46
+            && headerBytes[8] == 0x57
+            && headerBytes[9] == 0x45
+            && headerBytes[10] == 0x42
+            && headerBytes[11] == 0x50;
     }
 
     /// <summary>
@@ -289,10 +243,12 @@ internal static class ZipMemberTriage
     /// <returns>True when the bytes start with a zip marker.</returns>
     private static bool HasZipSignature(ReadOnlySpan<byte> headerBytes)
     {
-        return headerBytes.Length >= ZipSignatureLength
-            && headerBytes[0] == ZipMarkerByte0
-            && headerBytes[1] == ZipMarkerByte1
-            && (headerBytes[ZipRecordMarkerIndex] == ZipLocalFileRecordMarker || headerBytes[ZipRecordMarkerIndex] == ZipCentralDirEndMarker || headerBytes[ZipRecordMarkerIndex] == ZipSpannedArchiveMarker)
-            && (headerBytes[ZipRecordVersionIndex] == ZipLocalFileRecordVersion || headerBytes[ZipRecordVersionIndex] == ZipCentralDirEndVersion || headerBytes[ZipRecordVersionIndex] == ZipSpannedArchiveVersion);
+        return headerBytes.Length >= 4
+            && headerBytes[0] == 0x50
+            && headerBytes[1] == 0x4B
+            && (headerBytes[2] == 0x03 || headerBytes[2] == 0x05 || headerBytes[2] == 0x07)
+            && (headerBytes[3] == 0x04 || headerBytes[3] == 0x06 || headerBytes[3] == 0x08);
     }
 }
+
+#pragma warning restore S109

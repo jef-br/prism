@@ -87,20 +87,38 @@ public class FetcherTests : IClassFixture<ImporterFixture> {
     /// </summary>
     private static Fetch_HTTPS_DirectFile NewLoopbackFetcher() {
         HostRules_Config rules = new() {
-            AllowedSchemes             = ["http", "https"],
-            BlockedSchemes             = ["ftp"],
-            BlockedHostPatterns        = [],
-            AllowGenericDirectFileRedirects = false,
-            AllowFetcherOwnedRedirects = false,
-            AllowPrivate               = true,
-            AllowLinkLocal             = true,
-            AllowLoopback              = true,
-            RejectAnyLoopbackDnsResult = false,
-            ConnectSeconds             = 10,
-            ResponseHeaderSeconds      = 10,
-            IdleReadSeconds            = 10,
-            TotalFetchSeconds          = 30,
-            AllowLocalhost             = true
+            AllowedSchemes      = ["http", "https"],
+            BlockedSchemes      = ["ftp"],
+            BlockedHostPatterns = [],
+            Redirects = new() {
+                AllowGenericDirectFileRedirects = false,
+                AllowFetcherOwnedRedirects       = false
+            },
+            NetworkRanges = new() {
+                AllowPrivate               = true,
+                AllowLinkLocal             = true,
+                AllowLoopback              = true,
+                RejectAnyLoopbackDnsResult = false
+            },
+            Timeouts = new() {
+                ConnectSeconds        = 10,
+                ResponseHeaderSeconds = 10,
+                IdleReadSeconds       = 10,
+                TotalFetchSeconds     = 30
+            },
+            WeTransferPolling = new() {
+                ConsentClickTimeoutMs         = 5000,
+                ConsentHiddenWaitTimeoutMs    = 10000,
+                ConsentSettleDelayMs          = 300,
+                DownloadButtonClickTimeoutMs  = 10000,
+                DownloadWaitTimeoutMs         = 60000,
+                StreamBufferSizeBytes         = 81920,
+                MaxDownloadGb                 = 10,
+                ConsentBannerPasses           = 2
+            },
+            Testing = new() {
+                AllowLocalhost = true
+            }
         };
 
         HttpClientHandler handler = new() { AllowAutoRedirect = false, UseCookies = false };

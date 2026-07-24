@@ -16,13 +16,10 @@ internal class WetransferClient
     private readonly int _downloadWaitTimeoutMs;
     private readonly int _streamBufferSizeBytes;
 
+    private readonly long _maxDownloadBytes;
+    private readonly int _consentBannerPasses;
+
     private const int BytesPerGigabyte = 1024 * 1024 * 1024;
-
-    /// <summary>Maximum download size enforced during streaming (10 GB).</summary>
-    private const long MaxDownloadBytes = 10L * BytesPerGigabyte;
-
-    /// <summary>Number of consent-banner dismissal passes attempted (a second banner can appear once the first is dismissed).</summary>
-    private const int ConsentBannerPasses = 2;
 
     private static readonly string[] ConsentLabels =
     {
@@ -51,22 +48,24 @@ internal class WetransferClient
     private static readonly bool _isDebugging = System.Diagnostics.Debugger.IsAttached;
 
     /// <summary>Creates a client with no default cancellation token.</summary>
-    public WetransferClient(int consentClickTimeoutMs, int consentHiddenWaitTimeoutMs, int consentSettleDelayMs, int downloadButtonClickTimeoutMs, int downloadWaitTimeoutMs, int streamBufferSizeBytes)
-        : this(consentClickTimeoutMs, consentHiddenWaitTimeoutMs, consentSettleDelayMs, downloadButtonClickTimeoutMs, downloadWaitTimeoutMs, streamBufferSizeBytes, CancellationToken.None) { }
+    public WetransferClient(HostRules_Config.WeTransferPollingSection cfg)
+        : this(cfg, CancellationToken.None) { }
 
     /// <summary>
     /// Creates a client with an instance-level cancellation token.
     /// The token is linked into every <c>DownloadAsync</c> call, so cancelling it
     /// aborts any in-progress download regardless of the per-call token.
     /// </summary>
-    public WetransferClient(int consentClickTimeoutMs, int consentHiddenWaitTimeoutMs, int consentSettleDelayMs, int downloadButtonClickTimeoutMs, int downloadWaitTimeoutMs, int streamBufferSizeBytes, CancellationToken cancellationToken)
+    public WetransferClient(HostRules_Config.WeTransferPollingSection cfg, CancellationToken cancellationToken)
     {
-        _consentClickTimeoutMs = consentClickTimeoutMs;
-        _consentHiddenWaitTimeoutMs = consentHiddenWaitTimeoutMs;
-        _consentSettleDelayMs = consentSettleDelayMs;
-        _downloadButtonClickTimeoutMs = downloadButtonClickTimeoutMs;
-        _downloadWaitTimeoutMs = downloadWaitTimeoutMs;
-        _streamBufferSizeBytes = streamBufferSizeBytes;
+        _consentClickTimeoutMs = cfg.ConsentClickTimeoutMs;
+        _consentHiddenWaitTimeoutMs = cfg.ConsentHiddenWaitTimeoutMs;
+        _consentSettleDelayMs = cfg.ConsentSettleDelayMs;
+        _downloadButtonClickTimeoutMs = cfg.DownloadButtonClickTimeoutMs;
+        _downloadWaitTimeoutMs = cfg.DownloadWaitTimeoutMs;
+        _streamBufferSizeBytes = cfg.StreamBufferSizeBytes;
+        _maxDownloadBytes = (long)cfg.MaxDownloadGb * BytesPerGigabyte;
+        _consentBannerPasses = cfg.ConsentBannerPasses;
         _defaultCt = cancellationToken;
     }
 
@@ -85,7 +84,7 @@ internal class WetransferClient
     /// The caller must dispose the result when done — this closes the stream and deletes the temp file.
     /// </returns>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when the download button is not found (expired link) or the file exceeds 10 GB.
+    /// Thrown when the download button is not found (expired link) or the file exceeds the configured size limit.
     /// </exception>
     public async Task<WeTransferDownloadResult> DownloadAsync(string url, string? password, CancellationToken cancellationToken)
     {
@@ -148,7 +147,7 @@ internal class WetransferClient
             }
 
             // Two passes: a second banner can appear once the first is dismissed
-            for (int pass = 1; pass <= ConsentBannerPasses; pass++) {
+            for (int pass = 1; pass <= _consentBannerPasses; pass++) {
                 bool clickedThisPass = false;
                 foreach (string label in ConsentLabels) {
                     if (await TryClickConsentAsync(label)) {
@@ -252,8 +251,8 @@ internal class WetransferClient
             string resolvedFileName = download.SuggestedFilename is { Length: > 0 } s ? s : tempName;
             long? totalBytes = await TryGetContentLengthAsync(download.Url, ct);
 
-            if (totalBytes.HasValue && totalBytes.Value > MaxDownloadBytes){
-                throw new InvalidOperationException($"File too large: {totalBytes.Value / (double)BytesPerGigabyte:0.##} GB. Limit is 10 GB.");
+            if (totalBytes.HasValue && totalBytes.Value > _maxDownloadBytes){
+                throw new InvalidOperationException($"File too large: {totalBytes.Value / (double)BytesPerGigabyte:0.##} GB. Limit is {_maxDownloadBytes / BytesPerGigabyte} GB.");
             }
 
             {
@@ -265,8 +264,8 @@ internal class WetransferClient
                 while ((read = await source.ReadAsync(buffer.AsMemory(), ct)) > 0) {
                     await target.WriteAsync(buffer.AsMemory(0, read), ct);
                     totalRead += read;
-                    if (totalRead > MaxDownloadBytes) {
-                        throw new InvalidOperationException("File exceeds the 10 GB limit, download aborted.");
+                    if (totalRead > _maxDownloadBytes) {
+                        throw new InvalidOperationException($"File exceeds the {_maxDownloadBytes / BytesPerGigabyte} GB limit, download aborted.");
                     }
                 }
             }

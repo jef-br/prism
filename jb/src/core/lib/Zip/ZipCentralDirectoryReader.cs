@@ -6,6 +6,8 @@ using System.Text;
 
 namespace Prism.Lib.Zip;
 
+#pragma warning disable S109
+
 /// <summary> Reads central-directory metadata needed by the zip foundation module. </summary>
 internal static class ZipCentralDirectoryReader {
 
@@ -23,7 +25,6 @@ internal static class ZipCentralDirectoryReader {
     /// <returns>The central-directory offset.</returns>
     private static long FindCentralDirectoryOffset(FileStream zipStream) {
 
-#pragma warning disable S109
         if (zipStream.Length < 22) throw new InvalidDataException("The zip archive is too small to contain a central directory.");
         int maxCommentBytes = 65_535;
         int bytesToRead = (int)Math.Min(zipStream.Length, 22 + maxCommentBytes);
@@ -31,7 +32,6 @@ internal static class ZipCentralDirectoryReader {
         zipStream.Seek(zipStream.Length - bytesToRead, SeekOrigin.Begin);
         ReadExactly(zipStream, tailBytes);
 
-#pragma warning disable S109
         for (int offset = tailBytes.Length - 22; offset >= 0; offset--) {
 
             uint signature = BinaryPrimitives.ReadUInt32LittleEndian(tailBytes.AsSpan(offset, 4));
@@ -55,7 +55,6 @@ internal static class ZipCentralDirectoryReader {
     private static long FindZip64CentralDirectoryOffset(FileStream zipStream, byte[] tailBytes, int endOfCentralDirectoryOffset) {
         int locatorOffset = endOfCentralDirectoryOffset - 20;
 
-#pragma warning disable S109
         if (locatorOffset < 0 || BinaryPrimitives.ReadUInt32LittleEndian(tailBytes.AsSpan(locatorOffset, 4)) != 0x07064B50) throw new InvalidDataException("The ZIP64 end-of-central-directory locator is missing.");
         long zip64RecordOffset = checked((long)BinaryPrimitives.ReadUInt64LittleEndian(tailBytes.AsSpan(locatorOffset + 8, 8)));
 
@@ -65,7 +64,6 @@ internal static class ZipCentralDirectoryReader {
         zipStream.Seek(zip64RecordOffset, SeekOrigin.Begin);
         ReadExactly(zipStream, zip64RecordBytes);
 
-#pragma warning disable S109
         if (BinaryPrimitives.ReadUInt32LittleEndian(zip64RecordBytes.AsSpan(0, 4)) != 0x06064B50) throw new InvalidDataException("The ZIP64 end-of-central-directory record is malformed.");
 
         return checked((long)BinaryPrimitives.ReadUInt64LittleEndian(zip64RecordBytes.AsSpan(48, 8)));
@@ -129,3 +127,5 @@ internal static class ZipCentralDirectoryReader {
         }
     }
 }
+
+#pragma warning restore S109
