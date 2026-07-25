@@ -59,15 +59,23 @@ Done tickets are moved to `AGENT-TICKETS-ARCHIVE.md` (via /ticket-finish) — th
 ### T-2600 · M5 Classify groundwork
 **Status:** Blocked | **Profile:** P0-orchestrator  
 **Blocked-by:** M5 milestone gate — the 2 remaining Classify `jbtodo.md` items are both FROZEN pending prerequisite work, not simply unanswered.
-**Board sync (2026-07-24):** this entry previously listed 6 open items; 4 have since been closed via the todo lifecycle (decisions live in `jb/docs/PRISM-classify.md`, `jb/docs/ImageNGP/imagePhenotypes.md`, `jb/docs/ImageNGP/PRODUCTTYPES.MD`) but the board was never refreshed to match. Re-synced against the current source file.
+**Board sync (2026-07-24):** re-synced the item list against the source file (was 6 on the board, 2 in the file).
+**Board sync (2026-07-25):** correcting the 07-24 note, which claimed "4 closed via the todo lifecycle, decisions in jb/docs" — that flattened five removed items into one disposition. Verified the true history: the Classify `jbtodo.md` went from 7 open items (late June) to 2 (by 8 July, `9144f3e`), and the five that left had **mixed** dispositions, not a uniform lifecycle-close:
+- **ONNX session per-run → shared** — resolved: `OnnxSessionFactory.cs` exists, decision recorded in `PRISM-classify.md`/`PRISM-pipeline-core.md`; milestone table dates it 2026-06-29. ✅
+- **illustration-technical-drawing scope** — resolved with a real decision, documented (`PRISM-classify.md:171`: no longer a catch-all, requires an `is-illustration` positive signal). ✅
+- **interior-shot unreachable in CPU-only** — resolved: `Analyzer_Interior.cs` implemented, sets `interior-detected` feeding the phenotype, config-driven. ✅
+- **Gate phenotypes** — not "closed," **implemented and live by design**: the `BypassPhenotypes` PoC flag (`ImageTransformer`) is ON, so routing ignores `SelectedPhenotype` and basic transforms run off geometry alone. It flips off only once phenotype assignment is validated — the same gate as FROZEN item 2 below.
+- **`RecordUnknownFeatures()` stub** — **still a live stub** (`ImageFeatureAnalyzer.cs:326`, marks 35+ features UNKNOWN). Not closed with a doc decision; its remaining work — replacing each UNKNOWN with a real measurement — is exactly what [[T-4000]]'s per-feature Analyzer backlog does, so it's effectively relocated to T-4000, not resolved here.
 
 Tracks the 2 remaining items in `jb/src/core/Services/Matching/Classify/jbtodo.md`, both `FROZEN`:
 1. ImageNGP taxonomy/feature-combination reconciliation — FROZEN: "Taxonomy is captured in canonical files (ImageNGP.json, ImageRoles.json, imagePhenotypes.md, ImageFeatures.md). No reconciliation action needed at this time."
-2. Phenotype production validation (labeled set, confusion matrix, <5% misassignment across 26 phenotypes) — FROZEN: "Premature. Revisit after per-feature Analyzer stubs are substantially resolved and BypassPhenotypes flip is planned." Depends on [[T-4000]]'s Analyzer backlog.
+2. Phenotype production validation (labeled set, confusion matrix, <5% misassignment across 26 phenotypes) — FROZEN: "Premature. Revisit after per-feature Analyzer stubs are substantially resolved and BypassPhenotypes flip is planned."
+
+**Why this ticket is genuinely blocked (not just unattended):** both FROZEN items depend on features no longer being UNKNOWN, which depends on [[T-4000]] replacing the `RecordUnknownFeatures` stub analyzer-by-analyzer. Until enough analyzers land, phenotype assignment can't be validated, so `BypassPhenotypes` stays on and item 2 stays frozen. T-2600 is downstream of T-4000, full stop.
 
 Per-feature CLIP confidence calibration remains a live open concern feeding into this ticket (referenced by `AGENTFEEDBACK.md`'s S109 entry and T-4400's phase-2 closeout review) but is not currently a tracked checkbox in Classify's own `jbtodo.md` — it surfaces wherever a new confidence literal is discovered elsewhere in the codebase.
 
-M5 gate condition: both FROZEN items thaw and get answered (needs T-4000's Analyzer stubs + a BypassPhenotypes decision first); ONNX session migrated to singleton ✅ already done.
+M5 gate condition: both FROZEN items thaw and get answered (needs T-4000's Analyzer stubs substantially landed + a BypassPhenotypes flip decision); ONNX session migrated to shared/singleton ✅ already done.
 
 **Files:** `jb/src/core/Services/Matching/Classify/jbtodo.md`, `jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`
 
