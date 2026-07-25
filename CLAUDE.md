@@ -54,7 +54,7 @@ Not in the `.sln`: the npm-based web workbench (`jb/src/workbench/web/`).
 Imported → Classified → Matched → Ordered → Renamed → Generated → Transformed → Exported
 ```
 
-`Prism.cs` is the facade. It contains management code only — no inline logic. Each stage delegates to a dedicated class in a subfolder of `jb/src/core/`.
+`Pipeline.cs` is the facade. It contains management code only — no inline logic. Each stage delegates to a dedicated class in a subfolder of `jb/src/core/`.
 
 ### Core modules (`jb/src/core/`)
 `jb/src/core/` is split into **`Services/`** (deployable services, namespace `Prism.Services.*`) and **`lib/`** (support libraries, not services, namespace `Prism.Lib.*`), plus the monolith orchestrator + shared types. Each `Services/<X>/` is self-contained (feature code + service wrapper); a separable-assembly engine lives in a `Services/<X>/Engine/` subfolder.
