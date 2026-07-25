@@ -147,6 +147,21 @@ See `PRISM-models.md` for full field list. Summary:
 
 **Ticket 2 — MatchEvidence missing fields:** MatchEvidence now has `ThresholdStatus` (bool — true when FinalScore meets or exceeds `matchingConfig.SemanticThreshold`), `RejectedNearTieEvidence` (near-tie candidates passed over in Brackets 1–2), and `MatcherWeights` (per-matcher contributions as `IReadOnlyList<MatcherContribution>`). `AcceptedMatcherName` retained. `RejectedNearTieEvidence` is collected in `RunWaterfall` via a `Dictionary<string, List<CandidateSummary>> rejectedNearTies` keyed by `InitialFullName`, populated by `NumericMatcher.TryMatchBracket1WithTies` and `TryMatchBracket2WithTies` when a tie occurs, and attached to the evidence at the point of match acceptance in Brackets 1–4.
 
+---
+
+## Future Work — StringMatcher toward semantic/multilingual matching (T-3800, recorded 2026-07-25)
+
+The Bracket-3 categorical fuzzy fallback (`CollectFuzzyCategoricalEvidence`, above) is a single bounded Levenshtein check — distance ≤ 1, categorical columns, tokens ≥ 4 chars. It is deliberately narrow and is **not** on a path to a general semantic matcher on its own. A genuinely semantically-aware multilingual matcher layers four independent techniques, none substituting for another:
+
+1. **Dictionary/lexicon** — cross-language term translation. PRISM's only "dictionary" today is the hand-curated `TranslationDictionary.json` synonym groups; no general multilingual lexicon dependency exists anywhere.
+2. **Stemming/lemmatization** — collapse inflected forms ("boots"/"boot", "running"/"run"). Absent from Match entirely. One algorithm does not generalize across EN/FR/DE/ES/NL, so this means a per-language stemmer dependency (e.g. Snowball-family), scoped to the real supported-language list.
+3. **Fuzzy edit-distance** — the one layer that partially exists (T-3800), narrowly.
+4. **Semantic similarity** — meaning-based ("jacket" ≈ "coat"). Absent for text-to-text. CLIP's text encoder is the obvious in-process candidate (already loaded) but is trained for image-text alignment; using it for word-to-word similarity needs its own calibration, not an assumption that it transfers.
+
+**Prerequisites before this is buildable:** a real lexicon source (footprint/licensing/maintenance, not a config tweak); per-language stemmers for the actual supported languages; a validated semantic-similarity source (CLIP text encoder proven sane for token similarity, or a dedicated embedding model as a new dependency); a placement decision in the waterfall (new bracket vs reshaping Bracket 3/4 confidence math — semantic false positives are genuinely different products sitting near each other in embedding space, a worse failure mode than typo tolerance); a labeled validation set larger than T-3800's 3-value Levenshtein tuning; and its own performance pass (dictionary + stemming + semantic over large free-text columns can reintroduce real cost — the cheap substring-rescue measurement above does not carry over).
+
+**Decision:** do not build speculatively. This is recorded so a future decision starts from a real per-layer estimate rather than "add semantic matching" as a one-line wish. No code change implied.
+
 **Ticket 3 — Bracket 3 duplicate-phenotype guard:** Bracket 3 duplicate-phenotype guard is implemented in `ImageMatcher.RunBracket3` via `HasDuplicatePhenotypeInFamily`. Rejects a string match when the target FamilyID already has a non-KO matched record with the same non-null SelectedPhenotype.
 
 **Ticket 4 — Pre-normalization token text:** Pre-normalization token text is preserved via `FilenameToken(string Original, string Normalized)` struct in StringMatcher. Evidence records carry `imageToken.Original` (the raw filename text before diacritics/case normalization) alongside the matched family token.
