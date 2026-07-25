@@ -1,8 +1,7 @@
 namespace Prism.Contracts;
 
 /// <summary>A CLIP zero-shot classification result pairing a text prompt with its cosine similarity score.</summary>
-public class ClassificationToken
-{
+public class ClassificationToken {
     /// <summary>The text prompt used for zero-shot classification.</summary>
     public string Label { get; set; } = string.Empty;
 

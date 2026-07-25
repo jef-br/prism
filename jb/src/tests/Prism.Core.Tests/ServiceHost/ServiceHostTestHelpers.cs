@@ -7,21 +7,17 @@ namespace PrismCoreTests.ServiceHost;
 /// <summary>
 /// Test helpers for creating minimal real images and test data for service host roundtrip tests.
 /// </summary>
-internal static class ServiceHostTestHelpers
-{
+internal static class ServiceHostTestHelpers {
     /// <summary>
     /// Generates a minimal valid JPEG image (small size to keep test fast) and writes it to disk.
     /// Returns the path to the written file.
     /// </summary>
-    public static string CreateTestJpeg(string outputPath, int width = 100, int height = 100)
-    {
+    public static string CreateTestJpeg(string outputPath, int width = 100, int height = 100) {
         using Image<Rgb24> image = new(width, height);
 
         // Fill with a simple gradient to make it non-trivial.
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
                 byte r = (byte)(255 * x / width);
                 byte g = (byte)(255 * y / height);
                 byte b = 128;
@@ -36,14 +32,11 @@ internal static class ServiceHostTestHelpers
     /// <summary>
     /// Generates a minimal JPEG image as a byte array (in-memory).
     /// </summary>
-    public static byte[] CreateTestJpegBytes(int width = 100, int height = 100)
-    {
+    public static byte[] CreateTestJpegBytes(int width = 100, int height = 100) {
         using Image<Rgb24> image = new(width, height);
 
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
                 byte r = (byte)(255 * x / width);
                 byte g = (byte)(255 * y / height);
                 byte b = 128;
@@ -63,22 +56,19 @@ internal static class ServiceHostTestHelpers
     /// </summary>
     public static IngestResult CreateMinimalIngestResult(
         string? jobTempFolder = null,
-        bool createNormalizedJpeg = true)
-    {
+        bool createNormalizedJpeg = true) {
         jobTempFolder ??= Path.Combine(Path.GetTempPath(), $"prism-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(jobTempFolder);
 
         string normalizedPath = "";
-        if (createNormalizedJpeg)
-        {
+        if (createNormalizedJpeg) {
             string normalizedDir = Path.Combine(jobTempFolder, "normalized");
             Directory.CreateDirectory(normalizedDir);
             normalizedPath = Path.Combine(normalizedDir, "000000_test.jpg");
             CreateTestJpeg(normalizedPath, 200, 200);
         }
 
-        return new IngestResult
-        {
+        return new IngestResult {
             JobID = Guid.NewGuid(),
             Parameters = new PrismProcessingParameters(),
             NormalizedImages =
@@ -101,12 +91,10 @@ internal static class ServiceHostTestHelpers
     /// Creates a minimal MatchingResult with a single OK image. Used for downstream services
     /// (Generate, Transform) that accept MatchingResult as input.
     /// </summary>
-    public static MatchingResult CreateMinimalMatchingResult(IngestResult? ingestBase = null)
-    {
+    public static MatchingResult CreateMinimalMatchingResult(IngestResult? ingestBase = null) {
         ingestBase ??= CreateMinimalIngestResult(createNormalizedJpeg: false);
 
-        return new MatchingResult
-        {
+        return new MatchingResult {
             Ingest = ingestBase,
             LambdaRecords =
             [

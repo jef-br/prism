@@ -12,18 +12,15 @@ namespace PrismCoreTests.ServiceHost;
 /// (or explicitly clears it) to host all four. Manages the process env var to avoid crosstalk
 /// between tests.
 /// </summary>
-public sealed class ServiceHostFixture : IAsyncLifetime
-{
+public sealed class ServiceHostFixture : IAsyncLifetime {
     private WebApplicationFactory<Program>? factory;
 
     /// <summary>
     /// The HTTP client managed by the factory. Use this to construct service clients
     /// (e.g. <c>new HttpMatchingService(Client)</c>).
     /// </summary>
-    public HttpClient Client
-    {
-        get
-        {
+    public HttpClient Client {
+        get {
             HttpClient client = factory?.CreateClient() ?? throw new InvalidOperationException("Fixture not initialized.");
             // Mirrors ServiceHttp.CreateClient: CreateClient()'s 100s default aborts GPU-bound upscale
             // roundtrips when PipelineIntegrationTests contends for the shared Real-ESRGAN session in
@@ -36,24 +33,20 @@ public sealed class ServiceHostFixture : IAsyncLifetime
     /// <summary>
     /// Initializes the factory, ensuring PRISM_SERVICE env var is clear so all services are hosted.
     /// </summary>
-    public Task InitializeAsync()
-    {
+    public Task InitializeAsync() {
         // Clear PRISM_SERVICE to ensure all services are hosted (unset = all services).
         string? previous = Environment.GetEnvironmentVariable("PRISM_SERVICE");
         Environment.SetEnvironmentVariable("PRISM_SERVICE", null);
 
-        try
-        {
+        try {
             factory = new WebApplicationFactory<Program>();
             // Trigger lazy initialization by creating a client.
             _ = factory.CreateClient();
             return Task.CompletedTask;
         }
-        catch
-        {
+        catch {
             // Restore the env var on failure.
-            if (previous != null)
-            {
+            if (previous != null) {
                 Environment.SetEnvironmentVariable("PRISM_SERVICE", previous);
             }
             throw;
@@ -63,8 +56,7 @@ public sealed class ServiceHostFixture : IAsyncLifetime
     /// <summary>
     /// Disposes the factory and restores the PRISM_SERVICE env var to its original state (if any).
     /// </summary>
-    public Task DisposeAsync()
-    {
+    public Task DisposeAsync() {
         factory?.Dispose();
         // Note: We don't restore the env var here because we cleared it on init.
         // In a test environment, env-var leakage across tests is acceptable as long

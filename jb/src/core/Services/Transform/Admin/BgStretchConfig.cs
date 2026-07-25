@@ -7,15 +7,13 @@ namespace Prism.Services.Transform;
 /// "BgStretch" section of transform_Config.json. No defaults — every value must be present in the
 /// JSON or deserialization fails loud.
 /// </summary>
-public sealed class BgStretchConfig : IValidatableConfig
-{
+public sealed class BgStretchConfig : IValidatableConfig {
     public required float Tier1MaxRatio { get; init; }
     public required float Tier2MaxRatio { get; init; }
     public required float Tier4MinRatio { get; init; }
     public required int FeatherPx { get; init; }
 
-    public void Validate()
-    {
+    public void Validate() {
         List<string> problems = [];
 
         if (this.Tier1MaxRatio <= 1f) problems.Add("BgStretch.Tier1MaxRatio must be > 1");

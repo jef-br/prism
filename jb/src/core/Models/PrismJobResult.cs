@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// Client-facing result returned by PRISM for one accepted job.
 /// </summary>
-public sealed record PrismJobResult
-{
+public sealed record PrismJobResult {
     /// <summary>
     /// PRISM-owned internal job identifier.
     /// </summary>

@@ -42,7 +42,7 @@ public sealed class YoloDetector : IDisposable {
     /// Returns the process-wide shared detector, initializing it from <paramref name="modelPath"/>
     /// on first use. Later calls ignore the path.
     /// </summary>
-    public static YoloDetector GetShared( string modelPath ) {
+    public static YoloDetector GetShared(string modelPath) {
         if (shared is not null) return shared;
         lock (SharedLock) {
             if (shared is null) {
@@ -60,14 +60,15 @@ public sealed class YoloDetector : IDisposable {
     /// in production. A file that is present but fails to load throws
     /// <see cref="PrismConfigurationException"/> — corrupt models never degrade silently (T-4110).
     /// </summary>
-    public void Initialize( string modelPath ) {
+    public void Initialize(string modelPath) {
         if (!File.Exists(modelPath)) return;
 
         try {
             this.session = OnnxSessionFactory.Create(modelPath);
             this.inputName = this.session.InputMetadata.Keys.FirstOrDefault() ?? TensorImages;
             this.outputName = this.session.OutputMetadata.Keys.FirstOrDefault() ?? TensorOutput0;
-        } catch (Exception loadException) {
+        }
+        catch (Exception loadException) {
             this.session?.Dispose();
             this.session = null;
             throw new PrismConfigurationException(
@@ -80,7 +81,7 @@ public sealed class YoloDetector : IDisposable {
     /// Runs detection on the pre-loaded image and returns NMS-filtered detections with
     /// normalized [0,1] boxes, strongest first. Empty when the session is unavailable.
     /// </summary>
-    public IReadOnlyList<YoloDetection> Detect( Image<Rgba32> image, YoloAnalyzerConfig cfg ) {
+    public IReadOnlyList<YoloDetection> Detect(Image<Rgba32> image, YoloAnalyzerConfig cfg) {
         if (!this.IsReady) return [];
 
         DenseTensor<float> input = PreprocessImage(image);
@@ -96,7 +97,7 @@ public sealed class YoloDetector : IDisposable {
     }
 
     // Resizes to 640×640 (RGB, /255) and lays pixels out CHW. The source image is not mutated.
-    private static DenseTensor<float> PreprocessImage( Image<Rgba32> image ) {
+    private static DenseTensor<float> PreprocessImage(Image<Rgba32> image) {
         var tensor = new DenseTensor<float>([1, 3, InputHeight, InputWidth]);
 
         using Image<Rgba32> resized = image.Clone(ctx => ctx.Resize(InputWidth, InputHeight));
@@ -122,7 +123,7 @@ public sealed class YoloDetector : IDisposable {
     // [x1, y1, x2, y2, score, classId] with box coords in 640-input pixel space and detections
     // already NMS-filtered and ranked. Unused slots are zero-padded (score 0). We threshold on
     // confidence, normalize boxes to [0,1] of the resized frame, and cap at MaxDetections.
-    private static IReadOnlyList<YoloDetection> Postprocess( Tensor<float> prediction, YoloAnalyzerConfig cfg ) {
+    private static IReadOnlyList<YoloDetection> Postprocess(Tensor<float> prediction, YoloAnalyzerConfig cfg) {
         int detections = prediction.Dimensions[1];
 
         List<YoloDetection> kept = [];
@@ -130,7 +131,7 @@ public sealed class YoloDetector : IDisposable {
             float score = prediction[0, d, 4];
             if (score < cfg.ConfidenceThreshold) continue;
 
-            int classId = (int) prediction[0, d, 5];
+            int classId = (int)prediction[0, d, 5];
 
             // Box coords are x1,y1,x2,y2 in 640-space; normalize to [0,1] of the resized frame.
             float x1 = prediction[0, d, 0] / InputWidth;

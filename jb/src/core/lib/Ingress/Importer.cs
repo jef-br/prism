@@ -16,8 +16,7 @@ namespace Prism.Lib.Ingress;
 /// Excel Model from accepted Excel workbooks.
 /// Reads like a recipe: <see cref="Run"/> expresses the workflow; named helpers do each step.
 /// </summary>
-public sealed class Importer
-{
+public sealed class Importer {
     private readonly PrismConfiguration configuration;
     private readonly ModelBuilder modelBuilder;
 
@@ -39,10 +38,9 @@ public sealed class Importer
     /// </summary>
     /// <param name="configuration">Validated PRISM configuration.</param>
     /// <param name="modelBuilder">Pre-constructed Excel model builder pointing to ExcelConfig.json.</param>
-    public Importer(PrismConfiguration configuration, ModelBuilder modelBuilder)
-    {
+    public Importer(PrismConfiguration configuration, ModelBuilder modelBuilder) {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        this.modelBuilder  = modelBuilder  ?? throw new ArgumentNullException(nameof(modelBuilder));
+        this.modelBuilder = modelBuilder ?? throw new ArgumentNullException(nameof(modelBuilder));
 
         this.acceptedImageExtensions = new HashSet<string>(configuration.AcceptedImageExtensions, StringComparer.OrdinalIgnoreCase);
         this.acceptedExcelExtensions = new HashSet<string>(configuration.AcceptedExcelExtensions, StringComparer.OrdinalIgnoreCase);
@@ -68,15 +66,14 @@ public sealed class Importer
         IReadOnlyList<ImageRecord_INPUT> imageRecords,
         IReadOnlyList<InputExcelFileRecord> excelRecords,
         IReadOnlyList<InputZipFileRecord> zipRecords,
-        string jobTempRoot)
-    {
+        string jobTempRoot) {
         string jobTempFolder = PrepareJobTempFolder(jobID, jobTempRoot);
 
-        ConcurrentBag<ImageRecord_INPUT> normalizedImages  = [];
-        List<ExcelProcessingDiagnostic>  excelDiagnostics  = [];
-        ConcurrentBag<ImportKoRecord>    imageKoRecords    = [];
-        List<ZipMemberKoRecord>          zipKoRecords      = [];
-        List<string>                     excelFilePaths    = [];
+        ConcurrentBag<ImageRecord_INPUT> normalizedImages = [];
+        List<ExcelProcessingDiagnostic> excelDiagnostics = [];
+        ConcurrentBag<ImportKoRecord> imageKoRecords = [];
+        List<ZipMemberKoRecord> zipKoRecords = [];
+        List<string> excelFilePaths = [];
 
         // Shared across both image loops so normalized filenames stay unique job-wide
         // regardless of parallel completion order. Array wrapper: a `ref int` local cannot
@@ -92,14 +89,13 @@ public sealed class Importer
         // ConcurrentBag enumeration order varies per run (per-thread stacks). Sort into a stable
         // order so every downstream stage — matching aggregation, det-order tie-breaking, manifest
         // rows — sees the same sequence on every run with the same input (T-2820).
-        return new ImportStageResult
-        {
-            NormalizedImages  = SortDeterministically(normalizedImages),
-            FamilyRecords     = familyRecords,
-            ExcelDiagnostics  = excelDiagnostics,
-            ImageKoRecords    = imageKoRecords.OrderBy(k => k.OriginalFileName, StringComparer.Ordinal).ToList(),
-            ZipKoRecords      = zipKoRecords,
-            JobTempFolder     = jobTempFolder
+        return new ImportStageResult {
+            NormalizedImages = SortDeterministically(normalizedImages),
+            FamilyRecords = familyRecords,
+            ExcelDiagnostics = excelDiagnostics,
+            ImageKoRecords = imageKoRecords.OrderBy(k => k.OriginalFileName, StringComparer.Ordinal).ToList(),
+            ZipKoRecords = zipKoRecords,
+            JobTempFolder = jobTempFolder
         };
     }
 
@@ -108,8 +104,7 @@ public sealed class Importer
     /// counter): original filename, then byte length, then pixel size. Identical files compare
     /// equal on every key, so their relative order is irrelevant.
     /// </summary>
-    private static List<ImageRecord_INPUT> SortDeterministically(ConcurrentBag<ImageRecord_INPUT> records)
-    {
+    private static List<ImageRecord_INPUT> SortDeterministically(ConcurrentBag<ImageRecord_INPUT> records) {
         return records
             .OrderBy(r => r.InitialFullName, StringComparer.Ordinal)
             .ThenBy(r => r.ByteLength ?? 0)
@@ -133,17 +128,14 @@ public sealed class Importer
         List<string> excelFilePaths,
         ConcurrentBag<ImportKoRecord> imageKoRecords,
         List<ZipMemberKoRecord> zipKoRecords,
-        int[] normalizedFileNameCounter)
-    {
+        int[] normalizedFileNameCounter) {
         string zipExtractionRoot = Path.Combine(jobTempFolder, ZipExtractSubfolder);
         ParallelOptions parallelOptions = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
-        foreach (InputZipFileRecord zipRecord in zipRecords)
-        {
+        foreach (InputZipFileRecord zipRecord in zipRecords) {
             string zipFilePath = ResolveReadablePath(zipRecord.TempFilePath, zipRecord.SourceReference);
 
-            if (!File.Exists(zipFilePath))
-            {
+            if (!File.Exists(zipFilePath)) {
                 continue;
             }
 
@@ -155,8 +147,7 @@ public sealed class Importer
             zipKoRecords.AddRange(extraction.KoRecords);
 
             // Excel routing stays sequential (excelFilePaths is a plain, non-concurrent List<T>).
-            foreach (ZipExtractedMember excelMember in extraction.ExtractedMembers.Where(member => member.MediaKind == ZipMemberMediaKind.Excel))
-            {
+            foreach (ZipExtractedMember excelMember in extraction.ExtractedMembers.Where(member => member.MediaKind == ZipMemberMediaKind.Excel)) {
                 excelFilePaths.Add(excelMember.ExtractedFilePath);
             }
 
@@ -164,8 +155,7 @@ public sealed class Importer
                 .Where(member => member.MediaKind == ZipMemberMediaKind.Image)
                 .ToList();
 
-            Parallel.ForEach(imageMembers, parallelOptions, member =>
-            {
+            Parallel.ForEach(imageMembers, parallelOptions, member => {
                 this.NormalizeAndRecord(
                     member.ExtractedFilePath,
                     member.OriginalFileName,
@@ -192,17 +182,14 @@ public sealed class Importer
         string jobTempFolder,
         ConcurrentBag<ImageRecord_INPUT> normalizedImages,
         ConcurrentBag<ImportKoRecord> imageKoRecords,
-        int[] normalizedFileNameCounter)
-    {
+        int[] normalizedFileNameCounter) {
         ParallelOptions parallelOptions = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
-        Parallel.ForEach(imageRecords, parallelOptions, record =>
-        {
+        Parallel.ForEach(imageRecords, parallelOptions, record => {
             // Prefer TempFilePath (API-spilled file) over InitialFullName (direct local path).
             string sourcePath = ResolveReadablePath(record.TempFilePath, record.InitialFullName);
 
-            if (!File.Exists(sourcePath))
-            {
+            if (!File.Exists(sourcePath)) {
                 imageKoRecords.Add(ImportKoRecord.CorruptImage(
                     record.InitialFullName,
                     record.InitialFullName,
@@ -212,8 +199,7 @@ public sealed class Importer
 
             string extension = Path.GetExtension(record.InitialFullName);
 
-            if (!this.acceptedImageExtensions.Contains(extension))
-            {
+            if (!this.acceptedImageExtensions.Contains(extension)) {
                 imageKoRecords.Add(ImportKoRecord.UnsupportedFormat(
                     record.InitialFullName,
                     record.InitialFullName));
@@ -222,30 +208,26 @@ public sealed class Importer
 
             long byteLength = record.ByteLength ?? new FileInfo(sourcePath).Length;
 
-            if (byteLength < this.configuration.MinBytesPerImg)
-            {
-                imageKoRecords.Add(new ImportKoRecord
-                {
+            if (byteLength < this.configuration.MinBytesPerImg) {
+                imageKoRecords.Add(new ImportKoRecord {
                     OriginalFileName = record.InitialFullName,
                     SourceProvenance = record.InitialFullName,
-                    ReasonCode       = ImportKoRecord.FileTooSmallReason,
-                    KoGroup          = ImportKoRecord.CorruptImagesKoGroup,
-                    SafeMessage      = "The input image is smaller than the configured minimum file size.",
-                    BatchContinues   = true
+                    ReasonCode = ImportKoRecord.FileTooSmallReason,
+                    KoGroup = ImportKoRecord.CorruptImagesKoGroup,
+                    SafeMessage = "The input image is smaller than the configured minimum file size.",
+                    BatchContinues = true
                 });
                 return;
             }
 
-            if (byteLength > this.configuration.MaxBytesPerImg)
-            {
-                imageKoRecords.Add(new ImportKoRecord
-                {
+            if (byteLength > this.configuration.MaxBytesPerImg) {
+                imageKoRecords.Add(new ImportKoRecord {
                     OriginalFileName = record.InitialFullName,
                     SourceProvenance = record.InitialFullName,
-                    ReasonCode       = ImportKoRecord.FileTooLargeReason,
-                    KoGroup          = ImportKoRecord.OversizedKoGroup,
-                    SafeMessage      = "The input image exceeds the configured maximum file size.",
-                    BatchContinues   = true
+                    ReasonCode = ImportKoRecord.FileTooLargeReason,
+                    KoGroup = ImportKoRecord.OversizedKoGroup,
+                    SafeMessage = "The input image exceeds the configured maximum file size.",
+                    BatchContinues = true
                 });
                 return;
             }
@@ -272,15 +254,12 @@ public sealed class Importer
     /// </summary>
     private void ProcessDirectExcelRecords(
         IReadOnlyList<InputExcelFileRecord> excelRecords,
-        List<string> excelFilePaths)
-    {
-        foreach (InputExcelFileRecord excelRecord in excelRecords)
-        {
+        List<string> excelFilePaths) {
+        foreach (InputExcelFileRecord excelRecord in excelRecords) {
             string readablePath = ResolveReadablePath(excelRecord.TempFilePath, excelRecord.SourceReference);
 
             if (File.Exists(readablePath)
-                && this.acceptedExcelExtensions.Contains(Path.GetExtension(readablePath)))
-            {
+                && this.acceptedExcelExtensions.Contains(Path.GetExtension(readablePath))) {
                 excelFilePaths.Add(readablePath);
             }
         }
@@ -296,10 +275,8 @@ public sealed class Importer
     /// </summary>
     private IReadOnlyList<FamilyIDRecord> BuildFamilyRecords(
         IReadOnlyList<string> excelFilePaths,
-        List<ExcelProcessingDiagnostic> diagnostics)
-    {
-        if (excelFilePaths.Count == 0)
-        {
+        List<ExcelProcessingDiagnostic> diagnostics) {
+        if (excelFilePaths.Count == 0) {
             return [];
         }
 
@@ -326,14 +303,13 @@ public sealed class Importer
         string jobTempFolder,
         ConcurrentBag<ImageRecord_INPUT> normalizedImages,
         ConcurrentBag<ImportKoRecord> imageKoRecords,
-        int[] normalizedFileNameCounter)
-    {
+        int[] normalizedFileNameCounter) {
         string normalizedFolder = Path.Combine(jobTempFolder, NormalizedSubfolder);
         Directory.CreateDirectory(normalizedFolder);
 
         int uniqueIndex = Interlocked.Increment(ref normalizedFileNameCounter[0]) - 1;
         string normalizedFileName = BuildNormalizedFileName(originalFileName, uniqueIndex);
-        string normalizedPath     = Path.Combine(normalizedFolder, normalizedFileName);
+        string normalizedPath = Path.Combine(normalizedFolder, normalizedFileName);
 
         bool normalizedSuccessfully = this.TryNormalizeToJpeg(
             sourcePath,
@@ -344,10 +320,8 @@ public sealed class Importer
             out byte[]? normalizedBytes,
             out ImportKoRecord? koRecord);
 
-        if (!normalizedSuccessfully)
-        {
-            if (koRecord is not null)
-            {
+        if (!normalizedSuccessfully) {
+            if (koRecord is not null) {
                 imageKoRecords.Add(koRecord);
             }
 
@@ -356,33 +330,30 @@ public sealed class Importer
 
         // The salient object can never reach MinInputSizeInPixels when the whole image is smaller —
         // KO here instead of spending classify/match/order effort before Transform rejects it anyway.
-        if (Math.Max(normalizedWidth, normalizedHeight) < this.configuration.MinInputSizeInPixels)
-        {
-            imageKoRecords.Add(new ImportKoRecord
-            {
+        if (Math.Max(normalizedWidth, normalizedHeight) < this.configuration.MinInputSizeInPixels) {
+            imageKoRecords.Add(new ImportKoRecord {
                 OriginalFileName = originalFileName,
                 SourceProvenance = sourcePath,
-                ReasonCode       = ImportKoRecord.ImageTooSmallReason,
-                KoGroup          = ImportKoRecord.UndersizedKoGroup,
-                SafeMessage      = $"Image is {normalizedWidth}x{normalizedHeight}px; the accepted input minimum is {this.configuration.MinInputSizeInPixels}px on the longest side.",
-                BatchContinues   = true
+                ReasonCode = ImportKoRecord.ImageTooSmallReason,
+                KoGroup = ImportKoRecord.UndersizedKoGroup,
+                SafeMessage = $"Image is {normalizedWidth}x{normalizedHeight}px; the accepted input minimum is {this.configuration.MinInputSizeInPixels}px on the longest side.",
+                BatchContinues = true
             });
             return;
         }
 
-        normalizedImages.Add(new ImageRecord_INPUT
-        {
-            InitialFullName     = originalFileName,
-            SourceKind          = sourceKind,
+        normalizedImages.Add(new ImageRecord_INPUT {
+            InitialFullName = originalFileName,
+            SourceKind = sourceKind,
             OriginalContentType = originalContentType,
-            ByteLength          = byteLength,
-            NormalizedJpgPath   = normalizedPath,
+            ByteLength = byteLength,
+            NormalizedJpgPath = normalizedPath,
             NormalizedJpegBytes = normalizedBytes,
-            NormalizedWidth     = normalizedWidth,
-            NormalizedHeight    = normalizedHeight,
-            Width               = normalizedWidth,
-            Height              = normalizedHeight,
-            ImportStatus        = ImportStatus.Ok
+            NormalizedWidth = normalizedWidth,
+            NormalizedHeight = normalizedHeight,
+            Width = normalizedWidth,
+            Height = normalizedHeight,
+            ImportStatus = ImportStatus.Ok
         });
     }
 
@@ -409,23 +380,20 @@ public sealed class Importer
         out int width,
         out int height,
         out byte[]? normalizedBytes,
-        out ImportKoRecord? koRecord)
-    {
-        width           = 0;
-        height          = 0;
+        out ImportKoRecord? koRecord) {
+        width = 0;
+        height = 0;
         normalizedBytes = null;
-        koRecord        = null;
+        koRecord = null;
 
-        if (TryFastPathCopyConformingJpeg(sourcePath, destinationPath, out width, out height))
-        {
+        if (TryFastPathCopyConformingJpeg(sourcePath, destinationPath, out width, out height)) {
             return true;
         }
 
-        try
-        {
+        try {
             using Image sourceImage = LoadImageWithExifOrientation(sourcePath);
 
-            width  = sourceImage.Width;
+            width = sourceImage.Width;
             height = sourceImage.Height;
 
             JpegEncoder encoder = new() { Quality = NormalizedJpegQuality };
@@ -440,32 +408,28 @@ public sealed class Importer
 
             return true;
         }
-        catch (UnknownImageFormatException)
-        {
+        catch (UnknownImageFormatException) {
             koRecord = ImportKoRecord.CorruptImage(
                 originalFileName,
                 sourcePath,
                 "The image format could not be identified. The file may be corrupt or unsupported.");
             return false;
         }
-        catch (InvalidImageContentException)
-        {
+        catch (InvalidImageContentException) {
             koRecord = ImportKoRecord.CorruptImage(
                 originalFileName,
                 sourcePath,
                 "The image file appears to be corrupt or partially damaged.");
             return false;
         }
-        catch (ImageProcessingException)
-        {
+        catch (ImageProcessingException) {
             koRecord = ImportKoRecord.ConversionFailure(
                 originalFileName,
                 sourcePath,
                 "The image could not be converted to JPEG.");
             return false;
         }
-        catch (Exception)
-        {
+        catch (Exception) {
             koRecord = ImportKoRecord.CorruptImage(
                 originalFileName,
                 sourcePath,
@@ -491,34 +455,29 @@ public sealed class Importer
         string sourcePath,
         string destinationPath,
         out int width,
-        out int height)
-    {
-        width  = 0;
+        out int height) {
+        width = 0;
         height = 0;
 
-        try
-        {
+        try {
             ImageInfo info = Image.Identify(sourcePath);
 
-            if (info.Metadata.DecodedImageFormat != JpegFormat.Instance)
-            {
+            if (info.Metadata.DecodedImageFormat != JpegFormat.Instance) {
                 return false;
             }
 
             if (info.Metadata.ExifProfile is not null
                 && info.Metadata.ExifProfile.TryGetValue(ExifTag.Orientation, out IExifValue<ushort>? orientationValue)
-                && orientationValue.Value != ExifOrientationMode.TopLeft)
-            {
+                && orientationValue.Value != ExifOrientationMode.TopLeft) {
                 return false;
             }
 
             File.Copy(sourcePath, destinationPath, overwrite: true);
-            width  = info.Size.Width;
+            width = info.Size.Width;
             height = info.Size.Height;
             return true;
         }
-        catch
-        {
+        catch {
             return false;
         }
     }
@@ -530,14 +489,12 @@ public sealed class Importer
     /// </summary>
     /// <param name="sourcePath">Readable source file path.</param>
     /// <returns>The loaded and orientation-corrected image. Caller disposes.</returns>
-    private static Image LoadImageWithExifOrientation(string sourcePath)
-    {
+    private static Image LoadImageWithExifOrientation(string sourcePath) {
         Image image = Image.Load(sourcePath);
 
         // Apply EXIF orientation correction so downstream stages see the correct orientation.
         // Missing EXIF orientation renders the file as-is per spec.
-        image.Mutate(context =>
-        {
+        image.Mutate(context => {
             // AutoOrient reads the EXIF orientation tag and rotates/flips accordingly.
             context.AutoOrient();
 
@@ -559,10 +516,8 @@ public sealed class Importer
     /// <param name="tempPath">Optional temp path written by the API or caller.</param>
     /// <param name="fallback">Fallback path (source reference or initial filename).</param>
     /// <returns>The best available readable path.</returns>
-    private static string ResolveReadablePath(string? tempPath, string fallback)
-    {
-        if (!string.IsNullOrWhiteSpace(tempPath))
-        {
+    private static string ResolveReadablePath(string? tempPath, string fallback) {
+        if (!string.IsNullOrWhiteSpace(tempPath)) {
             return tempPath;
         }
 
@@ -575,8 +530,7 @@ public sealed class Importer
     /// <param name="jobID">Job identifier.</param>
     /// <param name="jobTempRoot">Server-level temp root.</param>
     /// <returns>Absolute path to the job temp folder.</returns>
-    private static string PrepareJobTempFolder(Guid jobID, string jobTempRoot)
-    {
+    private static string PrepareJobTempFolder(Guid jobID, string jobTempRoot) {
         string jobTempFolder = Path.Combine(jobTempRoot, jobID.ToString("N"));
         Directory.CreateDirectory(jobTempFolder);
         return jobTempFolder;
@@ -588,8 +542,7 @@ public sealed class Importer
     /// <param name="originalFileName">Original source filename.</param>
     /// <param name="currentIndex">Current normalized-image count (used for uniqueness).</param>
     /// <returns>A safe filename with .jpg extension.</returns>
-    private static string BuildNormalizedFileName(string originalFileName, int currentIndex)
-    {
+    private static string BuildNormalizedFileName(string originalFileName, int currentIndex) {
         string baseName = Path.GetFileNameWithoutExtension(originalFileName);
         string safeName = string.Join(
             "_",
@@ -598,8 +551,7 @@ public sealed class Importer
                 .Select(segment => segment.Trim())
                 .Where(segment => segment.Length > 0));
 
-        if (string.IsNullOrWhiteSpace(safeName))
-        {
+        if (string.IsNullOrWhiteSpace(safeName)) {
             safeName = "image";
         }
 
@@ -609,13 +561,12 @@ public sealed class Importer
     /// <summary>
     /// Builds a <see cref="ZipExtractionPolicy"/> from the validated PRISM configuration.
     /// </summary>
-    private ZipExtractionPolicy BuildZipPolicy()
-    {
+    private ZipExtractionPolicy BuildZipPolicy() {
         return new ZipExtractionPolicy(
-            MaxZipArchiveBytes   : this.configuration.MaxZipBytes,
-            MaxImageMemberBytes  : this.configuration.MaxBytesPerImg,
-            MaxExcelMemberBytes  : this.configuration.MaxXLSBytes,
-            MaxNestedZipDepth    : this.configuration.MaxNestDepthZip,
-            HeaderProbeBytes     : 16);
+            MaxZipArchiveBytes: this.configuration.MaxZipBytes,
+            MaxImageMemberBytes: this.configuration.MaxBytesPerImg,
+            MaxExcelMemberBytes: this.configuration.MaxXLSBytes,
+            MaxNestedZipDepth: this.configuration.MaxNestDepthZip,
+            HeaderProbeBytes: 16);
     }
 }

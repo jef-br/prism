@@ -8,15 +8,13 @@ namespace Prism.Lib.Zip;
 /// <summary>
 /// Classifies zip members by content signature and accepted PRISM filename extensions.
 /// </summary>
-internal static class ZipMemberTriage
-{
+internal static class ZipMemberTriage {
     /// <summary>
     /// Determines whether a zip member has a filename that PRISM would try to process.
     /// </summary>
     /// <param name="memberPath">Member path from the zip archive.</param>
     /// <returns>True when the member extension is image, document, Excel, or zip.</returns>
-    public static bool HasProcessableFileName(string memberPath)
-    {
+    public static bool HasProcessableFileName(string memberPath) {
         string extension = Path.GetExtension(memberPath);
 
         return IsImageOrDocumentExtension(extension)
@@ -32,27 +30,22 @@ internal static class ZipMemberTriage
     /// <returns>The detected media kind, or Ignored for non-processable members.</returns>
     public static ZipMemberMediaKind TriageProcessableMediaKind(
         string memberPath,
-        ReadOnlySpan<byte> headerBytes)
-    {
-        if (HasImageOrDocumentSignature(headerBytes))
-        {
+        ReadOnlySpan<byte> headerBytes) {
+        if (HasImageOrDocumentSignature(headerBytes)) {
             return ZipMemberMediaKind.Image;
         }
 
-        if (!HasZipSignature(headerBytes))
-        {
+        if (!HasZipSignature(headerBytes)) {
             return ZipMemberMediaKind.Ignored;
         }
 
         string extension = Path.GetExtension(memberPath);
 
-        if (IsExcelExtension(extension))
-        {
+        if (IsExcelExtension(extension)) {
             return ZipMemberMediaKind.Excel;
         }
 
-        if (IsZipExtension(extension))
-        {
+        if (IsZipExtension(extension)) {
             return ZipMemberMediaKind.NestedZip;
         }
 
@@ -64,8 +57,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="mediaKind">Triaged media kind.</param>
     /// <returns>True for image and Excel members.</returns>
-    public static bool IsImporterInput(ZipMemberMediaKind mediaKind)
-    {
+    public static bool IsImporterInput(ZipMemberMediaKind mediaKind) {
         return mediaKind is ZipMemberMediaKind.Image or ZipMemberMediaKind.Excel;
     }
 
@@ -74,8 +66,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="headerBytes">Initial member bytes.</param>
     /// <returns>True when the bytes match a PRISM image/document input.</returns>
-    private static bool HasImageOrDocumentSignature(ReadOnlySpan<byte> headerBytes)
-    {
+    private static bool HasImageOrDocumentSignature(ReadOnlySpan<byte> headerBytes) {
         return HasJpegSignature(headerBytes)
             || HasPngSignature(headerBytes)
             || HasGifSignature(headerBytes)
@@ -90,8 +81,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="extension">Filename extension including the dot.</param>
     /// <returns>True when the extension is processable as image/document input.</returns>
-    private static bool IsImageOrDocumentExtension(string extension)
-    {
+    private static bool IsImageOrDocumentExtension(string extension) {
         return extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".png", StringComparison.OrdinalIgnoreCase)
@@ -108,8 +98,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="extension">Filename extension including the dot.</param>
     /// <returns>True for .xlsx.</returns>
-    private static bool IsExcelExtension(string extension)
-    {
+    private static bool IsExcelExtension(string extension) {
         return extension.Equals(".xlsx", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -118,8 +107,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="extension">Filename extension including the dot.</param>
     /// <returns>True for .zip.</returns>
-    private static bool IsZipExtension(string extension)
-    {
+    private static bool IsZipExtension(string extension) {
         return extension.Equals(".zip", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -128,8 +116,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="headerBytes">Initial member bytes.</param>
     /// <returns>True when the bytes start with a JPEG marker.</returns>
-    private static bool HasJpegSignature(ReadOnlySpan<byte> headerBytes)
-    {
+    private static bool HasJpegSignature(ReadOnlySpan<byte> headerBytes) {
         return headerBytes.Length >= 3
             && headerBytes[0] == 0xFF
             && headerBytes[1] == 0xD8
@@ -141,8 +128,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="headerBytes">Initial member bytes.</param>
     /// <returns>True when the bytes start with a PNG marker.</returns>
-    private static bool HasPngSignature(ReadOnlySpan<byte> headerBytes)
-    {
+    private static bool HasPngSignature(ReadOnlySpan<byte> headerBytes) {
         return headerBytes.Length >= 8
             && headerBytes[0] == 0x89
             && headerBytes[1] == 0x50
@@ -159,8 +145,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="headerBytes">Initial member bytes.</param>
     /// <returns>True when the bytes start with a GIF marker.</returns>
-    private static bool HasGifSignature(ReadOnlySpan<byte> headerBytes)
-    {
+    private static bool HasGifSignature(ReadOnlySpan<byte> headerBytes) {
         return headerBytes.Length >= 6
             && headerBytes[0] == 0x47
             && headerBytes[1] == 0x49
@@ -175,8 +160,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="headerBytes">Initial member bytes.</param>
     /// <returns>True when the bytes start with a BMP marker.</returns>
-    private static bool HasBmpSignature(ReadOnlySpan<byte> headerBytes)
-    {
+    private static bool HasBmpSignature(ReadOnlySpan<byte> headerBytes) {
         return headerBytes.Length >= 2
             && headerBytes[0] == 0x42
             && headerBytes[1] == 0x4D;
@@ -187,8 +171,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="headerBytes">Initial member bytes.</param>
     /// <returns>True when the bytes start with a TIFF marker.</returns>
-    private static bool HasTiffSignature(ReadOnlySpan<byte> headerBytes)
-    {
+    private static bool HasTiffSignature(ReadOnlySpan<byte> headerBytes) {
         bool littleEndianTiff = headerBytes.Length >= 4
             && headerBytes[0] == 0x49
             && headerBytes[1] == 0x49
@@ -209,8 +192,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="headerBytes">Initial member bytes.</param>
     /// <returns>True when the bytes start with a PDF marker.</returns>
-    private static bool HasPdfSignature(ReadOnlySpan<byte> headerBytes)
-    {
+    private static bool HasPdfSignature(ReadOnlySpan<byte> headerBytes) {
         return headerBytes.Length >= 4
             && headerBytes[0] == 0x25
             && headerBytes[1] == 0x50
@@ -223,8 +205,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="headerBytes">Initial member bytes.</param>
     /// <returns>True when the bytes start with a WebP RIFF marker.</returns>
-    private static bool HasWebpSignature(ReadOnlySpan<byte> headerBytes)
-    {
+    private static bool HasWebpSignature(ReadOnlySpan<byte> headerBytes) {
         return headerBytes.Length >= 12
             && headerBytes[0] == 0x52
             && headerBytes[1] == 0x49
@@ -241,8 +222,7 @@ internal static class ZipMemberTriage
     /// </summary>
     /// <param name="headerBytes">Initial member bytes.</param>
     /// <returns>True when the bytes start with a zip marker.</returns>
-    private static bool HasZipSignature(ReadOnlySpan<byte> headerBytes)
-    {
+    private static bool HasZipSignature(ReadOnlySpan<byte> headerBytes) {
         return headerBytes.Length >= 4
             && headerBytes[0] == 0x50
             && headerBytes[1] == 0x4B

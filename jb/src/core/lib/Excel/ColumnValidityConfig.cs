@@ -3,8 +3,7 @@ namespace Prism.Lib.Excel;
 /// <summary>
 /// Column validity thresholds from ExcelConfig.json.
 /// </summary>
-public sealed record ColumnValidityConfig
-{
+public sealed record ColumnValidityConfig {
     /// <summary>
     /// Minimum share of data rows that must have a non-empty value for a column to survive.
     /// </summary>
@@ -13,10 +12,8 @@ public sealed record ColumnValidityConfig
     /// <summary>
     /// Validates column validity thresholds.
     /// </summary>
-    public void Validate()
-    {
-        if (this.MinimumUsefulValueRatio <= 0 || this.MinimumUsefulValueRatio > 1)
-        {
+    public void Validate() {
+        if (this.MinimumUsefulValueRatio <= 0 || this.MinimumUsefulValueRatio > 1) {
             throw new PrismConfigurationException("ExcelConfig.ColumnValidity.MinimumUsefulValueRatio must be greater than zero and less than or equal to one.");
         }
     }

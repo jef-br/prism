@@ -8,8 +8,7 @@ namespace Prism.Services.Matching;
 /// Matches images to FamilyIDs using normalized string token comparison.
 /// Bracket 3: accepts an assignment only when exactly one FamilyID has string token evidence.
 /// </summary>
-internal sealed class StringMatcher
-{
+internal sealed class StringMatcher {
     private static readonly Regex TokenSplitPattern = new(
         @"[^a-zA-ZÀ-ÖØ-öø-ÿ0-9]+",
         RegexOptions.Compiled);
@@ -40,8 +39,7 @@ internal sealed class StringMatcher
     private Dictionary<string, List<Posting>>? categoricalTokenIndex;
 
     /// <summary>StringMatcher's tunables, loaded from MatchingConfig.json's match.stringMatcher section.</summary>
-    public sealed class Config
-    {
+    public sealed class Config {
         /// <summary>
         /// Minimum distinct filename tokens the winning family must have matched for a Bracket 3 string
         /// assignment. 1 preserves the historical behavior; 2 rejects single-common-token matches
@@ -86,8 +84,7 @@ internal sealed class StringMatcher
         public required double NonExactTokenMatchConfidence { get; init; }
     }
 
-    internal StringMatcher(TranslationConfig translationConfig, Config cfg)
-    {
+    internal StringMatcher(TranslationConfig translationConfig, Config cfg) {
         this.translationConfig = translationConfig;
         this.cfg = cfg;
         this.bracket3MinDistinctTokens = cfg.Bracket3MinDistinctTokens;
@@ -106,11 +103,10 @@ internal sealed class StringMatcher
     /// <returns>Accepted MatchEvidence when exactly one FamilyID matches; null otherwise.</returns>
     internal MatchEvidence? TryMatch(
         ImageRecord_LAMBDA record,
-        IReadOnlyList<FamilyIDRecord> families)
-    {
-        string filename      = record.MatchingName;
+        IReadOnlyList<FamilyIDRecord> families) {
+        string filename = record.MatchingName;
         string sourceFilename = filename;
-        string imageId       = Path.GetFileNameWithoutExtension(filename);
+        string imageId = Path.GetFileNameWithoutExtension(filename);
 
         IReadOnlyList<FilenameToken> imageTokens = this.ExtractImageTokens(filename);
         if (imageTokens.Count == 0)
@@ -134,8 +130,7 @@ internal sealed class StringMatcher
             .OrderByDescending(candidate => candidate.DistinctMatches)
             .ToList();
 
-        if (ranked.Count > 1 && ranked[0].DistinctMatches == ranked[1].DistinctMatches)
-        {
+        if (ranked.Count > 1 && ranked[0].DistinctMatches == ranked[1].DistinctMatches) {
             // Top tie: short digit tokens (excluded from string tokens) may still discriminate —
             // "76" picks the family whose columns carry color code 76 over its 13-coded sibling.
             string? tiebreakWinner = this.BreakTieWithShortDigitTokens(filename, ranked, families);
@@ -156,18 +151,17 @@ internal sealed class StringMatcher
         double score = ComputeStringScore(winnerMatches, imageTokens.Count);
         string matcherName = "StringMatcher.Bracket3";
 
-        return new MatchEvidence
-        {
-            ImageId             = imageId,
-            SourceFilename      = sourceFilename,
-            FinalFamilyId       = matchedFamilyId,
-            FinalScore          = score,
-            IsKo                = false,
+        return new MatchEvidence {
+            ImageId = imageId,
+            SourceFilename = sourceFilename,
+            FinalFamilyId = matchedFamilyId,
+            FinalScore = score,
+            IsKo = false,
             AcceptedMatcherName = matcherName,
             StringTokenEvidence = tokenEvidence,
-            TopCandidates       = [new CandidateSummary(matchedFamilyId, score, matcherName)],
-            ImageNgpSummary     = BuildNgpSummary(record),
-            SafeExplanation     = $"Bracket3: {winnerMatches} string token(s) uniquely matched family {matchedFamilyId} (score={score:F3})."
+            TopCandidates = [new CandidateSummary(matchedFamilyId, score, matcherName)],
+            ImageNgpSummary = BuildNgpSummary(record),
+            SafeExplanation = $"Bracket3: {winnerMatches} string token(s) uniquely matched family {matchedFamilyId} (score={score:F3})."
         };
     }
 
@@ -180,8 +174,7 @@ internal sealed class StringMatcher
     private string? BreakTieWithShortDigitTokens(
         string filename,
         List<(string FamilyId, List<TokenEvidenceItem> Evidence, int DistinctMatches)> ranked,
-        IReadOnlyList<FamilyIDRecord> families)
-    {
+        IReadOnlyList<FamilyIDRecord> families) {
         int topMatches = ranked[0].DistinctMatches;
         HashSet<string> tiedFamilyIds = ranked
             .Where(r => r.DistinctMatches == topMatches)
@@ -195,8 +188,7 @@ internal sealed class StringMatcher
         string stem = Path.GetFileNameWithoutExtension(filename);
         string? agreedWinner = null;
 
-        foreach (string token in TokenSplitPattern.Split(stem))
-        {
+        foreach (string token in TokenSplitPattern.Split(stem)) {
             if (token.Length == 0 || !IsAllDigits(token))
                 continue;
 
@@ -223,13 +215,11 @@ internal sealed class StringMatcher
     /// index. Such a token (e.g. "1707527E", "A129") is a reference code, not a shared word, and is
     /// allowed to carry a Bracket 3 assignment alone.
     /// </summary>
-    private bool HasUniqueIdentifierToken(List<TokenEvidenceItem> evidence, string familyId)
-    {
+    private bool HasUniqueIdentifierToken(List<TokenEvidenceItem> evidence, string familyId) {
         if (this.identifierTokenMinLength <= 0 || this.tokenIndex is null)
             return false;
 
-        foreach (TokenEvidenceItem item in evidence)
-        {
+        foreach (TokenEvidenceItem item in evidence) {
             string normalized = NormalizeDiacritics(item.FilenameToken.ToLowerInvariant());
 
             if (normalized.Length < this.identifierTokenMinLength ||
@@ -259,26 +249,22 @@ internal sealed class StringMatcher
     /// </summary>
     private Dictionary<string, List<TokenEvidenceItem>> CollectEvidenceByFamily(
         IReadOnlyList<FilenameToken> imageTokens,
-        IReadOnlyList<FamilyIDRecord> families)
-    {
+        IReadOnlyList<FamilyIDRecord> families) {
         Dictionary<string, List<Posting>> index = this.GetOrBuildTokenIndex(families);
         Dictionary<string, List<Posting>> categoricalIndex = this.GetOrBuildCategoricalTokenIndex(families);
         Dictionary<string, List<TokenEvidenceItem>> byFamily = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (FilenameToken imageToken in imageTokens)
-        {
+        foreach (FilenameToken imageToken in imageTokens) {
             bool anyHit = false;
 
-            foreach (string key in this.ExpandSynonymKeys(imageToken.Normalized).Distinct(StringComparer.OrdinalIgnoreCase))
-            {
+            foreach (string key in this.ExpandSynonymKeys(imageToken.Normalized).Distinct(StringComparer.OrdinalIgnoreCase)) {
                 if (!index.TryGetValue(key, out List<Posting>? postings))
                     continue;
 
                 anyHit = true;
                 bool isExact = key.Equals(imageToken.Normalized, StringComparison.OrdinalIgnoreCase);
 
-                foreach (Posting posting in postings)
-                {
+                foreach (Posting posting in postings) {
                     if (!byFamily.TryGetValue(posting.FamilyId, out List<TokenEvidenceItem>? evidence))
                         byFamily[posting.FamilyId] = evidence = [];
 
@@ -309,13 +295,11 @@ internal sealed class StringMatcher
     private void CollectFuzzyCategoricalEvidence(
         FilenameToken imageToken,
         Dictionary<string, List<Posting>> categoricalIndex,
-        Dictionary<string, List<TokenEvidenceItem>> byFamily)
-    {
+        Dictionary<string, List<TokenEvidenceItem>> byFamily) {
         if (imageToken.Normalized.Length < this.fuzzyMinTokenLength)
             return;
 
-        foreach (KeyValuePair<string, List<Posting>> entry in categoricalIndex)
-        {
+        foreach (KeyValuePair<string, List<Posting>> entry in categoricalIndex) {
             if (entry.Key.Length < this.fuzzyMinTokenLength ||
                 Math.Abs(entry.Key.Length - imageToken.Normalized.Length) > this.fuzzyMaxEditDistance)
                 continue;
@@ -323,8 +307,7 @@ internal sealed class StringMatcher
             if (ModelBuilder.ComputeLevenshteinDistance(imageToken.Normalized, entry.Key) > this.fuzzyMaxEditDistance)
                 continue;
 
-            foreach (Posting posting in entry.Value)
-            {
+            foreach (Posting posting in entry.Value) {
                 if (!byFamily.TryGetValue(posting.FamilyId, out List<TokenEvidenceItem>? evidence))
                     byFamily[posting.FamilyId] = evidence = [];
 
@@ -343,18 +326,15 @@ internal sealed class StringMatcher
     /// token to the families and columns that contain it. Numeric and FamilyID columns are excluded;
     /// Descriptive/Mixed columns are noise-filtered before indexing.
     /// </summary>
-    private Dictionary<string, List<Posting>> GetOrBuildTokenIndex(IReadOnlyList<FamilyIDRecord> families)
-    {
+    private Dictionary<string, List<Posting>> GetOrBuildTokenIndex(IReadOnlyList<FamilyIDRecord> families) {
         if (this.tokenIndex is not null && ReferenceEquals(this.indexedFamilies, families))
             return this.tokenIndex;
 
         Dictionary<string, List<Posting>> index = new(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, List<Posting>> categorical = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (FamilyIDRecord family in families)
-        {
-            foreach (KeyValuePair<string, IReadOnlyList<string>> property in family.NormalizedTokens)
-            {
+        foreach (FamilyIDRecord family in families) {
+            foreach (KeyValuePair<string, IReadOnlyList<string>> property in family.NormalizedTokens) {
                 ExcelColumnClassification classification = family.ColumnClassifications.TryGetValue(
                     property.Key, out ExcelColumnClassification cls)
                         ? cls
@@ -364,8 +344,7 @@ internal sealed class StringMatcher
                     classification == ExcelColumnClassification.FamilyID)
                     continue;
 
-                foreach (string familyToken in PrepareExcelTokens(property.Value, property.Key, classification))
-                {
+                foreach (string familyToken in PrepareExcelTokens(property.Value, property.Key, classification)) {
                     if (string.IsNullOrEmpty(familyToken))
                         continue;
 
@@ -388,15 +367,13 @@ internal sealed class StringMatcher
     }
 
     /// <summary>Categorical-only subset of the token index, built and cached alongside GetOrBuildTokenIndex.</summary>
-    private Dictionary<string, List<Posting>> GetOrBuildCategoricalTokenIndex(IReadOnlyList<FamilyIDRecord> families)
-    {
+    private Dictionary<string, List<Posting>> GetOrBuildCategoricalTokenIndex(IReadOnlyList<FamilyIDRecord> families) {
         this.GetOrBuildTokenIndex(families);
         return this.categoricalTokenIndex!;
     }
 
     /// <summary>Appends one posting to the index bucket for <paramref name="key"/>.</summary>
-    private static void AddPosting(Dictionary<string, List<Posting>> index, string key, Posting posting)
-    {
+    private static void AddPosting(Dictionary<string, List<Posting>> index, string key, Posting posting) {
         if (!index.TryGetValue(key, out List<Posting>? postings))
             index[key] = postings = [];
 
@@ -410,26 +387,21 @@ internal sealed class StringMatcher
     /// NormalizedTokens are sorted alphabetically and have lost it. Digit-only pairs are skipped
     /// (digit concatenations belong to NumericMatcher).
     /// </summary>
-    private void IndexAdjacentTokenBigrams(Dictionary<string, List<Posting>> index, FamilyIDRecord family, string propertyName)
-    {
+    private void IndexAdjacentTokenBigrams(Dictionary<string, List<Posting>> index, FamilyIDRecord family, string propertyName) {
         if (!family.OriginalSourceCellValues.TryGetValue(propertyName, out IReadOnlyList<string>? cellValues))
             return;
 
-        foreach (string cellValue in cellValues)
-        {
+        foreach (string cellValue in cellValues) {
             string? previous = null;
 
-            foreach (string rawToken in TokenSplitPattern.Split(cellValue))
-            {
+            foreach (string rawToken in TokenSplitPattern.Split(cellValue)) {
                 string token = NormalizeDiacritics(rawToken.ToLowerInvariant());
-                if (token.Length < 2)
-                {
+                if (token.Length < 2) {
                     previous = null; // a 1-char fragment breaks adjacency
                     continue;
                 }
 
-                if (previous is not null && !(IsAllDigits(previous) && IsAllDigits(token)))
-                {
+                if (previous is not null && !(IsAllDigits(previous) && IsAllDigits(token))) {
                     AddBigramPosting(index, previous + token, family.FamilyID, propertyName, $"{previous} {token}");
                     AddBigramPosting(index, token + previous, family.FamilyID, propertyName, $"{previous} {token}");
                 }
@@ -440,8 +412,7 @@ internal sealed class StringMatcher
     }
 
     /// <summary>Adds one bigram posting unless the same family already holds that key.</summary>
-    private static void AddBigramPosting(Dictionary<string, List<Posting>> index, string key, string familyId, string propertyName, string familyToken)
-    {
+    private static void AddBigramPosting(Dictionary<string, List<Posting>> index, string key, string familyId, string propertyName, string familyToken) {
         if (!index.TryGetValue(key, out List<Posting>? postings))
             index[key] = postings = [];
 
@@ -453,17 +424,14 @@ internal sealed class StringMatcher
     /// Yields the lookup keys for an image token: the token itself plus every term sharing a configured
     /// synonym group with it, so synonym matches resolve through the index.
     /// </summary>
-    private IEnumerable<string> ExpandSynonymKeys(string normalizedToken)
-    {
+    private IEnumerable<string> ExpandSynonymKeys(string normalizedToken) {
         yield return normalizedToken;
 
-        foreach (SynonymGroup group in this.translationConfig.SynonymGroups)
-        {
+        foreach (SynonymGroup group in this.translationConfig.SynonymGroups) {
             if (!group.Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedToken))
                 continue;
 
-            foreach (string term in group.Terms)
-            {
+            foreach (string term in group.Terms) {
                 string normalizedTerm = term.Trim().ToLowerInvariant();
                 if (normalizedTerm != normalizedToken)
                     yield return normalizedTerm;
@@ -478,10 +446,8 @@ internal sealed class StringMatcher
     private static IReadOnlyList<string> PrepareExcelTokens(
         IReadOnlyList<string> tokens,
         string propertyName,
-        ExcelColumnClassification classification)
-    {
-        if (classification is ExcelColumnClassification.Descriptive or ExcelColumnClassification.Mixed)
-        {
+        ExcelColumnClassification classification) {
+        if (classification is ExcelColumnClassification.Descriptive or ExcelColumnClassification.Mixed) {
             return tokens
                 .Select(t => NoiseFilter.RemoveNumericNoiseForMatching(t, propertyName))
                 .Where(t => !string.IsNullOrWhiteSpace(t))
@@ -511,8 +477,7 @@ internal sealed class StringMatcher
     /// the index is built once per bracket run instead of once per image.
     /// </param>
     internal IReadOnlyList<(FamilyIDRecord Family, int MatchCount, List<TokenEvidenceItem> Evidence)>
-        ScoreCandidatesByStringTokens(string filename, IReadOnlyList<FamilyIDRecord> candidates, IReadOnlyList<FamilyIDRecord> indexScope)
-    {
+        ScoreCandidatesByStringTokens(string filename, IReadOnlyList<FamilyIDRecord> candidates, IReadOnlyList<FamilyIDRecord> indexScope) {
         IReadOnlyList<FilenameToken> imageTokens = this.ExtractImageTokens(filename);
         if (imageTokens.Count == 0)
             return [];
@@ -523,8 +488,7 @@ internal sealed class StringMatcher
 
         List<(FamilyIDRecord Family, int MatchCount, List<TokenEvidenceItem> Evidence)> results = [];
 
-        foreach (FamilyIDRecord family in candidates)
-        {
+        foreach (FamilyIDRecord family in candidates) {
             if (!evidenceByFamily.TryGetValue(family.FamilyID, out List<TokenEvidenceItem>? evidence))
                 continue;
 
@@ -533,7 +497,7 @@ internal sealed class StringMatcher
             results.Add((family, evidence.Count, evidence));
         }
 
-        return [..results.OrderByDescending(r => r.MatchCount)];
+        return [.. results.OrderByDescending(r => r.MatchCount)];
     }
 
     /// <summary>
@@ -557,18 +521,15 @@ internal sealed class StringMatcher
     /// Excludes pure-digit tokens (those belong to NumericMatcher). Mixed tokens are additionally
     /// split at letter↔digit boundaries so "magenta76" also yields "magenta".
     /// </summary>
-    private IReadOnlyList<FilenameToken> ExtractImageTokens(string filename)
-    {
+    private IReadOnlyList<FilenameToken> ExtractImageTokens(string filename) {
         string stem = Path.GetFileNameWithoutExtension(filename);
         List<FilenameToken> tokens = [];
 
-        foreach (string raw in TokenSplitPattern.Split(stem))
-        {
+        foreach (string raw in TokenSplitPattern.Split(stem)) {
             this.AddImageToken(tokens, raw);
 
             string[] parts = AlphaDigitBoundaryPattern.Split(raw);
-            if (parts.Length > 1)
-            {
+            if (parts.Length > 1) {
                 foreach (string part in parts)
                     this.AddImageToken(tokens, part);
             }
@@ -578,8 +539,7 @@ internal sealed class StringMatcher
     }
 
     /// <summary>Appends one candidate token when it passes the length/digit/stop-word filters.</summary>
-    private void AddImageToken(List<FilenameToken> tokens, string raw)
-    {
+    private void AddImageToken(List<FilenameToken> tokens, string raw) {
         FilenameToken token = new(raw, NormalizeDiacritics(raw.ToLowerInvariant()));
 
         if (token.Normalized.Length < 2 || IsAllDigits(token.Normalized) ||
@@ -592,8 +552,7 @@ internal sealed class StringMatcher
 
     //  Scoring 
 
-    private static double ComputeStringScore(int matchedTokenCount, int totalImageTokenCount)
-    {
+    private static double ComputeStringScore(int matchedTokenCount, int totalImageTokenCount) {
         if (totalImageTokenCount == 0)
             return 0.0;
 
@@ -605,13 +564,11 @@ internal sealed class StringMatcher
 
     //  Normalization 
 
-    private static string NormalizeDiacritics(string input)
-    {
+    private static string NormalizeDiacritics(string input) {
         string decomposed = input.Normalize(NormalizationForm.FormD);
         StringBuilder builder = new(decomposed.Length);
 
-        foreach (char ch in decomposed)
-        {
+        foreach (char ch in decomposed) {
             if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
                 builder.Append(ch);
         }
@@ -619,10 +576,8 @@ internal sealed class StringMatcher
         return builder.ToString().Normalize(NormalizationForm.FormC);
     }
 
-    private static bool IsAllDigits(string token)
-    {
-        foreach (char ch in token)
-        {
+    private static bool IsAllDigits(string token) {
+        foreach (char ch in token) {
             if (!char.IsDigit(ch)) return false;
         }
 

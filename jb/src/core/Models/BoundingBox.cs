@@ -4,8 +4,7 @@ namespace Prism.Contracts;
 /// Axis-aligned rectangle identifying a region of interest within an image, in pixels.
 /// Used to describe salient object bounds and crop coordinates.
 /// </summary>
-public struct BoundingBox
-{
+public struct BoundingBox {
     /// <summary>Left edge offset from the image origin (pixels).</summary>
     public int X { get; set; }
 

@@ -9,8 +9,7 @@ namespace Prism.Lib.Excel;
 /// <summary>
 /// Runtime configuration for building the Internal Excel Model.
 /// </summary>
-public sealed record ExcelConfig
-{
+public sealed record ExcelConfig {
     /// <summary>
     /// Canonical primary-key column header expected in a detected header row.
     /// </summary>
@@ -61,23 +60,19 @@ public sealed record ExcelConfig
     /// </summary>
     /// <param name="configPath">Path to ExcelConfig.json.</param>
     /// <returns>A validated Excel configuration object.</returns>
-    public static ExcelConfig Load(string configPath)
-    {
-        if (string.IsNullOrWhiteSpace(configPath))
-        {
+    public static ExcelConfig Load(string configPath) {
+        if (string.IsNullOrWhiteSpace(configPath)) {
             throw new ArgumentException("Excel config path is required.", nameof(configPath));
         }
 
-        if (!File.Exists(configPath))
-        {
+        if (!File.Exists(configPath)) {
             throw new FileNotFoundException("Excel config file was not found.", configPath);
         }
 
         string json = File.ReadAllText(configPath);
         ExcelConfig? config = JsonSerializer.Deserialize<ExcelConfig>(json, JsonOptions);
 
-        if (config is null)
-        {
+        if (config is null) {
             throw new PrismConfigurationException("Excel config could not be parsed.");
         }
 
@@ -89,15 +84,12 @@ public sealed record ExcelConfig
     /// <summary>
     /// Validates all required configuration fields before processing any workbook.
     /// </summary>
-    public void Validate()
-    {
-        if (string.IsNullOrWhiteSpace(this.RecordPrimaryKey))
-        {
+    public void Validate() {
+        if (string.IsNullOrWhiteSpace(this.RecordPrimaryKey)) {
             throw new PrismConfigurationException("ExcelConfig.RecordPrimaryKey is required.");
         }
 
-        if (this.HeaderRowIndicators.Count == 0 || this.HeaderRowIndicators.Any(string.IsNullOrWhiteSpace))
-        {
+        if (this.HeaderRowIndicators.Count == 0 || this.HeaderRowIndicators.Any(string.IsNullOrWhiteSpace)) {
             throw new PrismConfigurationException("ExcelConfig.HeaderRowIndicators must contain at least one non-empty value.");
         }
 
@@ -109,8 +101,7 @@ public sealed record ExcelConfig
         this.ColumnClassification.Validate();
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
+    private static readonly JsonSerializerOptions JsonOptions = new() {
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true

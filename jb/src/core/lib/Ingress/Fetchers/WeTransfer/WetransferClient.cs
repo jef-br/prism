@@ -6,8 +6,7 @@ namespace Prism.Lib.Ingress;
 /// Downloads files from WeTransfer, SwissTransfer, and other browser-driven file-sharing services.
 /// Uses Playwright to automate cookie consent, optional password, and the download button interaction.
 /// </summary>
-internal class WetransferClient
-{
+internal class WetransferClient {
     private readonly CancellationToken _defaultCt;
     private readonly int _consentClickTimeoutMs;
     private readonly int _consentHiddenWaitTimeoutMs;
@@ -56,8 +55,7 @@ internal class WetransferClient
     /// The token is linked into every <c>DownloadAsync</c> call, so cancelling it
     /// aborts any in-progress download regardless of the per-call token.
     /// </summary>
-    public WetransferClient(HostRules_Config.WeTransferPollingSection cfg, CancellationToken cancellationToken)
-    {
+    public WetransferClient(HostRules_Config.WeTransferPollingSection cfg, CancellationToken cancellationToken) {
         this._consentClickTimeoutMs = cfg.ConsentClickTimeoutMs;
         this._consentHiddenWaitTimeoutMs = cfg.ConsentHiddenWaitTimeoutMs;
         this._consentSettleDelayMs = cfg.ConsentSettleDelayMs;
@@ -86,8 +84,7 @@ internal class WetransferClient
     /// <exception cref="InvalidOperationException">
     /// Thrown when the download button is not found (expired link) or the file exceeds the configured size limit.
     /// </exception>
-    public async Task<WeTransferDownloadResult> DownloadAsync(string url, string? password, CancellationToken cancellationToken)
-    {
+    public async Task<WeTransferDownloadResult> DownloadAsync(string url, string? password, CancellationToken cancellationToken) {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(this._defaultCt, cancellationToken);
         var ct = cts.Token;
 
@@ -102,7 +99,7 @@ internal class WetransferClient
             // Show the browser window when a debugger is attached so you can watch the interaction
             Headless = !_isDebugging,
             SlowMo = _isDebugging ? 500 : 0
-            }
+        }
         );
 
         var browserContext = await browser.NewContextAsync(new() { AcceptDownloads = true });
@@ -115,8 +112,7 @@ internal class WetransferClient
             // The OneTrust overlay intercepts pointer events on everything below it.
             // We must dismiss it via its stable DOM ID before touching anything else.
             var oneTrustSdk = page.Locator("#onetrust-consent-sdk");
-            if (await oneTrustSdk.IsVisibleAsync())
-            {
+            if (await oneTrustSdk.IsVisibleAsync()) {
                 var oneTrustBtn = page.Locator("#onetrust-accept-btn-handler");
                 if (await oneTrustBtn.IsVisibleAsync()) {
                     try {
@@ -127,7 +123,8 @@ internal class WetransferClient
 
                 try {
                     await oneTrustSdk.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = this._consentHiddenWaitTimeoutMs });
-                } catch { }
+                }
+                catch { }
             }
 
             //  Phase 2: provider-specific consent banners 
@@ -141,7 +138,8 @@ internal class WetransferClient
                         try { await b.ClickAsync(new() { Timeout = this._consentClickTimeoutMs }); await page.WaitForTimeoutAsync(this._consentSettleDelayMs); } catch { }
                     }
                     return any;
-                } catch {
+                }
+                catch {
                     return false;
                 }
             }
@@ -240,18 +238,19 @@ internal class WetransferClient
                 throw new InvalidOperationException($"Download button not found — the link may have expired or the page layout has changed. Page screenshot saved to: {screenshotPath}");
             }
 
-            var download = await page.RunAndWaitForDownloadAsync( async () => {
-                    try {
-                        await downloadBtn.ClickAsync(new() { Timeout = this._downloadButtonClickTimeoutMs });
-                    } catch { }
-                },
+            var download = await page.RunAndWaitForDownloadAsync(async () => {
+                try {
+                    await downloadBtn.ClickAsync(new() { Timeout = this._downloadButtonClickTimeoutMs });
+                }
+                catch { }
+            },
                 new PageRunAndWaitForDownloadOptions { Timeout = this._downloadWaitTimeoutMs }
             );
 
             string resolvedFileName = download.SuggestedFilename is { Length: > 0 } s ? s : tempName;
             long? totalBytes = await TryGetContentLengthAsync(download.Url, ct);
 
-            if (totalBytes.HasValue && totalBytes.Value > this._maxDownloadBytes){
+            if (totalBytes.HasValue && totalBytes.Value > this._maxDownloadBytes) {
                 throw new InvalidOperationException($"File too large: {totalBytes.Value / (double)BytesPerGigabyte:0.##} GB. Limit is {this._maxDownloadBytes / BytesPerGigabyte} GB.");
             }
 
@@ -272,13 +271,15 @@ internal class WetransferClient
 
             var fileStream = new FileStream(downloadPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: this._streamBufferSizeBytes, useAsync: true);
             return new WeTransferDownloadResult(fileStream, resolvedFileName, totalBytes, downloadPath);
-        } catch {
+        }
+        catch {
             if (File.Exists(downloadPath)) {
                 File.Delete(downloadPath);
             }
 
             throw;
-        } finally {
+        }
+        finally {
             await page.CloseAsync();
         }
     }
@@ -300,7 +301,8 @@ internal class WetransferClient
             if (rangeRes.StatusCode == System.Net.HttpStatusCode.PartialContent && rangeRes.Content.Headers.ContentRange?.Length.HasValue == true) {
                 return rangeRes.Content.Headers.ContentRange.Length!.Value;
             }
-        } catch { }
+        }
+        catch { }
         return null;
     }
 }

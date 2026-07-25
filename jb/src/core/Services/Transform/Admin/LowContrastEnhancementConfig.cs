@@ -7,13 +7,11 @@ namespace Prism.Services.Transform;
 /// of transform_Config.json. No defaults — every value must be present in the JSON or
 /// deserialization fails loud.
 /// </summary>
-public sealed class LowContrastEnhancementConfig : IValidatableConfig
-{
+public sealed class LowContrastEnhancementConfig : IValidatableConfig {
     public required double ClipLimit { get; init; }
     public required int TileSize { get; init; }
 
-    public void Validate()
-    {
+    public void Validate() {
         List<string> problems = [];
 
         if (this.ClipLimit <= 0.0) problems.Add("LowContrastEnhancement.ClipLimit must be > 0");

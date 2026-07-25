@@ -5,8 +5,7 @@ namespace Prism.Services.Transform;
 /// attaches an OutputRecord carrying the transform outcome. When transform is disabled, every non-KO image is
 /// marked Skipped. Emits the Transformed event.
 /// </summary>
-public interface ITransformService
-{
+public interface ITransformService {
     /// <summary>Runs the Transformed stage over the enriched LAMBDA collection.</summary>
     Task<TransformResult> TransformAsync(
         MatchingResult matched,

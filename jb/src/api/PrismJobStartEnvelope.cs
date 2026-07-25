@@ -4,8 +4,7 @@ namespace Prism.Api;
 /// <summary>
 /// Envelope returned immediately after a job is accepted.
 /// </summary>
-internal sealed record PrismJobStartEnvelope
-{
+internal sealed record PrismJobStartEnvelope {
     public Guid JobID { get; init; }
     public string? ClientRequestToken { get; init; }
     public string ProgressUrl { get; init; } = string.Empty;

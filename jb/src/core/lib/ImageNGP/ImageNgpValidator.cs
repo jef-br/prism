@@ -11,18 +11,16 @@ namespace Prism.Lib.ImageNGP;
 /// This is what makes the taxonomy safe to edit by hand: a typo (e.g. <c>hero-orientaton</c>) is
 /// caught at startup instead of silently evaluating to UNKNOWN and never matching at runtime.
 /// </summary>
-public static class ImageNgpValidator
-{
+public static class ImageNgpValidator {
     /// <summary>
     /// Validates the rule and mapping files in <paramref name="coreConfigDirectory"/> against the
     /// canonical taxonomy. Throws <see cref="PrismConfigurationException"/> listing all problems.
     /// </summary>
     /// <param name="coreConfigDirectory">Directory containing Prism_Config.json (the core config root).</param>
-    public static void Validate(string coreConfigDirectory)
-    {
+    public static void Validate(string coreConfigDirectory) {
         string vocabularyPath = Path.Combine(coreConfigDirectory, "ImageNGP.json");
         string imageRolesPath = Path.Combine(coreConfigDirectory, "ImageRoles.json");
-        string detOrderPath   = Path.Combine(coreConfigDirectory, "DetOrderRules.json");
+        string detOrderPath = Path.Combine(coreConfigDirectory, "DetOrderRules.json");
         string clipPromptsPath = Path.Combine(coreConfigDirectory, "ClipPrompts.json");
 
         ImageNgpVocabulary vocabulary = ImageNgpVocabulary.Load(vocabularyPath);
@@ -41,8 +39,7 @@ public static class ImageNgpValidator
 
     //  ImageRoles.json 
 
-    private static void ValidateImageRoles(string path, ImageNgpVocabulary vocabulary, List<string> problems)
-    {
+    private static void ValidateImageRoles(string path, ImageNgpVocabulary vocabulary, List<string> problems) {
         JsonElement root = LoadRoot(path, problems);
         if (root.ValueKind == JsonValueKind.Undefined) return;
 
@@ -65,8 +62,7 @@ public static class ImageNgpValidator
         }
     }
 
-    private static void ValidateCondition(JsonElement condition, string phenotypeId, ImageNgpVocabulary vocabulary, List<string> problems)
-    {
+    private static void ValidateCondition(JsonElement condition, string phenotypeId, ImageNgpVocabulary vocabulary, List<string> problems) {
         // OR group: recurse into each child condition.
         if (condition.TryGetProperty("anyOf", out JsonElement anyOfEl) && anyOfEl.ValueKind == JsonValueKind.Array) {
             foreach (JsonElement child in anyOfEl.EnumerateArray())
@@ -99,8 +95,7 @@ public static class ImageNgpValidator
 
     //  DetOrderRules.json 
 
-    private static void ValidateDetOrderRules(string path, ImageNgpVocabulary vocabulary, List<string> problems)
-    {
+    private static void ValidateDetOrderRules(string path, ImageNgpVocabulary vocabulary, List<string> problems) {
         JsonElement root = LoadRoot(path, problems);
         if (root.ValueKind == JsonValueKind.Undefined) return;
 
@@ -125,8 +120,7 @@ public static class ImageNgpValidator
 
     //  ClipPrompts.json 
 
-    private static void ValidateClipPrompts(string path, ImageNgpVocabulary vocabulary, List<string> problems)
-    {
+    private static void ValidateClipPrompts(string path, ImageNgpVocabulary vocabulary, List<string> problems) {
         JsonElement root = LoadRoot(path, problems);
         if (root.ValueKind == JsonValueKind.Undefined) return;
 
@@ -156,8 +150,7 @@ public static class ImageNgpValidator
     /// Reads and parses a JSON file. On a missing file or parse error, records a problem and returns
     /// an <see cref="JsonValueKind.Undefined"/> element so the caller skips it.
     /// </summary>
-    private static JsonElement LoadRoot(string path, List<string> problems)
-    {
+    private static JsonElement LoadRoot(string path, List<string> problems) {
         if (!File.Exists(path)) {
             problems.Add($"Required config file not found: '{path}'.");
             return default;

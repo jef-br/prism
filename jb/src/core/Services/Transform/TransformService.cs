@@ -9,8 +9,7 @@ namespace Prism.Services.Transform;
 /// <see cref="IUpscaleService"/> when one is provided (remote Upscale host, PRISM_UPSCALE_URL); otherwise
 /// through the local static Real-ESRGAN session.
 /// </summary>
-public sealed class TransformService : ITransformService
-{
+public sealed class TransformService : ITransformService {
     private readonly IUpscaleService? remoteUpscale;
 
     public TransformService() : this(null) { }
@@ -23,20 +22,16 @@ public sealed class TransformService : ITransformService
         bool transformEnabled,
         bool headcut,
         Func<PipelineProgressEvent, Task>? progress,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         await StageProgress.EmitStarted(progress, matched.Ingest.JobID, PipelineStageNames.Transformed, cancellationToken);
 
-        if (!transformEnabled)
-        {
-            foreach (ImageRecord_LAMBDA lambda in matched.LambdaRecords)
-            {
+        if (!transformEnabled) {
+            foreach (ImageRecord_LAMBDA lambda in matched.LambdaRecords) {
                 if (lambda.IsKo) continue;
-                lambda.OutputRecord = new ImageRecord_OUTPUT
-                {
+                lambda.OutputRecord = new ImageRecord_OUTPUT {
                     TransformStatus = TransformationStatus.Skipped,
-                    InputWidth      = lambda.Width,
-                    InputHeight     = lambda.Height,
+                    InputWidth = lambda.Width,
+                    InputHeight = lambda.Height,
                     SafeSummaryText = "Transform disabled by job parameters."
                 };
             }
@@ -61,8 +56,7 @@ public sealed class TransformService : ITransformService
         await Parallel.ForEachAsync(
             matched.LambdaRecords.Where(l => !l.IsKo),
             new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = cancellationToken },
-            async (lambda, ct) =>
-            {
+            async (lambda, ct) => {
                 inputByName.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input);
                 (byte[]? preprocessed, Mat? colorMat) = await ImagePreProcessor.PreprocessAsync(lambda, input?.NormalizedJpgPath, prismConfig, this.remoteUpscale, ct);
 
@@ -70,8 +64,7 @@ public sealed class TransformService : ITransformService
 
                 lambda.ProcessedBytes = preprocessed;
 
-                using (colorMat)
-                {
+                using (colorMat) {
                     ImageTransformer.TransformImage(lambda, colorMat, headcut, parameters);
                 }
 

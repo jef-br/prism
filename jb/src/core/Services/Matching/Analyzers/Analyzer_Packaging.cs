@@ -11,10 +11,8 @@ namespace Prism.Services.Matching;
 */
 
 /// <summary>STUB: will set <c>packaging-visible</c> and <c>scale-reference-present</c>. Currently writes nothing.</summary>
-internal static class Analyzer_Packaging
-{
-    public static void Analyze(ImageFeatureSnapshot snapshot)
-    {
+internal static class Analyzer_Packaging {
+    public static void Analyze(ImageFeatureSnapshot snapshot) {
         // Not implemented — packaging-visible/scale-reference-present stay UNKNOWN.
     }
 }

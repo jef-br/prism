@@ -1,8 +1,7 @@
 namespace Prism.Api;
 
 /// <summary>Result of lite ingress validation.</summary>
-internal sealed record PrismMatchLiteIngressResult
-{
+internal sealed record PrismMatchLiteIngressResult {
     public IReadOnlyList<ImageRecord_INPUT>? Images { get; init; }
     public IReadOnlyList<InputExcelFileRecord>? ExcelFiles { get; init; }
     public string? JobTempDir { get; init; }
@@ -18,8 +17,7 @@ internal sealed record PrismMatchLiteIngressResult
         => new() { Error = error };
 
     /// <summary>Deletes the temp folder that holds spilled Excel files.</summary>
-    public void CleanUp()
-    {
+    public void CleanUp() {
         if (this.JobTempDir is null) return;
         try { if (Directory.Exists(this.JobTempDir)) Directory.Delete(this.JobTempDir, recursive: true); }
         catch (IOException) { }

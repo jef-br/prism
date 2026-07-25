@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// Processing options selected by the caller for one PRISM job.
 /// </summary>
-public sealed record PrismProcessingParameters
-{
+public sealed record PrismProcessingParameters {
     /// <summary>
     /// Whether output images should be renamed with the matched FamilyID and det order.
     /// </summary>

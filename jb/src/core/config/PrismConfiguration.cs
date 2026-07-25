@@ -11,7 +11,7 @@ public sealed class PrismConfiguration {
     /// <summary>Config file name; resolve its path with <see cref="ConfigLoader.RequireFile"/>.</summary>
     public const string FileName = "Prism_Config.json";
 
-    
+
 
 
     // --- Input limits 
@@ -106,7 +106,7 @@ public sealed class PrismConfiguration {
     public bool DetOrderGapsAllowed { get; private set; }
 
     // --- Factory
-    public static PrismConfiguration LoadPrismConfig( string cfgPath ) {
+    public static PrismConfiguration LoadPrismConfig(string cfgPath) {
         if (string.IsNullOrWhiteSpace(cfgPath)) {
             throw new PrismConfigurationException($"{FileName} path must not be null or empty.");
         }
@@ -118,7 +118,8 @@ public sealed class PrismConfiguration {
         string rawJson;
         try {
             rawJson = File.ReadAllText(cfgPath);
-        } catch (Exception readException) {
+        }
+        catch (Exception readException) {
             throw new PrismConfigurationException(
                 $"{FileName} could not be read at: {cfgPath}",
                 readException);
@@ -127,7 +128,8 @@ public sealed class PrismConfiguration {
         JsonDocument document;
         try {
             document = JsonDocument.Parse(rawJson);
-        } catch (JsonException parseException) {
+        }
+        catch (JsonException parseException) {
             throw new PrismConfigurationException(
                 $"{FileName} is not valid JSON: {parseException.Message}",
                 parseException);
@@ -145,7 +147,7 @@ public sealed class PrismConfiguration {
     // Fail fast on missing model assets: the refinement chain needs the YOLO26 detector and Transform
     // needs the Real-ESRGAN upscaler, and a per-image degradation would be silent (T-4110: no fallback
     // upscaler exists). Same resolution order as the CLIP model assets.
-    private static void ValidateModelAssets( PrismConfiguration config ) {
+    private static void ValidateModelAssets(PrismConfiguration config) {
         if (ModelAssetLocator.Find("Services/Matching/Analyzers/ONNX/yolo26s.onnx") is null)
             throw new PrismConfigurationException(
                 "YOLO26 ONNX model not found. Deploy Services/Matching/Analyzers/ONNX/yolo26s.onnx next to " +
@@ -157,7 +159,7 @@ public sealed class PrismConfiguration {
     }
 
     // --- Parsing helpers 
-    private static PrismConfiguration ParseAndValidate( JsonElement root, string cfgPath ) {
+    private static PrismConfiguration ParseAndValidate(JsonElement root, string cfgPath) {
         PrismConfiguration config = new() {
             MaximumRequestBytes = RequireInt64(root, cfgPath, "Input", "MAXIMUM_REQUEST_SIZE"),
             MinimumImageCountPerJob = RequireInt32(root, cfgPath, "Input", "Images", "amount", "min"),
@@ -227,7 +229,7 @@ public sealed class PrismConfiguration {
     /// Throws <see cref="PrismConfigurationException"/> on any invalid value.
     /// </summary>
     /// <param name="cfgPath">Source path used in error messages.</param>
-    private void Validate( string cfgPath ) {
+    private void Validate(string cfgPath) {
         AssertPositive(this.MaximumRequestBytes, cfgPath, "Input.MAXIMUM_REQUEST_SIZE");
         AssertPositive(this.MinimumImageCountPerJob, cfgPath, "Input.Images.amount.min");
         AssertPositive(this.MaximumImageCountPerJob, cfgPath, "Input.Images.amount.max");
@@ -241,8 +243,8 @@ public sealed class PrismConfiguration {
         AssertInRange(this.ThresholdForInfluentialTags, 0.0, 1.0, cfgPath, "Classification.Confidence_Threshold");
         AssertInRange(this.ThresholdForDiscardingClassificationTags, 0.0, 1.0, cfgPath, "Classification.Cutoff_Threshold");
 
-        if (this.ThresholdForDiscardingClassificationTags > this.ThresholdForInfluentialTags) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Classification.Cutoff_Threshold ({this.ThresholdForDiscardingClassificationTags}) must be <= Classification.Confidence_Threshold ({this.ThresholdForInfluentialTags}).");}
-        if (this.MaxHammingDistance < 0) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Classification.Deduplication.HammingThreshold must be >= 0 but was {this.MaxHammingDistance}.");}
+        if (this.ThresholdForDiscardingClassificationTags > this.ThresholdForInfluentialTags) { throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Classification.Cutoff_Threshold ({this.ThresholdForDiscardingClassificationTags}) must be <= Classification.Confidence_Threshold ({this.ThresholdForInfluentialTags})."); }
+        if (this.MaxHammingDistance < 0) { throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Classification.Deduplication.HammingThreshold must be >= 0 but was {this.MaxHammingDistance}."); }
 
         AssertInRange(this.Weight_NumTokens, 0.0, 1.0, cfgPath, "Classification.Weights.NumericToken_Weight");
         AssertInRange(this.Weight_StringTokens, 0.0, 1.0, cfgPath, "Classification.Weights.StringToken_Weight");
@@ -260,7 +262,7 @@ public sealed class PrismConfiguration {
         AssertPositive(this.MinGeneratedImgWidth, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.width");
         AssertPositive(this.MinGeneratedImgWidthHeight, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.height");
 
-        if (this.JobRetries < 0) {throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Pipeline.JobRetries must be >= 0 but was {this.JobRetries}.");}
+        if (this.JobRetries < 0) { throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Pipeline.JobRetries must be >= 0 but was {this.JobRetries}."); }
         if (this.JobRetentionPeriodInHours <= 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Jobs.JobRetentionPeriodInHours must be > 0 but was {this.JobRetentionPeriodInHours}.");
 
         AssertPositive(this.MaxQueuedJobs, cfgPath, "Jobs.MaxQueuedJobs");
@@ -279,7 +281,7 @@ public sealed class PrismConfiguration {
     }
 
     // --- JSON navigation helpers 
-    private static int RequireInt32( JsonElement root, string cfgPath, params string[] path ) {
+    private static int RequireInt32(JsonElement root, string cfgPath, params string[] path) {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Number || !element.Value.TryGetInt32(out int val)) {
@@ -289,7 +291,7 @@ public sealed class PrismConfiguration {
         return val;
     }
 
-    private static long RequireInt64( JsonElement root, string cfgPath, params string[] path ) {
+    private static long RequireInt64(JsonElement root, string cfgPath, params string[] path) {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Number || !element.Value.TryGetInt64(out long val)) {
@@ -299,7 +301,7 @@ public sealed class PrismConfiguration {
         return val;
     }
 
-    private static double RequireDouble( JsonElement root, string cfgPath, params string[] path ) {
+    private static double RequireDouble(JsonElement root, string cfgPath, params string[] path) {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Number || !element.Value.TryGetDouble(out double val)) {
@@ -309,7 +311,7 @@ public sealed class PrismConfiguration {
         return val;
     }
 
-    private static bool RequireBool( JsonElement root, string cfgPath, params string[] path ) {
+    private static bool RequireBool(JsonElement root, string cfgPath, params string[] path) {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || (element.Value.ValueKind != JsonValueKind.True && element.Value.ValueKind != JsonValueKind.False)) {
@@ -319,7 +321,7 @@ public sealed class PrismConfiguration {
         return element.Value.GetBoolean();
     }
 
-    private static string RequireString( JsonElement root, string cfgPath, params string[] path ) {
+    private static string RequireString(JsonElement root, string cfgPath, params string[] path) {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.String) {
@@ -329,7 +331,7 @@ public sealed class PrismConfiguration {
         return element.Value.GetString()!;
     }
 
-    private static IReadOnlyList<string> RequireStringArray( JsonElement root, string cfgPath, params string[] path ) {
+    private static IReadOnlyList<string> RequireStringArray(JsonElement root, string cfgPath, params string[] path) {
         JsonElement? element = Navigate(root, path);
 
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Array) {
@@ -348,21 +350,21 @@ public sealed class PrismConfiguration {
         return values;
     }
 
-    private static bool? OptionalBool( JsonElement root, params string[] path ) {
+    private static bool? OptionalBool(JsonElement root, params string[] path) {
         JsonElement? element = Navigate(root, path);
         if (!element.HasValue || (element.Value.ValueKind != JsonValueKind.True && element.Value.ValueKind != JsonValueKind.False))
             return null;
         return element.Value.GetBoolean();
     }
 
-    private static int? OptionalInt32( JsonElement root, params string[] path ) {
+    private static int? OptionalInt32(JsonElement root, params string[] path) {
         JsonElement? element = Navigate(root, path);
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Number || !element.Value.TryGetInt32(out int val))
             return null;
         return val;
     }
 
-    private static IReadOnlyList<string>? OptionalStringArray( JsonElement root, params string[] path ) {
+    private static IReadOnlyList<string>? OptionalStringArray(JsonElement root, params string[] path) {
         JsonElement? element = Navigate(root, path);
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Array)
             return null;
@@ -375,7 +377,7 @@ public sealed class PrismConfiguration {
         return values;
     }
 
-    private static IReadOnlyDictionary<string, double>? OptionalDoubleMap( JsonElement root, params string[] path ) {
+    private static IReadOnlyDictionary<string, double>? OptionalDoubleMap(JsonElement root, params string[] path) {
         JsonElement? element = Navigate(root, path);
         if (!element.HasValue || element.Value.ValueKind != JsonValueKind.Object)
             return null;
@@ -388,7 +390,7 @@ public sealed class PrismConfiguration {
         return values;
     }
 
-    private static JsonElement? Navigate( JsonElement root, string[] path ) {
+    private static JsonElement? Navigate(JsonElement root, string[] path) {
         JsonElement current = root;
 
         foreach (string segment in path) if (!current.TryGetProperty(segment, out current)) return null;
@@ -398,37 +400,37 @@ public sealed class PrismConfiguration {
 
     // --- Assertion helpers 
 
-    private static void AssertPositive( long val, string cfgPath, string fieldPath ) {
+    private static void AssertPositive(long val, string cfgPath, string fieldPath) {
         if (val <= 0) {
             throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be > 0 but was {val}.");
         }
     }
 
-    private static void AssertPositive( int val, string cfgPath, string fieldPath ) {
+    private static void AssertPositive(int val, string cfgPath, string fieldPath) {
         if (val <= 0) {
             throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be > 0 but was {val}.");
         }
     }
 
-    private static void AssertPositive( double val, string cfgPath, string fieldPath ) {
+    private static void AssertPositive(double val, string cfgPath, string fieldPath) {
         if (val <= 0.0) {
             throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be > 0 but was {val}.");
         }
     }
 
-    private static void AssertInRange( double val, double min, double max, string cfgPath, string fieldPath ) {
+    private static void AssertInRange(double val, double min, double max, string cfgPath, string fieldPath) {
         if (val < min || val > max) {
             throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be between {min} and {max} but was {val}.");
         }
     }
 
-    private static void AssertInRange( int val, int min, int max, string cfgPath, string fieldPath ) {
+    private static void AssertInRange(int val, int min, int max, string cfgPath, string fieldPath) {
         if (val < min || val > max) {
             throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be between {min} and {max} but was {val}.");
         }
     }
 
-    private static void AssertNonEmpty( string val, string cfgPath, string fieldPath ) {
+    private static void AssertNonEmpty(string val, string cfgPath, string fieldPath) {
         if (string.IsNullOrWhiteSpace(val)) {
             throw new PrismConfigurationException($"{FileName} at '{cfgPath}': field '{fieldPath}' must be a non-empty string.");
         }

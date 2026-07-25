@@ -5,13 +5,11 @@ namespace Prism.Api;
 /// <summary>
 /// Internal API job state.
 /// </summary>
-internal sealed class PrismApiJob
-{
+internal sealed class PrismApiJob {
     private readonly List<Channel<PipelineProgressEvent>> subscribers = [];
     private readonly object subscriberLock = new();
 
-    public PrismApiJob(PrismJobRequest request, PrismJobUrls urls)
-    {
+    public PrismApiJob(PrismJobRequest request, PrismJobUrls urls) {
         this.Request = request;
         this.Urls = urls;
     }
@@ -24,24 +22,19 @@ internal sealed class PrismApiJob
     public DateTimeOffset? CompletedAt { get; private set; }
     public bool IsTerminal => this.CompletedAt.HasValue;
 
-    public void MarkRunning()
-    {
+    public void MarkRunning() {
         this.Status = "Running";
     }
 
-    public void MarkCompleted(PrismJobResult result)
-    {
+    public void MarkCompleted(PrismJobResult result) {
         this.Result = result;
         this.Status = result.Status;
         this.CompletedAt = DateTimeOffset.UtcNow;
     }
 
-    public void AddSubscriber(Channel<PipelineProgressEvent> subscriber)
-    {
-        lock (this.subscriberLock)
-        {
-            if (this.IsTerminal)
-            {
+    public void AddSubscriber(Channel<PipelineProgressEvent> subscriber) {
+        lock (this.subscriberLock) {
+            if (this.IsTerminal) {
                 subscriber.Writer.TryComplete();
                 return;
             }
@@ -50,26 +43,20 @@ internal sealed class PrismApiJob
         }
     }
 
-    public async Task Publish(PipelineProgressEvent progressEvent)
-    {
+    public async Task Publish(PipelineProgressEvent progressEvent) {
         Channel<PipelineProgressEvent>[] currentSubscribers;
-        lock (this.subscriberLock)
-        {
+        lock (this.subscriberLock) {
             currentSubscribers = this.subscribers.ToArray();
         }
 
-        foreach (Channel<PipelineProgressEvent> subscriber in currentSubscribers)
-        {
+        foreach (Channel<PipelineProgressEvent> subscriber in currentSubscribers) {
             await subscriber.Writer.WriteAsync(progressEvent);
         }
     }
 
-    public void CompleteSubscribers()
-    {
-        lock (this.subscriberLock)
-        {
-            foreach (Channel<PipelineProgressEvent> subscriber in this.subscribers)
-            {
+    public void CompleteSubscribers() {
+        lock (this.subscriberLock) {
+            foreach (Channel<PipelineProgressEvent> subscriber in this.subscribers) {
                 subscriber.Writer.TryComplete();
             }
 

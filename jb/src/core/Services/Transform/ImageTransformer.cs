@@ -34,14 +34,14 @@ public static class ImageTransformer {
     /// Selects and applies the transform strategy for <paramref name="lambda"/>, records the
     /// outcome in <see cref="ImageRecord_LAMBDA.OutputRecord"/>, and returns the record.
     /// </summary>
-    public static ImageRecord_LAMBDA TransformImage( ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters ) {
+    public static ImageRecord_LAMBDA TransformImage(ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters) {
         IImageTransformation transformer = SelectTransformer(lambda, colorMat, headcut, parameters);
         return transformer.Transform(lambda);
     }
 
     //  Strategy selection
 
-    private static IImageTransformation SelectTransformer( ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters ) {
+    private static IImageTransformation SelectTransformer(ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters) {
         // Step 1 — prerequisites missing: route to conservative processor.
         // The phenotype-null guard is suppressed while phenotypes are bypassed.
         if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null)) return new Tx_ProblemImageProcessor(parameters.ProblemImageProcessor, parameters.Output);
@@ -69,11 +69,11 @@ public static class ImageTransformer {
     /// </summary>
     private const int DefaultDetSlotExclusionMax = 2;
 
-    private static bool IsDetailCropperDetSlotExcluded( ImageRecord_LAMBDA lambda ) {
+    private static bool IsDetailCropperDetSlotExcluded(ImageRecord_LAMBDA lambda) {
         bool isClothing = lambda.ProductTypeId?.StartsWith("clothing-", System.StringComparison.OrdinalIgnoreCase) == true;
         return isClothing ? lambda.DetOrder <= 1 : lambda.DetOrder <= DefaultDetSlotExclusionMax;
     }
-    private static bool hasEdgeIntersect( ImageFeatureSnapshot ImgFeat ) {
+    private static bool hasEdgeIntersect(ImageFeatureSnapshot ImgFeat) {
         return ImgFeat.GetValue("intersects-top") == "true" || ImgFeat.GetValue("intersects-bottom") == "true" || ImgFeat.GetValue("intersects-left") == "true" || ImgFeat.GetValue("intersects-right") == "true";
     }
 }

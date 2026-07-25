@@ -11,8 +11,7 @@ namespace Prism.Contracts;
 /// record but is skipped by Export, so it never receives the export block.
 /// </para>
 /// </summary>
-public class ImageRecord_OUTPUT : ImageRecord_Base
-{
+public class ImageRecord_OUTPUT : ImageRecord_Base {
     //  Transform block — written by the Transformed stage
 
     // Null when the Transformed stage never evaluated this image; distinct from NotEvaluated.

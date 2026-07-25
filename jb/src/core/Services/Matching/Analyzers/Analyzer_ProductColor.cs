@@ -13,10 +13,8 @@ namespace Prism.Services.Matching;
 /// <summary>
 /// Names the product color from the dominant foreground bucket via the configured palette.
 /// </summary>
-internal static class Analyzer_ProductColor
-{
-    public static void Analyze(IReadOnlyList<ColorBucket> buckets, ImageFeatureSnapshot snapshot, ColorAnalyzerConfig cfg)
-    {
+internal static class Analyzer_ProductColor {
+    public static void Analyze(IReadOnlyList<ColorBucket> buckets, ImageFeatureSnapshot snapshot, ColorAnalyzerConfig cfg) {
         if (buckets.Count == 0) return;
 
         ColorBucket top = buckets[0];

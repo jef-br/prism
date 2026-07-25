@@ -7,8 +7,7 @@ namespace Prism.Services.Matching;
 /// "SkinTone" section of analyzer_Config.json. No defaults — every value must be present in the JSON
 /// or deserialization fails loud.
 /// </summary>
-public sealed class SkinToneAnalyzerConfig : IValidatableConfig
-{
+public sealed class SkinToneAnalyzerConfig : IValidatableConfig {
     /// <summary>Minimum luma ([0,1]) for a pixel to be considered skin.</summary>
     public required float LumaMin { get; init; }
 
@@ -27,8 +26,7 @@ public sealed class SkinToneAnalyzerConfig : IValidatableConfig
     /// <summary>Maximum Cr chrominance ([0,1]) for a pixel to be considered skin.</summary>
     public required float CrMax { get; init; }
 
-    public void Validate()
-    {
+    public void Validate() {
         List<string> problems = [];
 
         if (this.LumaMin >= this.LumaMax) problems.Add("SkinTone.LumaMin must be < LumaMax");

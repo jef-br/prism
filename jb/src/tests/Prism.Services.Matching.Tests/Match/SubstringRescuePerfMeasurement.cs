@@ -10,34 +10,30 @@ namespace PrismCoreTests.Match;
 /// with indexDigitRunsAllColumns=true and minSubstringRescueLength=7 matching production MatchingConfig.json.
 /// Not a regression gate — a one-time measurement to decide whether an n-gram index is warranted.
 /// </summary>
-public class SubstringRescuePerfMeasurement
-{
+public class SubstringRescuePerfMeasurement {
     private readonly ITestOutputHelper output;
 
-    public SubstringRescuePerfMeasurement(ITestOutputHelper output)
-    {
+    public SubstringRescuePerfMeasurement(ITestOutputHelper output) {
         this.output = output;
     }
 
     [Theory]
     [InlineData(250)]   // generous slice of a 2,500-image heavy batch reaching substring rescue
     [InlineData(2500)]  // pathological upper bound: every image in the heaviest documented batch unmatched
-    public void TryMatchBySubstringRescue_HeavyBatchScale_ReportsElapsedTime(int unmatchedImageCount)
-    {
+    public void TryMatchBySubstringRescue_HeavyBatchScale_ReportsElapsedTime(int unmatchedImageCount) {
         const int familyCount = 3000; // family-catalog scale matching a ~2,500-image heavy batch
 
         List<FamilyIDRecord> families = BuildSyntheticFamilies(familyCount);
         MatchingRule familyIdRule = new() { ExcelField = "FamilyID", Type = "numeric", Strategy = "NumericalMatcher", Weight = 1.0, MaxDistance = 1.478 };
-        MatchingRule refCoRule    = new() { ExcelField = "RefCo",    Type = "numeric", Strategy = "NumericalMatcher", Weight = 1.0, MaxDistance = 1.478 };
-        MatchingRule eanRule      = new() { ExcelField = "EAN",      Type = "numeric", Strategy = "NumericalMatcher", Weight = 1.0, MaxDistance = 1.478 };
-        List<MatchingRule> rules  = [familyIdRule, refCoRule, eanRule];
+        MatchingRule refCoRule = new() { ExcelField = "RefCo", Type = "numeric", Strategy = "NumericalMatcher", Weight = 1.0, MaxDistance = 1.478 };
+        MatchingRule eanRule = new() { ExcelField = "EAN", Type = "numeric", Strategy = "NumericalMatcher", Weight = 1.0, MaxDistance = 1.478 };
+        List<MatchingRule> rules = [familyIdRule, refCoRule, eanRule];
 
-        NumericMatcher.Config cfg = new()
-        {
-            MinNumericTokenLength      = 5,
-            IndexDigitRunsAllColumns   = true,
-            MinSubstringRescueLength   = 7,
-            SubstringRescueConfidence  = 0.9,
+        NumericMatcher.Config cfg = new() {
+            MinNumericTokenLength = 5,
+            IndexDigitRunsAllColumns = true,
+            MinSubstringRescueLength = 7,
+            SubstringRescueConfidence = 0.9,
             DefaultMaxDistanceFallback = 1.478
         };
         NumericMatcher matcher = new("FamilyID", cfg);
@@ -68,11 +64,9 @@ public class SubstringRescuePerfMeasurement
         Assert.True(totalMs < 10_000, $"TryMatchBySubstringRescue took {totalMs:F0}ms for {unmatchedImageCount} images against a {familyCount}-family index — investigate before assuming this is still negligible.");
     }
 
-    private static List<FamilyIDRecord> BuildSyntheticFamilies(int count)
-    {
+    private static List<FamilyIDRecord> BuildSyntheticFamilies(int count) {
         List<FamilyIDRecord> families = [];
-        for (int i = 0; i < count; i++)
-        {
+        for (int i = 0; i < count; i++) {
             string familyId = (90000000 + i).ToString();
             FamilyIDRecord family = new(familyId);
             family.MergeProperty(new ExcelPropertyValue("RefCo", [$"{10000000 + i}"], []), ExcelColumnClassification.Numerical);

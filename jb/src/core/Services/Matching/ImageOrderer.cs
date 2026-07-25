@@ -6,8 +6,7 @@ namespace Prism.Services.Matching;
 /// Writes <see cref="ImageRecord_Base.Family"/>, <see cref="ImageRecord_Base.DetOrder"/>,
 /// and <see cref="OrderEvidence"/> to each processed record.
 /// </summary>
-internal static class ImageOrderer
-{
+internal static class ImageOrderer {
     /// <summary>
     /// Runs the Ordered stage over a matched LAMBDA collection.
     /// Groups non-KO matched records by FinalFamilyId, assigns det slots per product type rules,
@@ -15,8 +14,7 @@ internal static class ImageOrderer
     /// </summary>
     /// <param name="records">Matched LAMBDA records.</param>
     /// <param name="families">Family records resolved from the Internal Excel Model.</param>
-    internal static void Run(List<ImageRecord_LAMBDA> records, IReadOnlyList<FamilyIDRecord> families)
-    {
+    internal static void Run(List<ImageRecord_LAMBDA> records, IReadOnlyList<FamilyIDRecord> families) {
         DetOrderConfig config = LoadConfig();
 
         List<IGrouping<string, ImageRecord_LAMBDA>> familyGroups = records
@@ -27,8 +25,7 @@ internal static class ImageOrderer
         Dictionary<string, FamilyIDRecord> familyLookup = families
             .ToDictionary(f => f.FamilyID, f => f, StringComparer.OrdinalIgnoreCase);
 
-        foreach (IGrouping<string, ImageRecord_LAMBDA> group in familyGroups)
-        {
+        foreach (IGrouping<string, ImageRecord_LAMBDA> group in familyGroups) {
             familyLookup.TryGetValue(group.Key, out FamilyIDRecord? familyIDRecord);
             ProcessFamily(group.Key, group.ToList(), familyIDRecord, config);
         }
@@ -41,14 +38,12 @@ internal static class ImageOrderer
     /// order the Order stage assigned is preserved exactly (renumber only, never reorder). Applied when
     /// Output.DET-ORDER-GAPS-ALLOWED is false. Operates on non-KO matched records grouped by Family.
     /// </summary>
-    internal static void CompactDetOrder(IReadOnlyList<ImageRecord_LAMBDA> records)
-    {
+    internal static void CompactDetOrder(IReadOnlyList<ImageRecord_LAMBDA> records) {
         IEnumerable<IGrouping<string, ImageRecord_LAMBDA>> familyGroups = records
             .Where(r => !r.IsKo && !string.IsNullOrEmpty(r.Family))
             .GroupBy(r => r.Family!);
 
-        foreach (IGrouping<string, ImageRecord_LAMBDA> group in familyGroups)
-        {
+        foreach (IGrouping<string, ImageRecord_LAMBDA> group in familyGroups) {
             int det = 0;
             foreach (ImageRecord_LAMBDA lambda in group.OrderBy(r => r.DetOrder))
                 lambda.DetOrder = det++;
@@ -66,8 +61,7 @@ internal static class ImageOrderer
         string familyId,
         List<ImageRecord_LAMBDA> images,
         FamilyIDRecord? familyIDRecord,
-        DetOrderConfig config)
-    {
+        DetOrderConfig config) {
         string productTypeId = ResolveProductType(images, familyIDRecord, config);
         IReadOnlyList<DetSlotRule> slots = config.GetSlots(productTypeId);
         int lastConfiguredSlot = slots.Count > 0 ? slots[^1].SlotIndex : -1;
@@ -108,8 +102,7 @@ internal static class ImageOrderer
             .OrderBy(x => x.HintSlot == int.MaxValue ? config.OverflowUnhintedAnchor : x.HintSlot)
             .ThenBy(x => OnModelRank(x.img, config))
             .ThenBy(x => x.img.InitialFullName, NaturalFilenameComparer)
-            .ThenBy(x => x.idx))
-        {
+            .ThenBy(x => x.idx)) {
             int ngpConfidence = img.Features.All.Count(kv => !kv.Value.IsUnknown);
             assignments[idx] = new AssignmentRecord(
                 overflowSlot++, WinningPhenotype: null, PhenotypeRank: -1,
@@ -119,20 +112,18 @@ internal static class ImageOrderer
         }
 
         // Write results back to records.
-        foreach ((int imageIndex, AssignmentRecord record) in assignments)
-        {
+        foreach ((int imageIndex, AssignmentRecord record) in assignments) {
             ImageRecord_LAMBDA lambda = images[imageIndex];
-            lambda.Family        = familyId;
-            lambda.DetOrder      = record.DetSlot;
+            lambda.Family = familyId;
+            lambda.DetOrder = record.DetSlot;
             lambda.ProductTypeId = productTypeId;
-            lambda.OrderEvidence = new OrderEvidence
-            {
-                AssignedDetSlot     = record.DetSlot,
-                WinningPhenotype    = record.WinningPhenotype,
+            lambda.OrderEvidence = new OrderEvidence {
+                AssignedDetSlot = record.DetSlot,
+                WinningPhenotype = record.WinningPhenotype,
                 PhenotypeRankInSlot = record.PhenotypeRank,
-                NgpConfidenceCount  = record.NgpConfidence,
-                TieBreakerWon       = record.TieBreakerWon,
-                IsOverflow          = record.IsOverflow
+                NgpConfidenceCount = record.NgpConfidence,
+                TieBreakerWon = record.TieBreakerWon,
+                IsOverflow = record.IsOverflow
             };
         }
     }
@@ -143,10 +134,8 @@ internal static class ImageOrderer
     /// The earliest configured slot whose keyword stems match the filename, or int.MaxValue when no
     /// keyword matches — used to order overflow images by intent (front before back before side).
     /// </summary>
-    private static int ResolveHintSlot(string filename, IReadOnlyList<DetSlotRule> slots, DetOrderConfig config)
-    {
-        foreach (DetSlotRule slot in slots)
-        {
+    private static int ResolveHintSlot(string filename, IReadOnlyList<DetSlotRule> slots, DetOrderConfig config) {
+        foreach (DetSlotRule slot in slots) {
             if (config.FilenameMatchesSlotKeyword(filename, slot.Keyword))
                 return slot.SlotIndex;
         }
@@ -160,8 +149,7 @@ internal static class ImageOrderer
     /// first (0). Everything else — FALSE or UNKNOWN — ranks equal (1); UNKNOWN must not outrank
     /// a known packshot. Disabled via DetOrderRules.json overflowPolicy.onModelFirst.
     /// </summary>
-    private static int OnModelRank(ImageRecord_LAMBDA img, DetOrderConfig config)
-    {
+    private static int OnModelRank(ImageRecord_LAMBDA img, DetOrderConfig config) {
         if (!config.OverflowOnModelFirst) return 0;
         return string.Equals(img.Features.GetValue("hero-is-human"), "TRUE", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
     }
@@ -169,14 +157,11 @@ internal static class ImageOrderer
     /// <summary>Numeric-aware ordinal filename comparer: digit runs compare as numbers, text ordinally.</summary>
     private static readonly Comparer<string> NaturalFilenameComparer = Comparer<string>.Create(CompareNatural);
 
-    private static int CompareNatural(string a, string b)
-    {
+    private static int CompareNatural(string a, string b) {
         int i = 0, j = 0;
 
-        while (i < a.Length && j < b.Length)
-        {
-            if (char.IsDigit(a[i]) && char.IsDigit(b[j]))
-            {
+        while (i < a.Length && j < b.Length) {
+            if (char.IsDigit(a[i]) && char.IsDigit(b[j])) {
                 int startA = i, startB = j;
                 while (i < a.Length && char.IsDigit(a[i])) i++;
                 while (j < b.Length && char.IsDigit(b[j])) j++;
@@ -188,8 +173,7 @@ internal static class ImageOrderer
                 int cmp = runA.CompareTo(runB, StringComparison.Ordinal);
                 if (cmp != 0) return cmp;
             }
-            else
-            {
+            else {
                 int cmp = char.ToLowerInvariant(a[i]).CompareTo(char.ToLowerInvariant(b[j]));
                 if (cmp != 0) return cmp;
                 i++; j++;
@@ -212,19 +196,16 @@ internal static class ImageOrderer
     private static List<CandidateDetOrder> BuildCandidates(
         List<ImageRecord_LAMBDA> images,
         IReadOnlyList<DetSlotRule> slots,
-        DetOrderConfig config)
-    {
+        DetOrderConfig config) {
         List<CandidateDetOrder> result = [];
 
-        for (int i = 0; i < images.Count; i++)
-        {
+        for (int i = 0; i < images.Count; i++) {
             ImageRecord_LAMBDA img = images[i];
             if (img.SelectedPhenotype is null) continue;
 
             int ngpConfidence = img.Features.All.Count(kv => !kv.Value.IsUnknown);
 
-            foreach (DetSlotRule slot in slots)
-            {
+            foreach (DetSlotRule slot in slots) {
                 int phenotypeRank = ((IList<string>)slot.Phenotypes).IndexOf(img.SelectedPhenotype);
                 if (phenotypeRank < 0) continue;
 
@@ -244,13 +225,12 @@ internal static class ImageOrderer
     /// filename ordinal → lower source index. Filename ordinal comes before source index so the
     /// outcome does not depend on list position even if upstream ordering ever changes (T-2820).
     /// </summary>
-    private static int CompareCandidates(CandidateDetOrder a, CandidateDetOrder b)
-    {
-        int cmp = a.DetSlot.CompareTo(b.DetSlot);             if (cmp != 0) return cmp;
-        cmp = a.PhenotypeRank.CompareTo(b.PhenotypeRank);     if (cmp != 0) return cmp;
-        cmp = b.NgpConfidence.CompareTo(a.NgpConfidence);     if (cmp != 0) return cmp;
-        cmp = b.HintScore.CompareTo(a.HintScore);             if (cmp != 0) return cmp;
-        cmp = string.CompareOrdinal(a.Filename, b.Filename);  if (cmp != 0) return cmp;
+    private static int CompareCandidates(CandidateDetOrder a, CandidateDetOrder b) {
+        int cmp = a.DetSlot.CompareTo(b.DetSlot); if (cmp != 0) return cmp;
+        cmp = a.PhenotypeRank.CompareTo(b.PhenotypeRank); if (cmp != 0) return cmp;
+        cmp = b.NgpConfidence.CompareTo(a.NgpConfidence); if (cmp != 0) return cmp;
+        cmp = b.HintScore.CompareTo(a.HintScore); if (cmp != 0) return cmp;
+        cmp = string.CompareOrdinal(a.Filename, b.Filename); if (cmp != 0) return cmp;
         return a.SourceIndex.CompareTo(b.SourceIndex);
     }
 
@@ -290,17 +270,14 @@ internal static class ImageOrderer
     /// wins. Fallback: sniff every canonical property value for a known product type id (legacy
     /// path, to retire after real-batch validation — see the Analyzers jbtodo). Then "default".
     /// </summary>
-    private static string ResolveProductType(List<ImageRecord_LAMBDA> images, FamilyIDRecord? familyIDRecord, DetOrderConfig config)
-    {
-        foreach (ImageRecord_LAMBDA image in images)
-        {
+    private static string ResolveProductType(List<ImageRecord_LAMBDA> images, FamilyIDRecord? familyIDRecord, DetOrderConfig config) {
+        foreach (ImageRecord_LAMBDA image in images) {
             if (image.ProductTypeId is string resolved && config.HasProductType(resolved)) return resolved;
         }
 
         if (familyIDRecord is null) return "default";
 
-        foreach (string value in familyIDRecord.CanonicalProperties.Values)
-        {
+        foreach (string value in familyIDRecord.CanonicalProperties.Values) {
             string normalized = value.ToLowerInvariant()
                 .Replace(' ', '-')
                 .Replace('_', '-');
@@ -317,8 +294,7 @@ internal static class ImageOrderer
     /// Locates and loads both order config files. Throws <see cref="PrismConfigurationException"/>
     /// when either file is not found.
     /// </summary>
-    private static DetOrderConfig LoadConfig()
-    {
+    private static DetOrderConfig LoadConfig() {
         return DetOrderConfig.Load(
             ConfigLoader.RequireFile("DetOrderRules.json"),
             ConfigLoader.RequireFile("DetOrderKeywordStems.json"));

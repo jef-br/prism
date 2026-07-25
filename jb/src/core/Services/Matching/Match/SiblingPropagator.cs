@@ -27,8 +27,7 @@ internal sealed class SiblingPropagator {
     private readonly Config cfg;
 
     /// <summary>SiblingPropagator's tunables, loaded from MatchingConfig.json's match.siblingPropagator section.</summary>
-    public sealed class Config
-    {
+    public sealed class Config {
         /// <summary>A token shared by more than this fraction of the batch is batch noise (brand, collection).</summary>
         public required double CommonTokenRatio { get; init; }
 

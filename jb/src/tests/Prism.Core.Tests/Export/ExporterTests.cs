@@ -9,21 +9,18 @@ namespace PrismCoreTests.Export;
 /// All temp files are cleaned up in <see cref="Dispose"/>.
 /// <see cref="Exporter.Run"/> takes an explicit <see cref="ExportRequest"/> and returns the artifacts.
 /// </summary>
-public class ExporterTests : IDisposable
-{
+public class ExporterTests : IDisposable {
     private readonly string tempDir = Path.Combine(
         Path.GetTempPath(), "PrismExporterTests_" + Guid.NewGuid().ToString("N"));
 
-    public ExporterTests()
-    {
+    public ExporterTests() {
         Directory.CreateDirectory(tempDir);
     }
 
     //  ZIP: manifest.json 
 
     [Fact]
-    public void Run_ZipFormat_ContainsManifestJson()
-    {
+    public void Run_ZipFormat_ContainsManifestJson() {
         string imgPath = WriteTempJpeg("ok_img.jpg");
         ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ok_img.jpg", imgPath)],
@@ -37,8 +34,7 @@ public class ExporterTests : IDisposable
     //  ZIP: OK image in OK/ folder 
 
     [Fact]
-    public void Run_ZipFormat_OkImageAppearsInOkFolder()
-    {
+    public void Run_ZipFormat_OkImageAppearsInOkFolder() {
         string imgPath = WriteTempJpeg("ok_img.jpg");
         ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ok_img.jpg", imgPath)],
@@ -52,8 +48,7 @@ public class ExporterTests : IDisposable
     //  ZIP: KO image in KO/ folder 
 
     [Fact]
-    public void Run_ZipFormat_KoImageAppearsInKoFolder()
-    {
+    public void Run_ZipFormat_KoImageAppearsInKoFolder() {
         string imgPath = WriteTempJpeg("ko_img.jpg");
         ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ko_img.jpg", imgPath)],
@@ -67,8 +62,7 @@ public class ExporterTests : IDisposable
     //  ZIP: Excel file included 
 
     [Fact]
-    public void Run_ZipFormat_ExcelFileIncluded()
-    {
+    public void Run_ZipFormat_ExcelFileIncluded() {
         string imgPath = WriteTempJpeg("ok_img.jpg");
         string xlsPath = WriteTempFile("catalogue.xlsx", [0x50, 0x4B]);
         ExportArtifacts result = Exporter.Run(MakeRequest(
@@ -84,8 +78,7 @@ public class ExporterTests : IDisposable
     //  ZIP: KO with no normalized jpg not added to KO/ 
 
     [Fact]
-    public void Run_ZipFormat_KoWithNoNormalizedJpg_NotInZip()
-    {
+    public void Run_ZipFormat_KoWithNoNormalizedJpg_NotInZip() {
         ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("import_fail.jpg", normalizedPath: null)],
             [MakeLambda("import_fail.jpg", "FAM001", 0, isKo: true)],
@@ -98,8 +91,7 @@ public class ExporterTests : IDisposable
     //  ZIP: OutputRecord attached to OK lambda 
 
     [Fact]
-    public void Run_ZipFormat_OutputRecordAttachedToOkLambda()
-    {
+    public void Run_ZipFormat_OutputRecordAttachedToOkLambda() {
         string imgPath = WriteTempJpeg("ok_img.jpg");
         ImageRecord_LAMBDA lambda = MakeLambda("ok_img.jpg", "FAM001", 0);
         Exporter.Run(MakeRequest(
@@ -114,23 +106,21 @@ public class ExporterTests : IDisposable
     //  Export enriches the record Transform attached — it must not overwrite the transform block
 
     [Fact]
-    public void Run_OutputRecordAlreadyAttachedByTransform_ExportPreservesTransformBlock()
-    {
+    public void Run_OutputRecordAlreadyAttachedByTransform_ExportPreservesTransformBlock() {
         // The T-4550 fold made Transform the creator of OutputRecord and Export the enricher. The
         // regression this guards: Export re-creating the record and silently dropping the transform
         // outcome, which would surface as null TransformerType on every manifest row.
         string imgPath = WriteTempJpeg("ok_img.jpg");
         ImageRecord_LAMBDA lambda = MakeLambda("ok_img.jpg", "FAM001", 0);
-        lambda.OutputRecord = new ImageRecord_OUTPUT
-        {
-            TransformStatus      = TransformationStatus.Ok,
-            TransformerType      = nameof(Tx_CenterAndStretch),
-            InputWidth           = 1500,
-            InputHeight          = 2000,
-            OutputWidth          = 1948,
-            OutputHeight         = 1948,
+        lambda.OutputRecord = new ImageRecord_OUTPUT {
+            TransformStatus = TransformationStatus.Ok,
+            TransformerType = nameof(Tx_CenterAndStretch),
+            InputWidth = 1500,
+            InputHeight = 2000,
+            OutputWidth = 1948,
+            OutputHeight = 1948,
             BackgroundFillMethod = "background-stretch",
-            SafeSummaryText      = "Center-and-stretch applied."
+            SafeSummaryText = "Center-and-stretch applied."
         };
 
         Exporter.Run(MakeRequest([MakeInput("ok_img.jpg", imgPath)], [lambda], "zip"));
@@ -150,12 +140,10 @@ public class ExporterTests : IDisposable
     }
 
     [Fact]
-    public void Run_ManifestRow_SourcesTransformFieldsFromOutputRecord()
-    {
+    public void Run_ManifestRow_SourcesTransformFieldsFromOutputRecord() {
         string imgPath = WriteTempJpeg("ok_img.jpg");
         ImageRecord_LAMBDA lambda = MakeLambda("ok_img.jpg", "FAM001", 0);
-        lambda.OutputRecord = new ImageRecord_OUTPUT
-        {
+        lambda.OutputRecord = new ImageRecord_OUTPUT {
             TransformStatus = TransformationStatus.Ok,
             TransformerType = nameof(Tx_CropSquare)
         };
@@ -171,8 +159,7 @@ public class ExporterTests : IDisposable
     //  JSON: ZipBytes is null
 
     [Fact]
-    public void Run_JsonFormat_ZipBytesNull()
-    {
+    public void Run_JsonFormat_ZipBytesNull() {
         ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ok_img.jpg", null)],
             [MakeLambda("ok_img.jpg", "FAM001", 0)],
@@ -184,8 +171,7 @@ public class ExporterTests : IDisposable
     //  JSON: ImageRows count matches lambda count 
 
     [Fact]
-    public void Run_JsonFormat_ManifestImageRowsMatchLambdaCount()
-    {
+    public void Run_JsonFormat_ManifestImageRowsMatchLambdaCount() {
         ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("a.jpg", null), MakeInput("b.jpg", null)],
             [MakeLambda("a.jpg", "FAM001", 0), MakeLambda("b.jpg", "FAM001", 1)],
@@ -197,8 +183,7 @@ public class ExporterTests : IDisposable
     //  JSON: OK row has FinalFileName 
 
     [Fact]
-    public void Run_JsonFormat_OkRowHasFinalFileName()
-    {
+    public void Run_JsonFormat_OkRowHasFinalFileName() {
         ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ok_img.jpg", null)],
             [MakeLambda("ok_img.jpg", "FAM001", 0)],
@@ -211,8 +196,7 @@ public class ExporterTests : IDisposable
     //  JSON: KO row has null FinalFileName and KoReasonCode set 
 
     [Fact]
-    public void Run_JsonFormat_KoRowHasNullFinalFileName()
-    {
+    public void Run_JsonFormat_KoRowHasNullFinalFileName() {
         ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("ko_img.jpg", null)],
             [MakeLambda("ko_img.jpg", "FAM001", 0, isKo: true, koCode: "MATCH_FAIL")],
@@ -226,8 +210,7 @@ public class ExporterTests : IDisposable
     //  Det-order gap policy
 
     [Fact]
-    public void Run_DefaultGapPolicy_CompactsOverflowDetIndicesFromZero()
-    {
+    public void Run_DefaultGapPolicy_CompactsOverflowDetIndicesFromZero() {
         // Two overflow images at det8, det9 → manifest filenames must be det0, det1.
         ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("a.jpg", null), MakeInput("b.jpg", null)],
@@ -241,8 +224,7 @@ public class ExporterTests : IDisposable
     }
 
     [Fact]
-    public void Run_GapsAllowed_LeavesDetIndicesUntouched()
-    {
+    public void Run_GapsAllowed_LeavesDetIndicesUntouched() {
         ExportArtifacts result = Exporter.Run(MakeRequest(
             [MakeInput("a.jpg", null), MakeInput("b.jpg", null)],
             [MakeLambda("a.jpg", "FAM001", 8), MakeLambda("b.jpg", "FAM001", 9)],
@@ -257,15 +239,13 @@ public class ExporterTests : IDisposable
 
     //  Helpers
 
-    public void Dispose()
-    {
+    public void Dispose() {
         try { Directory.Delete(tempDir, recursive: true); } catch { /* best-effort */ }
     }
 
     private string WriteTempJpeg(string name) => WriteTempFile(name, MinimalJpegBytes);
 
-    private string WriteTempFile(string name, byte[] bytes)
-    {
+    private string WriteTempFile(string name, byte[] bytes) {
         string path = Path.Combine(tempDir, name);
         File.WriteAllBytes(path, bytes);
         return path;
@@ -276,30 +256,26 @@ public class ExporterTests : IDisposable
         IReadOnlyList<ImageRecord_LAMBDA> lambdas,
         string format,
         string? excelPath = null,
-        bool detOrderGapsAllowed = false)
-    {
-        return new ExportRequest
-        {
-            JobID               = Guid.NewGuid(),
-            LambdaRecords       = lambdas,
-            NormalizedImages    = inputs,
-            FirstExcelTempPath  = excelPath,
-            Format              = format,
-            ImageCount          = inputs.Count,
-            ExcelCount          = excelPath is not null ? 1 : 0,
-            ZipCount            = 0,
+        bool detOrderGapsAllowed = false) {
+        return new ExportRequest {
+            JobID = Guid.NewGuid(),
+            LambdaRecords = lambdas,
+            NormalizedImages = inputs,
+            FirstExcelTempPath = excelPath,
+            Format = format,
+            ImageCount = inputs.Count,
+            ExcelCount = excelPath is not null ? 1 : 0,
+            ZipCount = 0,
             DetOrderGapsAllowed = detOrderGapsAllowed,
-            Warnings            = []
+            Warnings = []
         };
     }
 
-    private static ImageRecord_INPUT MakeInput(string name, string? normalizedPath)
-    {
-        return new ImageRecord_INPUT
-        {
-            InitialFullName   = name,
+    private static ImageRecord_INPUT MakeInput(string name, string? normalizedPath) {
+        return new ImageRecord_INPUT {
+            InitialFullName = name,
             NormalizedJpgPath = normalizedPath,
-            ImportStatus      = normalizedPath is not null ? ImportStatus.Ok : ImportStatus.KO
+            ImportStatus = normalizedPath is not null ? ImportStatus.Ok : ImportStatus.KO
         };
     }
 
@@ -308,15 +284,13 @@ public class ExporterTests : IDisposable
         string familyId,
         int detOrder,
         bool isKo = false,
-        string? koCode = null)
-    {
-        return new ImageRecord_LAMBDA
-        {
+        string? koCode = null) {
+        return new ImageRecord_LAMBDA {
             InitialFullName = name,
-            Family          = familyId,
-            DetOrder        = detOrder,
-            IsKo            = isKo,
-            KoReasonCode    = koCode ?? (isKo ? "TEST_KO" : null)
+            Family = familyId,
+            DetOrder = detOrder,
+            IsKo = isKo,
+            KoReasonCode = koCode ?? (isKo ? "TEST_KO" : null)
         };
     }
 

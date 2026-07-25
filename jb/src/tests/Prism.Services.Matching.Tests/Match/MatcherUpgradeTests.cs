@@ -9,34 +9,30 @@ namespace PrismCoreTests.Match;
 /// real failure mode observed in the dataset analysis (INPUTMA24, FILA94, WOODWIC12, HEROAUT3,
 /// CiMini, MEPAL4).
 /// </summary>
-public class MatcherUpgradeTests
-{
-    private static readonly MatchingRule FamilyIdRule = new()
-    {
-        ExcelField  = "familyID",
-        Type        = "numeric",
-        Strategy    = "NumericalMatcher",
-        Weight      = 1.0,
+public class MatcherUpgradeTests {
+    private static readonly MatchingRule FamilyIdRule = new() {
+        ExcelField = "familyID",
+        Type = "numeric",
+        Strategy = "NumericalMatcher",
+        Weight = 1.0,
         MaxDistance = 1.478,
-        Candidates  = "3"
+        Candidates = "3"
     };
 
-    private static readonly MatchingRule RefCoRule = new()
-    {
-        ExcelField  = "RefCo",
-        Type        = "numeric",
-        Strategy    = "NumericalMatcher",
-        Weight      = 1.0,
+    private static readonly MatchingRule RefCoRule = new() {
+        ExcelField = "RefCo",
+        Type = "numeric",
+        Strategy = "NumericalMatcher",
+        Weight = 1.0,
         MaxDistance = 1.478,
-        Candidates  = "3"
+        Candidates = "3"
     };
 
     private static readonly IReadOnlyList<MatchingRule> Rules = [FamilyIdRule, RefCoRule];
 
-    private static readonly TranslationConfig EmptyTranslation = new()
-    {
+    private static readonly TranslationConfig EmptyTranslation = new() {
         SynonymGroups = [],
-        StopWords     = new StopWordConfig { General = [], Domain = [] }
+        StopWords = new StopWordConfig { General = [], Domain = [] }
     };
 
     // Production-equivalent tuning values (MatchingConfig.json is required-only now — tests supply
@@ -50,41 +46,37 @@ public class MatcherUpgradeTests
     private const double DefaultSubstringRescueConfidence = 0.9;
     private const double DefaultMaxDistanceFallback = 1.478;
 
-    private static NumericMatcher.Config MakeNumericCfg(int minNumericTokenLength, bool indexDigitRunsAllColumns, int minSubstringRescueLength) => new()
-    {
-        MinNumericTokenLength      = minNumericTokenLength,
-        IndexDigitRunsAllColumns   = indexDigitRunsAllColumns,
-        MinSubstringRescueLength   = minSubstringRescueLength,
-        SubstringRescueConfidence  = DefaultSubstringRescueConfidence,
+    private static NumericMatcher.Config MakeNumericCfg(int minNumericTokenLength, bool indexDigitRunsAllColumns, int minSubstringRescueLength) => new() {
+        MinNumericTokenLength = minNumericTokenLength,
+        IndexDigitRunsAllColumns = indexDigitRunsAllColumns,
+        MinSubstringRescueLength = minSubstringRescueLength,
+        SubstringRescueConfidence = DefaultSubstringRescueConfidence,
         DefaultMaxDistanceFallback = DefaultMaxDistanceFallback
     };
 
-    private static StringMatcher.Config MakeStringCfg(int bracket3MinDistinctTokens, int identifierTokenMinLength, bool indexExcelTokenBigrams) => new()
-    {
-        Bracket3MinDistinctTokens    = bracket3MinDistinctTokens,
-        IdentifierTokenMinLength     = identifierTokenMinLength,
-        IndexExcelTokenBigrams       = indexExcelTokenBigrams,
-        FuzzyMinTokenLength          = DefaultFuzzyMinTokenLength,
-        FuzzyMaxEditDistance         = DefaultFuzzyMaxEditDistance,
-        FuzzyMatchScore              = DefaultFuzzyMatchScore,
+    private static StringMatcher.Config MakeStringCfg(int bracket3MinDistinctTokens, int identifierTokenMinLength, bool indexExcelTokenBigrams) => new() {
+        Bracket3MinDistinctTokens = bracket3MinDistinctTokens,
+        IdentifierTokenMinLength = identifierTokenMinLength,
+        IndexExcelTokenBigrams = indexExcelTokenBigrams,
+        FuzzyMinTokenLength = DefaultFuzzyMinTokenLength,
+        FuzzyMaxEditDistance = DefaultFuzzyMaxEditDistance,
+        FuzzyMatchScore = DefaultFuzzyMatchScore,
         NonExactTokenMatchConfidence = 0.85
     };
 
     // Production-equivalent SiblingPropagator tuning (MatchingConfig.json's match.siblingPropagator).
-    private static readonly SiblingPropagator.Config SiblingPropagatorCfg = new()
-    {
-        CommonTokenRatio             = 0.5,
-        CommonTokenFloor             = 10,
+    private static readonly SiblingPropagator.Config SiblingPropagatorCfg = new() {
+        CommonTokenRatio = 0.5,
+        CommonTokenFloor = 10,
         SiblingPropagationConfidence = 0.9,
-        MinCommonTokens              = 2,
-        ReferenceGradeTokenLength    = 5
+        MinCommonTokens = 2,
+        ReferenceGradeTokenLength = 5
     };
 
     // Production-equivalent FolderNameEnricher tuning (MatchingConfig.json's match.folderNameEnricher).
-    private static readonly FolderNameEnricher.Config FolderNameEnricherCfg = new()
-    {
-        CameraPrefixes         = ["dscn", "dsc", "img", "image", "photo", "pic", "picture", "scan", "p", "capture", "shot"],
-        NoiseFolderTokens      =
+    private static readonly FolderNameEnricher.Config FolderNameEnricherCfg = new() {
+        CameraPrefixes = ["dscn", "dsc", "img", "image", "photo", "pic", "picture", "scan", "p", "capture", "shot"],
+        NoiseFolderTokens =
         [
             "hd", "ld", "sd", "web", "print", "packshot", "packshots", "hero", "heroes", "detail", "details",
             "front", "back", "side", "top", "model", "onmodel", "ghost", "flat", "still", "lifestyle",
@@ -93,17 +85,16 @@ public class MatcherUpgradeTests
             "photos", "photo", "pictures", "picture", "visuals", "visual", "media", "jpg", "jpeg", "png",
             "rgb", "cmyk", "dpi", "px", "new", "old", "copy", "temp", "tmp"
         ],
-        MinBareNumberLength      = 5,
-        MinTokenLengthFloor      = 2,
-        MinPerItemSiblings       = 2,
+        MinBareNumberLength = 5,
+        MinTokenLengthFloor = 2,
+        MinPerItemSiblings = 2,
         MinMeaningfulTokenLength = 3
     };
 
     //  M1: min-token-length guard (INPUTMA24 false ties)
 
     [Fact]
-    public void Bracket1_ShortRefCoDigitsDoNotTieAgainstFamilyIdToken()
-    {
+    public void Bracket1_ShortRefCoDigitsDoNotTieAgainstFamilyIdToken() {
         // Family B's RefCo "MGGE073" yields digits "073"; the shot suffix "_073" must not drag it
         // into a tie with the exact 8-digit FamilyID match on family A.
         NumericMatcher matcher = new("familyID", MakeNumericCfg(minNumericTokenLength: 5, indexDigitRunsAllColumns: false, minSubstringRescueLength: 0));
@@ -117,8 +108,7 @@ public class MatcherUpgradeTests
     }
 
     [Fact]
-    public void Bracket1_LegacyMinLengthOne_ShortTokensStillTie()
-    {
+    public void Bracket1_LegacyMinLengthOne_ShortTokensStillTie() {
         NumericMatcher matcher = new("familyID", MakeNumericCfg(minNumericTokenLength: 1, indexDigitRunsAllColumns: false, minSubstringRescueLength: 0));
         FamilyIDRecord famA = new("94671115");
         FamilyIDRecord famB = MakeFamily("94671189", ("RefCo", "MGGE073", ExcelColumnClassification.Mixed));
@@ -131,8 +121,7 @@ public class MatcherUpgradeTests
     //  M1: all-columns digit-run index (FILA94 label, INPUTMA27 SKU)
 
     [Fact]
-    public void Bracket1_DigitRunInsideNonRuleColumn_Matches()
-    {
+    public void Bracket1_DigitRunInsideNonRuleColumn_Matches() {
         // The article number lives inside a compound label cell, not in any numeric-rule column.
         NumericMatcher matcher = new("familyID", MakeNumericCfg(minNumericTokenLength: 5, indexDigitRunsAllColumns: true, minSubstringRescueLength: 0));
         FamilyIDRecord family = MakeFamily("98226704", ("label", "MAN-Posy Green-1010930-60105", ExcelColumnClassification.Mixed));
@@ -146,8 +135,7 @@ public class MatcherUpgradeTests
     //  M1: token intersection (FILA94 article+color pair)
 
     [Fact]
-    public void TokenIntersection_SharedColorCodePlusArticleRun_NarrowsToOneFamily()
-    {
+    public void TokenIntersection_SharedColorCodePlusArticleRun_NarrowsToOneFamily() {
         // "60105" (color) appears in both labels; "1010930" (article) appears in both too — but
         // only one family carries the pair in one label. Intersection of per-token hit sets must
         // resolve what single-token lookups cannot.
@@ -170,8 +158,7 @@ public class MatcherUpgradeTests
     //  M1: substring rescue (INPUTMA24 EAN-embedded reference)
 
     [Fact]
-    public void SubstringRescue_TokenInsideEan_MatchesUniqueFamily()
-    {
+    public void SubstringRescue_TokenInsideEan_MatchesUniqueFamily() {
         NumericMatcher matcher = new("familyID", MakeNumericCfg(minNumericTokenLength: 5, indexDigitRunsAllColumns: false, minSubstringRescueLength: 7));
         FamilyIDRecord famA = MakeFamily("94671120", ("EAN", "8446271023117", ExcelColumnClassification.Numerical));
         FamilyIDRecord famB = MakeFamily("94671121", ("EAN", "8435747805700", ExcelColumnClassification.Numerical));
@@ -186,8 +173,7 @@ public class MatcherUpgradeTests
     }
 
     [Fact]
-    public void SubstringRescue_Disabled_ReturnsNull()
-    {
+    public void SubstringRescue_Disabled_ReturnsNull() {
         NumericMatcher matcher = new("familyID", MakeNumericCfg(minNumericTokenLength: 5, indexDigitRunsAllColumns: false, minSubstringRescueLength: 0));
         FamilyIDRecord family = MakeFamily("94671120", ("EAN", "8446271023117", ExcelColumnClassification.Numerical));
 
@@ -198,8 +184,7 @@ public class MatcherUpgradeTests
     //  M2: Excel bigrams + filename boundary split (HEROAUT3 glued color)
 
     [Fact]
-    public void Bracket3_GluedFilenameToken_MatchesAdjacentExcelTokens()
-    {
+    public void Bracket3_GluedFilenameToken_MatchesAdjacentExcelTokens() {
         // Filename glues "palm blue" into "palmblue"; the Excel cell holds them adjacent.
         StringMatcher matcher = new(EmptyTranslation, MakeStringCfg(bracket3MinDistinctTokens: 2, identifierTokenMinLength: DefaultIdentifierTokenMinLength, indexExcelTokenBigrams: true));
         FamilyIDRecord famA = MakeFamily("94612975", ("reference", "ANASTASIA AB-PALM BLUE", ExcelColumnClassification.Mixed));
@@ -214,8 +199,7 @@ public class MatcherUpgradeTests
     //  M2: identifier-grade single token (WOODWIC12 reference stems)
 
     [Fact]
-    public void Bracket3_UniqueIdentifierToken_BypassesMinDistinctTokensGate()
-    {
+    public void Bracket3_UniqueIdentifierToken_BypassesMinDistinctTokensGate() {
         StringMatcher matcher = new(EmptyTranslation, MakeStringCfg(bracket3MinDistinctTokens: 2, identifierTokenMinLength: 4, indexExcelTokenBigrams: DefaultIndexExcelTokenBigrams));
         FamilyIDRecord famA = MakeFamily("98954095", ("reference", "1707527E", ExcelColumnClassification.Mixed));
         FamilyIDRecord famB = MakeFamily("98954100", ("reference", "2653556E", ExcelColumnClassification.Mixed));
@@ -227,8 +211,7 @@ public class MatcherUpgradeTests
     }
 
     [Fact]
-    public void Bracket3_IdentifierBypassDisabled_GateStillRejects()
-    {
+    public void Bracket3_IdentifierBypassDisabled_GateStillRejects() {
         StringMatcher matcher = new(EmptyTranslation, MakeStringCfg(bracket3MinDistinctTokens: 2, identifierTokenMinLength: 0, indexExcelTokenBigrams: DefaultIndexExcelTokenBigrams));
         FamilyIDRecord famA = MakeFamily("98954095", ("reference", "1707527E", ExcelColumnClassification.Mixed));
         FamilyIDRecord famB = MakeFamily("98954100", ("reference", "2653556E", ExcelColumnClassification.Mixed));
@@ -239,8 +222,7 @@ public class MatcherUpgradeTests
     //  M2: short-digit tiebreak (CiMini color-code discrimination)
 
     [Fact]
-    public void Bracket3_TopTie_ShortDigitTokenDiscriminates()
-    {
+    public void Bracket3_TopTie_ShortDigitTokenDiscriminates() {
         // Both families are cardigans in magenta; only famA carries color code "76".
         StringMatcher matcher = new(EmptyTranslation, MakeStringCfg(bracket3MinDistinctTokens: 2, identifierTokenMinLength: DefaultIdentifierTokenMinLength, indexExcelTokenBigrams: DefaultIndexExcelTokenBigrams));
         FamilyIDRecord famA = MakeFamily("90861052",
@@ -259,8 +241,7 @@ public class MatcherUpgradeTests
     //  M3: sibling propagation (CiMini keyless shot of a matched product)
 
     [Fact]
-    public void SiblingPropagator_KeylessShot_InheritsSiblingFamily()
-    {
+    public void SiblingPropagator_KeylessShot_InheritsSiblingFamily() {
         SiblingPropagator propagator = new(SiblingPropagatorCfg);
 
         ImageRecord_LAMBDA matched = MakeLambda("24211507_CARDIGAN_76_MAGENTA_B.jpg");
@@ -282,8 +263,7 @@ public class MatcherUpgradeTests
     }
 
     [Fact]
-    public void SiblingPropagator_ConflictingSiblings_DoesNotPropagate()
-    {
+    public void SiblingPropagator_ConflictingSiblings_DoesNotPropagate() {
         // Two different products both have magenta cardigan shots that reduce to {cardigan, magenta}.
         // The exact profile is owned by two families, so it is NOT a safe key, and a third keyless
         // shot with that same profile has no way to choose — it stays unmatched.
@@ -304,8 +284,7 @@ public class MatcherUpgradeTests
     }
 
     [Fact]
-    public void SiblingPropagator_ThirdShotOfOneProduct_JoinsDespiteOverlapWithAnother()
-    {
+    public void SiblingPropagator_ThirdShotOfOneProduct_JoinsDespiteOverlapWithAnother() {
         // One product (90861052) has two matched magenta-cardigan shots. A third shot, CARDIGAN_MAGENTA76_C,
         // reduces to the same {cardigan, magenta} profile. A DIFFERENT product (90861099) has one matched
         // cardigan shot that only loosely overlaps. The exact profile {cardigan,magenta} is owned by exactly
@@ -331,8 +310,7 @@ public class MatcherUpgradeTests
     //  Folder-name enrichment
 
     [Fact]
-    public void FolderNameEnricher_MeaninglessFileInMeaningfulFolder_BorrowsFolderName()
-    {
+    public void FolderNameEnricher_MeaninglessFileInMeaningfulFolder_BorrowsFolderName() {
         // Filenames are meaningless (1.jpg, 2.jpg); the folders are one-per-product and a folder token
         // (the reference SH23005) appears in the Excel data. The folder name is borrowed for matching.
         FolderNameEnricher enricher = new(FolderNameEnricherCfg);
@@ -355,8 +333,7 @@ public class MatcherUpgradeTests
     }
 
     [Fact]
-    public void FolderNameEnricher_FormatFolder_IsNotBorrowed()
-    {
+    public void FolderNameEnricher_FormatFolder_IsNotBorrowed() {
         // Folders describe format/size, not the product — nothing is borrowed.
         FolderNameEnricher enricher = new(FolderNameEnricherCfg);
         FamilyIDRecord fam = MakeFamily("98765432", ("reference", "SH23005", ExcelColumnClassification.Mixed));
@@ -374,8 +351,7 @@ public class MatcherUpgradeTests
     }
 
     [Fact]
-    public void FolderNameEnricher_MeaningfulFilename_IsLeftAlone()
-    {
+    public void FolderNameEnricher_MeaningfulFilename_IsLeftAlone() {
         // The filename already carries a product word — the folder is never borrowed, even if meaningful.
         FolderNameEnricher enricher = new(FolderNameEnricherCfg);
         FamilyIDRecord fam = MakeFamily("98765432", ("reference", "zenith SH23005", ExcelColumnClassification.Mixed), ("model", "anastasia", ExcelColumnClassification.Categorical));
@@ -389,8 +365,7 @@ public class MatcherUpgradeTests
     }
 
     [Fact]
-    public void FolderNameEnricher_FolderTokenNotInExcel_IsNotBorrowed()
-    {
+    public void FolderNameEnricher_FolderTokenNotInExcel_IsNotBorrowed() {
         // The folder is a per-product pattern, but none of its tokens appear in the Excel — no borrow.
         FolderNameEnricher enricher = new(FolderNameEnricherCfg);
         FamilyIDRecord fam = MakeFamily("98765432", ("reference", "totally unrelated", ExcelColumnClassification.Mixed));
@@ -406,8 +381,7 @@ public class MatcherUpgradeTests
     //  Phase E: orphan row join (MEPAL4 catalog → bundle Ref)
 
     [Fact]
-    public void OrphanRowJoiner_ArticleNumberInsideBundleRef_JoinsRowToFamily()
-    {
+    public void OrphanRowJoiner_ArticleNumberInsideBundleRef_JoinsRowToFamily() {
         InternalExcelModel model = new();
         model.AddOrMergeFamilyRow(
             "98985645",
@@ -438,8 +412,7 @@ public class MatcherUpgradeTests
     }
 
     [Fact]
-    public void OrphanRowJoiner_KeySharedByTwoFamilies_DoesNotJoin()
-    {
+    public void OrphanRowJoiner_KeySharedByTwoFamilies_DoesNotJoin() {
         InternalExcelModel model = new();
         Dictionary<string, ExcelColumnClassification> refClassification = new() { ["ref"] = ExcelColumnClassification.Mixed };
         model.AddOrMergeFamilyRow("98985645", [new ExcelPropertyValue("ref", ["106297094700"], [])], refClassification);
@@ -461,8 +434,7 @@ public class MatcherUpgradeTests
     private static ImageRecord_LAMBDA MakeLambda(string filename) =>
         new() { InitialFullName = filename };
 
-    private static FamilyIDRecord MakeFamily(string familyId, params (string Name, string Value, ExcelColumnClassification Classification)[] properties)
-    {
+    private static FamilyIDRecord MakeFamily(string familyId, params (string Name, string Value, ExcelColumnClassification Classification)[] properties) {
         FamilyIDRecord family = new(familyId);
         foreach ((string name, string value, ExcelColumnClassification classification) in properties)
             family.MergeProperty(new ExcelPropertyValue(name, [value], []), classification);

@@ -7,8 +7,7 @@ namespace Prism.Services.Matching;
 /// Either a direct feature comparison (when <see cref="Feature"/> is set)
 /// or an OR group (when <see cref="AnyOf"/> is set).
 /// </summary>
-public sealed class FeatureCondition
-{
+public sealed class FeatureCondition {
     /// <summary>Feature id to evaluate (kebab-case, matching ImageFeatures.md).</summary>
     [JsonPropertyName("feature")]
     public string? Feature { get; init; }

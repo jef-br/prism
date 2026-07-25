@@ -17,7 +17,7 @@ public sealed class UpscaleService : IUpscaleService {
     /// cannot be located, or (from <see cref="Upscaler.Initialize"/>) when the model file is present
     /// but corrupt — there is no fallback upscaler (T-4110).
     /// </summary>
-    public static UpscaleService Create( PrismConfiguration configuration ) {
+    public static UpscaleService Create(PrismConfiguration configuration) {
         string? modelPath = ModelAssetLocator.Find(configuration.UpscaleModelPath);
 
         if (modelPath is null)
@@ -38,6 +38,6 @@ public sealed class UpscaleService : IUpscaleService {
     }
 
     /// <inheritdoc/>
-    public Task<byte[]> UpscaleAsync( byte[] imageBytes, double scaleFactor, CancellationToken _ ) =>
+    public Task<byte[]> UpscaleAsync(byte[] imageBytes, double scaleFactor, CancellationToken _) =>
         Task.FromResult(Upscaler.Upscale(imageBytes, scaleFactor));
 }

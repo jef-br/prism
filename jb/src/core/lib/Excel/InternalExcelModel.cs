@@ -7,8 +7,7 @@ namespace Prism.Lib.Excel;
 /// <summary>
 /// Deduplicated in-memory model of accepted Excel data, keyed by FamilyID.
 /// </summary>
-public sealed class InternalExcelModel
-{
+public sealed class InternalExcelModel {
     /// <summary>
     /// All deduplicated family records keyed by FamilyID.
     /// </summary>
@@ -30,17 +29,14 @@ public sealed class InternalExcelModel
     public void AddOrMergeFamilyRow(
         string familyID,
         IReadOnlyList<ExcelPropertyValue> propertyValues,
-        IReadOnlyDictionary<string, ExcelColumnClassification> columnClassifications)
-    {
-        if (string.IsNullOrWhiteSpace(familyID))
-        {
+        IReadOnlyDictionary<string, ExcelColumnClassification> columnClassifications) {
+        if (string.IsNullOrWhiteSpace(familyID)) {
             throw new ArgumentException("FamilyID is required.", nameof(familyID));
         }
 
         FamilyIDRecord familyIDRecord = this.GetOrCreateFamilyRecord(familyID.Trim());
 
-        foreach (ExcelPropertyValue propertyValue in propertyValues)
-        {
+        foreach (ExcelPropertyValue propertyValue in propertyValues) {
             ExcelColumnClassification classification = columnClassifications.TryGetValue(propertyValue.PropertyName, out ExcelColumnClassification configuredClassification)
                 ? configuredClassification
                 : ExcelColumnClassification.Descriptive;
@@ -55,8 +51,7 @@ public sealed class InternalExcelModel
     /// Maps the Internal Excel Model to the canonical FamilyIDRecord collection.
     /// </summary>
     /// <returns>One FamilyIDRecord per valid FamilyID.</returns>
-    public IReadOnlyList<FamilyIDRecord> ToFamilyRecords()
-    {
+    public IReadOnlyList<FamilyIDRecord> ToFamilyRecords() {
         return this.recordsByFamilyID.Values
             .OrderBy(record => record.FamilyID, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -69,21 +64,17 @@ public sealed class InternalExcelModel
     /// </summary>
     /// <param name="primaryKeyName">Configured primary-key property to exempt from pruning.</param>
     /// <returns>Names of the properties dropped, sorted for stable diagnostics.</returns>
-    internal IReadOnlyList<string> PruneEmptyProperties(string primaryKeyName)
-    {
+    internal IReadOnlyList<string> PruneEmptyProperties(string primaryKeyName) {
         // A property can linger in classifications/tokens without ever holding a canonical value (an
         // all-blank column that survived the per-worksheet fill gate registers a classification but no
         // canonical value). Union all property-name-keyed dictionaries so we prune that bloat too.
         HashSet<string> candidateNames = new(StringComparer.OrdinalIgnoreCase);
-        foreach (FamilyIDRecord record in this.recordsByFamilyID.Values)
-        {
+        foreach (FamilyIDRecord record in this.recordsByFamilyID.Values) {
             foreach (string propertyName in record.CanonicalProperties.Keys
                 .Concat(record.ColumnClassifications.Keys)
                 .Concat(record.NormalizedTokens.Keys)
-                .Concat(record.OriginalSourceCellValues.Keys))
-            {
-                if (!string.Equals(propertyName, primaryKeyName, StringComparison.OrdinalIgnoreCase))
-                {
+                .Concat(record.OriginalSourceCellValues.Keys)) {
+                if (!string.Equals(propertyName, primaryKeyName, StringComparison.OrdinalIgnoreCase)) {
                     candidateNames.Add(propertyName);
                 }
             }
@@ -95,15 +86,12 @@ public sealed class InternalExcelModel
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        if (emptyNames.Length == 0)
-        {
+        if (emptyNames.Length == 0) {
             return emptyNames;
         }
 
-        foreach (FamilyIDRecord record in this.recordsByFamilyID.Values)
-        {
-            foreach (string emptyName in emptyNames)
-            {
+        foreach (FamilyIDRecord record in this.recordsByFamilyID.Values) {
+            foreach (string emptyName in emptyNames) {
                 record.RemoveProperty(emptyName);
             }
 
@@ -113,10 +101,8 @@ public sealed class InternalExcelModel
         return emptyNames;
     }
 
-    private FamilyIDRecord GetOrCreateFamilyRecord(string familyID)
-    {
-        if (this.recordsByFamilyID.TryGetValue(familyID, out FamilyIDRecord? existingRecord))
-        {
+    private FamilyIDRecord GetOrCreateFamilyRecord(string familyID) {
+        if (this.recordsByFamilyID.TryGetValue(familyID, out FamilyIDRecord? existingRecord)) {
             return existingRecord;
         }
 

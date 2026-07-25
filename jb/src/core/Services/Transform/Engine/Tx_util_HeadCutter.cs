@@ -8,16 +8,14 @@ namespace Prism.Services.Transform;
 /// Updates <see cref="ImageRecord_LAMBDA.ProcessedBytes"/> and <see cref="ImageRecord_LAMBDA.BoundingBox"/>
 /// in place when a qualifying face is found. No-ops when no face is detected.
 /// </summary>
-internal static class Tx_util_HeadCutter
-{
+internal static class Tx_util_HeadCutter {
     /// <summary>
     /// Detects a human face and crops the image from the nose-to-lips line downward.
     /// Always runs when headcut is requested; branches on has-human feature for search strategy.
     /// When has-human is true, Algorithm A (anatomy-guided — pending deepdive, see Transform jbtodo.md)
     /// is used; otherwise Algorithm B searches the full top half.
     /// </summary>
-    public static void Analyze(ImageRecord_LAMBDA lambda, Mat colorMat, HeadCutterConfig cfg)
-    {
+    public static void Analyze(ImageRecord_LAMBDA lambda, Mat colorMat, HeadCutterConfig cfg) {
         BoundingBox bbox = lambda.BoundingBox!.Value;
 
         using CascadeClassifier faceDetector = new CascadeClassifier();
@@ -49,15 +47,14 @@ internal static class Tx_util_HeadCutter
 
         // Shift bbox up — the cut is always above the clothing bbox.
         int newY = bbox.Y - cutY;
-        lambda.BoundingBox = new BoundingBox
-        {
-            X      = bbox.X,
-            Y      = newY,
-            Width  = bbox.Width,
+        lambda.BoundingBox = new BoundingBox {
+            X = bbox.X,
+            Y = newY,
+            Width = bbox.Width,
             Height = bbox.Height,
-            Left   = bbox.Left,
-            Top    = newY,
-            Right  = bbox.Right,
+            Left = bbox.Left,
+            Top = newY,
+            Right = bbox.Right,
             Bottom = newY + bbox.Height
         };
     }
@@ -65,8 +62,7 @@ internal static class Tx_util_HeadCutter
     //  Face detection
 
     private static Rect[] DetectFaces(CascadeClassifier detector, Mat gray,
-        ImageRecord_LAMBDA lambda, int imageHeight)
-    {
+        ImageRecord_LAMBDA lambda, int imageHeight) {
         bool hasHuman = lambda.Features.GetValue("has-human") == "true";
 
         // Algorithm A (has-human == true): anatomy-guided search space refinement.
@@ -80,8 +76,7 @@ internal static class Tx_util_HeadCutter
         var qualifying = new System.Collections.Generic.List<Rect>();
         // Midpoint math (/2) — structural, never tuned.
 #pragma warning disable S109
-        foreach (Rect f in allFaces)
-        {
+        foreach (Rect f in allFaces) {
             if (f.Y + f.Height / 2 < halfHeight)
                 qualifying.Add(f);
         }
@@ -91,8 +86,7 @@ internal static class Tx_util_HeadCutter
 
     //  Haar cascade path resolution
 
-    private static string FindHaarCascadePath()
-    {
+    private static string FindHaarCascadePath() {
         string[] candidates =
         [
             "haarcascade_frontalface_default.xml",

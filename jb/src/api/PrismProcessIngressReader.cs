@@ -6,15 +6,12 @@ namespace Prism.Api;
 /// <summary>
 /// Reads and validates API multipart process requests before job creation.
 /// </summary>
-internal static class PrismProcessIngressReader
-{
+internal static class PrismProcessIngressReader {
     /// <summary>
     /// Reads multipart form data and builds a core-facing request or pre-core error.
     /// </summary>
-    public static async Task<PrismProcessIngressResult> Read(HttpRequest httpRequest, PrismApiConfiguration configuration)
-    {
-        if (!httpRequest.HasFormContentType)
-        {
+    public static async Task<PrismProcessIngressResult> Read(HttpRequest httpRequest, PrismApiConfiguration configuration) {
+        if (!httpRequest.HasFormContentType) {
             return PrismProcessIngressResult.FromError(CreateError(
                 httpRequest,
                 "INVALID_PAYLOAD",
@@ -25,8 +22,7 @@ internal static class PrismProcessIngressReader
 
         IFormCollection form = await httpRequest.ReadFormAsync();
         string? requestJson = await ReadRequestJson(form);
-        if (string.IsNullOrWhiteSpace(requestJson))
-        {
+        if (string.IsNullOrWhiteSpace(requestJson)) {
             return PrismProcessIngressResult.FromError(CreateError(
                 httpRequest,
                 "INVALID_PAYLOAD",
@@ -36,13 +32,11 @@ internal static class PrismProcessIngressReader
         }
 
         PrismProcessRequest? processRequest = DeserializeRequest(requestJson, httpRequest, out PrismPreCoreErrorResponse? parseError);
-        if (parseError is not null)
-        {
+        if (parseError is not null) {
             return PrismProcessIngressResult.FromError(parseError);
         }
 
-        if (!IsSupportedFormat(processRequest!.Format))
-        {
+        if (!IsSupportedFormat(processRequest!.Format)) {
             return PrismProcessIngressResult.FromError(CreateError(
                 httpRequest,
                 "INVALID_PAYLOAD",
@@ -68,8 +62,7 @@ internal static class PrismProcessIngressReader
         await AddRemoteInputRecordsAsync(processRequest.Input, mediaTypes, configuration.FetchDispatcher, jobTempDir, images, excelFiles, zipFiles, httpRequest.HttpContext.RequestAborted);
         await AddUploadedInputRecords(form.Files, configuration, mediaTypes, jobTempDir, images, excelFiles, zipFiles, fieldErrors);
 
-        if (configuration.MaximumRequestBytes > 0 && totalSubmittedBytes > configuration.MaximumRequestBytes)
-        {
+        if (configuration.MaximumRequestBytes > 0 && totalSubmittedBytes > configuration.MaximumRequestBytes) {
             CleanUpJobTempDir(jobTempDir);
             return PrismProcessIngressResult.FromError(CreateError(
                 httpRequest,
@@ -79,8 +72,7 @@ internal static class PrismProcessIngressReader
                 ["request:REQUEST_TOO_LARGE"]));
         }
 
-        if (fieldErrors.Count > 0)
-        {
+        if (fieldErrors.Count > 0) {
             CleanUpJobTempDir(jobTempDir);
             return PrismProcessIngressResult.FromError(CreateError(
                 httpRequest,
@@ -92,9 +84,8 @@ internal static class PrismProcessIngressReader
 
         (int zipImages, int zipExcel) = PeekZipContents(zipFiles, mediaTypes);
         int effectiveImages = images.Count + zipImages;
-        int effectiveExcel  = excelFiles.Count + zipExcel;
-        if (effectiveImages < configuration.MinimumImageCount || effectiveExcel < configuration.MinimumExcelCount)
-        {
+        int effectiveExcel = excelFiles.Count + zipExcel;
+        if (effectiveImages < configuration.MinimumImageCount || effectiveExcel < configuration.MinimumExcelCount) {
             CleanUpJobTempDir(jobTempDir);
             return PrismProcessIngressResult.FromError(CreateError(
                 httpRequest,
@@ -104,15 +95,13 @@ internal static class PrismProcessIngressReader
                 ["request.Input:INCOMPLETE_PAYLOAD"]));
         }
 
-        PrismJobRequest coreRequest = new()
-        {
+        PrismJobRequest coreRequest = new() {
             JobID = jobID,
             ClientRequestToken = processRequest.ClientRequestToken,
             ImageRecords = images,
             ExcelRecords = excelFiles,
             ZipFileRecords = zipFiles,
-            PrismProcessingParameters = new PrismProcessingParameters
-            {
+            PrismProcessingParameters = new PrismProcessingParameters {
                 Rename = processRequest.Rename,
                 Transform = processRequest.Transform,
                 Generation = processRequest.Generation,
@@ -125,17 +114,14 @@ internal static class PrismProcessIngressReader
         return PrismProcessIngressResult.FromRequest(coreRequest);
     }
 
-    private static async Task<string?> ReadRequestJson(IFormCollection form)
-    {
+    private static async Task<string?> ReadRequestJson(IFormCollection form) {
         if (form.TryGetValue("request", out Microsoft.Extensions.Primitives.StringValues requestValues)
-            && requestValues.Count > 0)
-        {
+            && requestValues.Count > 0) {
             return requestValues[0];
         }
 
         IFormFile? requestFile = form.Files.FirstOrDefault(file => string.Equals(file.Name, "request", StringComparison.OrdinalIgnoreCase));
-        if (requestFile is null)
-        {
+        if (requestFile is null) {
             return null;
         }
 
@@ -146,17 +132,14 @@ internal static class PrismProcessIngressReader
     private static PrismProcessRequest? DeserializeRequest(
         string requestJson,
         HttpRequest httpRequest,
-        out PrismPreCoreErrorResponse? parseError)
-    {
-        try
-        {
+        out PrismPreCoreErrorResponse? parseError) {
+        try {
             parseError = null;
             return JsonSerializer.Deserialize<PrismProcessRequest>(
                 requestJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
-        catch (JsonException exception)
-        {
+        catch (JsonException exception) {
             parseError = CreateError(
                 httpRequest,
                 "INVALID_PAYLOAD",
@@ -167,14 +150,12 @@ internal static class PrismProcessIngressReader
         }
     }
 
-    private static bool IsSupportedFormat(string format)
-    {
+    private static bool IsSupportedFormat(string format) {
         return string.Equals(format, "zip", StringComparison.OrdinalIgnoreCase)
             || string.Equals(format, "json", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static MediaTypeSets BuildMediaTypeSets(PrismApiConfiguration configuration)
-    {
+    private static MediaTypeSets BuildMediaTypeSets(PrismApiConfiguration configuration) {
         return new MediaTypeSets(
             new HashSet<string>(configuration.ImageMediaTypes, StringComparer.OrdinalIgnoreCase),
             new HashSet<string>(configuration.ExcelMediaTypes, StringComparer.OrdinalIgnoreCase),
@@ -189,12 +170,9 @@ internal static class PrismProcessIngressReader
         List<ImageRecord_INPUT> images,
         List<InputExcelFileRecord> excelFiles,
         List<InputZipFileRecord> zipFiles,
-        CancellationToken ct)
-    {
-        foreach (string input in remoteInputs.Where(i => !string.IsNullOrWhiteSpace(i)))
-        {
-            if (dispatcher.CanHandle(input))
-            {
+        CancellationToken ct) {
+        foreach (string input in remoteInputs.Where(i => !string.IsNullOrWhiteSpace(i))) {
+            if (dispatcher.CanHandle(input)) {
                 ImageRecord_INPUT fetched = await dispatcher.FetchAsync(input, jobTempFolder, input, ct);
                 string ext = Path.GetExtension(fetched.InitialFullName ?? string.Empty);
                 if (mediaTypes.Images.Contains(ext))
@@ -202,13 +180,15 @@ internal static class PrismProcessIngressReader
                 else if (mediaTypes.Excel.Contains(ext))
                     excelFiles.Add(new InputExcelFileRecord {
                         SourceReference = fetched.InitialFullName ?? input,
-                        TempFilePath    = fetched.TempFilePath,
-                        ByteLength      = fetched.ByteLength });
+                        TempFilePath = fetched.TempFilePath,
+                        ByteLength = fetched.ByteLength
+                    });
                 else if (mediaTypes.Zip.Contains(ext))
                     zipFiles.Add(new InputZipFileRecord {
                         SourceReference = fetched.InitialFullName ?? input,
-                        TempFilePath    = fetched.TempFilePath,
-                        ByteLength      = fetched.ByteLength });
+                        TempFilePath = fetched.TempFilePath,
+                        ByteLength = fetched.ByteLength
+                    });
                 // else: extension unrecognised after fetch — silently dropped
                 continue;
             }
@@ -232,41 +212,33 @@ internal static class PrismProcessIngressReader
         List<ImageRecord_INPUT> images,
         List<InputExcelFileRecord> excelFiles,
         List<InputZipFileRecord> zipFiles,
-        List<string> fieldErrors)
-    {
+        List<string> fieldErrors) {
         int inputIndex = 0;
-        foreach (IFormFile file in files.Where(file => string.Equals(file.Name, "input", StringComparison.OrdinalIgnoreCase)))
-        {
+        foreach (IFormFile file in files.Where(file => string.Equals(file.Name, "input", StringComparison.OrdinalIgnoreCase))) {
             string extension = Path.GetExtension(file.FileName);
             string fieldPath = $"multipart.input[{inputIndex}]";
 
-            if (mediaTypes.Images.Contains(extension))
-            {
+            if (mediaTypes.Images.Contains(extension)) {
                 ValidateFileLength(file, configuration.MinimumImageBytes, configuration.MaximumImageBytes, fieldPath, fieldErrors);
                 string tempPath = await SpillToTempAsync(file, jobTempDir, inputIndex);
-                images.Add(new ImageRecord_INPUT
-                {
+                images.Add(new ImageRecord_INPUT {
                     InitialFullName = file.FileName,
                     TempFilePath = tempPath
                 });
             }
-            else if (mediaTypes.Excel.Contains(extension))
-            {
+            else if (mediaTypes.Excel.Contains(extension)) {
                 ValidateFileLength(file, configuration.MinimumExcelBytes, configuration.MaximumExcelBytes, fieldPath, fieldErrors);
                 string tempPath = await SpillToTempAsync(file, jobTempDir, inputIndex);
-                excelFiles.Add(new InputExcelFileRecord
-                {
+                excelFiles.Add(new InputExcelFileRecord {
                     SourceReference = file.FileName,
                     ByteLength = file.Length,
                     TempFilePath = tempPath
                 });
             }
-            else if (mediaTypes.Zip.Contains(extension))
-            {
+            else if (mediaTypes.Zip.Contains(extension)) {
                 ValidateFileLength(file, 0, configuration.MaximumZipBytes, fieldPath, fieldErrors);
                 string tempPath = await SpillToTempAsync(file, jobTempDir, inputIndex);
-                zipFiles.Add(new InputZipFileRecord
-                {
+                zipFiles.Add(new InputZipFileRecord {
                     SourceReference = file.FileName,
                     ByteLength = file.Length,
                     TempFilePath = tempPath
@@ -277,8 +249,7 @@ internal static class PrismProcessIngressReader
         }
     }
 
-    private static async Task<string> SpillToTempAsync(IFormFile file, string jobTempDir, int index)
-    {
+    private static async Task<string> SpillToTempAsync(IFormFile file, string jobTempDir, int index) {
         Directory.CreateDirectory(jobTempDir);
         string safeFileName = $"{index:D4}_{Path.GetFileName(file.FileName)}";
         string tempPath = Path.Combine(jobTempDir, safeFileName);
@@ -289,33 +260,28 @@ internal static class PrismProcessIngressReader
         return tempPath;
     }
 
-    private static (int images, int excel) PeekZipContents(List<InputZipFileRecord> zipFiles, MediaTypeSets mediaTypes)
-    {
+    private static (int images, int excel) PeekZipContents(List<InputZipFileRecord> zipFiles, MediaTypeSets mediaTypes) {
         int images = 0;
-        int excel  = 0;
-        foreach (InputZipFileRecord zr in zipFiles)
-        {
+        int excel = 0;
+        foreach (InputZipFileRecord zr in zipFiles) {
             if (zr.TempFilePath is null || !File.Exists(zr.TempFilePath))
                 continue;
             try {
                 using ZipArchive archive = ZipFile.OpenRead(zr.TempFilePath);
-                foreach (ZipArchiveEntry entry in archive.Entries)
-                {
+                foreach (ZipArchiveEntry entry in archive.Entries) {
                     string ext = Path.GetExtension(entry.FullName);
                     if (mediaTypes.Images.Contains(ext)) images++;
                     else if (mediaTypes.Excel.Contains(ext)) excel++;
                 }
-            } catch { /* corrupt / encrypted ZIP — let Import stage report the error */ }
+            }
+            catch { /* corrupt / encrypted ZIP — let Import stage report the error */ }
         }
         return (images, excel);
     }
 
-    private static void CleanUpJobTempDir(string jobTempDir)
-    {
-        try
-        {
-            if (Directory.Exists(jobTempDir))
-            {
+    private static void CleanUpJobTempDir(string jobTempDir) {
+        try {
+            if (Directory.Exists(jobTempDir)) {
                 Directory.Delete(jobTempDir, recursive: true);
             }
         }
@@ -328,15 +294,12 @@ internal static class PrismProcessIngressReader
         long minimumBytes,
         long maximumBytes,
         string fieldPath,
-        List<string> fieldErrors)
-    {
-        if (minimumBytes > 0 && file.Length < minimumBytes)
-        {
+        List<string> fieldErrors) {
+        if (minimumBytes > 0 && file.Length < minimumBytes) {
             fieldErrors.Add($"{fieldPath}:FILE_TOO_SMALL");
         }
 
-        if (maximumBytes > 0 && file.Length > maximumBytes)
-        {
+        if (maximumBytes > 0 && file.Length > maximumBytes) {
             fieldErrors.Add($"{fieldPath}:FILE_TOO_LARGE");
         }
     }
@@ -346,8 +309,7 @@ internal static class PrismProcessIngressReader
         string code,
         string message,
         IReadOnlyList<string> details,
-        IReadOnlyList<string> fieldErrors)
-    {
+        IReadOnlyList<string> fieldErrors) {
         return PrismPreCoreErrorResponse.Create(
             request.HttpContext.TraceIdentifier,
             code,

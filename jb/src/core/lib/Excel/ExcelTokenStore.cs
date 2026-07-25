@@ -7,8 +7,7 @@ namespace Prism.Lib.Excel;
 /// <summary>
 /// Searchable token store derived from FamilyIDRecord normalized tokens.
 /// </summary>
-public sealed class ExcelTokenStore
-{
+public sealed class ExcelTokenStore {
     /// <summary>
     /// Tokens by normalized value.
     /// </summary>
@@ -24,51 +23,41 @@ public sealed class ExcelTokenStore
     /// Rebuilds token entries for one family record.
     /// </summary>
     /// <param name="familyIDRecord">The family record whose current token state should be indexed.</param>
-    public void RefreshFromRecord(FamilyIDRecord familyIDRecord)
-    {
+    public void RefreshFromRecord(FamilyIDRecord familyIDRecord) {
         this.RemoveExistingTokensForFamily(familyIDRecord.FamilyID);
 
-        foreach (KeyValuePair<string, IReadOnlyList<string>> propertyTokens in familyIDRecord.NormalizedTokens)
-        {
-            foreach (string normalizedToken in propertyTokens.Value)
-            {
+        foreach (KeyValuePair<string, IReadOnlyList<string>> propertyTokens in familyIDRecord.NormalizedTokens) {
+            foreach (string normalizedToken in propertyTokens.Value) {
                 this.AddToken(familyIDRecord.FamilyID, propertyTokens.Key, normalizedToken);
             }
         }
     }
 
-    private void RemoveExistingTokensForFamily(string familyID)
-    {
+    private void RemoveExistingTokensForFamily(string familyID) {
         string[] tokenIdsToRemove = this.byTokenId.Values
             .Where(token => string.Equals(token.FamilyID, familyID, StringComparison.OrdinalIgnoreCase))
             .Select(token => token.TokenID)
             .ToArray();
 
-        foreach (string tokenID in tokenIdsToRemove)
-        {
-            if (!this.byTokenId.Remove(tokenID, out ExcelToken? removedToken))
-            {
+        foreach (string tokenID in tokenIdsToRemove) {
+            if (!this.byTokenId.Remove(tokenID, out ExcelToken? removedToken)) {
                 continue;
             }
 
-            if (!this.byNormalizedValue.TryGetValue(removedToken.NormalizedValue, out List<ExcelToken>? tokens))
-            {
+            if (!this.byNormalizedValue.TryGetValue(removedToken.NormalizedValue, out List<ExcelToken>? tokens)) {
                 continue;
             }
 
             tokens.RemoveAll(token => token.TokenID == tokenID);
 
-            if (tokens.Count == 0)
-            {
+            if (tokens.Count == 0) {
                 this.byNormalizedValue.Remove(removedToken.NormalizedValue);
             }
         }
     }
 
-    private void AddToken(string familyID, string propertyName, string normalizedToken)
-    {
-        if (string.IsNullOrWhiteSpace(normalizedToken))
-        {
+    private void AddToken(string familyID, string propertyName, string normalizedToken) {
+        if (string.IsNullOrWhiteSpace(normalizedToken)) {
             return;
         }
 
@@ -77,8 +66,7 @@ public sealed class ExcelTokenStore
 
         this.byTokenId[tokenID] = token;
 
-        if (!this.byNormalizedValue.TryGetValue(normalizedToken, out List<ExcelToken>? tokens))
-        {
+        if (!this.byNormalizedValue.TryGetValue(normalizedToken, out List<ExcelToken>? tokens)) {
             tokens = [];
             this.byNormalizedValue.Add(normalizedToken, tokens);
         }

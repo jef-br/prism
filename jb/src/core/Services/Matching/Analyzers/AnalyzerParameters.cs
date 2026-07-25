@@ -9,8 +9,7 @@ namespace Prism.Services.Matching;
 /// independently through <see cref="ConfigLoader"/> (each one self-validating), then bundles the
 /// results. Built once at service construction, never per image.
 /// </summary>
-public sealed class AnalyzerParameters
-{
+public sealed class AnalyzerParameters {
     internal const string ConfigFile = "analyzer_Config.json";
 
     public required Analyzer_Interior.Config Interior { get; init; }
@@ -28,16 +27,15 @@ public sealed class AnalyzerParameters
     /// or an out-of-range value throws here — so calling this at host startup fails the process loud
     /// rather than failing the first image mid-job.
     /// </summary>
-    public static AnalyzerParameters FromConfig() => new()
-    {
-        Interior         = ConfigLoader.Section<Analyzer_Interior.Config>(ConfigFile, "Interior"),
-        IsIllustration   = ConfigLoader.Section<Analyzer_IsIllustration.Config>(ConfigFile, "IsIllustration"),
-        Yolo             = ConfigLoader.Section<YoloAnalyzerConfig>(ConfigFile, "Yolo"),
-        Filename         = ConfigLoader.Section<Analyzer_FilenameEvidence.Config>(ConfigFile, "Filename"),
-        SubjectGeometry  = ConfigLoader.Section<Analyzer_SubjectGeometry.Config>(ConfigFile, "SubjectGeometry"),
-        Colors           = ConfigLoader.Section<ColorAnalyzerConfig>(ConfigFile, "Colors"),
-        Exposure         = ConfigLoader.Section<Analyzer_Exposure.Config>(ConfigFile, "Exposure"),
+    public static AnalyzerParameters FromConfig() => new() {
+        Interior = ConfigLoader.Section<Analyzer_Interior.Config>(ConfigFile, "Interior"),
+        IsIllustration = ConfigLoader.Section<Analyzer_IsIllustration.Config>(ConfigFile, "IsIllustration"),
+        Yolo = ConfigLoader.Section<YoloAnalyzerConfig>(ConfigFile, "Yolo"),
+        Filename = ConfigLoader.Section<Analyzer_FilenameEvidence.Config>(ConfigFile, "Filename"),
+        SubjectGeometry = ConfigLoader.Section<Analyzer_SubjectGeometry.Config>(ConfigFile, "SubjectGeometry"),
+        Colors = ConfigLoader.Section<ColorAnalyzerConfig>(ConfigFile, "Colors"),
+        Exposure = ConfigLoader.Section<Analyzer_Exposure.Config>(ConfigFile, "Exposure"),
         MultipleProducts = ConfigLoader.Section<Analyzer_MultipleProducts.Config>(ConfigFile, "MultipleProducts"),
-        SkinTone         = ConfigLoader.Section<SkinToneAnalyzerConfig>(ConfigFile, "SkinTone")
+        SkinTone = ConfigLoader.Section<SkinToneAnalyzerConfig>(ConfigFile, "SkinTone")
     };
 }

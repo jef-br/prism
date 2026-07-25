@@ -6,26 +6,24 @@ namespace Prism.Services.Matching;
 /// Accepts an assignment only when exactly one candidate survives all filters and the combined evidence
 /// score meets SemanticThreshold.
 /// </summary>
-internal sealed class SemanticMatcher
-{
-    private readonly NumericMatcher    numericMatcher;
-    private readonly StringMatcher     stringMatcher;
+internal sealed class SemanticMatcher {
+    private readonly NumericMatcher numericMatcher;
+    private readonly StringMatcher stringMatcher;
     private readonly ClipLabelEnricher clipLabelEnricher;
-    private readonly double            semanticThreshold;
-    private readonly double            semanticWeight;
+    private readonly double semanticThreshold;
+    private readonly double semanticWeight;
 
     internal SemanticMatcher(
-        NumericMatcher    numericMatcher,
-        StringMatcher     stringMatcher,
+        NumericMatcher numericMatcher,
+        StringMatcher stringMatcher,
         ClipLabelEnricher clipLabelEnricher,
-        double            semanticThreshold,
-        double            semanticWeight)
-    {
-        this.numericMatcher    = numericMatcher;
-        this.stringMatcher     = stringMatcher;
+        double semanticThreshold,
+        double semanticWeight) {
+        this.numericMatcher = numericMatcher;
+        this.stringMatcher = stringMatcher;
         this.clipLabelEnricher = clipLabelEnricher;
         this.semanticThreshold = semanticThreshold;
-        this.semanticWeight    = semanticWeight;
+        this.semanticWeight = semanticWeight;
     }
 
     /// <summary>
@@ -39,15 +37,14 @@ internal sealed class SemanticMatcher
     /// attribution. Candidates eliminated outright by a hard filter are not ties (empty tied list).
     /// </returns>
     internal (MatchEvidence? Evidence, List<CandidateSummary> TiedCandidates) TryMatch(
-        ImageRecord_LAMBDA          record,
+        ImageRecord_LAMBDA record,
         IReadOnlyList<FamilyIDRecord> unassignedFamilies,
-        IReadOnlyList<MatchingRule>   numericRules,
-        IReadOnlyList<MatchingRule>   labelRules)
-    {
+        IReadOnlyList<MatchingRule> numericRules,
+        IReadOnlyList<MatchingRule> labelRules) {
         string filename = record.MatchingName;
-        string imageId  = Path.GetFileNameWithoutExtension(filename);
+        string imageId = Path.GetFileNameWithoutExtension(filename);
 
-        List<FamilyIDRecord> candidates = [..unassignedFamilies];
+        List<FamilyIDRecord> candidates = [.. unassignedFamilies];
 
         // Step 1: CLIP ProductType hard filter
         (candidates, bool typeFilterApplied) = this.FilterByClipProductType(record, candidates, labelRules);
@@ -63,7 +60,7 @@ internal sealed class SemanticMatcher
 
         // Step 3: Numeric token candidate reduction
         bool hadMultipleBeforeNumeric = candidates.Count > 1;
-        candidates = [..this.numericMatcher.ReduceCandidatesByNumericTokens(filename, candidates, numericRules)];
+        candidates = [.. this.numericMatcher.ReduceCandidatesByNumericTokens(filename, candidates, numericRules)];
         bool numericReduced = hadMultipleBeforeNumeric && candidates.Count == 1;
 
         if (candidates.Count == 0) return (null, []);
@@ -81,13 +78,11 @@ internal sealed class SemanticMatcher
         FamilyIDRecord winner;
         List<TokenEvidenceItem> stringEvidence;
 
-        if (scored.Count > 0)
-        {
+        if (scored.Count > 0) {
             int topCount = scored[0].MatchCount;
             var topCandidates = scored.Where(s => s.MatchCount == topCount).ToList();
 
-            if (topCandidates.Count > 1)
-            {
+            if (topCandidates.Count > 1) {
                 List<CandidateSummary> tied = topCandidates
                     .Select(c => new CandidateSummary(c.Family.FamilyID, c.MatchCount, "SemanticMatcher.Bracket4"))
                     .ToList();
@@ -96,18 +91,16 @@ internal sealed class SemanticMatcher
 
             (winner, _, stringEvidence) = topCandidates[0];
         }
-        else if (candidates.Count == 1)
-        {
+        else if (candidates.Count == 1) {
             // A sole survivor is only acceptable when some signal actually narrowed the pool —
             // an image with no CLIP tags and no numeric reduction has no evidence tying it to the
             // last unassigned family, however alone that family is.
             if (!clipApplied && !numericReduced) return (null, []);
 
-            winner        = candidates[0];
+            winner = candidates[0];
             stringEvidence = [];
         }
-        else
-        {
+        else {
             // multiple candidates, no string signal to break the tie
             List<CandidateSummary> tied = candidates
                 .Select(f => new CandidateSummary(f.FamilyID, 0.0, "SemanticMatcher.Bracket4"))
@@ -116,9 +109,9 @@ internal sealed class SemanticMatcher
         }
 
         // Step 5: Compute combined score and check threshold
-        double clipSignal    = clipApplied ? 1.0 : 0.5; // 0.5 = no CLIP filter ran (neutral)
+        double clipSignal = clipApplied ? 1.0 : 0.5; // 0.5 = no CLIP filter ran (neutral)
         double numericSignal = numericReduced ? 1.0 : 0.5; // 0.5 = no numeric reduction (neutral)
-        double stringSignal  = totalImageTokens > 0
+        double stringSignal = totalImageTokens > 0
             ? Math.Min(1.0, (double)stringEvidence.Count / totalImageTokens)
             : (stringEvidence.Count > 0 ? 0.5 : 0.0);
 
@@ -131,19 +124,18 @@ internal sealed class SemanticMatcher
         IReadOnlyList<LabelEvidenceItem> clipEvidence =
             this.clipLabelEnricher.BuildEvidence(record, [winner], labelRules);
 
-        return (new MatchEvidence
-        {
-            ImageId                    = imageId,
-            SourceFilename             = filename,
-            FinalFamilyId              = winner.FamilyID,
-            FinalScore                 = finalScore,
-            IsKo                       = false,
-            AcceptedMatcherName        = "SemanticMatcher.Bracket4",
-            TopCandidates              = [new CandidateSummary(winner.FamilyID, finalScore, "SemanticMatcher.Bracket4")],
-            StringTokenEvidence        = stringEvidence,
+        return (new MatchEvidence {
+            ImageId = imageId,
+            SourceFilename = filename,
+            FinalFamilyId = winner.FamilyID,
+            FinalScore = finalScore,
+            IsKo = false,
+            AcceptedMatcherName = "SemanticMatcher.Bracket4",
+            TopCandidates = [new CandidateSummary(winner.FamilyID, finalScore, "SemanticMatcher.Bracket4")],
+            StringTokenEvidence = stringEvidence,
             ClassificationLabelEvidence = clipEvidence,
-            ImageNgpSummary            = record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}",
-            SafeExplanation            = $"Bracket4: semantic signals (CLIP+numeric+string) narrowed to family {winner.FamilyID} (score={combinedScore:F3})."
+            ImageNgpSummary = record.SelectedPhenotype is null ? null : $"phenotype={record.SelectedPhenotype}",
+            SafeExplanation = $"Bracket4: semantic signals (CLIP+numeric+string) narrowed to family {winner.FamilyID} (score={combinedScore:F3})."
         }, []);
     }
 
@@ -156,10 +148,9 @@ internal sealed class SemanticMatcher
     /// candidates through unchanged instead of erasing them. Applied reports whether filtering ran.
     /// </summary>
     private (List<FamilyIDRecord> Candidates, bool Applied) FilterByClipProductType(
-        ImageRecord_LAMBDA          record,
-        List<FamilyIDRecord>         candidates,
-        IReadOnlyList<MatchingRule>   labelRules)
-    {
+        ImageRecord_LAMBDA record,
+        List<FamilyIDRecord> candidates,
+        IReadOnlyList<MatchingRule> labelRules) {
         MatchingRule? productTypeRule = labelRules.FirstOrDefault(
             r => r.ExcelField.Equals("ProductType", StringComparison.OrdinalIgnoreCase));
 
@@ -186,10 +177,9 @@ internal sealed class SemanticMatcher
     /// image carries a color tag the rule may consider. Applied reports whether filtering ran.
     /// </summary>
     private (List<FamilyIDRecord> Candidates, bool Applied) FilterByClipProductColor(
-        ImageRecord_LAMBDA          record,
-        List<FamilyIDRecord>         candidates,
-        IReadOnlyList<MatchingRule>   labelRules)
-    {
+        ImageRecord_LAMBDA record,
+        List<FamilyIDRecord> candidates,
+        IReadOnlyList<MatchingRule> labelRules) {
         MatchingRule? colorRule = labelRules.FirstOrDefault(
             r => r.ExcelField.Equals("ProductColor", StringComparison.OrdinalIgnoreCase));
 

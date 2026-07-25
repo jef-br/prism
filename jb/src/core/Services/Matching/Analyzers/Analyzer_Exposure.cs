@@ -16,14 +16,12 @@ namespace Prism.Services.Matching;
 /// Sets the <c>overexposed</c> and <c>underexposed</c> ImageFeatures from the subject's
 /// luminance distribution.
 /// </summary>
-public static class Analyzer_Exposure
-{
+public static class Analyzer_Exposure {
     /// <summary>
     /// Thresholds for Analyzer_Exposure, bound from the "Exposure" section of analyzer_Config.json.
     /// No defaults — every value must be present in the JSON or deserialization fails loud.
     /// </summary>
-    public sealed class Config : IValidatableConfig
-    {
+    public sealed class Config : IValidatableConfig {
         /// <summary>Luminance at or above which a pixel counts as blown out.</summary>
         public required float HighLuminance { get; init; }
 
@@ -36,8 +34,7 @@ public static class Analyzer_Exposure
         /// <summary>Confidence written on overexposed/underexposed.</summary>
         public required float Confidence { get; init; }
 
-        public void Validate()
-        {
+        public void Validate() {
             List<string> problems = [];
 
             if (this.HighLuminance is <= 0f or > 1f) problems.Add("Exposure.HighLuminance must be in (0,1]");
@@ -48,8 +45,7 @@ public static class Analyzer_Exposure
         }
     }
 
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot, Config cfg, ColorAnalyzerConfig colorCfg)
-    {
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot, Config cfg, ColorAnalyzerConfig colorCfg) {
         bool excludeBackground = string.Equals(snapshot.GetValue("background-type"), "SOLIDCOLOR", StringComparison.OrdinalIgnoreCase);
         (float bgR, float bgG, float bgB) = excludeBackground ? AnalyzerMath.EstimateBackgroundColor(image) : (0f, 0f, 0f);
 
@@ -58,13 +54,10 @@ public static class Analyzer_Exposure
         // Stride 2 subsamples every other pixel/row (perf, not a tunable threshold); 128 is the
         // alpha-opaque cutoff on the [0,255] channel scale — both structural, never tuned.
 #pragma warning disable S109
-        image.ProcessPixelRows(accessor =>
-        {
-            for (int y = 0; y < accessor.Height; y += 2)
-            {
+        image.ProcessPixelRows(accessor => {
+            for (int y = 0; y < accessor.Height; y += 2) {
                 Span<Rgba32> row = accessor.GetRowSpan(y);
-                for (int x = 0; x < row.Length; x += 2)
-                {
+                for (int x = 0; x < row.Length; x += 2) {
                     Rgba32 p = row[x];
                     if (p.A < 128) continue;
 

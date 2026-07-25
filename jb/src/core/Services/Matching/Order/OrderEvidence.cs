@@ -4,8 +4,7 @@ namespace Prism.Contracts;
 /// Det-slot assignment decision and tie-breaking evidence produced by the Ordered stage.
 /// Immutable; produced by <see cref="ImageOrderer"/> and embedded on <see cref="ImageRecord_LAMBDA"/>.
 /// </summary>
-public sealed record OrderEvidence
-{
+public sealed record OrderEvidence {
     /// <summary>Zero-based det slot index assigned to this image.</summary>
     public int AssignedDetSlot { get; init; }
 

@@ -6,8 +6,7 @@ namespace Prism.Core;
 /// matching result (Ingest.Parameters), so the remote host derives it; the explicit flag is ignored.
 /// Emits the Transformed event client-side.
 /// </summary>
-public sealed class HttpTransformService : ITransformService
-{
+public sealed class HttpTransformService : ITransformService {
     private readonly HttpClient client;
 
     /// <summary>Creates the client targeting the remote Transform host base address.</summary>
@@ -24,8 +23,7 @@ public sealed class HttpTransformService : ITransformService
         bool transformEnabled,
         bool headcut,
         Func<PipelineProgressEvent, Task>? progress,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         await StageProgress.EmitStarted(progress, matched.Ingest.JobID, PipelineStageNames.Transformed, cancellationToken);
         return await ServiceHttp.PostJson<MatchingResult, TransformResult>(
             this.client, PrismServiceRoutes.Transform, matched, cancellationToken);

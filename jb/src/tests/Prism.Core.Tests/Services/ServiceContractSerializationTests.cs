@@ -9,14 +9,12 @@ namespace PrismCoreTests.Services;
 /// here is invisible in-process but breaks the distributed pipeline — e.g. a FamilyIDRecord whose get-only
 /// CanonicalProperties deserialize empty makes every non-FamilyID matcher rule silently fail.
 /// </summary>
-public class ServiceContractSerializationTests
-{
+public class ServiceContractSerializationTests {
     // The HTTP clients and service host both use PascalCase (PropertyNamingPolicy = null).
     private static readonly JsonSerializerOptions WireOptions = new() { PropertyNamingPolicy = null };
 
     [Fact]
-    public void FamilyRecord_RoundTrips_CanonicalProperties_AndCaseInsensitiveLookup()
-    {
+    public void FamilyRecord_RoundTrips_CanonicalProperties_AndCaseInsensitiveLookup() {
         var family = new FamilyIDRecord("90861025");
         family.MergeProperty(
             new ExcelPropertyValue("article", ["20213024"], []),
@@ -33,8 +31,7 @@ public class ServiceContractSerializationTests
     }
 
     [Fact]
-    public void ImageRecordLambda_RoundTrips_Features()
-    {
+    public void ImageRecordLambda_RoundTrips_Features() {
         var lambda = new ImageRecord_LAMBDA { InitialFullName = "x.jpg", SelectedPhenotype = "front-packshot" };
         lambda.Features.Set("hero-is-human", "FALSE", 0.67, "clip");
 
@@ -54,15 +51,13 @@ public class ServiceContractSerializationTests
     /// the round trip untouched.
     /// </summary>
     [Fact]
-    public void ImageRecordInput_RoundTrips_ButOmitsInMemoryNormalizedBytes()
-    {
-        var input = new ImageRecord_INPUT
-        {
-            InitialFullName    = "x.jpg",
-            NormalizedJpgPath  = @"C:\job\normalized\x.jpg",
+    public void ImageRecordInput_RoundTrips_ButOmitsInMemoryNormalizedBytes() {
+        var input = new ImageRecord_INPUT {
+            InitialFullName = "x.jpg",
+            NormalizedJpgPath = @"C:\job\normalized\x.jpg",
             NormalizedJpegBytes = [1, 2, 3, 4],
-            NormalizedWidth    = 800,
-            NormalizedHeight   = 600
+            NormalizedWidth = 800,
+            NormalizedHeight = 600
         };
 
         string json = JsonSerializer.Serialize(input, WireOptions);

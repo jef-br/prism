@@ -79,7 +79,7 @@ public static class SubjectEdgeDetector {
     }
 
     // --- Image acquisition
-    private static Image<Rgba32> AcquireAnalysisImage( string imagePath, Config cfg ) {
+    private static Image<Rgba32> AcquireAnalysisImage(string imagePath, Config cfg) {
         string ext = Path.GetExtension(imagePath);
         bool isJpeg = ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
                    || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase);
@@ -94,7 +94,8 @@ public static class SubjectEdgeDetector {
                         return thumb;   // Fast path: main image never opened.
                     }
                     thumb.Dispose();
-                } catch { /* Thumbnail decode failed - use main image.*/
+                }
+                catch { /* Thumbnail decode failed - use main image.*/
                 }
             }
         }
@@ -106,10 +107,10 @@ public static class SubjectEdgeDetector {
         using (full) return ScaleDown(full, cfg);
     }
 
-    private static Image<Rgba32> ScaleDown( Image<Rgba32> source, Config cfg ) {
-        float scale = (float) cfg.MaxAnalysisSize / Math.Max(source.Width, source.Height);
-        int newW = Math.Max(1, (int) (source.Width * scale));
-        int newH = Math.Max(1, (int) (source.Height * scale));
+    private static Image<Rgba32> ScaleDown(Image<Rgba32> source, Config cfg) {
+        float scale = (float)cfg.MaxAnalysisSize / Math.Max(source.Width, source.Height);
+        int newW = Math.Max(1, (int)(source.Width * scale));
+        int newH = Math.Max(1, (int)(source.Height * scale));
         return source.Clone(ctx => ctx.Resize(newW, newH, KnownResamplers.Box));
     }
 
@@ -118,7 +119,7 @@ public static class SubjectEdgeDetector {
     private static SubjectEdgeDetectionResult DetectOnImage(Image<Rgba32> image, Config cfg) {
         SampleBackground(image, out float bgR, out float bgG, out float bgB);
 
-        int stripPx = Math.Max(2, (int) (Math.Min(image.Width, image.Height) * cfg.StripDepthFraction));
+        int stripPx = Math.Max(2, (int)(Math.Min(image.Width, image.Height) * cfg.StripDepthFraction));
 
         bool top = StripIntersects(image, 0, 0, image.Width, stripPx, bgR, bgG, bgB, cfg);
         bool bottom = StripIntersects(image, 0, image.Height - stripPx, image.Width, stripPx, bgR, bgG, bgB, cfg);
@@ -133,7 +134,7 @@ public static class SubjectEdgeDetector {
     private static bool StripIntersects(
         Image<Rgba32> image,
         int x0, int y0, int width, int height,
-        float bgR, float bgG, float bgB, Config cfg ) {
+        float bgR, float bgG, float bgB, Config cfg) {
         int endX = Math.Min(x0 + width, image.Width);
         int endY = Math.Min(y0 + height, image.Height);
         int totalPixels = (endX - x0) * (endY - y0);
@@ -155,17 +156,17 @@ public static class SubjectEdgeDetector {
             CommitRun(ref runLen, ref fgRunPixels, cfg);
         }
 
-        return (float) fgRunPixels / totalPixels > cfg.IntersectionFraction;
+        return (float)fgRunPixels / totalPixels > cfg.IntersectionFraction;
     }
 
-    private static void CommitRun( ref int runLen, ref int fgRunPixels, Config cfg ) {
+    private static void CommitRun(ref int runLen, ref int fgRunPixels, Config cfg) {
         if (runLen >= cfg.MinRunLength) {
             fgRunPixels += runLen;
         }
         runLen = 0;
     }
 
-    private static bool IsForeground( Rgba32 px, float bgR, float bgG, float bgB, Config cfg ) {
+    private static bool IsForeground(Rgba32 px, float bgR, float bgG, float bgB, Config cfg) {
         float dr = (px.R / MaxChannelValueF) - bgR;
         float dg = (px.G / MaxChannelValueF) - bgG;
         float db = (px.B / MaxChannelValueF) - bgB;
@@ -176,7 +177,7 @@ public static class SubjectEdgeDetector {
 
     /// <summary> Samples the outermost 10 % of each image dimension at all four corners to estimate background color. Falls back to white when all corner pixels are transparent. </summary>
     private static void SampleBackground(
-        Image<Rgba32> image, out float bgR, out float bgG, out float bgB ) {
+        Image<Rgba32> image, out float bgR, out float bgG, out float bgB) {
         int cw = Math.Max(1, image.Width / 10);
         int ch = Math.Max(1, image.Height / 10);
 
@@ -200,7 +201,7 @@ public static class SubjectEdgeDetector {
 
     private static void Accumulate(
         Image<Rgba32> image, int x, int y,
-        ref float sumR, ref float sumG, ref float sumB, ref int n ) {
+        ref float sumR, ref float sumG, ref float sumB, ref int n) {
         Rgba32 px = image[x, y];
         if (px.A < AlphaOpaqueThreshold) return;
         sumR += px.R / MaxChannelValueF;
@@ -216,7 +217,7 @@ public static class SubjectEdgeDetector {
     // markers, the TIFF magic number 42, tag IDs, field widths) — they will never change, so they
     // stay bare literals rather than named constants that would just restate the spec in English.
 #pragma warning disable S109
-    internal static byte[]? TryExtractJpegExifThumbnail( string path ) {
+    internal static byte[]? TryExtractJpegExifThumbnail(string path) {
         try {
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read,
                 FileShare.Read, bufferSize: 4096);
@@ -248,13 +249,14 @@ public static class SubjectEdgeDetector {
             }
 
             return null;
-        } catch {
+        }
+        catch {
             return null;
         }
     }
 
     ///<summary> Parses one APP1 segment (marker already consumed) for an EXIF IFD1 thumbnail. Skips the segment and returns <c>null</c> when the EXIF signature is absent./// </summary>
-    private static byte[]? TryParseApp1ForThumbnail( FileStream fs ) {
+    private static byte[]? TryParseApp1ForThumbnail(FileStream fs) {
         int lenHi = fs.ReadByte(), lenLo = fs.ReadByte();
         if (lenHi < 0 || lenLo < 0) return null;
         int app1Len = (lenHi << 8) | lenLo; // Includes the length field bytes.

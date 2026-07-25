@@ -5,8 +5,7 @@ namespace Prism.Lib.Ingress;
 /// image folder and Excel file, then prints a result summary.
 /// Designed to be invoked from a console runner or test harness once fixtures are available.
 /// </summary>
-public static class ImportSmokeTest
-{
+public static class ImportSmokeTest {
     /// <summary>
     /// Runs the Imported stage smoke test against a local image directory and Excel file.
     /// Does not throw on import KO items — those appear in the result summary.
@@ -27,17 +26,14 @@ public static class ImportSmokeTest
     public static ImportSmokeTestResult Run(
         string imageFolder,
         string excelFilePath,
-        string? configPath = null)
-    {
+        string? configPath = null) {
         // Validate fixture paths first.
-        if (!Directory.Exists(imageFolder))
-        {
+        if (!Directory.Exists(imageFolder)) {
             return ImportSmokeTestResult.Blocked(
                 $"Image folder not found: {imageFolder}");
         }
 
-        if (!File.Exists(excelFilePath))
-        {
+        if (!File.Exists(excelFilePath)) {
             return ImportSmokeTestResult.Blocked(
                 $"Excel file not found: {excelFilePath}");
         }
@@ -65,7 +61,7 @@ public static class ImportSmokeTest
         ];
 
         // Run the stage.
-        Guid jobID      = Guid.NewGuid();
+        Guid jobID = Guid.NewGuid();
         string tempRoot = Path.Combine(Path.GetTempPath(), "PRISM_SmokeTest");
         ImportStageResult result = importer.Run(
             jobID,
@@ -81,8 +77,7 @@ public static class ImportSmokeTest
     /// Scans a folder for image files and builds <see cref="ImageRecord_INPUT"/> records
     /// pointing to each file.
     /// </summary>
-    private static List<ImageRecord_INPUT> BuildImageRecordsFromFolder(string imageFolder)
-    {
+    private static List<ImageRecord_INPUT> BuildImageRecordsFromFolder(string imageFolder) {
         string[] imageExtensions = [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf", ".webp", ".bmp", ".gif"];
 
         return Directory
@@ -90,12 +85,11 @@ public static class ImportSmokeTest
             .Where(file => imageExtensions.Contains(
                 Path.GetExtension(file),
                 StringComparer.OrdinalIgnoreCase))
-            .Select(file => new ImageRecord_INPUT
-            {
+            .Select(file => new ImageRecord_INPUT {
                 // InitialFullName is a full local path for direct-file smoke test invocation.
                 // The Importer resolves this as the readable source path.
                 InitialFullName = file,
-                SourceKind      = ImageSourceKind.LocalPath
+                SourceKind = ImageSourceKind.LocalPath
             })
             .ToList();
     }
@@ -103,10 +97,8 @@ public static class ImportSmokeTest
     /// <summary>
     /// Resolves the config path, falling back to auto-detection when null.
     /// </summary>
-    private static string ResolveConfigPath(string? configPath)
-    {
-        if (!string.IsNullOrWhiteSpace(configPath))
-        {
+    private static string ResolveConfigPath(string? configPath) {
+        if (!string.IsNullOrWhiteSpace(configPath)) {
             return configPath;
         }
 

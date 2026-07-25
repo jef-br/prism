@@ -7,14 +7,12 @@ namespace Prism.Services.Transform;
 /// transform_Config.json. No defaults — every value must be present in the JSON or deserialization
 /// fails loud.
 /// </summary>
-public sealed class ProblemImageProcessorConfig : IValidatableConfig
-{
+public sealed class ProblemImageProcessorConfig : IValidatableConfig {
     public required int MinInputPx { get; init; }
     public required int MinOutputPx { get; init; }
     public required double MaxUpscale { get; init; }
 
-    public void Validate()
-    {
+    public void Validate() {
         List<string> problems = [];
 
         if (this.MinInputPx <= 0) problems.Add("ProblemImageProcessor.MinInputPx must be > 0");

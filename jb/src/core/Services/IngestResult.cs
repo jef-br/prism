@@ -5,8 +5,7 @@ namespace Prism.Core;
 /// job folder, the FamilyRecords parsed from Excel, and the counts/warnings the manifest will need.
 /// Replaces the import-related fields that used to live on <c>PipelineContext</c>.
 /// </summary>
-public sealed record IngestResult
-{
+public sealed record IngestResult {
     /// <summary>PRISM-owned job identifier, carried forward so downstream services can emit progress
     /// and persist per-image documents without re-reading the original request.</summary>
     public required Guid JobID { get; init; }

@@ -7,8 +7,7 @@ namespace Prism.Core;
 /// Shared JSON settings and POST helper for the HTTP service clients. PascalCase property names match the
 /// host's <c>ConfigureHttpJsonOptions</c> and the API, so the wire format is identical in both directions.
 /// </summary>
-internal static class ServiceHttp
-{
+internal static class ServiceHttp {
     /// <summary>Serializer options shared by every service client. Null naming policy = PascalCase.</summary>
     internal static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = null };
 
@@ -28,8 +27,7 @@ internal static class ServiceHttp
         HttpClient client,
         string route,
         TBody body,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         HttpResponseMessage response = await client.PostAsJsonAsync(route, body, Json, cancellationToken);
         response.EnsureSuccessStatusCode();
 

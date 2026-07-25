@@ -16,15 +16,13 @@ namespace Prism.Services.Matching;
 /// are recorded as UNKNOWN and will be populated by the CLIP-backed <see cref="ImageClassifier"/>
 /// or specialized analyzers when those are implemented.
 /// </summary>
-public static class ImageFeatureAnalyzer
-{
+public static class ImageFeatureAnalyzer {
     /// <summary>
     /// Thresholds and confidence weights for ImageFeatureAnalyzer, bound from the
     /// "ImageFeatureAnalyzer" section of ClassifyConfig.json. No defaults — every value must be
     /// present in the JSON or deserialization fails loud.
     /// </summary>
-    public sealed class Config : IValidatableConfig
-    {
+    public sealed class Config : IValidatableConfig {
         // Validation bound, not tunable: AlphaOpaqueThreshold is a byte-range alpha value.
         private const int AlphaThresholdUpperBound = 255;
 
@@ -76,8 +74,7 @@ public static class ImageFeatureAnalyzer
         /// <summary>Confidence written on skin-tone-area.</summary>
         public required double SkinToneAreaConfidence { get; init; }
 
-        public void Validate()
-        {
+        public void Validate() {
             List<string> problems = [];
 
             if (this.BackgroundVarianceSolidColorMax <= 0f) problems.Add("ImageFeatureAnalyzer.BackgroundVarianceSolidColorMax must be > 0");
@@ -106,8 +103,7 @@ public static class ImageFeatureAnalyzer
     /// feature values into <paramref name="snapshot"/>.
     /// Features that cannot be determined are recorded as UNKNOWN.
     /// </summary>
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot, AnalyzerParameters parameters, Config cfg)
-    {
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot, AnalyzerParameters parameters, Config cfg) {
         AnalyzeGeometry(image, snapshot);
         AnalyzeBackground(image, snapshot, out _, out _, out _, cfg);
         WriteEdgeIntersections(SubjectEdgeDetector.Detect(image), snapshot, cfg);
@@ -125,8 +121,7 @@ public static class ImageFeatureAnalyzer
     /// qualifies for every phenotype; each wave eliminates those with strong contra-evidence.
     /// The final assignment overwrites the provisional phenotype set at the Classified stage.
     /// </summary>
-    public static void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet, AnalyzerParameters parameters, string? yoloModelPath, ProductTypeResolver productTypes)
-    {
+    public static void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet, AnalyzerParameters parameters, string? yoloModelPath, ProductTypeResolver productTypes) {
         PhenotypePool pool = new(ruleSet);
 
         // Wave 1 — IEM + filename evidence. Phase-1 measurements (background, edge intersections)
@@ -135,8 +130,7 @@ public static class ImageFeatureAnalyzer
         Analyzer_FilenameEvidence.Analyze(lambda, productTypes, parameters.Filename);
         pool.Eliminate(lambda.Features);
 
-        if (imagePath is not null && File.Exists(imagePath))
-        {
+        if (imagePath is not null && File.Exists(imagePath)) {
             using Image<Rgba32> image = Image.Load<Rgba32>(imagePath);
 
             // Wave 2 — human/face evidence: YOLO person detections, then face/pose refinement.
@@ -173,8 +167,7 @@ public static class ImageFeatureAnalyzer
     // The refined phenotype: first fully-satisfied rule wins; otherwise the provisional pick
     // survives only while it is still in the pool. CandidatePhenotypes lists the selected
     // phenotype first, then the remaining uncontradicted pool members in rule order.
-    private static void FinalizePhenotype(ImageRecord_LAMBDA lambda, PhenotypePool pool, PhenotypeRuleSet ruleSet)
-    {
+    private static void FinalizePhenotype(ImageRecord_LAMBDA lambda, PhenotypePool pool, PhenotypeRuleSet ruleSet) {
         string[] satisfied = ruleSet.EvaluateCandidates(lambda.Features);
         string? provisional = lambda.SelectedPhenotype;
 
@@ -184,20 +177,18 @@ public static class ImageFeatureAnalyzer
 
         List<string> candidates = [];
         if (selected is not null) candidates.Add(selected);
-        foreach (string id in pool.Candidates)
-        {
+        foreach (string id in pool.Candidates) {
             if (!candidates.Contains(id, StringComparer.OrdinalIgnoreCase))
                 candidates.Add(id);
         }
 
-        lambda.SelectedPhenotype   = selected;
+        lambda.SelectedPhenotype = selected;
         lambda.CandidatePhenotypes = [.. candidates];
     }
 
     //  Geometry
 
-    private static void AnalyzeGeometry(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
-    {
+    private static void AnalyzeGeometry(Image<Rgba32> image, ImageFeatureSnapshot snapshot) {
         double aspectRatio = (double)image.Width / image.Height;
         snapshot.Set("aspect-ratio",
             aspectRatio.ToString("F4", CultureInfo.InvariantCulture), 1.0, "geometry");
@@ -205,14 +196,13 @@ public static class ImageFeatureAnalyzer
 
     //  Background 
 
-    private static void AnalyzeBackground(Image<Rgba32> image, ImageFeatureSnapshot snapshot, out float bgR, out float bgG, out float bgB, Config cfg)
-    {
+    private static void AnalyzeBackground(Image<Rgba32> image, ImageFeatureSnapshot snapshot, out float bgR, out float bgG, out float bgB, Config cfg) {
         // JPEG carries no alpha channel, and Import normalizes every pipeline input to a flat JPEG —
         // for JPEG-decoded images the alpha scan is skipped outright. Other sources (in-memory,
         // PNG paths outside the pipeline) keep the scan, now row-span based with early exit.
         bool hasAlpha = image.Metadata.DecodedImageFormat != JpegFormat.Instance && HasTransparentPixels(image, cfg);
         snapshot.Set("transparent-background", hasAlpha ? "true" : "false", 1.0, "imagesharp");
-        snapshot.Set("clipping-path",          hasAlpha ? "true" : "false", cfg.ClippingPathConfidence, "imagesharp");
+        snapshot.Set("clipping-path", hasAlpha ? "true" : "false", cfg.ClippingPathConfidence, "imagesharp");
 
         SampleCorners(image, out bgR, out bgG, out bgB, out float variance, cfg);
 
@@ -220,23 +210,19 @@ public static class ImageFeatureAnalyzer
         snapshot.Set("white-background", nearWhite ? "true" : "false", cfg.WhiteBackgroundConfidence, "imagesharp");
 
         string bgType;
-        if (hasAlpha)
-        {
+        if (hasAlpha) {
             bgType = "SOLIDCOLOR";
             snapshot.Set("lifestyle-background", "false", cfg.LifestyleBackgroundAlphaConfidence, "imagesharp");
         }
-        else if (variance < cfg.BackgroundVarianceSolidColorMax)
-        {
+        else if (variance < cfg.BackgroundVarianceSolidColorMax) {
             bgType = "SOLIDCOLOR";
             snapshot.Set("lifestyle-background", "false", cfg.LifestyleBackgroundSolidConfidence, "imagesharp");
         }
-        else if (variance > cfg.BackgroundVarianceLifestyleMin)
-        {
+        else if (variance > cfg.BackgroundVarianceLifestyleMin) {
             bgType = "REALLIFE";
             snapshot.Set("lifestyle-background", "true", cfg.LifestyleBackgroundRealLifeConfidence, "heuristic");
         }
-        else
-        {
+        else {
             bgType = "UNKNOWN";
             snapshot.Set("lifestyle-background", "UNKNOWN", 0.0, "heuristic");
         }
@@ -246,32 +232,29 @@ public static class ImageFeatureAnalyzer
 
     //  Border intersections 
 
-    private static void WriteEdgeIntersections(SubjectEdgeDetectionResult r, ImageFeatureSnapshot snapshot, Config cfg)
-    {
-        snapshot.Set("intersects-top",     r.IntersectsTop    ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
-        snapshot.Set("intersects-bottom",  r.IntersectsBottom ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
-        snapshot.Set("intersects-left",    r.IntersectsLeft   ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
-        snapshot.Set("intersects-right",   r.IntersectsRight  ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
+    private static void WriteEdgeIntersections(SubjectEdgeDetectionResult r, ImageFeatureSnapshot snapshot, Config cfg) {
+        snapshot.Set("intersects-top", r.IntersectsTop ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
+        snapshot.Set("intersects-bottom", r.IntersectsBottom ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
+        snapshot.Set("intersects-left", r.IntersectsLeft ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
+        snapshot.Set("intersects-right", r.IntersectsRight ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
         snapshot.Set("intersection-count", r.IntersectionCount.ToString(CultureInfo.InvariantCulture), cfg.EdgeIntersectionConfidence, "heuristic");
-        snapshot.Set("fully-in-frame",     r.FullyInFrame     ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
+        snapshot.Set("fully-in-frame", r.FullyInFrame ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
     }
 
     //  Occlusion level (derived) 
 
-    private static void DeriveOcclusionLevel(ImageFeatureSnapshot snapshot, Config cfg)
-    {
+    private static void DeriveOcclusionLevel(ImageFeatureSnapshot snapshot, Config cfg) {
         string countStr = snapshot.GetValue("intersection-count");
         if (countStr == "UNKNOWN") return;
 
         if (!int.TryParse(countStr, out int count)) return;
 
-        string level = count switch
-        {
-            0     => "full-product",
-            1     => "mostly-visible",
-            2     => "partially-occluded",
-            >= 3  => "closeup",
-            _     => "UNKNOWN"
+        string level = count switch {
+            0 => "full-product",
+            1 => "mostly-visible",
+            2 => "partially-occluded",
+            >= 3 => "closeup",
+            _ => "UNKNOWN"
         };
 
         snapshot.Set("occlusion-level", level, cfg.OcclusionLevelConfidence, "heuristic");
@@ -279,19 +262,15 @@ public static class ImageFeatureAnalyzer
 
     //  Skin tone 
 
-    private static void AnalyzeSkinTone(Image<Rgba32> image, ImageFeatureSnapshot snapshot, SkinToneAnalyzerConfig skinCfg, Config cfg)
-    {
+    private static void AnalyzeSkinTone(Image<Rgba32> image, ImageFeatureSnapshot snapshot, SkinToneAnalyzerConfig skinCfg, Config cfg) {
         int total = 0;
         int skinPx = 0;
 
         // Sample every other pixel for performance; row spans instead of the per-pixel indexer.
-        image.ProcessPixelRows(accessor =>
-        {
-            for (int y = 0; y < accessor.Height; y += cfg.PixelSampleStride)
-            {
+        image.ProcessPixelRows(accessor => {
+            for (int y = 0; y < accessor.Height; y += cfg.PixelSampleStride) {
                 Span<Rgba32> row = accessor.GetRowSpan(y);
-                for (int x = 0; x < row.Length; x += cfg.PixelSampleStride)
-                {
+                for (int x = 0; x < row.Length; x += cfg.PixelSampleStride) {
                     Rgba32 px = row[x];
                     if (px.A < cfg.AlphaOpaqueThreshold) continue;
                     total++;
@@ -307,24 +286,21 @@ public static class ImageFeatureAnalyzer
 
     //  Interior detection
 
-    private static void AnalyzeInterior(Image<Rgba32> image, ImageFeatureSnapshot snapshot, Analyzer_Interior.Config cfg)
-    {
+    private static void AnalyzeInterior(Image<Rgba32> image, ImageFeatureSnapshot snapshot, Analyzer_Interior.Config cfg) {
         bool detected = Analyzer_Interior.Analyze(image, cfg);
         snapshot.Set("interior-detected", detected ? "true" : "false", 1.0, "geometry");
     }
 
     //  Illustration / technical drawing detection
 
-    private static void AnalyzeIllustration(Image<Rgba32> image, ImageFeatureSnapshot snapshot, Analyzer_IsIllustration.Config cfg)
-    {
+    private static void AnalyzeIllustration(Image<Rgba32> image, ImageFeatureSnapshot snapshot, Analyzer_IsIllustration.Config cfg) {
         bool detected = Analyzer_IsIllustration.Analyze(image, cfg);
         snapshot.Set("is-illustration", detected ? "true" : "false", 1.0, "topology");
     }
 
     //  Stubs for features that need heavier models
 
-    private static void RecordUnknownFeatures(ImageFeatureSnapshot snapshot)
-    {
+    private static void RecordUnknownFeatures(ImageFeatureSnapshot snapshot) {
         // These will be populated by the CLIP-backed classifier or specialized detectors.
         SetUnknownIfNotSet(snapshot, "hero-is-human");
         SetUnknownIfNotSet(snapshot, "hero-orientation");
@@ -364,23 +340,18 @@ public static class ImageFeatureAnalyzer
         SetUnknownIfNotSet(snapshot, "horizontal-centering");
     }
 
-    private static void SetUnknownIfNotSet(ImageFeatureSnapshot snapshot, string featureId)
-    {
+    private static void SetUnknownIfNotSet(ImageFeatureSnapshot snapshot, string featureId) {
         if (!snapshot.TryGet(featureId, out _))
             snapshot.Set(featureId, "UNKNOWN", 0.0, "heuristic");
     }
 
     //  Pixel helpers 
 
-    private static bool HasTransparentPixels(Image<Rgba32> image, Config cfg)
-    {
+    private static bool HasTransparentPixels(Image<Rgba32> image, Config cfg) {
         bool found = false;
-        image.ProcessPixelRows(accessor =>
-        {
-            for (int y = 0; y < accessor.Height && !found; y++)
-            {
-                foreach (Rgba32 px in accessor.GetRowSpan(y))
-                {
+        image.ProcessPixelRows(accessor => {
+            for (int y = 0; y < accessor.Height && !found; y++) {
+                foreach (Rgba32 px in accessor.GetRowSpan(y)) {
                     if (px.A < cfg.AlphaOpaqueThreshold) { found = true; break; }
                 }
             }
@@ -388,9 +359,8 @@ public static class ImageFeatureAnalyzer
         return found;
     }
 
-    private static void SampleCorners(Image<Rgba32> image, out float avgR, out float avgG, out float avgB, out float variance, Config cfg)
-    {
-        int cw = Math.Max(1, image.Width  / 10);
+    private static void SampleCorners(Image<Rgba32> image, out float avgR, out float avgG, out float avgB, out float variance, Config cfg) {
+        int cw = Math.Max(1, image.Width / 10);
         int ch = Math.Max(1, image.Height / 10);
 
         // Single pass over the four corner blocks via row spans, accumulating sums and squared sums.
@@ -400,13 +370,11 @@ public static class ImageFeatureAnalyzer
         double sumR2 = 0, sumG2 = 0, sumB2 = 0;
         int n = 0;
 
-        image.ProcessPixelRows(accessor =>
-        {
-            int width  = accessor.Width;
+        image.ProcessPixelRows(accessor => {
+            int width = accessor.Width;
             int height = accessor.Height;
 
-            void AddPixel(Rgba32 px)
-            {
+            void AddPixel(Rgba32 px) {
                 if (px.A < cfg.AlphaOpaqueThreshold) return;
                 float r = px.R / cfg.MaxChannelValueF, g = px.G / cfg.MaxChannelValueF, b = px.B / cfg.MaxChannelValueF;
                 sumR += r; sumG += g; sumB += b;
@@ -414,17 +382,14 @@ public static class ImageFeatureAnalyzer
                 n++;
             }
 
-            void AddRowCorners(Span<Rgba32> row)
-            {
-                for (int dx = 0; dx < cw; dx++)
-                {
+            void AddRowCorners(Span<Rgba32> row) {
+                for (int dx = 0; dx < cw; dx++) {
                     AddPixel(row[dx]);
                     if (width - 1 - dx >= cw) AddPixel(row[width - 1 - dx]);
                 }
             }
 
-            for (int dy = 0; dy < ch; dy++)
-            {
+            for (int dy = 0; dy < ch; dy++) {
                 AddRowCorners(accessor.GetRowSpan(dy));
                 int bottomY = height - 1 - dy;
                 if (bottomY >= ch) AddRowCorners(accessor.GetRowSpan(bottomY));

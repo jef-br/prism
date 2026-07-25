@@ -10,22 +10,19 @@ namespace PrismCoreTests.Upscale;
 /// not guarantee cross-class ordering. Every assertion below is either "never throws" or relative to
 /// whatever IsReady was immediately before the call, so they hold regardless of run order.
 /// </summary>
-public class UpscalerTests
-{
+public class UpscalerTests {
     private const string NonexistentModelPath = @"Z:\definitely\does\not\exist\Real-ESRGAN_x2plus.onnx";
     private const string NonexistentConfigPath = @"Z:\definitely\does\not\exist\cfg_Upscale.json";
 
     [Fact]
-    public void Initialize_NonexistentPath_DoesNotThrow()
-    {
+    public void Initialize_NonexistentPath_DoesNotThrow() {
         Exception? exception = Record.Exception(() => Upscaler.Initialize(NonexistentModelPath, NonexistentConfigPath));
 
         Assert.Null(exception);
     }
 
     [Fact]
-    public void Initialize_NonexistentPath_DoesNotChangeReadiness()
-    {
+    public void Initialize_NonexistentPath_DoesNotChangeReadiness() {
         bool before = Upscaler.IsReady;
 
         Upscaler.Initialize(NonexistentModelPath, NonexistentConfigPath);
@@ -34,8 +31,7 @@ public class UpscalerTests
     }
 
     [Fact]
-    public void Initialize_CalledTwiceWithNonexistentPath_IsIdempotentAndDoesNotThrow()
-    {
+    public void Initialize_CalledTwiceWithNonexistentPath_IsIdempotentAndDoesNotThrow() {
         Exception? firstException = Record.Exception(() => Upscaler.Initialize(NonexistentModelPath, NonexistentConfigPath));
         bool afterFirst = Upscaler.IsReady;
 
@@ -47,27 +43,23 @@ public class UpscalerTests
     }
 
     [Fact]
-    public void Initialize_CorruptModelFile_ThrowsPrismConfigurationException()
-    {
+    public void Initialize_CorruptModelFile_ThrowsPrismConfigurationException() {
         string corruptPath = Path.Combine(Path.GetTempPath(), $"corrupt-upscaler-{Guid.NewGuid():N}.onnx");
         File.WriteAllBytes(corruptPath, [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02, 0x03]);
 
-        try
-        {
+        try {
             PrismConfigurationException exception = Assert.Throws<PrismConfigurationException>(
                 () => Upscaler.Initialize(corruptPath, NonexistentConfigPath));
             Assert.Contains("corrupt", exception.Message);
             Assert.False(Upscaler.IsReady);
         }
-        finally
-        {
+        finally {
             File.Delete(corruptPath);
         }
     }
 
     [Fact]
-    public async Task Initialize_ConcurrentCallsWithNonexistentPath_DoNotDeadlock()
-    {
+    public async Task Initialize_ConcurrentCallsWithNonexistentPath_DoNotDeadlock() {
         Task[] tasks = Enumerable.Range(0, 8)
             .Select(_ => Task.Run(() => Upscaler.Initialize(NonexistentModelPath, NonexistentConfigPath)))
             .ToArray();

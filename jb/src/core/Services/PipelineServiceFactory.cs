@@ -9,8 +9,7 @@ namespace Prism.Core;
 /// (ingress, export, job mechanics) always runs in-process. Discovery is environment-only and
 /// local-filesystem-friendly: every host shares the same job temp folder.
 /// </summary>
-public static class PipelineServiceFactory
-{
+public static class PipelineServiceFactory {
     /// <summary>Environment variable naming the remote Matching host base URL.</summary>
     public const string MatchingUrlVariable = "PRISM_MATCHING_URL";
 
@@ -24,8 +23,7 @@ public static class PipelineServiceFactory
     public const string UpscaleUrlVariable = "PRISM_UPSCALE_URL";
 
     /// <summary>Builds an all-in-process service set (the modular monolith).</summary>
-    public static PipelineServices CreateInProcess(PrismConfiguration configuration, ModelBuilder modelBuilder)
-    {
+    public static PipelineServices CreateInProcess(PrismConfiguration configuration, ModelBuilder modelBuilder) {
         EnsureUpscalerReady(configuration);
 
         return new(
@@ -40,8 +38,7 @@ public static class PipelineServiceFactory
     /// Builds a service set from environment discovery: each service runs in-process unless its URL
     /// variable is set, in which case the HTTP client to that remote host is used instead.
     /// </summary>
-    public static PipelineServices CreateFromEnvironment(PrismConfiguration configuration, ModelBuilder modelBuilder)
-    {
+    public static PipelineServices CreateFromEnvironment(PrismConfiguration configuration, ModelBuilder modelBuilder) {
         // Ingest is core, not a public service — it always runs in-process where the pipeline runs.
         // Media enters PRISM only through ingress (see PRISM-overview.md "Core vs. Features").
         IIngestService ingest = new IngestService(configuration, modelBuilder);
@@ -55,18 +52,15 @@ public static class PipelineServiceFactory
             : new GenerateService();
 
         ITransformService transform;
-        if (RemoteUrl(TransformUrlVariable) is { } transformUrl)
-        {
+        if (RemoteUrl(TransformUrlVariable) is { } transformUrl) {
             transform = new HttpTransformService(transformUrl);
         }
-        else if (RemoteUrl(UpscaleUrlVariable) is { } upscaleUrl)
-        {
+        else if (RemoteUrl(UpscaleUrlVariable) is { } upscaleUrl) {
             // In-process Transform delegating upscaling to a remote Upscale host — no local
             // Real-ESRGAN session needed in this process.
             transform = new TransformService(new HttpUpscaleService(upscaleUrl));
         }
-        else
-        {
+        else {
             // Eagerly load the process-wide Real-ESRGAN GPU session before this in-process
             // TransformService runs (T-2800) — mirrors the MatchingService/CLIP eager-init above. Only
             // needed when Transform upscales locally in this process; a remote Transform host initializes
@@ -86,14 +80,12 @@ public static class PipelineServiceFactory
     /// unloadable model asset propagates as <see cref="PrismConfigurationException"/> — there is no
     /// fallback upscaler, so startup fails loud like it does for the YOLO model (T-4110).
     /// </summary>
-    private static void EnsureUpscalerReady(PrismConfiguration configuration)
-    {
+    private static void EnsureUpscalerReady(PrismConfiguration configuration) {
         UpscaleService.Create(configuration);
     }
 
     /// <summary>Reads a service host URL from the environment, or null when unset/blank.</summary>
-    private static Uri? RemoteUrl(string variableName)
-    {
+    private static Uri? RemoteUrl(string variableName) {
         string? value = Environment.GetEnvironmentVariable(variableName);
         return string.IsNullOrWhiteSpace(value) ? null : new Uri(value, UriKind.Absolute);
     }

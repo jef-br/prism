@@ -6,8 +6,7 @@ namespace Prism.Services.Matching;
 /// (<c>FamilyID_det#.jpg</c>); this stage does not transform data, only validates the invariant.
 /// Families with colliding det indices are KOd in full and excluded from the renamed count.
 /// </summary>
-internal static class ImageRenamer
-{
+internal static class ImageRenamer {
     /// <summary>
     /// Runs the Renamed stage over a matched LAMBDA collection.
     /// Skips KO records and records without a family assignment.
@@ -16,17 +15,15 @@ internal static class ImageRenamer
     /// </summary>
     /// <param name="records">Ordered LAMBDA records.</param>
     /// <returns>Count of successfully renamed images and count of images KO'd by collision.</returns>
-    internal static (int OkRenamed, int KoAdded) Run(List<ImageRecord_LAMBDA> records)
-    {
+    internal static (int OkRenamed, int KoAdded) Run(List<ImageRecord_LAMBDA> records) {
         IEnumerable<IGrouping<string, ImageRecord_LAMBDA>> families = records
             .Where(r => !r.IsKo && !string.IsNullOrEmpty(r.Family))
             .GroupBy(r => r.Family);
 
         int okRenamed = 0;
-        int koAdded   = 0;
+        int koAdded = 0;
 
-        foreach (IGrouping<string, ImageRecord_LAMBDA> family in families)
-        {
+        foreach (IGrouping<string, ImageRecord_LAMBDA> family in families) {
             if (HasDetCollision(family))
                 koAdded += KoFamily(family);
             else
@@ -49,13 +46,11 @@ internal static class ImageRenamer
     /// Marks every image in the family as KO with reason code <c>RENAME_COLLISION</c>.
     /// </summary>
     /// <returns>Number of records KO'd.</returns>
-    private static int KoFamily(IGrouping<string, ImageRecord_LAMBDA> family)
-    {
+    private static int KoFamily(IGrouping<string, ImageRecord_LAMBDA> family) {
         int koAdded = 0;
-        foreach (ImageRecord_LAMBDA record in family)
-        {
-            record.IsKo          = true;
-            record.KoReasonCode  = "RENAME_COLLISION";
+        foreach (ImageRecord_LAMBDA record in family) {
+            record.IsKo = true;
+            record.KoReasonCode = "RENAME_COLLISION";
             record.KoSafeMessage = $"Det-slot collision in family '{record.Family}': multiple images share the same det index.";
             koAdded++;
         }

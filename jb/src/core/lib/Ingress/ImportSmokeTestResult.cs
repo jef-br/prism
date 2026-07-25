@@ -3,8 +3,7 @@ namespace Prism.Lib.Ingress;
 /// <summary>
 /// Result of one <see cref="ImportSmokeTest"/> run.
 /// </summary>
-public sealed record ImportSmokeTestResult
-{
+public sealed record ImportSmokeTestResult {
     /// <summary>Whether the test could run at all (false when fixtures are missing).</summary>
     public bool CanRun { get; init; }
 
@@ -29,10 +28,8 @@ public sealed record ImportSmokeTestResult
     /// <summary>
     /// Returns a human-readable summary of the test outcome.
     /// </summary>
-    public override string ToString()
-    {
-        if (!this.CanRun)
-        {
+    public override string ToString() {
+        if (!this.CanRun) {
             return $"SMOKE TEST BLOCKED: {this.BlockReason}";
         }
 

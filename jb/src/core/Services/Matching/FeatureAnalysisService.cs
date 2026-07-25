@@ -8,8 +8,7 @@ namespace Prism.Services.Matching;
 /// no model assets. Composes the analyzer chain's parameter bundle once at construction, so a missing
 /// or invalid analyzer_Config.json fails the host at startup instead of degrading. Internal to Matching.
 /// </summary>
-public sealed class FeatureAnalysisService : IFeatureAnalysisService
-{
+public sealed class FeatureAnalysisService : IFeatureAnalysisService {
     private const string YoloModelRelativePath = "Services/Matching/Analyzers/ONNX/yolo26s.onnx";
 
     private readonly AnalyzerParameters analyzerParameters;
@@ -17,8 +16,7 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService
     private readonly ProductTypeResolver productTypes;
     private readonly string? yoloModelPath;
 
-    public FeatureAnalysisService()
-    {
+    public FeatureAnalysisService() {
         this.analyzerParameters = AnalyzerParameters.FromConfig();
         this.classifyParameters = ClassifyParameters.FromConfig();
 

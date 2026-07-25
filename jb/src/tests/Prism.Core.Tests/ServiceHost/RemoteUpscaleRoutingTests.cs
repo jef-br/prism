@@ -12,25 +12,22 @@ namespace PrismCoreTests.ServiceHost;
 /// branch is forced deterministically (salient bbox below MinOutputWidth, within MaxUpScaleFactor).
 /// </summary>
 [Collection("Service Host")]
-public class RemoteUpscaleRoutingTests
-{
+public class RemoteUpscaleRoutingTests {
     private readonly ServiceHostFixture fixture;
 
-    public RemoteUpscaleRoutingTests(ServiceHostFixture fixture)
-    {
+    public RemoteUpscaleRoutingTests(ServiceHostFixture fixture) {
         this.fixture = fixture;
     }
 
     [Fact]
-    public async Task Preprocess_BelowMinimumImage_RoutesUpscaleThroughRemoteHost()
-    {
+    public async Task Preprocess_BelowMinimumImage_RoutesUpscaleThroughRemoteHost() {
         PrismConfiguration config = PrismConfiguration.LoadPrismConfig(
             ConfigLoader.RequireFile(PrismConfiguration.FileName));
 
         // Salient square sized 20% above the smallest upscalable bbox, image 25% larger than the square
         // so saliency detection finds the square, not the frame.
         int squareSide = (int)Math.Ceiling(config.MinOutputWidth / config.MaxUpScaleFactor * 1.2);
-        int imageSide  = (int)(squareSide * 1.25);
+        int imageSide = (int)(squareSide * 1.25);
         Assert.True(squareSide >= config.MinInputSizeInPixels,
             $"Config makes the forced-upscale window empty: square {squareSide}px < MinInputSizeInPixels {config.MinInputSizeInPixels}px.");
         Assert.True(squareSide < config.MinOutputWidth,
@@ -54,8 +51,7 @@ public class RemoteUpscaleRoutingTests
         Assert.True(upscaled.Width > imageSide, $"Upscaled width {upscaled.Width} not larger than input {imageSide}.");
     }
 
-    private static void WriteSquareJpeg(string path, int imageSide, int squareSide)
-    {
+    private static void WriteSquareJpeg(string path, int imageSide, int squareSide) {
         using Image<Rgb24> image = new(imageSide, imageSide, new Rgb24(255, 255, 255));
         int offset = (imageSide - squareSide) / 2;
         for (int y = offset; y < offset + squareSide; y++)

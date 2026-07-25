@@ -5,8 +5,7 @@ namespace Prism.Core;
 /// Matching host and returns its <see cref="MatchingResult"/>. Emits the Classified → Matched → Ordered →
 /// Renamed events client-side so the SSE stream still reports the four stages this service owns.
 /// </summary>
-public sealed class HttpMatchingService : IMatchingService
-{
+public sealed class HttpMatchingService : IMatchingService {
     private readonly HttpClient client;
 
     /// <summary>Creates the client targeting the remote Matching host base address.</summary>
@@ -22,8 +21,7 @@ public sealed class HttpMatchingService : IMatchingService
         IngestResult ingest,
         IArtifactStore store,
         Func<PipelineProgressEvent, Task>? progress,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Classified, cancellationToken);
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Matched, cancellationToken);
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Ordered, cancellationToken);

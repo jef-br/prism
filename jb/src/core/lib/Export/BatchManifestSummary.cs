@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// Batch-level counts projected into the manifest.
 /// </summary>
-public sealed record BatchManifestSummary
-{
+public sealed record BatchManifestSummary {
     /// <summary>Number of accepted image records.</summary>
     public int ImageCount { get; init; }
 

@@ -5,8 +5,7 @@ namespace Prism.Services.Generate;
 /// LAMBDA in place (GenerationRouteState + GeneratedChildren) and creates new ImageRecord_GENERATED
 /// records. Returns both outputs explicitly so neither enrichment is hidden. Emits the Generated event.
 /// </summary>
-public interface IGenerateService
-{
+public interface IGenerateService {
     /// <summary>Runs the Generated stage; returns the enriched LAMBDAs and the new synthetic records.</summary>
     Task<GenerateResult> GenerateAsync(
         MatchingResult matched,

@@ -6,13 +6,11 @@ namespace Prism.Lib.Excel;
 /// Lightweight executable-style test cases for numeric noise filtering.
 /// Move these cases into the project test runner once a test project exists.
 /// </summary>
-public static class NoiseFilterTestCases
-{
+public static class NoiseFilterTestCases {
     /// <summary>
     /// Verifies dimensions, dates, and unit-adjacent numbers are removed from matching text.
     /// </summary>
-    public static void VerifyObviousNumericNoiseIsRemoved()
-    {
+    public static void VerifyObviousNumericNoiseIsRemoved() {
         string cleaned = NoiseFilter.RemoveNumericNoiseForMatching("shirt 800x1200 2024-05-18 25cm 12345678");
 
         AssertFalse(cleaned.Contains("800x1200", StringComparison.OrdinalIgnoreCase), "Dimension should be removed.");
@@ -24,8 +22,7 @@ public static class NoiseFilterTestCases
     /// <summary>
     /// Verifies trusted identifier columns are never filtered as numeric noise.
     /// </summary>
-    public static void VerifyTrustedIdentifierColumnsArePreserved()
-    {
+    public static void VerifyTrustedIdentifierColumnsArePreserved() {
         string cleanedFamilyId = NoiseFilter.RemoveNumericNoiseForMatching("20240518", "FamilyID");
         string cleanedEan = NoiseFilter.RemoveNumericNoiseForMatching("8712345678901", "EAN");
 
@@ -33,18 +30,14 @@ public static class NoiseFilterTestCases
         AssertTrue(cleanedEan == "8712345678901", "EAN values should be preserved.");
     }
 
-    private static void AssertTrue(bool actual, string message)
-    {
-        if (!actual)
-        {
+    private static void AssertTrue(bool actual, string message) {
+        if (!actual) {
             throw new InvalidOperationException(message);
         }
     }
 
-    private static void AssertFalse(bool actual, string message)
-    {
-        if (actual)
-        {
+    private static void AssertFalse(bool actual, string message) {
+        if (actual) {
             throw new InvalidOperationException(message);
         }
     }

@@ -9,8 +9,7 @@ namespace Prism.Contracts;
 /// <c>ImageRoles.json</c> phenotype rule evaluator. The snapshot round-trips through System.Text.Json
 /// so it can be persisted as part of a LAMBDA document and reloaded by any downstream service.
 /// </summary>
-public sealed class ImageFeatureSnapshot
-{
+public sealed class ImageFeatureSnapshot {
     private readonly Dictionary<string, ImageFeatureValue> features;
 
     /// <summary>Creates an empty snapshot.</summary>

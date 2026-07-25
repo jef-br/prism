@@ -14,31 +14,27 @@ namespace Prism.Services.Transform;
 /// <see cref="Process"/> is the stateless webservice byte path.
 /// </para>
 /// </summary>
-public class Tx_CropSquare : IImageTransformation
-{
+public class Tx_CropSquare : IImageTransformation {
     private readonly OutputConfig _cfg;
 
-    public Tx_CropSquare(OutputConfig cfg)
-    {
+    public Tx_CropSquare(OutputConfig cfg) {
         this._cfg = cfg;
     }
 
     /// <inheritdoc/>
-    public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage)
-    {
+    public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage) {
         BoundingBox crop = ComputeCenteredSquareCrop(InputImage.Width, InputImage.Height);
 
-        InputImage.OutputRecord = new ImageRecord_OUTPUT
-        {
+        InputImage.OutputRecord = new ImageRecord_OUTPUT {
             TransformStatus = TransformationStatus.Ok,
             TransformerType = nameof(Tx_CropSquare),
-            InputWidth      = InputImage.Width,
-            InputHeight     = InputImage.Height,
-            CropRectangle   = crop,
-            OutputWidth     = crop.Width,
-            OutputHeight    = crop.Height,
-            ResizeMode      = "none",
-            ScaleFactor     = 1.0,
+            InputWidth = InputImage.Width,
+            InputHeight = InputImage.Height,
+            CropRectangle = crop,
+            OutputWidth = crop.Width,
+            OutputHeight = crop.Height,
+            ResizeMode = "none",
+            ScaleFactor = 1.0,
             SafeSummaryText = "Square crop applied."
         };
 
@@ -52,8 +48,7 @@ public class Tx_CropSquare : IImageTransformation
     /// <paramref name="stride"/> is reserved for caller-side alignment and is not used in crop logic.
     /// Input bytes: format auto-detected. Output: JPEG at quality 90.
     /// </remarks>
-    public byte[] Process(byte[] arr, int stride, float upscale_factor, ImageRecord_LAMBDA? lambda = null)
-    {
+    public byte[] Process(byte[] arr, int stride, float upscale_factor, ImageRecord_LAMBDA? lambda = null) {
         // Input: raw image bytes (format auto-detected by ImageSharp).
         using Image img = Image.Load(arr);
 
@@ -63,8 +58,7 @@ public class Tx_CropSquare : IImageTransformation
         img.Mutate(x => x.Crop(new Rectangle(crop.X, crop.Y, crop.Width, crop.Height)));
 
         // Scale the square output when the caller requests a different size.
-        if (upscale_factor != 0f && upscale_factor != 1f)
-        {
+        if (upscale_factor != 0f && upscale_factor != 1f) {
             int scaledSide = (int)Math.Ceiling(crop.Width * upscale_factor);
             img.Mutate(x => x.Resize(scaledSide, scaledSide, KnownResamplers.Lanczos3));
         }
@@ -77,20 +71,18 @@ public class Tx_CropSquare : IImageTransformation
     //  Helpers
 
     /// <summary>Computes a centered square crop rectangle from the given image dimensions.</summary>
-    private static BoundingBox ComputeCenteredSquareCrop(int width, int height)
-    {
+    private static BoundingBox ComputeCenteredSquareCrop(int width, int height) {
         int side = Math.Min(width, height);
-        int x    = (width  - side) / 2;
-        int y    = (height - side) / 2;
-        return new BoundingBox
-        {
-            X      = x,
-            Y      = y,
-            Width  = side,
+        int x = (width - side) / 2;
+        int y = (height - side) / 2;
+        return new BoundingBox {
+            X = x,
+            Y = y,
+            Width = side,
             Height = side,
-            Left   = x,
-            Top    = y,
-            Right  = x + side,
+            Left = x,
+            Top = y,
+            Right = x + side,
             Bottom = y + side
         };
     }

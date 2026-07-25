@@ -5,16 +5,14 @@ namespace Prism.Core;
 /// builds FamilyRecords from Excel, writing every artifact under the local job folder owned by the
 /// <see cref="IArtifactStore"/>. Emits the Imported stage event.
 /// </summary>
-public sealed class IngestService : IIngestService
-{
+public sealed class IngestService : IIngestService {
     private readonly PrismConfiguration configuration;
     private readonly ModelBuilder modelBuilder;
 
     /// <summary>Creates the service with the validated configuration and pre-loaded Excel model builder.</summary>
-    public IngestService(PrismConfiguration configuration, ModelBuilder modelBuilder)
-    {
+    public IngestService(PrismConfiguration configuration, ModelBuilder modelBuilder) {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        this.modelBuilder  = modelBuilder  ?? throw new ArgumentNullException(nameof(modelBuilder));
+        this.modelBuilder = modelBuilder ?? throw new ArgumentNullException(nameof(modelBuilder));
     }
 
     /// <inheritdoc/>
@@ -22,8 +20,7 @@ public sealed class IngestService : IIngestService
         PrismJobRequest request,
         IArtifactStore store,
         Func<PipelineProgressEvent, Task>? progress,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         await StageProgress.EmitStarted(progress, request.JobID, PipelineStageNames.Imported, cancellationToken);
 
         Importer importer = new(this.configuration, this.modelBuilder);
@@ -43,19 +40,18 @@ public sealed class IngestService : IIngestService
 
         await StageProgress.EmitCompleted(progress, request.JobID, PipelineStageNames.Imported, import.NormalizedImages.Count, koRecordCount, cancellationToken);
 
-        return new IngestResult
-        {
-            JobID              = request.JobID,
-            Parameters         = request.PrismProcessingParameters!,
-            NormalizedImages   = import.NormalizedImages,
-            FamilyRecords      = import.FamilyRecords,
-            JobTempFolder      = import.JobTempFolder,
+        return new IngestResult {
+            JobID = request.JobID,
+            Parameters = request.PrismProcessingParameters!,
+            NormalizedImages = import.NormalizedImages,
+            FamilyRecords = import.FamilyRecords,
+            JobTempFolder = import.JobTempFolder,
             OriginalImageCount = request.ImageRecords.Count,
             OriginalExcelCount = request.ExcelRecords.Count,
-            OriginalZipCount   = request.ZipFileRecords.Count,
+            OriginalZipCount = request.ZipFileRecords.Count,
             FirstExcelTempPath = request.ExcelRecords.Count > 0 ? request.ExcelRecords[0].TempFilePath : null,
-            KoRecordCount      = koRecordCount,
-            Warnings           = warnings
+            KoRecordCount = koRecordCount,
+            Warnings = warnings
         };
     }
 }

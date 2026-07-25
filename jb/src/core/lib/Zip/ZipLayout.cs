@@ -5,8 +5,7 @@ namespace Prism.Lib.Zip;
 /// <summary>
 /// Defines the fixed PRISM zip output layout.
 /// </summary>
-public static class ZipLayout
-{
+public static class ZipLayout {
     /// <summary>
     /// Folder name for exportable OK image artifacts.
     /// </summary>
@@ -27,8 +26,7 @@ public static class ZipLayout
     /// </summary>
     /// <param name="outputRootPath">Root folder used to assemble zip output.</param>
     /// <returns>The fixed OK folder path.</returns>
-    public static string BuildOkFolderPath(string outputRootPath)
-    {
+    public static string BuildOkFolderPath(string outputRootPath) {
         return Path.Combine(outputRootPath, OkFolderName);
     }
 
@@ -37,8 +35,7 @@ public static class ZipLayout
     /// </summary>
     /// <param name="outputRootPath">Root folder used to assemble zip output.</param>
     /// <returns>The fixed KO folder path.</returns>
-    public static string BuildKoFolderPath(string outputRootPath)
-    {
+    public static string BuildKoFolderPath(string outputRootPath) {
         return Path.Combine(outputRootPath, KoFolderName);
     }
 
@@ -47,8 +44,7 @@ public static class ZipLayout
     /// </summary>
     /// <param name="outputRootPath">Root folder used to assemble zip output.</param>
     /// <returns>The fixed manifest file path.</returns>
-    public static string BuildManifestPath(string outputRootPath)
-    {
+    public static string BuildManifestPath(string outputRootPath) {
         return Path.Combine(outputRootPath, ManifestFileName);
     }
 }

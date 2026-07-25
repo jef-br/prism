@@ -15,10 +15,8 @@ namespace Prism.Services.Matching;
 */
 
 /// <summary>STUB: will set <c>shadow-present</c> and <c>reflection-present</c>. Currently writes nothing.</summary>
-internal static class Analyzer_ShadowReflection
-{
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
-    {
+internal static class Analyzer_ShadowReflection {
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot) {
         // Not implemented — shadow-present/reflection-present stay UNKNOWN.
     }
 }

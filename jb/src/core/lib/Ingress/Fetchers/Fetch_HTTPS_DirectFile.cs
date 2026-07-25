@@ -8,11 +8,10 @@ namespace Prism.Lib.Ingress;
 /// streams the response to the job temp folder, and returns an <see cref="ImageRecord_INPUT"/>.
 /// Acts as the fallback fetcher — handles any URL not claimed by a specialist strategy.
 /// </summary>
-internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
-{
-    private const string KoReasonBlocked    = "fetch.url_blocked";
-    private const string KoReasonHttpError  = "fetch.http_error";
-    private const string KoReasonTimeout    = "fetch.timeout";
+internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy {
+    private const string KoReasonBlocked = "fetch.url_blocked";
+    private const string KoReasonHttpError = "fetch.http_error";
+    private const string KoReasonTimeout = "fetch.timeout";
     private const string KoReasonNetworkErr = "fetch.network_error";
 
     private readonly HostRules_Config _rules;
@@ -27,10 +26,9 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// <c>allowFetcherOwnedRedirects</c> from HostRules to permit redirects issued by a
     /// specialist fetcher (e.g. Fetch_DropBox) even when generic redirects are disabled.
     /// </summary>
-    internal Fetch_HTTPS_DirectFile(HostRules_Config rules, HttpClient http, bool isFetcherOwned = false)
-    {
-        this._rules          = rules;
-        this._http           = http;
+    internal Fetch_HTTPS_DirectFile(HostRules_Config rules, HttpClient http, bool isFetcherOwned = false) {
+        this._rules = rules;
+        this._http = http;
         this._isFetcherOwned = isFetcherOwned;
     }
 
@@ -47,14 +45,13 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     internal static Fetch_HTTPS_DirectFile CreateForDelegate(string configDirectory) =>
         CreateInstance(configDirectory, isFetcherOwned: true);
 
-    private static Fetch_HTTPS_DirectFile CreateInstance(string configDirectory, bool isFetcherOwned)
-    {
+    private static Fetch_HTTPS_DirectFile CreateInstance(string configDirectory, bool isFetcherOwned) {
         HostRules_Config rules = HostRules_Config.Load(configDirectory);
 
         // Disable automatic redirects so we can apply redirect policy from HostRules.
         var handler = new HttpClientHandler();
         handler.AllowAutoRedirect = false;
-        handler.UseCookies        = false;
+        handler.UseCookies = false;
 
         var http = new HttpClient(handler);
         http.Timeout = Timeout.InfiniteTimeSpan; // CancellationToken drives timeout instead.
@@ -67,8 +64,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// Returns true for any URL whose scheme appears in <c>allowedSchemes</c> in HostRules.json.
     /// Specialist fetchers (WeTransfer, DropBox) claim their URLs first; this class handles the rest.
     /// </summary>
-    public bool CanHandle(string url)
-    {
+    public bool CanHandle(string url) {
         if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri)) {
             return false;
         }
@@ -80,8 +76,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// Downloads the resource at <paramref name="url"/>, applying HostRules validation at every step.
     /// On validation failure or network error, returns a KO <see cref="ImageRecord_INPUT"/> rather than throwing.
     /// </summary>
-    public async Task<ImageRecord_INPUT> FetchAsync(string url, string jobTempFolder, string jobID, CancellationToken cancellationToken)
-    {
+    public async Task<ImageRecord_INPUT> FetchAsync(string url, string jobTempFolder, string jobID, CancellationToken cancellationToken) {
         if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? startUri)) {
             return KoRecord(url, KoReasonBlocked, "The URL is not well-formed.");
         }
@@ -98,16 +93,20 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
         try {
             Uri resolvedUri = await this.FollowRedirectsAsync(startUri, url, ct);
             return await this.DownloadToTempAsync(resolvedUri, url, jobTempFolder, ct);
-        } catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
             // Total-fetch timeout fired (not the external caller's cancellation).
             return KoRecord(url, KoReasonTimeout,
                 $"The download did not complete within the configured {this._rules.Timeouts.TotalFetchSeconds}-second limit.");
-        } catch (OperationCanceledException) {
+        }
+        catch (OperationCanceledException) {
             // Caller cancelled — propagate normally.
             throw;
-        } catch (HttpRequestException ex) {
+        }
+        catch (HttpRequestException ex) {
             return KoRecord(url, KoReasonNetworkErr, $"Network error: {ex.Message}");
-        } catch (InvalidOperationException ex) {
+        }
+        catch (InvalidOperationException ex) {
             // Redirect policy violation surfaced as InvalidOperationException by FollowRedirectsAsync.
             return KoRecord(url, KoReasonBlocked, ex.Message);
         }
@@ -121,8 +120,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// Follows HTTP redirects up to the redirect limit configured in HostRules.
     /// Validates each hop against the block rules.
     /// </summary>
-    private async Task<Uri> FollowRedirectsAsync(Uri uri, string originalUrl, CancellationToken ct)
-    {
+    private async Task<Uri> FollowRedirectsAsync(Uri uri, string originalUrl, CancellationToken ct) {
         // Maximum redirect hops: use responseHeaderSeconds as a proxy budget;
         // HostRules.json does not expose a redirect count field — cap at 10.
         const int MaxRedirects = 10;
@@ -136,7 +134,8 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
             HttpResponseMessage resp;
             try {
                 resp = await this._http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts2.Token);
-            } catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
                 throw new OperationCanceledException(ct); // treat response-header timeout as overall timeout
             }
 
@@ -193,8 +192,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// Streams the response body to a temp file inside <paramref name="jobTempFolder"/>
     /// and returns an OK <see cref="ImageRecord_INPUT"/> with <see cref="ImageRecord_INPUT.TempFilePath"/> set.
     /// </summary>
-    private async Task<ImageRecord_INPUT> DownloadToTempAsync(Uri uri, string originalUrl, string jobTempFolder, CancellationToken ct)
-    {
+    private async Task<ImageRecord_INPUT> DownloadToTempAsync(Uri uri, string originalUrl, string jobTempFolder, CancellationToken ct) {
         Directory.CreateDirectory(jobTempFolder);
 
         using var req = new HttpRequestMessage(HttpMethod.Get, uri);
@@ -204,7 +202,8 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
             var cts2 = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts2.CancelAfter(TimeSpan.FromSeconds(this._rules.Timeouts.ResponseHeaderSeconds));
             resp = await this._http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts2.Token);
-        } catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
             throw new OperationCanceledException(ct);
         }
 
@@ -214,11 +213,11 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
                     $"The server returned HTTP {(int)resp.StatusCode} {resp.ReasonPhrase}.");
             }
 
-            string fileName    = ResolveFileName(uri, resp.Content.Headers);
-            string destPath    = Path.Combine(jobTempFolder, fileName);
-            long? contentLen   = resp.Content.Headers.ContentLength;
+            string fileName = ResolveFileName(uri, resp.Content.Headers);
+            string destPath = Path.Combine(jobTempFolder, fileName);
+            long? contentLen = resp.Content.Headers.ContentLength;
 
-            await using var src  = await resp.Content.ReadAsStreamAsync(ct);
+            await using var src = await resp.Content.ReadAsStreamAsync(ct);
             await using var dest = new FileStream(destPath, FileMode.Create, FileAccess.Write,
                 FileShare.None, bufferSize: 81_920, useAsync: true);
 
@@ -226,10 +225,10 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
 
             ImageRecord_INPUT record = new();
             record.InitialFullName = fileName;
-            record.TempFilePath    = destPath;
-            record.SourceKind      = ImageSourceKind.RemoteUrl;
-            record.ByteLength      = contentLen ?? new FileInfo(destPath).Length;
-            record.ImportStatus    = ImportStatus.Ok;
+            record.TempFilePath = destPath;
+            record.SourceKind = ImageSourceKind.RemoteUrl;
+            record.ByteLength = contentLen ?? new FileInfo(destPath).Length;
+            record.ImportStatus = ImportStatus.Ok;
 
             return record;
         }
@@ -242,8 +241,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// <summary>
     /// Returns a human-readable block reason when the URI violates HostRules, or null when it is permitted.
     /// </summary>
-    private string? CheckUrlBlocked(Uri uri)
-    {
+    private string? CheckUrlBlocked(Uri uri) {
         if (!this._rules.AllowedSchemes.Any(s => string.Equals(s, uri.Scheme, StringComparison.OrdinalIgnoreCase))) {
             return $"URL scheme '{uri.Scheme}' is not in the HostRules allowedSchemes list.";
         }
@@ -279,8 +277,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
         return null;
     }
 
-    private static bool IsLoopback(string host)
-    {
+    private static bool IsLoopback(string host) {
         if (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)) {
             return true;
         }
@@ -295,12 +292,12 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     private static bool IsLocalhost(string host) =>
         string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase);
 
-    private static bool ResolvesToLoopback(string host)
-    {
+    private static bool ResolvesToLoopback(string host) {
         try {
             IPAddress[] addresses = Dns.GetHostAddresses(host);
             return addresses.Any(IPAddress.IsLoopback);
-        } catch {
+        }
+        catch {
             return false;
         }
     }
@@ -308,8 +305,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// <summary>
     /// Matches a host against a pattern that may use a leading wildcard (e.g. <c>*.reddit.com</c>).
     /// </summary>
-    private static bool MatchesHostPattern(string host, string pattern)
-    {
+    private static bool MatchesHostPattern(string host, string pattern) {
         if (pattern.StartsWith("*.", StringComparison.Ordinal)) {
             string suffix = pattern[1..]; // ".reddit.com"
             return host.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
@@ -327,8 +323,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// Copies <paramref name="src"/> to <paramref name="dest"/>, enforcing a per-chunk idle read timeout.
     /// Throws <see cref="OperationCanceledException"/> when the idle window expires.
     /// </summary>
-    private static async Task StreamWithIdleTimeoutAsync(Stream src, Stream dest, int idleSeconds, CancellationToken ct)
-    {
+    private static async Task StreamWithIdleTimeoutAsync(Stream src, Stream dest, int idleSeconds, CancellationToken ct) {
         byte[] buf = new byte[81_920];
         int read;
 
@@ -338,7 +333,8 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
 
             try {
                 read = await src.ReadAsync(buf.AsMemory(), idleCts.Token);
-            } catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
                 throw new OperationCanceledException(ct);
             }
 
@@ -358,8 +354,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     /// Resolves the download filename from the Content-Disposition header or the URI path.
     /// Generates a unique fallback name when neither source provides one.
     /// </summary>
-    private static string ResolveFileName(Uri uri, HttpContentHeaders headers)
-    {
+    private static string ResolveFileName(Uri uri, HttpContentHeaders headers) {
         // Prefer Content-Disposition filename.
         string? cdFilename = headers.ContentDisposition?.FileNameStar
                           ?? headers.ContentDisposition?.FileName;
@@ -383,8 +378,7 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
         return $"download_{Guid.NewGuid():N}.bin";
     }
 
-    private static string SanitizeFileName(string name)
-    {
+    private static string SanitizeFileName(string name) {
         char[] invalid = Path.GetInvalidFileNameChars();
         return string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
     }
@@ -393,14 +387,13 @@ internal sealed class Fetch_HTTPS_DirectFile : IFetchStrategy
     // KO factory
     // -------------------------------------------------------------------------
 
-    private static ImageRecord_INPUT KoRecord(string url, string reasonCode, string safeMessage)
-    {
+    private static ImageRecord_INPUT KoRecord(string url, string reasonCode, string safeMessage) {
         ImageRecord_INPUT rec = new();
         rec.InitialFullName = url;
-        rec.SourceKind      = ImageSourceKind.RemoteUrl;
-        rec.ImportStatus    = ImportStatus.KO;
-        rec.KoReasonCode    = reasonCode;
-        rec.KoSafeMessage   = safeMessage;
+        rec.SourceKind = ImageSourceKind.RemoteUrl;
+        rec.ImportStatus = ImportStatus.KO;
+        rec.KoReasonCode = reasonCode;
+        rec.KoSafeMessage = safeMessage;
         return rec;
     }
 }

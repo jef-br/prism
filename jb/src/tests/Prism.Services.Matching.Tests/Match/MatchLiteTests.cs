@@ -18,20 +18,17 @@ namespace PrismCoreTests.Match;
 /// correct output, not a forced collision.
 /// </list>
 /// </summary>
-public class MatchLiteTests : IClassFixture<PipelineFixture>
-{
+public class MatchLiteTests : IClassFixture<PipelineFixture> {
     private readonly PipelineFixture fixture;
 
-    public MatchLiteTests(PipelineFixture fixture)
-    {
+    public MatchLiteTests(PipelineFixture fixture) {
         this.fixture = fixture;
     }
 
     //  Black-box: real CiMini fixture
 
     [Fact]
-    public void MatchLite_CiMiniFixture_MatchesImagesAndProducesDet0BasedNames()
-    {
+    public void MatchLite_CiMiniFixture_MatchesImagesAndProducesDet0BasedNames() {
         List<ImageRecord_INPUT> imageInputs = Directory
             .GetFiles(fixture.ImagesPath, "*.jpg", SearchOption.TopDirectoryOnly)
             .Select(f => new ImageRecord_INPUT { InitialFullName = Path.GetFileName(f) })
@@ -53,8 +50,7 @@ public class MatchLiteTests : IClassFixture<PipelineFixture>
     }
 
     [Fact]
-    public void MatchLite_FilenameOnlyNoImageBytesOnDisk_StillMatchesByFilename()
-    {
+    public void MatchLite_FilenameOnlyNoImageBytesOnDisk_StillMatchesByFilename() {
         // MatchLite's contract is filename-only: it must not need the image bytes on disk at all.
         List<ImageRecord_INPUT> imageInputs = Directory
             .GetFiles(fixture.ImagesPath, "*.jpg", SearchOption.TopDirectoryOnly)
@@ -78,8 +74,7 @@ public class MatchLiteTests : IClassFixture<PipelineFixture>
     //  Sequence-level: ImageOrderer.Run -> ImageRenamer.Run -> CompactDetOrder (synthetic)
 
     [Fact]
-    public void MatchLiteSequence_NoSelectedPhenotype_AllImagesOverflowAndCompactFromDetZero()
-    {
+    public void MatchLiteSequence_NoSelectedPhenotype_AllImagesOverflowAndCompactFromDetZero() {
         // MatchLite never runs CLIP/refinement, so SelectedPhenotype stays null for every image —
         // exactly like this synthetic input — and BuildCandidates skips all of them (overflow only).
         List<ImageRecord_LAMBDA> records =
@@ -103,8 +98,7 @@ public class MatchLiteTests : IClassFixture<PipelineFixture>
     }
 
     [Fact]
-    public void MatchLiteSequence_MultipleFamilies_EachCompactsIndependentlyFromDetZero()
-    {
+    public void MatchLiteSequence_MultipleFamilies_EachCompactsIndependentlyFromDetZero() {
         List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("a1.jpg", "FAM001"),
@@ -128,18 +122,15 @@ public class MatchLiteTests : IClassFixture<PipelineFixture>
     //  Helpers
 
     /// <summary>Creates a minimal matched-but-unphenotyped LAMBDA, as MatchLite would after ImageMatcher.Run.</summary>
-    private static ImageRecord_LAMBDA MakeLambda(string filename, string familyId)
-    {
-        return new ImageRecord_LAMBDA
-        {
+    private static ImageRecord_LAMBDA MakeLambda(string filename, string familyId) {
+        return new ImageRecord_LAMBDA {
             InitialFullName = filename,
-            MatchEvidence = new MatchEvidence
-            {
-                ImageId        = filename,
+            MatchEvidence = new MatchEvidence {
+                ImageId = filename,
                 SourceFilename = filename,
-                FinalFamilyId  = familyId,
-                FinalScore     = 1.0,
-                IsKo           = false
+                FinalFamilyId = familyId,
+                FinalScore = 1.0,
+                IsKo = false
             }
         };
     }

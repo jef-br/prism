@@ -4,8 +4,7 @@ namespace Prism.Lib.Ingress;
 /// Safe KO record emitted by the Imported stage for one image that could not be normalized.
 /// Projected into <see cref="BatchManifest"/> KO groups.
 /// </summary>
-public sealed record ImportKoRecord
-{
+public sealed record ImportKoRecord {
     /// <summary>Source stage constant used in all import-stage KO records.</summary>
     public const string ImportSourceStage = "import";
 
@@ -92,17 +91,15 @@ public sealed record ImportKoRecord
     public static ImportKoRecord CorruptImage(
         string originalFileName,
         string sourceProvenance,
-        string safeMessage)
-    {
-        return new ImportKoRecord
-        {
-            OriginalFileName  = originalFileName,
-            SourceProvenance  = sourceProvenance,
-            ReasonCode        = CorruptImageReason,
-            KoGroup           = CorruptImagesKoGroup,
-            SafeMessage       = safeMessage,
-            Retryable         = false,
-            BatchContinues    = true
+        string safeMessage) {
+        return new ImportKoRecord {
+            OriginalFileName = originalFileName,
+            SourceProvenance = sourceProvenance,
+            ReasonCode = CorruptImageReason,
+            KoGroup = CorruptImagesKoGroup,
+            SafeMessage = safeMessage,
+            Retryable = false,
+            BatchContinues = true
         };
     }
 
@@ -116,17 +113,15 @@ public sealed record ImportKoRecord
     public static ImportKoRecord ConversionFailure(
         string originalFileName,
         string sourceProvenance,
-        string safeMessage)
-    {
-        return new ImportKoRecord
-        {
-            OriginalFileName  = originalFileName,
-            SourceProvenance  = sourceProvenance,
-            ReasonCode        = ConversionFailureReason,
-            KoGroup           = ConversionFailedKoGroup,
-            SafeMessage       = safeMessage,
-            Retryable         = false,
-            BatchContinues    = true
+        string safeMessage) {
+        return new ImportKoRecord {
+            OriginalFileName = originalFileName,
+            SourceProvenance = sourceProvenance,
+            ReasonCode = ConversionFailureReason,
+            KoGroup = ConversionFailedKoGroup,
+            SafeMessage = safeMessage,
+            Retryable = false,
+            BatchContinues = true
         };
     }
 
@@ -138,17 +133,15 @@ public sealed record ImportKoRecord
     /// <returns>An unsupported-format KO record.</returns>
     public static ImportKoRecord UnsupportedFormat(
         string originalFileName,
-        string sourceProvenance)
-    {
-        return new ImportKoRecord
-        {
-            OriginalFileName  = originalFileName,
-            SourceProvenance  = sourceProvenance,
-            ReasonCode        = UnsupportedFormatReason,
-            KoGroup           = UnsupportedFormatKoGroup,
-            SafeMessage       = "The input file format is not accepted by PRISM.",
-            Retryable         = false,
-            BatchContinues    = true
+        string sourceProvenance) {
+        return new ImportKoRecord {
+            OriginalFileName = originalFileName,
+            SourceProvenance = sourceProvenance,
+            ReasonCode = UnsupportedFormatReason,
+            KoGroup = UnsupportedFormatKoGroup,
+            SafeMessage = "The input file format is not accepted by PRISM.",
+            Retryable = false,
+            BatchContinues = true
         };
     }
 }

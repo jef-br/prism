@@ -20,10 +20,8 @@ namespace Prism.Services.Matching;
 /// STUB: will set has-head, head-visible, has-face, face-visible, body-visible, and pose-type
 /// from the YOLO person box. Currently writes nothing.
 /// </summary>
-internal static class Analyzer_FacePose
-{
-    public static void Analyze(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot)
-    {
+internal static class Analyzer_FacePose {
+    public static void Analyze(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot) {
         // Not implemented — face/pose features stay UNKNOWN (CLIP still covers head-visible/body-visible).
     }
 }

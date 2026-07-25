@@ -13,10 +13,8 @@ namespace Prism.Services.Matching;
 */
 
 /// <summary>STUB: will set <c>material-texture-visible</c>. Currently writes nothing.</summary>
-internal static class Analyzer_MaterialTexture
-{
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
-    {
+internal static class Analyzer_MaterialTexture {
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot) {
         // Not implemented — material-texture-visible stays UNKNOWN.
     }
 }

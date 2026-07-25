@@ -3,8 +3,7 @@ namespace Prism.Lib.Zip;
 /// <summary>
 /// Describes how a zip member should be handled by the zip foundation module.
 /// </summary>
-public enum ZipMemberMediaKind
-{
+public enum ZipMemberMediaKind {
     /// <summary>
     /// The member is not processable by PRISM import rules and is omitted silently.
     /// </summary>

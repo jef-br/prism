@@ -14,10 +14,8 @@ namespace Prism.Services.Matching;
 */
 
 /// <summary>STUB: will set <c>lighting</c> and <c>lighting-detail</c>. Currently writes nothing.</summary>
-internal static class Analyzer_LightingDetail
-{
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
-    {
+internal static class Analyzer_LightingDetail {
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot) {
         // Not implemented — lighting/lighting-detail stay UNKNOWN.
     }
 }

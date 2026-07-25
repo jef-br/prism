@@ -5,8 +5,7 @@ namespace Prism.Services.Matching;
 /// <summary>
 /// Typed loader for MatchingConfig.json — matcher strategies, field names, weights, and thresholds.
 /// </summary>
-internal sealed record MatchingConfig
-{
+internal sealed record MatchingConfig {
     /// <summary>The top-level "match" section — shared values plus one section per matcher.</summary>
     public required MatchSection Match { get; init; }
 
@@ -23,8 +22,7 @@ internal sealed record MatchingConfig
     /// </summary>
     /// <param name="configPath">Absolute path to MatchingConfig.json.</param>
     /// <returns>The parsed configuration.</returns>
-    internal static MatchingConfig Load(string configPath)
-    {
+    internal static MatchingConfig Load(string configPath) {
         if (string.IsNullOrWhiteSpace(configPath))
             throw new ArgumentException("Matching config path is required.", nameof(configPath));
 
@@ -32,27 +30,23 @@ internal sealed record MatchingConfig
             throw new FileNotFoundException("MatchingConfig.json was not found.", configPath);
 
         string json = File.ReadAllText(configPath);
-        try
-        {
+        try {
             return JsonSerializer.Deserialize<MatchingConfig>(json, JsonOptions)
                 ?? throw new PrismConfigurationException("MatchingConfig.json could not be parsed.");
         }
-        catch (JsonException ex)
-        {
+        catch (JsonException ex) {
             throw new PrismConfigurationException($"Cannot load MatchingConfig.json: {ex.Message}", ex);
         }
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
+    private static readonly JsonSerializerOptions JsonOptions = new() {
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true
     };
 
     /// <summary>The "match" section of MatchingConfig.json: shared values plus one section per matcher.</summary>
-    internal sealed record MatchSection
-    {
+    internal sealed record MatchSection {
         /// <summary>Cross-matcher values (thresholds, weights, feature toggles, rule list).</summary>
         public required SharedSection Shared { get; init; }
 
@@ -69,8 +63,7 @@ internal sealed record MatchingConfig
         public required FolderNameEnricher.Config FolderNameEnricher { get; init; }
 
         /// <summary>Genuinely cross-matcher values that do not belong to a single matcher.</summary>
-        internal sealed record SharedSection
-        {
+        internal sealed record SharedSection {
             /// <summary>All configured matching rules.</summary>
             public required IReadOnlyList<MatchingRule> Rules { get; init; }
 

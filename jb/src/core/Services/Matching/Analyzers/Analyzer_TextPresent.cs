@@ -14,10 +14,8 @@ namespace Prism.Services.Matching;
 */
 
 /// <summary>STUB: will set the <c>text-present</c> ImageFeature. Currently writes nothing.</summary>
-internal static class Analyzer_TextPresent
-{
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
-    {
+internal static class Analyzer_TextPresent {
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot) {
         // Not implemented — text-present stays UNKNOWN.
     }
 }

@@ -5,8 +5,7 @@ namespace Prism.Lib.Excel;
 /// </summary>
 public sealed record ExcelModelBuildResult(
     InternalExcelModel Model,
-    IReadOnlyList<ExcelProcessingDiagnostic> Diagnostics)
-{
+    IReadOnlyList<ExcelProcessingDiagnostic> Diagnostics) {
     /// <summary>
     /// FamilyIDRecord projection consumed by downstream matching.
     /// </summary>

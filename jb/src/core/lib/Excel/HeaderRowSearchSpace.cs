@@ -3,8 +3,7 @@ namespace Prism.Lib.Excel;
 /// <summary>
 /// Worksheet area scanned for a likely header row.
 /// </summary>
-public sealed record HeaderRowSearchSpace
-{
+public sealed record HeaderRowSearchSpace {
     /// <summary>
     /// Zero-based first row to inspect.
     /// </summary>
@@ -28,15 +27,12 @@ public sealed record HeaderRowSearchSpace
     /// <summary>
     /// Validates the configured worksheet search bounds.
     /// </summary>
-    public void Validate()
-    {
-        if (this.FirstRow < 0 || this.LastRow < this.FirstRow)
-        {
+    public void Validate() {
+        if (this.FirstRow < 0 || this.LastRow < this.FirstRow) {
             throw new PrismConfigurationException("ExcelConfig.HeaderRowSearchSpace rows must be zero-based and ordered.");
         }
 
-        if (this.FirstColumn < 0 || this.LastColumn < this.FirstColumn)
-        {
+        if (this.FirstColumn < 0 || this.LastColumn < this.FirstColumn) {
             throw new PrismConfigurationException("ExcelConfig.HeaderRowSearchSpace columns must be zero-based and ordered.");
         }
     }

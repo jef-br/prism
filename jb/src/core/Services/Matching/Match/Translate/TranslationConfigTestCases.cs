@@ -6,15 +6,12 @@ namespace Prism.Services.Matching;
 /// Lightweight executable-style test cases for translation matching behavior.
 /// Move these cases into the project test runner once a test project exists.
 /// </summary>
-public static class TranslationConfigTestCases
-{
+public static class TranslationConfigTestCases {
     /// <summary>
     /// Verifies exact token matching and configured synonym matching.
     /// </summary>
-    public static void VerifySynonymMatching()
-    {
-        TranslationConfig config = new()
-        {
+    public static void VerifySynonymMatching() {
+        TranslationConfig config = new() {
             SynonymGroups =
             [
                 new SynonymGroup
@@ -34,14 +31,11 @@ public static class TranslationConfigTestCases
     /// <summary>
     /// Verifies configured stop words are ignored.
     /// </summary>
-    public static void VerifyStopWordMatching()
-    {
-        TranslationConfig config = new()
-        {
-            StopWords = new StopWordConfig
-            {
-                General = [ "the", "and" ],
-                Domain = [ "product", "image" ]
+    public static void VerifyStopWordMatching() {
+        TranslationConfig config = new() {
+            StopWords = new StopWordConfig {
+                General = ["the", "and"],
+                Domain = ["product", "image"]
             }
         };
 
@@ -50,18 +44,14 @@ public static class TranslationConfigTestCases
         AssertFalse(config.IsStopWord("cotton"), "Meaningful product token should not be ignored.");
     }
 
-    private static void AssertTrue(bool actual, string message)
-    {
-        if (!actual)
-        {
+    private static void AssertTrue(bool actual, string message) {
+        if (!actual) {
             throw new InvalidOperationException(message);
         }
     }
 
-    private static void AssertFalse(bool actual, string message)
-    {
-        if (actual)
-        {
+    private static void AssertFalse(bool actual, string message) {
+        if (actual) {
             throw new InvalidOperationException(message);
         }
     }

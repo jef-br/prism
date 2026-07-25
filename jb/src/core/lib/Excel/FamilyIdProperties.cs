@@ -3,8 +3,7 @@ namespace Prism.Lib.Excel;
 /// <summary>
 /// Validation rules for the configured FamilyID primary key.
 /// </summary>
-public sealed record FamilyIdProperties
-{
+public sealed record FamilyIdProperties {
     /// <summary>
     /// Indicates whether the primary key must contain digits only.
     /// </summary>
@@ -18,15 +17,12 @@ public sealed record FamilyIdProperties
     /// <summary>
     /// Validates FamilyID requirements.
     /// </summary>
-    public void Validate()
-    {
-        if (!this.IsNumeric.HasValue)
-        {
+    public void Validate() {
+        if (!this.IsNumeric.HasValue) {
             throw new PrismConfigurationException("ExcelConfig.FamilyIDProperties.IsNumeric is required.");
         }
 
-        if (this.Length <= 0)
-        {
+        if (this.Length <= 0) {
             throw new PrismConfigurationException("ExcelConfig.FamilyIDProperties.Length must be greater than zero.");
         }
     }

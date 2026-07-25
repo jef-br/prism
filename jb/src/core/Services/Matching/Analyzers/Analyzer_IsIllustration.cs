@@ -9,8 +9,7 @@ namespace Prism.Services.Matching;
 /// near-white border region (flat background), and a low color-cluster count (few colors).
 /// Sets the <c>is-illustration</c> ImageFeature.
 /// </summary>
-public static class Analyzer_IsIllustration
-{
+public static class Analyzer_IsIllustration {
     private const int AlphaOpaqueThreshold = 128;
     private const float MaxChannelValueF = 255f;
 
@@ -19,8 +18,7 @@ public static class Analyzer_IsIllustration
     /// analyzer_Config.json. No defaults — every value must be present in the JSON or deserialization
     /// fails loud.
     /// </summary>
-    public sealed class Config : IValidatableConfig
-    {
+    public sealed class Config : IValidatableConfig {
         // Validation bounds, not tunable: BorderSampleDepth is a fraction of the short image side, so it
         // must stay below half; ColorBinsPerChannel needs at least 2 bins to quantize anything.
         private const float BorderSampleDepthUpperBound = 0.5f;
@@ -50,8 +48,7 @@ public static class Analyzer_IsIllustration
         /// <summary>Minimum population (fraction of sampled pixels) for a bucket to count as a cluster.</summary>
         public required float MinClusterPopulation { get; init; }
 
-        public void Validate()
-        {
+        public void Validate() {
             List<string> problems = [];
 
             if (this.MinEdgeDensity is <= 0f or >= 1f) problems.Add("IsIllustration.MinEdgeDensity must be in (0,1)");
@@ -69,8 +66,7 @@ public static class Analyzer_IsIllustration
     /// Returns true when all three topological signals indicate a technical drawing or illustration.
     /// Thresholds come from analyzer_Config.json.
     /// </summary>
-    public static bool Analyze(Image<Rgba32> image, Config cfg)
-    {
+    public static bool Analyze(Image<Rgba32> image, Config cfg) {
         int w = image.Width;
         int h = image.Height;
         float[,] gray = AnalyzerMath.ToGrayscale(image, w, h);
@@ -85,8 +81,7 @@ public static class Analyzer_IsIllustration
     // gradient-magnitude value on the normalized [0,1] luminance scale (range up to ~1.4), not a raw
     // pixel value. 0.2353 was chosen to be numerically equivalent to a ~60/255 raw luminance step
     // between adjacent pixels.
-    private static bool HasHighEdgeDensity(float[,] edges, int w, int h, Config cfg)
-    {
+    private static bool HasHighEdgeDensity(float[,] edges, int w, int h, Config cfg) {
         int edgePx = 0;
         int total = (w - 2) * (h - 2);
         for (int y = 1; y < h - 1; y++)
@@ -98,21 +93,17 @@ public static class Analyzer_IsIllustration
     // Illustrations typically sit on a near-white background.
     // Sample strips along all four borders (5% depth) and check that most pixels are near-white.
     // Transparent pixels count as white (no background).
-    private static bool HasFlatWhiteBackground(Image<Rgba32> image, int w, int h, Config cfg)
-    {
+    private static bool HasFlatWhiteBackground(Image<Rgba32> image, int w, int h, Config cfg) {
         int depth = Math.Max(1, (int)(Math.Min(w, h) * cfg.BorderSampleDepth));
         int nearWhite = 0;
         int total = 0;
 
-        image.ProcessPixelRows(accessor =>
-        {
-            for (int y = 0; y < h; y++)
-            {
+        image.ProcessPixelRows(accessor => {
+            for (int y = 0; y < h; y++) {
                 Span<Rgba32> row = accessor.GetRowSpan(y);
                 bool inTopOrBottomBand = y < depth || y >= h - depth;
 
-                for (int x = 0; x < w; x++)
-                {
+                for (int x = 0; x < w; x++) {
                     bool inBorder = inTopOrBottomBand || x < depth || x >= w - depth;
                     if (!inBorder) continue;
 
@@ -132,16 +123,14 @@ public static class Analyzer_IsIllustration
 
     // Technical drawings use few colors: black lines on white, or a handful of palette colors.
     // Quantize RGB to a coarse grid and count populated buckets above a minimum population.
-    private static bool HasFewColorClusters(Image<Rgba32> image, int w, int h, Config cfg)
-    {
+    private static bool HasFewColorClusters(Image<Rgba32> image, int w, int h, Config cfg) {
         int bins = cfg.ColorBinsPerChannel;
         int totalPixels = 0;
         int[] buckets = new int[bins * bins * bins];
 
         // Stride 2 subsamples every other pixel/row — perf, not a tunable threshold.
 #pragma warning disable S109
-        image.ProcessPixelRows(accessor =>
-        {
+        image.ProcessPixelRows(accessor => {
             for (int y = 0; y < h; y += 2) {
                 Span<Rgba32> row = accessor.GetRowSpan(y);
                 for (int x = 0; x < w; x += 2) {

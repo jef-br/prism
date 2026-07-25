@@ -29,10 +29,10 @@ public sealed class ImporterFixture : IDisposable {
     public ImporterFixture() {
         string configPath = ConfigLoader.RequireFile(PrismConfiguration.FileName);
 
-        Configuration   = PrismConfiguration.LoadPrismConfig(configPath);
+        Configuration = PrismConfiguration.LoadPrismConfig(configPath);
         ConfigDirectory = Path.GetDirectoryName(configPath)!;
-        modelBuilder    = ModelBuilder.FromConfigFile(ConfigLoader.RequireFile("ExcelConfig.json"));
-        TempRoot        = Path.Combine(Path.GetTempPath(), $"PRISM-INGEST-TESTS-{Guid.NewGuid():N}");
+        modelBuilder = ModelBuilder.FromConfigFile(ConfigLoader.RequireFile("ExcelConfig.json"));
+        TempRoot = Path.Combine(Path.GetTempPath(), $"PRISM-INGEST-TESTS-{Guid.NewGuid():N}");
         Directory.CreateDirectory(TempRoot);
         CiMiniExcelPath = Path.Combine(PipelineFixture.ResolveTestFixturePath(), "CiMini", "ci-mini.xlsx");
     }
@@ -102,8 +102,10 @@ public sealed class ImporterFixture : IDisposable {
     public void Dispose() {
         try {
             Directory.Delete(TempRoot, recursive: true);
-        } catch (IOException) {
-        } catch (UnauthorizedAccessException) {
+        }
+        catch (IOException) {
+        }
+        catch (UnauthorizedAccessException) {
         }
     }
 }

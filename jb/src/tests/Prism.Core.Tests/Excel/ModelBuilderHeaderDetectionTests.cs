@@ -7,13 +7,11 @@ namespace PrismCoreTests.Excel;
 /// Unit tests for <see cref="ModelBuilder"/> multilingual, token-based header detection and
 /// FamilyID-column resolution (header-name OR 8-digit-unique cell pattern).
 /// </summary>
-public class ModelBuilderHeaderDetectionTests
-{
+public class ModelBuilderHeaderDetectionTests {
     //  Multilingual header detection + PK by name
 
     [Fact]
-    public void FrenchMultiWordHeader_DetectedAndFamilyResolvedByName()
-    {
+    public void FrenchMultiWordHeader_DetectedAndFamilyResolvedByName() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook workbook = Workbook("fr",
             ["Family ID Veepee", "EAN / BARCODE", "Reference-colour", "Composition"],
@@ -29,8 +27,7 @@ public class ModelBuilderHeaderDetectionTests
     }
 
     [Fact]
-    public void SpanishHeader_VeepeeTokenResolvesFamilyId()
-    {
+    public void SpanishHeader_VeepeeTokenResolvesFamilyId() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook workbook = Workbook("es",
             ["REFERENCIA VEEPEE", "MODELO", "Color", "CUIDADOS"],
@@ -45,8 +42,7 @@ public class ModelBuilderHeaderDetectionTests
     }
 
     [Fact]
-    public void HeaderOnRow17_DetectedWithinSearchSpace()
-    {
+    public void HeaderOnRow17_DetectedWithinSearchSpace() {
         ModelBuilder builder = BuildBuilder();
 
         // 16 leading metadata rows (single innocuous cell), header on zero-based row 16, then data.
@@ -63,8 +59,7 @@ public class ModelBuilderHeaderDetectionTests
     }
 
     [Fact]
-    public void WideHeaderMostlyExoticColumns_QualifiesViaFamilyIdPresence()
-    {
+    public void WideHeaderMostlyExoticColumns_QualifiesViaFamilyIdPresence() {
         // MMERO26-style: a clear FamilyID column but most siblings are Dutch/concatenated and unrecognized,
         // pushing the matched ratio below the gate. The FamilyID-presence override must still detect the row.
         ModelBuilder builder = BuildBuilder();
@@ -83,8 +78,7 @@ public class ModelBuilderHeaderDetectionTests
     //  PK by cell pattern (foreign / unrecognized header name)
 
     [Fact]
-    public void UnrecognizedKeyHeader_FamilyIdResolvedByEightDigitUniqueCellPattern()
-    {
+    public void UnrecognizedKeyHeader_FamilyIdResolvedByEightDigitUniqueCellPattern() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook workbook = Workbook("pattern",
             ["Color", "Material", "Codpro"],
@@ -99,8 +93,7 @@ public class ModelBuilderHeaderDetectionTests
     }
 
     [Fact]
-    public void EightDigitColumnWithDuplicates_NotConfirmedAsFamilyId()
-    {
+    public void EightDigitColumnWithDuplicates_NotConfirmedAsFamilyId() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook workbook = Workbook("dup",
             ["Color", "Material", "Codpro"],
@@ -116,8 +109,7 @@ public class ModelBuilderHeaderDetectionTests
     //  Cross-file collation + cross-language column canonicalization
 
     [Fact]
-    public void SameFamilyIdAcrossTwoFiles_CollatedIntoOneRecord()
-    {
+    public void SameFamilyIdAcrossTwoFiles_CollatedIntoOneRecord() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook fileA = Workbook("a", ["Family ID", "Color"], ["30000001", "blue"]);
         ExcelWorkbook fileB = Workbook("b", ["FamilyId", "Composition"], ["30000001", "cotton"]);
@@ -132,8 +124,7 @@ public class ModelBuilderHeaderDetectionTests
     }
 
     [Fact]
-    public void ForeignLanguageColumn_CanonicalizedToEnglishId()
-    {
+    public void ForeignLanguageColumn_CanonicalizedToEnglishId() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook workbook = Workbook("c1", ["Family ID", "Couleur"], ["40000001", "bleu"]);
 
@@ -146,8 +137,7 @@ public class ModelBuilderHeaderDetectionTests
     //  Product-type / NGP column canonicalization (compound phrase terms only)
 
     [Fact]
-    public void ProductTypeHeader_EnglishTwoWords_CanonicalizedToProducttype()
-    {
+    public void ProductTypeHeader_EnglishTwoWords_CanonicalizedToProducttype() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook workbook = Workbook("pt-en",
             ["Family ID", "Product Type", "Color"],
@@ -160,8 +150,7 @@ public class ModelBuilderHeaderDetectionTests
     }
 
     [Fact]
-    public void ProductTypeHeader_ItalianPhrase_CanonicalizedToProducttype()
-    {
+    public void ProductTypeHeader_ItalianPhrase_CanonicalizedToProducttype() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook workbook = Workbook("pt-it",
             ["Family ID", "Tipo di prodotto", "Colore"],
@@ -174,8 +163,7 @@ public class ModelBuilderHeaderDetectionTests
     }
 
     [Fact]
-    public void ProductTypeHeader_GermanSingleCompound_CanonicalizedToProducttype()
-    {
+    public void ProductTypeHeader_GermanSingleCompound_CanonicalizedToProducttype() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook workbook = Workbook("pt-de",
             ["Family ID", "Produkttyp", "Farbe"],
@@ -188,8 +176,7 @@ public class ModelBuilderHeaderDetectionTests
     }
 
     [Fact]
-    public void BareTypeHeader_KeepsRawHeader_NotCanonicalized()
-    {
+    public void BareTypeHeader_KeepsRawHeader_NotCanonicalized() {
         // "Type" alone is not allowed as a product-type header — only compound "product type"
         // terms qualify, in any language. The raw header must survive untouched.
         ModelBuilder builder = BuildBuilder();
@@ -205,8 +192,7 @@ public class ModelBuilderHeaderDetectionTests
     }
 
     [Fact]
-    public void NgpHeader_CanonicalizedToNgp()
-    {
+    public void NgpHeader_CanonicalizedToNgp() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook workbook = Workbook("ngp",
             ["Family ID", "NGP", "Color"],
@@ -221,8 +207,7 @@ public class ModelBuilderHeaderDetectionTests
     //  AUTOMAT2 transition: refco-style key column is identified, then rows fail PK validation
 
     [Fact]
-    public void RefcoStyleKey_ColumnIdentified_RowsReportedInvalidNotHeaderMissing()
-    {
+    public void RefcoStyleKey_ColumnIdentified_RowsReportedInvalidNotHeaderMissing() {
         ModelBuilder builder = BuildBuilder();
         ExcelWorkbook workbook = Workbook("automat",
             ["REFERENCIA VEEPEE", "Color"],
@@ -239,13 +224,11 @@ public class ModelBuilderHeaderDetectionTests
 
     //  Builders
 
-    private static ModelBuilder BuildBuilder()
-    {
+    private static ModelBuilder BuildBuilder() {
         return new ModelBuilder(BuildExcelConfig(), BuildTranslationConfig());
     }
 
-    private static ExcelWorkbook Workbook(string name, params string[][] rows)
-    {
+    private static ExcelWorkbook Workbook(string name, params string[][] rows) {
         var worksheetRows = rows
             .Select((cells, index) => new ExcelWorksheetRow(index, cells))
             .ToList();
@@ -253,10 +236,8 @@ public class ModelBuilderHeaderDetectionTests
         return new ExcelWorkbook($"{name}.xlsx", [worksheet]);
     }
 
-    private static ExcelConfig BuildExcelConfig()
-    {
-        return new ExcelConfig
-        {
+    private static ExcelConfig BuildExcelConfig() {
+        return new ExcelConfig {
             RecordPrimaryKey = "FamilyID",
             HeaderRowIndicators =
             [
@@ -266,8 +247,7 @@ public class ModelBuilderHeaderDetectionTests
             ],
             HeaderRowSearchSpace = new HeaderRowSearchSpace { FirstRow = 0, LastRow = 20, FirstColumn = 0, LastColumn = 20 },
             FamilyIDProperties = new FamilyIdProperties { IsNumeric = true, Length = 8 },
-            HeaderDetection = new HeaderDetectionConfig
-            {
+            HeaderDetection = new HeaderDetectionConfig {
                 MinimumMatchedColumnRatio = 0.4,
                 MaximumEditDistanceRatio = 0.12,
                 EditDistanceOneConfidence = 0.75,
@@ -279,10 +259,8 @@ public class ModelBuilderHeaderDetectionTests
         };
     }
 
-    private static TranslationConfig BuildTranslationConfig()
-    {
-        return new TranslationConfig
-        {
+    private static TranslationConfig BuildTranslationConfig() {
+        return new TranslationConfig {
             HeaderGroups =
             [
                 new HeaderGroup { Id = "familyid", Terms = ["familyid", "family", "famille", "veepee"] },
@@ -297,8 +275,7 @@ public class ModelBuilderHeaderDetectionTests
                 new HeaderGroup { Id = "washinginstructions", Terms = ["cuidados", "entretien", "conseils", "washing"] },
                 new HeaderGroup { Id = "ngp", Terms = ["ngp"] }
             ],
-            StopWords = new StopWordConfig
-            {
+            StopWords = new StopWordConfig {
                 General = ["de", "la", "le", "les", "of", "the", "and", "a"],
                 Domain = ["color", "style", "size", "model", "product"]
             }

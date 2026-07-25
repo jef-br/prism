@@ -9,13 +9,11 @@ namespace PrismCoreTests.Generate;
 /// Prism_Config.json, so thresholds reflect the real configuration values.
 /// <see cref="ImageGenerator.Run"/> returns the new generated records directly.
 /// </summary>
-public class ImageGeneratorTests
-{
+public class ImageGeneratorTests {
     //  Generation disabled 
 
     [Fact]
-    public void Run_GenerationDisabled_AllNonKoImagesSkipped()
-    {
+    public void Run_GenerationDisabled_AllNonKoImagesSkipped() {
         List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("img1.jpg", "FAM001", 0, width: 2000, height: 2000),
@@ -30,8 +28,7 @@ public class ImageGeneratorTests
     }
 
     [Fact]
-    public void Run_GenerationDisabled_KoImagesNotTouched()
-    {
+    public void Run_GenerationDisabled_KoImagesNotTouched() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("ko.jpg", "FAM001", 0, isKo: true)];
 
         ImageGenerator.Run(records, generationEnabled: false);
@@ -42,8 +39,7 @@ public class ImageGeneratorTests
     //  Family above threshold 
 
     [Fact]
-    public void Run_FamilyAboveThreshold_AllSkipped()
-    {
+    public void Run_FamilyAboveThreshold_AllSkipped() {
         // MinImagesPerFamily = 1 in config; 2 images = above threshold
         List<ImageRecord_LAMBDA> records =
         [
@@ -61,8 +57,7 @@ public class ImageGeneratorTests
     //  Quality check 
 
     [Fact]
-    public void Run_HeroTooSmall_AllMembersSkippedLowQuality()
-    {
+    public void Run_HeroTooSmall_AllMembersSkippedLowQuality() {
         // 800×800 is below the 1600×1600 minimum in config
         List<ImageRecord_LAMBDA> records = [MakeLambda("small.jpg", "FAM001", 0, width: 800, height: 800)];
 
@@ -73,8 +68,7 @@ public class ImageGeneratorTests
     }
 
     [Fact]
-    public void Run_UnknownDimensions_TreatedAsQualified()
-    {
+    public void Run_UnknownDimensions_TreatedAsQualified() {
         // Width=0, Height=0 means the Imported stage did not record dimensions.
         // Unknown dimensions pass the quality check.
         List<ImageRecord_LAMBDA> records = [MakeLambda("unknown.jpg", "FAM001", 0, width: 0, height: 0)];
@@ -87,8 +81,7 @@ public class ImageGeneratorTests
     //  Gated path 
 
     [Fact]
-    public void Run_QualifiedHero_BackendUnavailable_RouteStateIsGated()
-    {
+    public void Run_QualifiedHero_BackendUnavailable_RouteStateIsGated() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
 
         ImageGenerator.Run(records, generationEnabled: true);
@@ -97,8 +90,7 @@ public class ImageGeneratorTests
     }
 
     [Fact]
-    public void Run_QualifiedHero_GeneratedChildAttachedToHero()
-    {
+    public void Run_QualifiedHero_GeneratedChildAttachedToHero() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
 
         ImageGenerator.Run(records, generationEnabled: true);
@@ -109,8 +101,7 @@ public class ImageGeneratorTests
     }
 
     [Fact]
-    public void Run_QualifiedHero_GeneratedCountIncremented()
-    {
+    public void Run_QualifiedHero_GeneratedCountIncremented() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
 
         IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
@@ -121,8 +112,7 @@ public class ImageGeneratorTests
     //  KO passthrough 
 
     [Fact]
-    public void Run_KoImageNotCountedInFamilySize_FamilyProceedsToGeneration()
-    {
+    public void Run_KoImageNotCountedInFamilySize_FamilyProceedsToGeneration() {
         // 1 non-KO + 1 KO = effective family size of 1 → proceed to generation path
         List<ImageRecord_LAMBDA> records =
         [
@@ -132,16 +122,15 @@ public class ImageGeneratorTests
 
         IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
 
-        Assert.Equal(GenerationRouteState.Gated,         records[0].GenerationRouteState);
-        Assert.Equal(GenerationRouteState.NotEvaluated,  records[1].GenerationRouteState);
+        Assert.Equal(GenerationRouteState.Gated, records[0].GenerationRouteState);
+        Assert.Equal(GenerationRouteState.NotEvaluated, records[1].GenerationRouteState);
         Assert.Single(generated);
     }
 
     //  Multi-family isolation 
 
     [Fact]
-    public void Run_MixedFamilies_EachEvaluatedIndependently()
-    {
+    public void Run_MixedFamilies_EachEvaluatedIndependently() {
         // FAM001 has 1 image → proceeds to gated generation.
         // FAM002 has 2 images → skipped (above threshold).
         List<ImageRecord_LAMBDA> records =
@@ -153,7 +142,7 @@ public class ImageGeneratorTests
 
         IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
 
-        Assert.Equal(GenerationRouteState.Gated,   records[0].GenerationRouteState);
+        Assert.Equal(GenerationRouteState.Gated, records[0].GenerationRouteState);
         Assert.Equal(GenerationRouteState.Skipped, records[1].GenerationRouteState);
         Assert.Equal(GenerationRouteState.Skipped, records[2].GenerationRouteState);
         Assert.Single(generated);
@@ -171,17 +160,15 @@ public class ImageGeneratorTests
         int detOrder,
         int width = 2000,
         int height = 2000,
-        bool isKo = false)
-    {
-        return new ImageRecord_LAMBDA
-        {
+        bool isKo = false) {
+        return new ImageRecord_LAMBDA {
             InitialFullName = filename,
-            Family          = familyId,
-            DetOrder        = detOrder,
-            Width           = width,
-            Height          = height,
-            IsKo            = isKo,
-            KoReasonCode    = isKo ? "TEST_KO" : null
+            Family = familyId,
+            DetOrder = detOrder,
+            Width = width,
+            Height = height,
+            IsKo = isKo,
+            KoReasonCode = isKo ? "TEST_KO" : null
         };
     }
 }

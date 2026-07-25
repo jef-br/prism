@@ -13,10 +13,8 @@ namespace Prism.Services.Matching;
 */
 
 /// <summary>STUB: will set the <c>contains-mannequin</c> ImageFeature. Currently writes nothing.</summary>
-internal static class Analyzer_Mannequin
-{
-    public static void Analyze(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot)
-    {
+internal static class Analyzer_Mannequin {
+    public static void Analyze(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot) {
         // Not implemented — contains-mannequin stays UNKNOWN.
     }
 }

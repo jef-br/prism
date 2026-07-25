@@ -4,8 +4,7 @@ namespace Prism.Contracts;
 /// Bounded matching decision and evidence for one image produced by the Matched stage.
 /// Immutable; produced by <see cref="ImageMatcher"/> and embedded on <see cref="ImageRecord_LAMBDA"/>.
 /// </summary>
-public sealed record MatchEvidence
-{
+public sealed record MatchEvidence {
     //  Identity 
 
     /// <summary>Source image identifier (original filename stem).</summary>

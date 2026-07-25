@@ -3,8 +3,7 @@ namespace Prism.Lib.Excel;
 /// <summary>
 /// Severity of a safe Excel processing diagnostic.
 /// </summary>
-public enum ExcelDiagnosticSeverity
-{
+public enum ExcelDiagnosticSeverity {
     /// <summary>
     /// Informational note.
     /// </summary>

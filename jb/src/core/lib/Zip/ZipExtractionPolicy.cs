@@ -13,14 +13,12 @@ public sealed record ZipExtractionPolicy(
     long MaxImageMemberBytes,
     long MaxExcelMemberBytes,
     long MaxZipArchiveBytes,
-    int HeaderProbeBytes)
-{
+    int HeaderProbeBytes) {
     /// <summary>
     /// Builds a policy from the current PRISM config defaults.
     /// </summary>
     /// <returns>A zip extraction policy matching the documented default limits.</returns>
-    public static ZipExtractionPolicy CreateDefault()
-    {
+    public static ZipExtractionPolicy CreateDefault() {
         // Real supplier drops routinely arrive as 5–7 GB ZIP64 archives of high-resolution shots;
         // zip-bomb protection is enforced per member (streamed expanded-byte caps), not here.
         return new ZipExtractionPolicy(

@@ -18,40 +18,55 @@ namespace Prism.Services.Matching;
 /// Extracts product-type and orientation evidence from the image filename. Runs in the first
 /// wave of the post-match refinement chain, after Analyzer_ProductType.
 /// </summary>
-public static class Analyzer_FilenameEvidence
-{
+public static class Analyzer_FilenameEvidence {
     /// <summary>
     /// Thresholds for Analyzer_FilenameEvidence, bound from the "Filename" section of
     /// analyzer_Config.json. No defaults — every value must be present in the JSON or deserialization
     /// fails loud.
     /// </summary>
-    public sealed class Config : IValidatableConfig
-    {
+    public sealed class Config : IValidatableConfig {
         /// <summary>
         /// Confidence written on hero-orientation when a filename token names the orientation.
         /// A stronger existing measurement (e.g. CLIP) is never overwritten.
         /// </summary>
         public required float OrientationConfidence { get; init; }
 
-        public void Validate()
-        {
+        public void Validate() {
             if (this.OrientationConfidence is <= 0f or > 1f)
                 throw new PrismConfigurationException("Filename.OrientationConfidence must be in (0,1]");
         }
     }
 
-    private static readonly Dictionary<string, string> OrientationTokens = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["front"] = "FRONT", ["frontal"] = "FRONT", ["face"] = "FRONT", ["avant"] = "FRONT", ["delante"] = "FRONT",
-        ["back"] = "BACK", ["rear"] = "BACK", ["dos"] = "BACK", ["espalda"] = "BACK", ["retro"] = "BACK", ["achterkant"] = "BACK",
-        ["side"] = "SIDEON", ["lateral"] = "SIDEON", ["profile"] = "SIDEON", ["profil"] = "SIDEON", ["perfil"] = "SIDEON",
-        ["top"] = "TOP", ["boven"] = "TOP", ["oben"] = "TOP",
-        ["bottom"] = "BOTTOM", ["under"] = "BOTTOM", ["dessous"] = "BOTTOM", ["onder"] = "BOTTOM",
-        ["diagonal"] = "DIAGONAL", ["diag"] = "DIAGONAL", ["angle"] = "DIAGONAL"
+    private static readonly Dictionary<string, string> OrientationTokens = new(StringComparer.OrdinalIgnoreCase) {
+        ["front"] = "FRONT",
+        ["frontal"] = "FRONT",
+        ["face"] = "FRONT",
+        ["avant"] = "FRONT",
+        ["delante"] = "FRONT",
+        ["back"] = "BACK",
+        ["rear"] = "BACK",
+        ["dos"] = "BACK",
+        ["espalda"] = "BACK",
+        ["retro"] = "BACK",
+        ["achterkant"] = "BACK",
+        ["side"] = "SIDEON",
+        ["lateral"] = "SIDEON",
+        ["profile"] = "SIDEON",
+        ["profil"] = "SIDEON",
+        ["perfil"] = "SIDEON",
+        ["top"] = "TOP",
+        ["boven"] = "TOP",
+        ["oben"] = "TOP",
+        ["bottom"] = "BOTTOM",
+        ["under"] = "BOTTOM",
+        ["dessous"] = "BOTTOM",
+        ["onder"] = "BOTTOM",
+        ["diagonal"] = "DIAGONAL",
+        ["diag"] = "DIAGONAL",
+        ["angle"] = "DIAGONAL"
     };
 
-    public static void Analyze(ImageRecord_LAMBDA lambda, ProductTypeResolver resolver, Config cfg)
-    {
+    public static void Analyze(ImageRecord_LAMBDA lambda, ProductTypeResolver resolver, Config cfg) {
         string stem = Path.GetFileNameWithoutExtension(lambda.InitialFullName ?? string.Empty);
         if (stem.Length == 0) return;
 
@@ -59,8 +74,7 @@ public static class Analyzer_FilenameEvidence
 
         lambda.ProductTypeId ??= resolver.ResolveTokens(tokens);
 
-        foreach (string token in tokens)
-        {
+        foreach (string token in tokens) {
             if (!OrientationTokens.TryGetValue(token, out string? orientation)) continue;
 
             bool weaker = !lambda.Features.TryGet("hero-orientation", out ImageFeatureValue? current)

@@ -5,8 +5,7 @@ namespace Prism.Lib.Ingress;
 /// Carries the normalized image records, the Internal Excel Model family records, and any
 /// KO records produced during import.
 /// </summary>
-public sealed record ImportStageResult
-{
+public sealed record ImportStageResult {
     /// <summary>
     /// Successfully imported and normalized image records ready for classification.
     /// </summary>

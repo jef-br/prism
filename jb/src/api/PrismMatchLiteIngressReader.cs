@@ -5,16 +5,13 @@ namespace Prism.Api;
 /// Images: filename extracted from Content-Disposition only — bytes are not spilled to disk.
 /// Excel: spilled to a job-scoped temp folder for parsing, then cleaned up by the caller.
 /// </summary>
-internal static class PrismMatchLiteIngressReader
-{
+internal static class PrismMatchLiteIngressReader {
     /// <summary>
     /// Parses the multipart request and returns filename-only image inputs and temp-spilled Excel inputs,
     /// or a pre-core error response when the payload is invalid.
     /// </summary>
-    public static async Task<PrismMatchLiteIngressResult> Read(HttpRequest httpRequest, PrismApiConfiguration configuration)
-    {
-        if (!httpRequest.HasFormContentType)
-        {
+    public static async Task<PrismMatchLiteIngressResult> Read(HttpRequest httpRequest, PrismApiConfiguration configuration) {
+        if (!httpRequest.HasFormContentType) {
             return PrismMatchLiteIngressResult.FromError(CreateError(
                 httpRequest, "INVALID_PAYLOAD",
                 "POST /PRISM/match/lite requires multipart/form-data.",
@@ -35,22 +32,18 @@ internal static class PrismMatchLiteIngressReader
             new HashSet<string>(configuration.ZipMediaTypes, StringComparer.OrdinalIgnoreCase));
 
         int inputIndex = 0;
-        foreach (IFormFile file in form.Files.Where(f => string.Equals(f.Name, "input", StringComparison.OrdinalIgnoreCase)))
-        {
+        foreach (IFormFile file in form.Files.Where(f => string.Equals(f.Name, "input", StringComparison.OrdinalIgnoreCase))) {
             string extension = Path.GetExtension(file.FileName);
             string fieldPath = $"multipart.input[{inputIndex}]";
 
-            if (mediaTypes.Images.Contains(extension))
-            {
+            if (mediaTypes.Images.Contains(extension)) {
                 // Lite path: filename only — no body read, no disk write.
                 images.Add(new ImageRecord_INPUT { InitialFullName = file.FileName });
             }
-            else if (mediaTypes.Excel.Contains(extension))
-            {
+            else if (mediaTypes.Excel.Contains(extension)) {
                 if (configuration.MaximumExcelBytes > 0 && file.Length > configuration.MaximumExcelBytes)
                     fieldErrors.Add($"{fieldPath}:FILE_TOO_LARGE");
-                else
-                {
+                else {
                     string tempPath = await SpillToTempAsync(file, jobTempDir, inputIndex);
                     excelFiles.Add(new InputExcelFileRecord { SourceReference = file.FileName, ByteLength = file.Length, TempFilePath = tempPath });
                 }
@@ -59,8 +52,7 @@ internal static class PrismMatchLiteIngressReader
             inputIndex++;
         }
 
-        if (fieldErrors.Count > 0)
-        {
+        if (fieldErrors.Count > 0) {
             CleanUpTempDir(jobTempDir);
             return PrismMatchLiteIngressResult.FromError(CreateError(
                 httpRequest, "INVALID_PAYLOAD",
@@ -68,8 +60,7 @@ internal static class PrismMatchLiteIngressReader
                 fieldErrors, fieldErrors));
         }
 
-        if (images.Count == 0 || excelFiles.Count == 0)
-        {
+        if (images.Count == 0 || excelFiles.Count == 0) {
             CleanUpTempDir(jobTempDir);
             return PrismMatchLiteIngressResult.FromError(CreateError(
                 httpRequest, "INCOMPLETE_PAYLOAD",
@@ -81,8 +72,7 @@ internal static class PrismMatchLiteIngressReader
         return PrismMatchLiteIngressResult.FromData(images, excelFiles, jobTempDir);
     }
 
-    private static async Task<string> SpillToTempAsync(IFormFile file, string jobTempDir, int index)
-    {
+    private static async Task<string> SpillToTempAsync(IFormFile file, string jobTempDir, int index) {
         Directory.CreateDirectory(jobTempDir);
         string safeFileName = $"{index:D4}_{Path.GetFileName(file.FileName)}";
         string tempPath = Path.Combine(jobTempDir, safeFileName);
@@ -91,8 +81,7 @@ internal static class PrismMatchLiteIngressReader
         return tempPath;
     }
 
-    private static void CleanUpTempDir(string jobTempDir)
-    {
+    private static void CleanUpTempDir(string jobTempDir) {
         try { if (Directory.Exists(jobTempDir)) Directory.Delete(jobTempDir, recursive: true); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }

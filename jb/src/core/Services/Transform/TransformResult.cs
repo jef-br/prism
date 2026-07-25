@@ -5,8 +5,7 @@ namespace Prism.Services.Transform;
 /// <c>OutputRecord</c>. Carries the originating <see cref="MatchingResult"/> forward (which in turn
 /// carries Ingest) so the Export step can still reach normalized images, counts, and warnings.
 /// </summary>
-public sealed record TransformResult
-{
+public sealed record TransformResult {
     /// <summary>The matching output whose LAMBDA records were transformed in place.</summary>
     public required MatchingResult Matched { get; init; }
 

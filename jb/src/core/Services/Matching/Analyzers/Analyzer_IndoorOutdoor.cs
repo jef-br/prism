@@ -10,10 +10,8 @@ namespace Prism.Services.Matching;
 */
 
 /// <summary>STUB: will set <c>indoor</c> and <c>outdoor</c>. Currently writes nothing.</summary>
-internal static class Analyzer_IndoorOutdoor
-{
-    public static void Analyze(ImageFeatureSnapshot snapshot)
-    {
+internal static class Analyzer_IndoorOutdoor {
+    public static void Analyze(ImageFeatureSnapshot snapshot) {
         // Not implemented — indoor/outdoor stay UNKNOWN.
     }
 }

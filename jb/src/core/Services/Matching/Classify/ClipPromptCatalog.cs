@@ -15,7 +15,7 @@ public sealed class ClipPromptCatalog {
     // tokenized prompt tensors by reference instead of re-tokenizing per image.
     private readonly string[] promptArray;
 
-    private ClipPromptCatalog( Dictionary<string, (string Feature, string Value)> byPrompt ) {
+    private ClipPromptCatalog(Dictionary<string, (string Feature, string Value)> byPrompt) {
         this.byPrompt = byPrompt;
         this.promptArray = [.. byPrompt.Keys];
     }
@@ -27,7 +27,7 @@ public sealed class ClipPromptCatalog {
     /// Throws <see cref="PrismConfigurationException"/> on a missing file or bad structure.
     /// </summary>
     /// <param name="jsonPath">Absolute path to ClipPrompts.json.</param>
-    public static ClipPromptCatalog Load( string jsonPath ) {
+    public static ClipPromptCatalog Load(string jsonPath) {
         if (!File.Exists(jsonPath))
             throw new PrismConfigurationException($"ClipPrompts.json not found at: {jsonPath}");
 
@@ -36,7 +36,8 @@ public sealed class ClipPromptCatalog {
         JsonDocument doc;
         try {
             doc = JsonDocument.Parse(json);
-        } catch (JsonException ex) {
+        }
+        catch (JsonException ex) {
             throw new PrismConfigurationException($"Failed to parse ClipPrompts.json at '{jsonPath}': {ex.Message}", ex);
         }
 
@@ -67,7 +68,7 @@ public sealed class ClipPromptCatalog {
     public string[] BuildPrompts() => this.promptArray;
 
     /// <summary> Maps a CLIP result label back to its feature id and value. Returns false for an unrecognised label.</summary>
-    public bool TryResolve( string label, out string feature, out string value ) {
+    public bool TryResolve(string label, out string feature, out string value) {
         if (this.byPrompt.TryGetValue(label, out (string Feature, string Value) mapping)) {
             feature = mapping.Feature;
             value = mapping.Value;

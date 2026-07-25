@@ -27,7 +27,7 @@ public static class Upscaler {
     private const int DefaultDiscardBandPixels = 3;
 
     // ONNX tensor names — standard Real-ESRGAN x2plus export.
-    private const string TensorInput  = "input";
+    private const string TensorInput = "input";
     private const string TensorOutput = "output";
 
     private static readonly object _sessionLock = new();
@@ -60,7 +60,7 @@ public static class Upscaler {
     /// silently (T-4110). A missing or unreadable tiling config falls back to the hardcoded defaults
     /// rather than blocking session load — it is a tuning knob, not a correctness gate.
     /// </summary>
-    public static void Initialize( string modelPath, string configPath ) {
+    public static void Initialize(string modelPath, string configPath) {
         lock (_sessionLock) {
             if (_session is not null) return;
             if (!File.Exists(modelPath)) return;
@@ -71,7 +71,7 @@ public static class Upscaler {
                 int[] inputDims = session.InputMetadata[TensorInput].Dimensions;
 #pragma warning disable S109 // NCHW dims: index 2 = height, 3 = width — fixed ONNX tensor layout, never changes.
                 _tileHeight = inputDims[2] > 0 ? inputDims[2] : 0;
-                _tileWidth  = inputDims[3] > 0 ? inputDims[3] : 0;
+                _tileWidth = inputDims[3] > 0 ? inputDims[3] : 0;
 #pragma warning restore S109
 
                 LoadTilingConfig(configPath);
@@ -89,7 +89,7 @@ public static class Upscaler {
     }
 
     /// <summary>Loads tile overlap / discard-band sizing from cfg_Upscale.json, falling back to the hardcoded defaults on any failure.</summary>
-    private static void LoadTilingConfig( string configPath ) {
+    private static void LoadTilingConfig(string configPath) {
         try {
             UpscaleConfig config = UpscaleConfig.Load(configPath);
             _tileOverlapPixels = config.TileOverlapPixels;
@@ -105,14 +105,14 @@ public static class Upscaler {
     /// Upscales JPEG image bytes by <paramref name="scaleFactor"/> using Real-ESRGAN ×2 followed
     /// by Lanczos4 to reach the requested scale.
     /// </summary>
-    public static byte[] Upscale( byte[] imageBytes, double scaleFactor ) {
+    public static byte[] Upscale(byte[] imageBytes, double scaleFactor) {
         byte[] sr = RunRealEsrgan(imageBytes);    // fixed ×2
         double remaining = scaleFactor / SrScale;  // 0.9–1.25 for scaleFactor 1.8–2.5
         return ApplyLanczos4(sr, remaining);
     }
 
     /// <summary>Runs Real-ESRGAN inference: JPEG → tiled session passes → stitched BGR uint8 → JPEG.</summary>
-    private static byte[] RunRealEsrgan( byte[] imageBytes ) {
+    private static byte[] RunRealEsrgan(byte[] imageBytes) {
         InferenceSession? session = _session;
         if (session is null)
             throw new InvalidOperationException(
@@ -132,10 +132,10 @@ public static class Upscaler {
     /// a weighted blend across the overlap band (<see cref="AccumulateTile"/>) so no hard seam remains
     /// at internal tile boundaries.
     /// </summary>
-    private static Mat RunTiled( InferenceSession session, Mat src ) {
+    private static Mat RunTiled(InferenceSession session, Mat src) {
         bool tiling = _tileHeight > 0 && _tileWidth > 0;
         int tileH = tiling ? _tileHeight : src.Rows;
-        int tileW = tiling ? _tileWidth  : src.Cols;
+        int tileW = tiling ? _tileWidth : src.Cols;
         int overlap = tiling ? _tileOverlapPixels : 0;
         int discard = tiling ? _discardBandPixels : 0;
 
@@ -159,16 +159,16 @@ public static class Upscaler {
         int overlapOut = overlap * SrScaleInt;
         int discardOut = discard * SrScaleInt;
 
-        using Mat colorSum  = new(outH, outW, MatType.CV_32FC3, Scalar.All(0));
+        using Mat colorSum = new(outH, outW, MatType.CV_32FC3, Scalar.All(0));
         using Mat weightSum = new(outH, outW, MatType.CV_32FC1, Scalar.All(0));
 
         for (int ty = 0; ty < tilesY; ty++) {
-            bool topOutward    = ty == 0;
+            bool topOutward = ty == 0;
             bool bottomOutward = ty == tilesY - 1;
             int originY = (ty * stepH - overlap) * SrScaleInt;
 
             for (int tx = 0; tx < tilesX; tx++) {
-                bool leftOutward  = tx == 0;
+                bool leftOutward = tx == 0;
                 bool rightOutward = tx == tilesX - 1;
                 int originX = (tx * stepW - overlap) * SrScaleInt;
 
@@ -193,7 +193,7 @@ public static class Upscaler {
     /// </summary>
     private static void AccumulateTile(
         Mat tileOutput, Mat colorSum, Mat weightSum, int originY, int originX, int outH, int outW,
-        int overlapOut, int discardOut, bool topOutward, bool bottomOutward, bool leftOutward, bool rightOutward ) {
+        int overlapOut, int discardOut, bool topOutward, bool bottomOutward, bool leftOutward, bool rightOutward) {
         int tileH = tileOutput.Rows;
         int tileW = tileOutput.Cols;
 
@@ -229,9 +229,9 @@ public static class Upscaler {
     /// the true image border (<paramref name="startOutward"/>/<paramref name="endOutward"/>) always
     /// contributes full weight, since there is no neighboring tile there to blend against.
     /// </summary>
-    internal static float AxisWeight( int pos, int length, int overlapOut, int discardOut, bool startOutward, bool endOutward ) {
+    internal static float AxisWeight(int pos, int length, int overlapOut, int discardOut, bool startOutward, bool endOutward) {
         float wStart = startOutward ? 1f : RampFromEdge(pos, overlapOut, discardOut);
-        float wEnd   = endOutward   ? 1f : RampFromEdge(length - 1 - pos, overlapOut, discardOut);
+        float wEnd = endOutward ? 1f : RampFromEdge(length - 1 - pos, overlapOut, discardOut);
         return Math.Min(wStart, wEnd);
     }
 
@@ -239,7 +239,7 @@ public static class Upscaler {
     /// 0 within the discard band nearest a seam-facing edge, a raised-cosine taper from 0 to 1 across the
     /// remaining overlap band, and 1 in the trusted interior beyond it.
     /// </summary>
-    internal static float RampFromEdge( int distFromEdge, int overlapOut, int discardOut ) {
+    internal static float RampFromEdge(int distFromEdge, int overlapOut, int discardOut) {
         if (distFromEdge < discardOut) return 0f;
 
         int rampWidth = overlapOut - discardOut;
@@ -255,7 +255,7 @@ public static class Upscaler {
     }
 
     /// <summary>Divides the weighted color accumulator by the accumulated weight to produce the final stitched BGR uint8 image.</summary>
-    private static Mat NormalizeAccumulator( Mat colorSum, Mat weightSum, int outH, int outW ) {
+    private static Mat NormalizeAccumulator(Mat colorSum, Mat weightSum, int outH, int outW) {
         Mat output = new(outH, outW, MatType.CV_8UC3);
 
         for (int y = 0; y < outH; y++) {
@@ -273,7 +273,7 @@ public static class Upscaler {
     }
 
     /// <summary>Runs one fixed-size tile through the ONNX session and returns the BGR uint8 result.</summary>
-    private static Mat RunSingleTile( InferenceSession session, Mat tileBgrUint8 ) {
+    private static Mat RunSingleTile(InferenceSession session, Mat tileBgrUint8) {
         DenseTensor<float> inputTensor = BuildInputTensor(tileBgrUint8);
 
         var inputs = new List<NamedOnnxValue> {
@@ -299,7 +299,7 @@ public static class Upscaler {
     /// Decodes BGR uint8 Mat to an NCHW float32 tensor normalized to [0, 1].
     /// Input shape: [1, 3, H, W] — CHW layout, BGR channel order.
     /// </summary>
-    private static DenseTensor<float> BuildInputTensor( Mat bgrUint8 ) {
+    private static DenseTensor<float> BuildInputTensor(Mat bgrUint8) {
         int h = bgrUint8.Rows;
         int w = bgrUint8.Cols;
         // Input shape: [1, 3, H, W] — NCHW, BGR channel order, normalized to [0, 1].
@@ -323,7 +323,7 @@ public static class Upscaler {
     /// Converts the NCHW float32 output tensor to a BGR uint8 Mat.
     /// Output tensor shape: [1, 3, H×2, W×2] — BGR channel order, [0, 1] float.
     /// </summary>
-    private static Mat TensorToMat( Tensor<float> outputTensor ) {
+    private static Mat TensorToMat(Tensor<float> outputTensor) {
         int h = outputTensor.Dimensions[2];
         int w = outputTensor.Dimensions[3];
         Mat bgrUint8Out = new(h, w, MatType.CV_8UC3);
@@ -343,7 +343,7 @@ public static class Upscaler {
         return bgrUint8Out;
     }
 
-    private static byte[] ApplyLanczos4( byte[] imageBytes, double scaleFactor ) {
+    private static byte[] ApplyLanczos4(byte[] imageBytes, double scaleFactor) {
         using Mat src = Cv2.ImDecode(imageBytes, ImreadModes.Color);
         int newW = (int)Math.Round(src.Cols * scaleFactor);
         int newH = (int)Math.Round(src.Rows * scaleFactor);

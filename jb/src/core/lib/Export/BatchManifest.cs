@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// Batch-level manifest projected into zip and JSON output.
 /// </summary>
-public sealed record BatchManifest
-{
+public sealed record BatchManifest {
     /// <summary>
     /// PRISM-owned job identifier when a job has been created.
     /// </summary>

@@ -7,8 +7,7 @@ namespace Prism.Services.Matching;
 /// bound from the "Yolo" section of analyzer_Config.json. No defaults — every value must be present
 /// in the JSON or deserialization fails loud.
 /// </summary>
-public sealed class YoloAnalyzerConfig : IValidatableConfig
-{
+public sealed class YoloAnalyzerConfig : IValidatableConfig {
     /// <summary>Minimum class score for a raw detection to survive.</summary>
     public required float ConfidenceThreshold { get; init; }
 
@@ -24,8 +23,7 @@ public sealed class YoloAnalyzerConfig : IValidatableConfig
     /// <summary>Minimum person-box area (fraction of the frame) for the person to count as the hero (hero-is-human=TRUE).</summary>
     public required float HeroPersonMinArea { get; init; }
 
-    public void Validate()
-    {
+    public void Validate() {
         List<string> problems = [];
 
         if (this.ConfidenceThreshold is <= 0f or >= 1f) problems.Add("Yolo.ConfidenceThreshold must be in (0,1)");

@@ -7,8 +7,7 @@ namespace Prism.Services.Transform;
 /// transform strategy, bound from the "Crop" section of transform_Config.json. No defaults — every
 /// value must be present in the JSON or deserialization fails loud.
 /// </summary>
-public sealed class CropTransformSettings : IValidatableConfig
-{
+public sealed class CropTransformSettings : IValidatableConfig {
     // Margin's upper bound: Tx_CenterAndStretch divides by (1 - 2*margin) to size the resized
     // product, which collapses to zero (margin=0.5) or goes negative (margin>0.5) — validation bound.
     private const double WhiteSpaceMarginUpperBound = 0.49;
@@ -18,8 +17,7 @@ public sealed class CropTransformSettings : IValidatableConfig
     public required double CropExtensionOneSided { get; init; }
     public required double CropExtensionBiDirectional { get; init; }
 
-    public void Validate()
-    {
+    public void Validate() {
         List<string> problems = [];
 
         // Margin's upper bound is 0.49, not 1.0: Tx_CenterAndStretch divides by (1 - 2*margin) to size

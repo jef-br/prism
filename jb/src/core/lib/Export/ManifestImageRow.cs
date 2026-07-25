@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// One row in the batch manifest — one entry per image processed by the pipeline.
 /// </summary>
-public sealed record ManifestImageRow
-{
+public sealed record ManifestImageRow {
     /// <summary>Original import filename (InitialFullName).</summary>
     public string SourceReference { get; init; } = string.Empty;
 

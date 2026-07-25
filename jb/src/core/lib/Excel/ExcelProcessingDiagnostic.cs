@@ -11,8 +11,7 @@ public sealed record ExcelProcessingDiagnostic(
     string WorksheetName,
     int? RowNumber,
     string? ColumnName,
-    string? ItemID)
-{
+    string? ItemID) {
     /// <summary>
     /// Creates a worksheet-level KO diagnostic.
     /// </summary>
@@ -20,8 +19,7 @@ public sealed record ExcelProcessingDiagnostic(
     /// <param name="message">Safe diagnostic message.</param>
     /// <param name="worksheet">Source worksheet.</param>
     /// <returns>A worksheet-level diagnostic.</returns>
-    public static ExcelProcessingDiagnostic WorksheetKo(string reasonCode, string message, ExcelWorksheet worksheet)
-    {
+    public static ExcelProcessingDiagnostic WorksheetKo(string reasonCode, string message, ExcelWorksheet worksheet) {
         return new ExcelProcessingDiagnostic(
             ExcelDiagnosticSeverity.Error,
             reasonCode,
@@ -45,8 +43,7 @@ public sealed record ExcelProcessingDiagnostic(
         string reasonCode,
         string message,
         ExcelWorksheet worksheet,
-        string? columnName = null)
-    {
+        string? columnName = null) {
         return new ExcelProcessingDiagnostic(
             ExcelDiagnosticSeverity.Warning,
             reasonCode,
@@ -65,8 +62,7 @@ public sealed record ExcelProcessingDiagnostic(
     /// <param name="message">Safe diagnostic message.</param>
     /// <param name="columnName">Optional canonical column name.</param>
     /// <returns>A model-level diagnostic.</returns>
-    public static ExcelProcessingDiagnostic ModelWarning(string reasonCode, string message, string? columnName = null)
-    {
+    public static ExcelProcessingDiagnostic ModelWarning(string reasonCode, string message, string? columnName = null) {
         return new ExcelProcessingDiagnostic(
             ExcelDiagnosticSeverity.Warning,
             reasonCode,
@@ -92,8 +88,7 @@ public sealed record ExcelProcessingDiagnostic(
         string message,
         ExcelWorksheet worksheet,
         int zeroBasedRowIndex,
-        string? itemID)
-    {
+        string? itemID) {
         return new ExcelProcessingDiagnostic(
             ExcelDiagnosticSeverity.Error,
             reasonCode,

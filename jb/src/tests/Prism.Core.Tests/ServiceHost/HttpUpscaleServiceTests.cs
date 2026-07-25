@@ -8,18 +8,15 @@ namespace PrismCoreTests.ServiceHost;
 /// Exercises the HTTP client POSTing raw JPEG bytes and a scale factor to the remote upscale service.
 /// </summary>
 [Collection("Service Host")]
-public class HttpUpscaleServiceTests
-{
+public class HttpUpscaleServiceTests {
     private readonly ServiceHostFixture fixture;
 
-    public HttpUpscaleServiceTests(ServiceHostFixture fixture)
-    {
+    public HttpUpscaleServiceTests(ServiceHostFixture fixture) {
         this.fixture = fixture;
     }
 
     [Fact]
-    public async Task UpscaleAsync_WithValidJpegBytes_ReturnsUpscaledJpegBytes()
-    {
+    public async Task UpscaleAsync_WithValidJpegBytes_ReturnsUpscaledJpegBytes() {
         // Arrange
         var client = new HttpUpscaleService(fixture.Client);
         byte[] inputJpeg = ServiceHostTestHelpers.CreateTestJpegBytes(100, 100);
@@ -35,8 +32,7 @@ public class HttpUpscaleServiceTests
     }
 
     [Fact]
-    public async Task UpscaleAsync_UpscaledBytesDecodeAsValidImage()
-    {
+    public async Task UpscaleAsync_UpscaledBytesDecodeAsValidImage() {
         // Arrange
         var client = new HttpUpscaleService(fixture.Client);
         byte[] inputJpeg = ServiceHostTestHelpers.CreateTestJpegBytes(100, 100);
@@ -59,8 +55,7 @@ public class HttpUpscaleServiceTests
     }
 
     [Fact]
-    public async Task UpscaleAsync_SmallScaleFactor_StillReturnsValidImage()
-    {
+    public async Task UpscaleAsync_SmallScaleFactor_StillReturnsValidImage() {
         // Arrange
         var client = new HttpUpscaleService(fixture.Client);
         byte[] inputJpeg = ServiceHostTestHelpers.CreateTestJpegBytes(200, 200);
@@ -79,8 +74,7 @@ public class HttpUpscaleServiceTests
     }
 
     [Fact]
-    public async Task UpscaleAsync_HealthEndpoint_ReturnsOk()
-    {
+    public async Task UpscaleAsync_HealthEndpoint_ReturnsOk() {
         // Arrange
         var httpClient = fixture.Client;
 

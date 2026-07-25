@@ -7,8 +7,7 @@ namespace Prism.Services.Matching;
 /// and the Export step can still reach the normalized images and original input counts without a
 /// shared mutable context.
 /// </summary>
-public sealed record MatchingResult
-{
+public sealed record MatchingResult {
     /// <summary>The ingest output this matching pass consumed — carried forward for Export.</summary>
     public required IngestResult Ingest { get; init; }
 

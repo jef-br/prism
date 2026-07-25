@@ -30,25 +30,22 @@ app.MapGet(PrismServiceRoutes.Health, () =>
 // resources it serves (a transform host never loads CLIP; a matching host never fail-fasts on the
 // Real-ESRGAN asset). Fail-fast is preserved per hosted service: no model → no host.
 
-if (Hosts("matching"))
-{
-    IArtifactStore store      = new LocalArtifactStore();
+if (Hosts("matching")) {
+    IArtifactStore store = new LocalArtifactStore();
     IMatchingService matching = new MatchingService(configuration);
     app.MapPost(PrismServiceRoutes.Match, async (IngestResult ingestResult, CancellationToken ct) =>
         Results.Json(await matching.MatchAsync(ingestResult, store, null, ct)));
     app.MapGet(PrismServiceRoutes.Match + "/health", () => Results.Json(new { status = "ok", service = "matching" }));
 }
 
-if (Hosts("generate"))
-{
+if (Hosts("generate")) {
     IGenerateService generate = new GenerateService();
     app.MapPost(PrismServiceRoutes.Generate, async (MatchingResult matched, CancellationToken ct) =>
         Results.Json(await generate.GenerateAsync(matched, matched.Ingest.Parameters.Generation, null, ct)));
     app.MapGet(PrismServiceRoutes.Generate + "/health", () => Results.Json(new { status = "ok", service = "generate" }));
 }
 
-if (Hosts("transform"))
-{
+if (Hosts("transform")) {
     // With PRISM_UPSCALE_URL set, this transform host delegates upscaling to the remote Upscale host and
     // needs no local Real-ESRGAN session. Otherwise it upscales below-minimum images via the static
     // Upscaler (T-2800), mirroring the in-process pipeline's semantics
@@ -56,13 +53,11 @@ if (Hosts("transform"))
     // no fallback upscaler (T-4110).
     ITransformService transform;
     string? upscaleUrl = Environment.GetEnvironmentVariable(PipelineServiceFactory.UpscaleUrlVariable);
-    if (string.IsNullOrWhiteSpace(upscaleUrl))
-    {
+    if (string.IsNullOrWhiteSpace(upscaleUrl)) {
         UpscaleService.Create(configuration);
         transform = new TransformService();
     }
-    else
-    {
+    else {
         transform = new TransformService(new HttpUpscaleService(new Uri(upscaleUrl, UriKind.Absolute)));
     }
     app.MapPost(PrismServiceRoutes.Transform, async (MatchingResult matched, CancellationToken ct) =>
@@ -70,8 +65,7 @@ if (Hosts("transform"))
     app.MapGet(PrismServiceRoutes.Transform + "/health", () => Results.Json(new { status = "ok", service = "transform" }));
 }
 
-if (Hosts("upscale"))
-{
+if (Hosts("upscale")) {
     // Dedicated upscale hosting fails fast: no model asset → no host (any machine; T-4110).
     IUpscaleService upscale = UpscaleService.Create(configuration);
     app.MapPost(PrismServiceRoutes.Upscale, async (UpscaleRequest request, CancellationToken ct) =>

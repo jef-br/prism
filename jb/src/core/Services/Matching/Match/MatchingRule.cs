@@ -3,8 +3,7 @@ namespace Prism.Services.Matching;
 /// <summary>
 /// One rule in MatchingConfig.json, mapping an Excel field to a matching strategy.
 /// </summary>
-public sealed record MatchingRule
-{
+public sealed record MatchingRule {
     /// <summary>The Excel column name this rule targets, or "ALL" for label-overlap rules.</summary>
     public string ExcelField { get; init; } = string.Empty;
 
@@ -41,13 +40,11 @@ public sealed record MatchingRule
     public string ClipFeature { get; init; } = string.Empty;
 
     /// <summary>True when a CLIP tag of <paramref name="feature"/> is eligible for this rule.</summary>
-    public bool AppliesToFeature(string feature)
-    {
+    public bool AppliesToFeature(string feature) {
         if (string.IsNullOrWhiteSpace(this.ClipFeature))
             return true;
 
-        foreach (string allowed in this.ClipFeature.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
+        foreach (string allowed in this.ClipFeature.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
             if (allowed.Equals(feature, StringComparison.OrdinalIgnoreCase))
                 return true;
         }

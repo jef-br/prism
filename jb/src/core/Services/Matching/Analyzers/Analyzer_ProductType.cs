@@ -20,14 +20,11 @@ namespace Prism.Services.Matching;
 /// Sets <see cref="ImageRecord_LAMBDA.ProductTypeId"/> from IEM columns (authoritative) with
 /// CLIP product-type-label fallback. First wave of the post-match refinement chain.
 /// </summary>
-internal static class Analyzer_ProductType
-{
-    public static void Analyze(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, ProductTypeResolver resolver)
-    {
+internal static class Analyzer_ProductType {
+    public static void Analyze(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, ProductTypeResolver resolver) {
         string? resolved = family is null ? null : resolver.ResolveFromFamily(family);
 
-        if (resolved is null)
-        {
+        if (resolved is null) {
             string label = lambda.Features.GetValue("product-type-label");
             if (!string.Equals(label, "UNKNOWN", StringComparison.OrdinalIgnoreCase))
                 resolved = resolver.ResolveValue(label);

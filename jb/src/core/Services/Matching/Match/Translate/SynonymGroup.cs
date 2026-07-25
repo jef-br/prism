@@ -6,8 +6,7 @@ namespace Prism.Services.Matching;
 /// <summary>
 /// A configured set of product terms that are equivalent for matching.
 /// </summary>
-public sealed record SynonymGroup
-{
+public sealed record SynonymGroup {
     /// <summary>
     /// Stable identifier for the synonym group.
     /// </summary>
@@ -29,8 +28,7 @@ public sealed record SynonymGroup
     /// <param name="normalizedLeftToken">The first normalized token.</param>
     /// <param name="normalizedRightToken">The second normalized token.</param>
     /// <returns>True when both tokens belong to this synonym group.</returns>
-    public bool ContainsBoth(string normalizedLeftToken, string normalizedRightToken)
-    {
+    public bool ContainsBoth(string normalizedLeftToken, string normalizedRightToken) {
         bool hasLeftToken = this.Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedLeftToken);
         bool hasRightToken = this.Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedRightToken);
 

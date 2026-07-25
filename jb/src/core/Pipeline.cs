@@ -7,8 +7,7 @@ namespace Prism.Core;
 /// is no shared mutable context. The services emit the eight stage progress events in immutable order:
 /// Imported → Classified → Matched → Ordered → Renamed → Generated → Transformed → Exported.
 /// </summary>
-internal sealed class Pipeline : IDisposable
-{
+internal sealed class Pipeline : IDisposable {
     private readonly IArtifactStore artifactStore;
     private readonly IIngestService ingestService;
     private readonly IMatchingService matchingService;
@@ -26,8 +25,7 @@ internal sealed class Pipeline : IDisposable
         : this(PipelineServiceFactory.CreateFromEnvironment(
             configuration ?? throw new ArgumentNullException(nameof(configuration)),
             modelBuilder ?? throw new ArgumentNullException(nameof(modelBuilder))),
-            configuration!.DetOrderGapsAllowed)
-    {
+            configuration!.DetOrderGapsAllowed) {
     }
 
     /// <summary>
@@ -36,15 +34,14 @@ internal sealed class Pipeline : IDisposable
     /// </summary>
     /// <param name="services">The service implementations and shared artifact store this pipeline runs on.</param>
     /// <param name="detOrderGapsAllowed">Output.DET-ORDER-GAPS-ALLOWED policy; forwarded to Export for det compaction.</param>
-    internal Pipeline(PipelineServices services, bool detOrderGapsAllowed = false)
-    {
+    internal Pipeline(PipelineServices services, bool detOrderGapsAllowed = false) {
         ArgumentNullException.ThrowIfNull(services);
 
-        this.artifactStore       = services.ArtifactStore;
-        this.ingestService       = services.Ingest;
-        this.matchingService     = services.Matching;
-        this.generateService     = services.Generate;
-        this.transformService    = services.Transform;
+        this.artifactStore = services.ArtifactStore;
+        this.ingestService = services.Ingest;
+        this.matchingService = services.Matching;
+        this.generateService = services.Generate;
+        this.transformService = services.Transform;
         this.detOrderGapsAllowed = detOrderGapsAllowed;
     }
 
@@ -112,8 +109,7 @@ internal sealed class Pipeline : IDisposable
         IReadOnlyList<ImageRecord_GENERATED> generatedImages,
         PrismJobRequest request,
         Func<PipelineProgressEvent, Task>? progress,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         await StageProgress.EmitStarted(progress, request.JobID, PipelineStageNames.Exported, cancellationToken);
         ExportArtifacts artifacts = Exporter.Run(this.BuildExportRequest(transformed, generatedImages, request));
 
@@ -132,27 +128,25 @@ internal sealed class Pipeline : IDisposable
     private ExportRequest BuildExportRequest(
         TransformResult transformed,
         IReadOnlyList<ImageRecord_GENERATED> generatedImages,
-        PrismJobRequest request)
-    {
+        PrismJobRequest request) {
         MatchingResult matched = transformed.Matched;
-        IngestResult   ingest  = matched.Ingest;
+        IngestResult ingest = matched.Ingest;
 
-        return new ExportRequest
-        {
-            JobID              = request.JobID,
-            LambdaRecords      = matched.LambdaRecords,
-            NormalizedImages   = ingest.NormalizedImages,
+        return new ExportRequest {
+            JobID = request.JobID,
+            LambdaRecords = matched.LambdaRecords,
+            NormalizedImages = ingest.NormalizedImages,
             FirstExcelTempPath = ingest.FirstExcelTempPath,
-            Format             = request.PrismProcessingParameters?.Format ?? "json",
-            ImageCount         = ingest.OriginalImageCount,
-            ExcelCount         = ingest.OriginalExcelCount,
-            ZipCount           = ingest.OriginalZipCount,
-            OkRenamedCount     = matched.OkRenamedCount,
-            KoRecordCount      = ingest.KoRecordCount + matched.KoRecordCount,
+            Format = request.PrismProcessingParameters?.Format ?? "json",
+            ImageCount = ingest.OriginalImageCount,
+            ExcelCount = ingest.OriginalExcelCount,
+            ZipCount = ingest.OriginalZipCount,
+            OkRenamedCount = matched.OkRenamedCount,
+            KoRecordCount = ingest.KoRecordCount + matched.KoRecordCount,
             OkTransformedCount = transformed.OkTransformedCount,
-            GeneratedCount     = generatedImages.Count,
+            GeneratedCount = generatedImages.Count,
             DetOrderGapsAllowed = this.detOrderGapsAllowed,
-            Warnings           = [.. ingest.Warnings, .. matched.Warnings]
+            Warnings = [.. ingest.Warnings, .. matched.Warnings]
         };
     }
 }

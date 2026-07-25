@@ -14,32 +14,27 @@ namespace Prism.Services.Transform;
 /// <see cref="Process"/> is the stateless webservice byte path.
 /// </para>
 /// </summary>
-public class Tx_ProblemImageProcessor : IImageTransformation
-{
+public class Tx_ProblemImageProcessor : IImageTransformation {
     private readonly ProblemImageProcessorConfig _cfg;
     private readonly OutputConfig _outputCfg;
 
-    public Tx_ProblemImageProcessor(ProblemImageProcessorConfig cfg, OutputConfig outputCfg)
-    {
+    public Tx_ProblemImageProcessor(ProblemImageProcessorConfig cfg, OutputConfig outputCfg) {
         this._cfg = cfg;
         this._outputCfg = outputCfg;
     }
 
     /// <inheritdoc/>
-    public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage)
-    {
-        if (IsKoBySize(InputImage, this._cfg, out string koReason))
-        {
-            InputImage.IsKo          = true;
-            InputImage.KoReasonCode  = "TRANSFORM_TOO_SMALL";
+    public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage) {
+        if (IsKoBySize(InputImage, this._cfg, out string koReason)) {
+            InputImage.IsKo = true;
+            InputImage.KoReasonCode = "TRANSFORM_TOO_SMALL";
             InputImage.KoSafeMessage = koReason;
-            InputImage.OutputRecord = new ImageRecord_OUTPUT
-            {
+            InputImage.OutputRecord = new ImageRecord_OUTPUT {
                 TransformStatus = TransformationStatus.Ko,
                 TransformerType = nameof(Tx_ProblemImageProcessor),
-                InputWidth      = InputImage.Width,
-                InputHeight     = InputImage.Height,
-                FailureReason   = koReason,
+                InputWidth = InputImage.Width,
+                InputHeight = InputImage.Height,
+                FailureReason = koReason,
                 SafeSummaryText = "Image rejected: too small for required output resolution."
             };
             return InputImage;
@@ -61,17 +56,16 @@ public class Tx_ProblemImageProcessor : IImageTransformation
         if (unknownFeatures.Length > 0)
             warnings[1] = "Unknown features: " + string.Join(", ", unknownFeatures) + ".";
 
-        InputImage.OutputRecord = new ImageRecord_OUTPUT
-        {
+        InputImage.OutputRecord = new ImageRecord_OUTPUT {
             TransformStatus = TransformationStatus.Ok,
             TransformerType = nameof(Tx_ProblemImageProcessor),
-            InputWidth      = InputImage.Width,
-            InputHeight     = InputImage.Height,
-            OutputWidth     = outW,
-            OutputHeight    = outH,
-            ResizeMode      = resizeMode,
-            ScaleFactor     = scaleFactor,
-            Warnings        = warnings,
+            InputWidth = InputImage.Width,
+            InputHeight = InputImage.Height,
+            OutputWidth = outW,
+            OutputHeight = outH,
+            ResizeMode = resizeMode,
+            ScaleFactor = scaleFactor,
+            Warnings = warnings,
             SafeSummaryText = "Conservative processing applied."
         };
 
@@ -88,17 +82,15 @@ public class Tx_ProblemImageProcessor : IImageTransformation
     /// <paramref name="stride"/> is reserved for caller-side alignment and is not used in resize logic.
     /// Input bytes: format auto-detected. Output: JPEG at quality 90.
     /// </remarks>
-    public byte[] Process(byte[] arr, int stride, float upscale_factor, ImageRecord_LAMBDA? lambda = null)
-    {
+    public byte[] Process(byte[] arr, int stride, float upscale_factor, ImageRecord_LAMBDA? lambda = null) {
         // Input: raw image bytes (BGR/RGB, format auto-detected by ImageSharp).
         using Image img = Image.Load(arr);
 
-        int inW    = img.Width;
-        int inH    = img.Height;
+        int inW = img.Width;
+        int inH = img.Height;
         int minDim = Math.Min(inW, inH);
 
-        if (minDim < this._cfg.MinInputPx)
-        {
+        if (minDim < this._cfg.MinInputPx) {
             double requiredScale = (double)this._cfg.MinOutputPx / minDim;
             if (requiredScale > this._cfg.MaxUpscale)
                 throw new InvalidOperationException(
@@ -108,14 +100,12 @@ public class Tx_ProblemImageProcessor : IImageTransformation
         int outW;
         int outH;
 
-        if (upscale_factor != 0f && upscale_factor != 1f)
-        {
+        if (upscale_factor != 0f && upscale_factor != 1f) {
             // Caller-supplied scale: proportional resize, no crop, no fill.
             outW = (int)Math.Round(inW * upscale_factor);
             outH = (int)Math.Round(inH * upscale_factor);
         }
-        else
-        {
+        else {
             // Auto-scale toward MinOutputPx when the image is below spec.
             ComputeSafeResizeTarget(inW, inH, this._cfg, out outW, out outH, out _, out _);
         }
@@ -134,14 +124,11 @@ public class Tx_ProblemImageProcessor : IImageTransformation
     /// Returns true when the image dimensions are too small and the required upscale to reach
     /// the minimum output size would exceed the configured maximum.
     /// </summary>
-    private static bool IsKoBySize(ImageRecord_LAMBDA lambda, ProblemImageProcessorConfig cfg, out string reason)
-    {
+    private static bool IsKoBySize(ImageRecord_LAMBDA lambda, ProblemImageProcessorConfig cfg, out string reason) {
         int minDim = Math.Min(lambda.Width, lambda.Height);
-        if (minDim < cfg.MinInputPx)
-        {
+        if (minDim < cfg.MinInputPx) {
             double requiredScale = (double)cfg.MinOutputPx / minDim;
-            if (requiredScale > cfg.MaxUpscale)
-            {
+            if (requiredScale > cfg.MaxUpscale) {
                 reason = $"Image too small ({lambda.Width}×{lambda.Height} px); "
                        + $"required upscale {requiredScale:F2}× exceeds maximum {cfg.MaxUpscale}×.";
                 return true;
@@ -152,8 +139,7 @@ public class Tx_ProblemImageProcessor : IImageTransformation
     }
 
     /// <summary>Returns the transform-critical feature ids whose current value is UNKNOWN.</summary>
-    private static string[] CollectUnknownCriticalFeatures(ImageFeatureSnapshot features)
-    {
+    private static string[] CollectUnknownCriticalFeatures(ImageFeatureSnapshot features) {
         string[] critical = [
             "intersects-top", "intersects-bottom", "intersects-left", "intersects-right",
             "low-contrast", "shadow-present"
@@ -173,18 +159,15 @@ public class Tx_ProblemImageProcessor : IImageTransformation
     /// Scales toward <c>MinOutputPx</c> on the longest axis when below spec, capped at
     /// <c>MaxUpscale</c>. No crop, no fill.
     /// </summary>
-    private static void ComputeSafeResizeTarget(int inW, int inH, ProblemImageProcessorConfig cfg, out int outW, out int outH, out string resizeMode, out double scaleFactor)
-    {
+    private static void ComputeSafeResizeTarget(int inW, int inH, ProblemImageProcessorConfig cfg, out int outW, out int outH, out string resizeMode, out double scaleFactor) {
         int maxDim = Math.Max(inW, inH);
-        if (maxDim < cfg.MinOutputPx)
-        {
+        if (maxDim < cfg.MinOutputPx) {
             scaleFactor = Math.Min((double)cfg.MinOutputPx / maxDim, cfg.MaxUpscale);
-            resizeMode  = "upscale";
+            resizeMode = "upscale";
         }
-        else
-        {
+        else {
             scaleFactor = 1.0;
-            resizeMode  = "none";
+            resizeMode = "none";
         }
         outW = (int)Math.Round(inW * scaleFactor);
         outH = (int)Math.Round(inH * scaleFactor);

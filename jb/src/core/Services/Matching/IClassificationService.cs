@@ -8,8 +8,7 @@ namespace Prism.Services.Matching;
 /// deduplication; both steps are compute-heavy and both require the image in memory, so they live
 /// together. Holds the CLIP session for the duration of a job and is disposed when matching finishes.
 /// </summary>
-public interface IClassificationService : IDisposable
-{
+public interface IClassificationService : IDisposable {
     /// <summary>True when the CLIP session initialized and is ready to classify.</summary>
     bool IsReady { get; }
 

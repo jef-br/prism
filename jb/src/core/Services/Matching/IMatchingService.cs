@@ -7,8 +7,7 @@ namespace Prism.Services.Matching;
 /// Renamed stage events as it goes. FeatureAnalysis/Classification/ImageNGP are not visible to the
 /// orchestrator — they are reached only through this service.
 /// </summary>
-public interface IMatchingService
-{
+public interface IMatchingService {
     /// <summary>Converts every normalized image into an enriched LAMBDA document.</summary>
     Task<MatchingResult> MatchAsync(
         IngestResult ingest,

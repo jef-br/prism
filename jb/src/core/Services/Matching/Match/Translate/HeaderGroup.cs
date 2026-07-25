@@ -8,8 +8,7 @@ namespace Prism.Services.Matching;
 /// (e.g. "color", "colour", "couleur", "kleur", "farbe", "colore"). Used by header-row
 /// detection and FamilyID-column resolution; never consulted during value matching.
 /// </summary>
-public sealed record HeaderGroup
-{
+public sealed record HeaderGroup {
     /// <summary>
     /// Canonical English header id this group resolves to (e.g. "familyid", "ean", "color").
     /// </summary>
@@ -26,8 +25,7 @@ public sealed record HeaderGroup
     /// </summary>
     /// <param name="normalizedToken">A lowercase, diacritics-folded header token.</param>
     /// <returns>True when the token is configured for this group.</returns>
-    public bool ContainsTerm(string normalizedToken)
-    {
+    public bool ContainsTerm(string normalizedToken) {
         return this.Terms.Any(term => term.Trim().ToLowerInvariant() == normalizedToken);
     }
 }

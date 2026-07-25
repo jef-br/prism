@@ -9,8 +9,7 @@ imported, classified, matched, ordered, renamed, generated, transformed, exporte
 /// Represents one canonical image as it travels through all eight PRISM pipeline stages.
 /// Produced by the Classified stage; extended by each subsequent stage.
 /// </summary>
-public class ImageRecord_LAMBDA : ImageRecord_Base
-{
+public class ImageRecord_LAMBDA : ImageRecord_Base {
     // -------------------------------------------------------------------------
     // Classification outputs — populated by the Classified stage
     // -------------------------------------------------------------------------

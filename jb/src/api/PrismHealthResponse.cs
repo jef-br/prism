@@ -3,8 +3,7 @@ namespace Prism.Api;
 /// <summary>
 /// Describes the current readiness of the API host and minimal PRISM processing adapter.
 /// </summary>
-internal sealed record PrismHealthResponse
-{
+internal sealed record PrismHealthResponse {
     public string Message { get; init; } = string.Empty;
     public bool CanAcceptJobs { get; init; }
     public bool ProcessingWired { get; init; }

@@ -14,10 +14,8 @@ namespace Prism.Services.Matching;
 */
 
 /// <summary>STUB: will set the <c>logo-present</c> ImageFeature. Currently writes nothing.</summary>
-internal static class Analyzer_LogoPresent
-{
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
-    {
+internal static class Analyzer_LogoPresent {
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot) {
         // Not implemented — logo-present stays UNKNOWN.
     }
 }

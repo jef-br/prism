@@ -7,16 +7,14 @@ namespace PrismCoreTests.Order;
 /// Uses the real DetOrderRules.json and DetOrderKeywordStems.json; records are built inline per test.
 /// <see cref="ImageOrderer.Run"/> takes the LAMBDA list and family records directly.
 /// </summary>
-public class ImageOrdererTests
-{
-    private static readonly string RulesPath  = ResolveConfigPath("config/DetOrderRules.json");
-    private static readonly string StemsPath  = ResolveConfigPath("config/DetOrderKeywordStems.json");
+public class ImageOrdererTests {
+    private static readonly string RulesPath = ResolveConfigPath("config/DetOrderRules.json");
+    private static readonly string StemsPath = ResolveConfigPath("config/DetOrderKeywordStems.json");
 
     //  DetOrderConfig.Load contract 
 
     [Fact]
-    public void Load_ValidPath_Has19ProductTypesIncludingDefault()
-    {
+    public void Load_ValidPath_Has19ProductTypesIncludingDefault() {
         DetOrderConfig config = DetOrderConfig.Load(RulesPath, StemsPath);
 
         // 18 named product types + default
@@ -31,30 +29,26 @@ public class ImageOrdererTests
             "toys-children", "diy-tools", "gardening", "sports-equipment", "furniture"
         ];
 
-        foreach (string type in expectedTypes)
-        {
+        foreach (string type in expectedTypes) {
             Assert.True(config.HasProductType(type), $"Expected product type '{type}' not found in DetOrderRules.json.");
         }
     }
 
     [Fact]
-    public void GetSlots_ClothingTops_Returns8Slots()
-    {
+    public void GetSlots_ClothingTops_Returns8Slots() {
         DetOrderConfig config = DetOrderConfig.Load(RulesPath, StemsPath);
         IReadOnlyList<DetSlotRule> slots = config.GetSlots("clothing-tops");
         Assert.Equal(8, slots.Count);
     }
 
     [Fact]
-    public void GetSlots_UnknownProductType_ReturnsDefaultSlots()
-    {
+    public void GetSlots_UnknownProductType_ReturnsDefaultSlots() {
         DetOrderConfig config = DetOrderConfig.Load(RulesPath, StemsPath);
         IReadOnlyList<DetSlotRule> unknown = config.GetSlots("does-not-exist");
         IReadOnlyList<DetSlotRule> defaultSlots = config.GetSlots("default");
 
         Assert.Equal(defaultSlots.Count, unknown.Count);
-        for (int i = 0; i < defaultSlots.Count; i++)
-        {
+        for (int i = 0; i < defaultSlots.Count; i++) {
             Assert.Equal(defaultSlots[i].SlotIndex, unknown[i].SlotIndex);
             Assert.Equal(defaultSlots[i].Keyword, unknown[i].Keyword);
         }
@@ -63,8 +57,7 @@ public class ImageOrdererTests
     //  ImageOrderer.Run — basic assignment 
 
     [Fact]
-    public void Run_SingleImage_AssignsDet0WithCorrectFamily()
-    {
+    public void Run_SingleImage_AssignsDet0WithCorrectFamily() {
         // front-packshot qualifies for det0 in default rules.
         List<ImageRecord_LAMBDA> records = [MakeLambda("product_front.jpg", "front-packshot", "FAM001")];
 
@@ -79,8 +72,7 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void Run_TwoImages_ClearPhenotypeWinner_CorrectOrder()
-    {
+    public void Run_TwoImages_ClearPhenotypeWinner_CorrectOrder() {
         // front-packshot → det0, back-packshot → det1 (no competition).
         List<ImageRecord_LAMBDA> records =
         [
@@ -91,7 +83,7 @@ public class ImageOrdererTests
         ImageOrderer.Run(records, [MakeFamily("FAM001")]);
 
         ImageRecord_LAMBDA front = records.Single(r => r.SelectedPhenotype == "front-packshot");
-        ImageRecord_LAMBDA back  = records.Single(r => r.SelectedPhenotype == "back-packshot");
+        ImageRecord_LAMBDA back = records.Single(r => r.SelectedPhenotype == "back-packshot");
 
         Assert.Equal(0, front.DetOrder);
         Assert.Equal(1, back.DetOrder);
@@ -100,8 +92,7 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void Run_RefinedProductTypeId_WinsOverValueSniffing()
-    {
+    public void Run_RefinedProductTypeId_WinsOverValueSniffing() {
         // The refinement chain (Analyzer_ProductType) resolved footwear from the IEM; the orderer
         // must adopt it for the whole family instead of sniffing canonical property values.
         ImageRecord_LAMBDA image = MakeLambda("shoe_front.jpg", "front-packshot", "FAM001");
@@ -116,8 +107,7 @@ public class ImageOrdererTests
     //  Tie-breakers
 
     [Fact]
-    public void Run_TieBreakerByNgpConfidence_HigherConfidenceWinsDet0()
-    {
+    public void Run_TieBreakerByNgpConfidence_HigherConfidenceWinsDet0() {
         // Two front-packshot images competing for det0.
         // Image A has 3 known features; image B has 1 known feature.
         // Image A should win det0; image B has no other qualifying slot so it becomes overflow.
@@ -141,8 +131,7 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void Run_TieBreakerByFilenameHint_MatchingHintWins()
-    {
+    public void Run_TieBreakerByFilenameHint_MatchingHintWins() {
         // Two front-packshot images, same NGP confidence, but imageA has "front" stem in filename.
         // imageA should win det0; imageB becomes overflow (front-packshot not in det1 list).
         ImageRecord_LAMBDA imageA = MakeLambda("product_front.jpg", "front-packshot", "FAM001");
@@ -289,8 +278,7 @@ public class ImageOrdererTests
     //  Overflow and edge cases 
 
     [Fact]
-    public void Run_NullPhenotype_AssignedAsOverflowAfterConfiguredSlots()
-    {
+    public void Run_NullPhenotype_AssignedAsOverflowAfterConfiguredSlots() {
         // Image with null phenotype cannot qualify for any det slot.
         // It should appear as overflow after the last configured slot (det7 in default = index 7).
         List<ImageRecord_LAMBDA> records = [MakeLambda("product.jpg", phenotype: null, familyId: "FAM001")];
@@ -304,8 +292,7 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void Run_IllustrationTechnicalDrawing_AssignedToDet7()
-    {
+    public void Run_IllustrationTechnicalDrawing_AssignedToDet7() {
         // illustration-technical-drawing is in det7 of default rules.
         List<ImageRecord_LAMBDA> records = [MakeLambda("technical.jpg", "illustration-technical-drawing", "FAM001")];
 
@@ -317,8 +304,7 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void Run_KoImageSkipped_NotAssignedDetSlot()
-    {
+    public void Run_KoImageSkipped_NotAssignedDetSlot() {
         // KO images must be skipped; Family and DetOrder must remain unset.
         ImageRecord_LAMBDA koImage = MakeLambda("ko.jpg", "front-packshot", "FAM001");
         koImage.IsKo = true;
@@ -336,8 +322,7 @@ public class ImageOrdererTests
     //  CompactDetOrder — gap policy
 
     [Fact]
-    public void CompactDetOrder_OverflowIndices_RenumberedToContiguousFromZeroPreservingOrder()
-    {
+    public void CompactDetOrder_OverflowIndices_RenumberedToContiguousFromZeroPreservingOrder() {
         // Three overflow images in one family at det8, det9, det10 → expect det0, det1, det2 in the
         // same relative order (compaction closes gaps, never reorders).
         ImageRecord_LAMBDA a = MakeLambda("a.jpg", null, "FAM001"); a.Family = "FAM001"; a.DetOrder = 8;
@@ -352,8 +337,7 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void CompactDetOrder_MultipleFamilies_EachRenumberedIndependentlyFromZero()
-    {
+    public void CompactDetOrder_MultipleFamilies_EachRenumberedIndependentlyFromZero() {
         ImageRecord_LAMBDA a = MakeLambda("a.jpg", null, "FAM001"); a.Family = "FAM001"; a.DetOrder = 8;
         ImageRecord_LAMBDA b = MakeLambda("b.jpg", null, "FAM001"); b.Family = "FAM001"; b.DetOrder = 9;
         ImageRecord_LAMBDA c = MakeLambda("c.jpg", null, "FAM002"); c.Family = "FAM002"; c.DetOrder = 8;
@@ -366,10 +350,9 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void CompactDetOrder_GapBetweenSemanticSlots_ClosedWithoutReordering()
-    {
+    public void CompactDetOrder_GapBetweenSemanticSlots_ClosedWithoutReordering() {
         // A family holding det2 and det5 (det0/1 empty) → det0, det1, order preserved.
-        ImageRecord_LAMBDA side   = MakeLambda("side.jpg",   "side-packshot",   "FAM001"); side.Family = "FAM001"; side.DetOrder = 2;
+        ImageRecord_LAMBDA side = MakeLambda("side.jpg", "side-packshot", "FAM001"); side.Family = "FAM001"; side.DetOrder = 2;
         ImageRecord_LAMBDA bottom = MakeLambda("bottom.jpg", "bottom-packshot", "FAM001"); bottom.Family = "FAM001"; bottom.DetOrder = 5;
 
         ImageOrderer.CompactDetOrder([side, bottom]);
@@ -381,12 +364,11 @@ public class ImageOrdererTests
     //  Overflow ordering policy
 
     [Fact]
-    public void Run_Overflow_DetailHintedImage_ClosesTheRanks()
-    {
+    public void Run_Overflow_DetailHintedImage_ClosesTheRanks() {
         // CiMini regression: a DETAIL-named image with no qualifying phenotype must never jump
         // ahead of the family's main shots — its "detail" hint anchors it after the unhinted ones.
-        ImageRecord_LAMBDA main1  = MakeLambda("24211507_CARDIGAN_76_MAGENTA_B.jpg", null, "FAM001");
-        ImageRecord_LAMBDA main2  = MakeLambda("CARDIGAN_MAGENTA76_A.jpg", null, "FAM001");
+        ImageRecord_LAMBDA main1 = MakeLambda("24211507_CARDIGAN_76_MAGENTA_B.jpg", null, "FAM001");
+        ImageRecord_LAMBDA main2 = MakeLambda("CARDIGAN_MAGENTA76_A.jpg", null, "FAM001");
         ImageRecord_LAMBDA detail = MakeLambda("CARDIGAN_MAGENTA76_DETAIL.jpg", null, "FAM001");
 
         List<ImageRecord_LAMBDA> records = [detail, main1, main2];
@@ -399,8 +381,7 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void Run_Overflow_OnModelImagesRankBeforePackshot()
-    {
+    public void Run_Overflow_OnModelImagesRankBeforePackshot() {
         // A packshot (hero-is-human FALSE) is less valuable than the product on a human model.
         ImageRecord_LAMBDA packshot = MakeLambda("Pareo Exotica.jpg", null, "FAM001");
         packshot.Features.Set("hero-is-human", "FALSE", 0.6, "yolo");
@@ -421,8 +402,7 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void Run_Overflow_FrontHintedImage_StaysFirst()
-    {
+    public void Run_Overflow_FrontHintedImage_StaysFirst() {
         // A front-hinted overflow image must still lead unhinted siblings.
         ImageRecord_LAMBDA front = MakeLambda("product_front.jpg", null, "FAM001");
         ImageRecord_LAMBDA other = MakeLambda("product_extra.jpg", null, "FAM001");
@@ -436,8 +416,7 @@ public class ImageOrdererTests
     }
 
     [Fact]
-    public void CompactDetOrder_KoImagesExcludedFromRenumbering()
-    {
+    public void CompactDetOrder_KoImagesExcludedFromRenumbering() {
         ImageRecord_LAMBDA ok = MakeLambda("ok.jpg", null, "FAM001"); ok.Family = "FAM001"; ok.DetOrder = 8;
         ImageRecord_LAMBDA ko = MakeLambda("ko.jpg", null, "FAM001"); ko.Family = "FAM001"; ko.DetOrder = 9; ko.IsKo = true;
 
@@ -452,19 +431,16 @@ public class ImageOrdererTests
     /// <summary>
     /// Creates a minimal <see cref="ImageRecord_LAMBDA"/> with MatchEvidence set for ordering.
     /// </summary>
-    private static ImageRecord_LAMBDA MakeLambda(string filename, string? phenotype, string familyId)
-    {
-        var lambda = new ImageRecord_LAMBDA
-        {
-            InitialFullName   = filename,
+    private static ImageRecord_LAMBDA MakeLambda(string filename, string? phenotype, string familyId) {
+        var lambda = new ImageRecord_LAMBDA {
+            InitialFullName = filename,
             SelectedPhenotype = phenotype,
-            MatchEvidence     = new MatchEvidence
-            {
-                ImageId        = filename,
+            MatchEvidence = new MatchEvidence {
+                ImageId = filename,
                 SourceFilename = filename,
-                FinalFamilyId  = familyId,
-                FinalScore     = 1.0,
-                IsKo           = false
+                FinalFamilyId = familyId,
+                FinalScore = 1.0,
+                IsKo = false
             }
         };
 
@@ -479,10 +455,8 @@ public class ImageOrdererTests
     /// <summary>
     /// Sets a fixed number of non-UNKNOWN features on the image to control NGP confidence.
     /// </summary>
-    private static void SetFeatureCount(ImageRecord_LAMBDA lambda, int count)
-    {
-        for (int i = 0; i < count; i++)
-        {
+    private static void SetFeatureCount(ImageRecord_LAMBDA lambda, int count) {
+        for (int i = 0; i < count; i++) {
             lambda.Features.Set($"test-feature-{i}", "true", 1.0, "test");
         }
     }
@@ -491,14 +465,12 @@ public class ImageOrdererTests
     /// Resolves the absolute path to a config file relative to the core source root.
     /// Walks up from the assembly directory looking for the jb/src/core root.
     /// </summary>
-    private static string ResolveConfigPath(string relativeFromCore)
-    {
+    private static string ResolveConfigPath(string relativeFromCore) {
         var assemblyDir = new FileInfo(typeof(ImageOrdererTests).Assembly.Location).DirectoryName
             ?? throw new InvalidOperationException("Cannot determine assembly directory.");
 
         var current = new DirectoryInfo(assemblyDir);
-        while (current.Parent != null)
-        {
+        while (current.Parent != null) {
             string candidate = Path.Combine(current.FullName, "jb", "src", "core", relativeFromCore);
             if (File.Exists(candidate))
                 return candidate;

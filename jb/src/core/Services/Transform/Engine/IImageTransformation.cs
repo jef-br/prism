@@ -1,8 +1,7 @@
 namespace Prism.Services.Transform;
 
 /// <summary>Contract for all image transformation strategies.</summary>
-public interface IImageTransformation
-{
+public interface IImageTransformation {
     /// <summary>
     /// Pipeline-internal entry point. Called once per image during the Transformed stage, after
     /// ImagePreProcessor has already populated <paramref name="InputImage"/>.BoundingBox,

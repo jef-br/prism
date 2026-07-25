@@ -99,11 +99,11 @@ public sealed class LocalArtifactStoreTests : IDisposable {
             InitialFullName = filename,
             DetOrder = detOrder,
             MatchEvidence = new MatchEvidence {
-                ImageId        = filename,
+                ImageId = filename,
                 SourceFilename = filename,
-                FinalFamilyId  = familyId,
-                FinalScore     = 1.0,
-                IsKo           = false
+                FinalFamilyId = familyId,
+                FinalScore = 1.0,
+                IsKo = false
             }
         };
     }
@@ -111,8 +111,10 @@ public sealed class LocalArtifactStoreTests : IDisposable {
     public void Dispose() {
         try {
             Directory.Delete(tempRoot, recursive: true);
-        } catch (IOException) {
-        } catch (UnauthorizedAccessException) {
+        }
+        catch (IOException) {
+        }
+        catch (UnauthorizedAccessException) {
         }
     }
 }

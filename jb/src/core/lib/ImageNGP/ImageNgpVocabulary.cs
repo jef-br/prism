@@ -11,13 +11,11 @@ namespace Prism.Lib.ImageNGP;
 /// mapping files (<c>ImageRoles.json</c>, <c>DetOrderRules.json</c>, <c>ClipPrompts.json</c>)
 /// against at startup. The taxonomy can change by editing <c>ImageNGP.json</c> — no recompilation.
 /// </summary>
-public sealed class ImageNgpVocabulary
-{
+public sealed class ImageNgpVocabulary {
     private readonly Dictionary<string, FeatureDefinition> featuresById;
     private readonly HashSet<string> phenotypeIds;
 
-    private ImageNgpVocabulary(Dictionary<string, FeatureDefinition> featuresById, HashSet<string> phenotypeIds)
-    {
+    private ImageNgpVocabulary(Dictionary<string, FeatureDefinition> featuresById, HashSet<string> phenotypeIds) {
         this.featuresById = featuresById;
         this.phenotypeIds = phenotypeIds;
     }
@@ -29,8 +27,7 @@ public sealed class ImageNgpVocabulary
     /// Throws <see cref="PrismConfigurationException"/> on a missing file or bad structure.
     /// </summary>
     /// <param name="jsonPath">Absolute path to ImageNGP.json.</param>
-    public static ImageNgpVocabulary Load(string jsonPath)
-    {
+    public static ImageNgpVocabulary Load(string jsonPath) {
         if (!File.Exists(jsonPath))
             throw new PrismConfigurationException($"ImageNGP.json not found at: {jsonPath}");
 
@@ -67,8 +64,7 @@ public sealed class ImageNgpVocabulary
     /// require a parseable number; string features accept anything. <c>UNKNOWN</c> is always accepted.
     /// Returns false when the feature id is not defined.
     /// </summary>
-    public bool IsAllowedValue(string featureId, string value)
-    {
+    public bool IsAllowedValue(string featureId, string value) {
         if (!this.featuresById.TryGetValue(featureId, out FeatureDefinition? def))
             return false;
 
@@ -90,8 +86,7 @@ public sealed class ImageNgpVocabulary
 
     //  Parsers 
 
-    private static Dictionary<string, FeatureDefinition> ParseFeatures(JsonElement root, string path)
-    {
+    private static Dictionary<string, FeatureDefinition> ParseFeatures(JsonElement root, string path) {
         if (!root.TryGetProperty("features", out JsonElement featuresEl) || featuresEl.ValueKind != JsonValueKind.Array)
             throw new PrismConfigurationException($"ImageNGP.json at '{path}' is missing required 'features' array.");
 
@@ -123,8 +118,7 @@ public sealed class ImageNgpVocabulary
         return result;
     }
 
-    private static HashSet<string> ParsePhenotypes(JsonElement root, string path)
-    {
+    private static HashSet<string> ParsePhenotypes(JsonElement root, string path) {
         if (!root.TryGetProperty("phenotypes", out JsonElement phenotypesEl) || phenotypesEl.ValueKind != JsonValueKind.Array)
             throw new PrismConfigurationException($"ImageNGP.json at '{path}' is missing required 'phenotypes' array.");
 

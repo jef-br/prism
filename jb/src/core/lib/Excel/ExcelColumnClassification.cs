@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// Dynamic classification assigned to an accepted Excel column.
 /// </summary>
-public enum ExcelColumnClassification
-{
+public enum ExcelColumnClassification {
     /// <summary>
     /// The FamilyID column — the configured primary key of an Excel record.
     /// </summary>

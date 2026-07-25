@@ -11,13 +11,11 @@ namespace PrismCoreTests.Classify;
 /// PrismConfigurationException — corrupt assets never degrade silently. Uses fresh instances, never
 /// GetShared, so the process-wide shared classifier is not touched.
 /// </summary>
-public class ImageClassifierTests
-{
+public class ImageClassifierTests {
     private static readonly string NonexistentPath = Path.Combine(Path.GetTempPath(), "does-not-exist.onnx");
 
     [Fact]
-    public void Initialize_WithMissingModelFile_DoesNotThrowAndIsNotReady()
-    {
+    public void Initialize_WithMissingModelFile_DoesNotThrowAndIsNotReady() {
         using var classifier = new ImageClassifier();
 
         classifier.Initialize(NonexistentPath, NonexistentPath, NonexistentPath);
@@ -26,21 +24,18 @@ public class ImageClassifierTests
     }
 
     [Fact]
-    public void Initialize_WithCorruptModelFile_ThrowsPrismConfigurationException()
-    {
+    public void Initialize_WithCorruptModelFile_ThrowsPrismConfigurationException() {
         string corruptPath = Path.Combine(Path.GetTempPath(), $"corrupt-clip-{Guid.NewGuid():N}.onnx");
         File.WriteAllBytes(corruptPath, [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02, 0x03]);
 
-        try
-        {
+        try {
             using var classifier = new ImageClassifier();
             PrismConfigurationException exception = Assert.Throws<PrismConfigurationException>(
                 () => classifier.Initialize(corruptPath, NonexistentPath, NonexistentPath));
             Assert.Contains("corrupt", exception.Message);
             Assert.False(classifier.IsReady);
         }
-        finally
-        {
+        finally {
             File.Delete(corruptPath);
         }
     }

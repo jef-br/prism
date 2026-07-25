@@ -9,12 +9,11 @@ namespace Prism.Services.Matching;
 /// a text prompt to token IDs using OpenAI's CLIP byte-pair encoding.
 /// Pads / truncates output to the CLIP context length of 77 tokens.
 /// </summary>
-internal sealed class ClipTokenizer
-{
+internal sealed class ClipTokenizer {
     private const int ContextLength = 77;
-    private const long PadTokenId   = 0L;
+    private const long PadTokenId = 0L;
     private const long StartTokenId = 49406L; // <|startoftext|>
-    private const long EndTokenId   = 49407L; // <|endoftext|>
+    private const long EndTokenId = 49407L; // <|endoftext|>
 
     // Matches CLIP's simple_tokenizer word pattern (before BPE).
     private static readonly Regex WordPattern = new(
@@ -30,32 +29,28 @@ internal sealed class ClipTokenizer
     /// <summary>
     /// Loads vocab and merges from disk.
     /// </summary>
-    public ClipTokenizer(string vocabPath, string mergesPath)
-    {
-        this.vocab      = LoadVocab(vocabPath);
+    public ClipTokenizer(string vocabPath, string mergesPath) {
+        this.vocab = LoadVocab(vocabPath);
         this.mergeRanks = LoadMerges(mergesPath);
     }
 
     /// <summary>
     /// Returns a 77-element int64 array of CLIP token IDs for the given text.
     /// </summary>
-    public long[] Encode(string text)
-    {
+    public long[] Encode(string text) {
         text = CleanText(text);
 
         var tokens = new List<long>(ContextLength) { StartTokenId };
 
-        foreach (Match match in WordPattern.Matches(text))
-        {
+        foreach (Match match in WordPattern.Matches(text)) {
             string word = match.Value;
 
             // Convert to byte-level unicode then apply BPE.
-            byte[]   bytes     = Encoding.UTF8.GetBytes(word);
-            string   bpeInput  = string.Concat(bytes.Select(b => this.byteEncoder[b]));
+            byte[] bytes = Encoding.UTF8.GetBytes(word);
+            string bpeInput = string.Concat(bytes.Select(b => this.byteEncoder[b]));
             string[] bpeTokens = this.BpeEncode(bpeInput);
 
-            foreach (string t in bpeTokens)
-            {
+            foreach (string t in bpeTokens) {
                 if (this.vocab.TryGetValue(t, out int id))
                     tokens.Add(id);
             }
@@ -64,8 +59,7 @@ internal sealed class ClipTokenizer
         tokens.Add(EndTokenId);
 
         // Truncate preserving end token.
-        if (tokens.Count > ContextLength)
-        {
+        if (tokens.Count > ContextLength) {
             tokens = [.. tokens.Take(ContextLength - 1), EndTokenId];
         }
 
@@ -78,8 +72,7 @@ internal sealed class ClipTokenizer
 
     //  BPE 
 
-    private string[] BpeEncode(string word)
-    {
+    private string[] BpeEncode(string word) {
         if (string.IsNullOrEmpty(word)) return [];
 
         // Start with characters; mark end of word on last character.
@@ -88,17 +81,14 @@ internal sealed class ClipTokenizer
             chars.Add(word[i].ToString());
         chars.Add(word[^1] + "</w>");
 
-        while (chars.Count >= 2)
-        {
+        while (chars.Count >= 2) {
             int bestRank = int.MaxValue;
-            int bestIdx  = -1;
+            int bestIdx = -1;
 
-            for (int i = 0; i < chars.Count - 1; i++)
-            {
-                if (this.mergeRanks.TryGetValue((chars[i], chars[i + 1]), out int rank) && rank < bestRank)
-                {
+            for (int i = 0; i < chars.Count - 1; i++) {
+                if (this.mergeRanks.TryGetValue((chars[i], chars[i + 1]), out int rank) && rank < bestRank) {
                     bestRank = rank;
-                    bestIdx  = i;
+                    bestIdx = i;
                 }
             }
 
@@ -113,21 +103,18 @@ internal sealed class ClipTokenizer
 
     //  Loaders 
 
-    private static Dictionary<string, int> LoadVocab(string path)
-    {
+    private static Dictionary<string, int> LoadVocab(string path) {
         string json = File.ReadAllText(path, Encoding.UTF8);
         return JsonSerializer.Deserialize<Dictionary<string, int>>(json)
             ?? [];
     }
 
-    private static Dictionary<(string, string), int> LoadMerges(string path)
-    {
+    private static Dictionary<(string, string), int> LoadMerges(string path) {
         var merges = new Dictionary<(string, string), int>();
         string[] lines = File.ReadAllLines(path, Encoding.UTF8);
         int rank = 0;
 
-        foreach (string line in lines)
-        {
+        foreach (string line in lines) {
             if (line.StartsWith('#')) continue;
             int space = line.IndexOf(' ');
             if (space < 1 || space >= line.Length - 1) continue;
@@ -143,8 +130,7 @@ internal sealed class ClipTokenizer
     // 174, 255, 256) is that spec: printable ASCII 33-126, Latin supplement 161-172 and 174-255 map to
     // themselves, all other bytes map to chr(256 + n). Fixed by the CLIP tokenizer spec, never tuned.
 #pragma warning disable S109
-    private static string[] BuildByteEncoder()
-    {
+    private static string[] BuildByteEncoder() {
         var bs = new List<int>();
         bs.AddRange(Enumerable.Range('!', '~' - '!' + 1));
         bs.AddRange(Enumerable.Range(0xA1, 0xAC - 0xA1 + 1));
@@ -153,10 +139,8 @@ internal sealed class ClipTokenizer
         var cs = new List<int>(bs);
         int n = 0;
 
-        for (int b = 0; b < 256; b++)
-        {
-            if (!bs.Contains(b))
-            {
+        for (int b = 0; b < 256; b++) {
+            if (!bs.Contains(b)) {
                 bs.Add(b);
                 cs.Add(256 + n++);
             }
@@ -172,8 +156,7 @@ internal sealed class ClipTokenizer
 
     //  Text normalisation 
 
-    private static string CleanText(string text)
-    {
+    private static string CleanText(string text) {
         // Lowercase, collapse whitespace, trim.
         text = text.ToLowerInvariant().Trim();
         return Regex.Replace(text, @"\s+", " ");

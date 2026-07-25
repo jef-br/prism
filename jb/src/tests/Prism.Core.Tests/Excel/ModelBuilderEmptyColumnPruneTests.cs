@@ -10,13 +10,11 @@ namespace PrismCoreTests.Excel;
 /// A canonical property blank across every merged family record is dropped to shrink the matcher
 /// search space; the FamilyID primary key and any property with at least one value are retained.
 /// </summary>
-public class ModelBuilderEmptyColumnPruneTests
-{
+public class ModelBuilderEmptyColumnPruneTests {
     //  Direct model-level prune behavior
 
     [Fact]
-    public void PruneEmptyProperties_DropsPropertyBlankAcrossAllRecords()
-    {
+    public void PruneEmptyProperties_DropsPropertyBlankAcrossAllRecords() {
         InternalExcelModel model = new();
         MergeRow(model, "10000001", ("color", "blue"), ("weight", ""));
         MergeRow(model, "10000002", ("color", "red"), ("weight", "   "));
@@ -31,8 +29,7 @@ public class ModelBuilderEmptyColumnPruneTests
     }
 
     [Fact]
-    public void PruneEmptyProperties_KeepsPropertyWithValueInAnySingleRecord()
-    {
+    public void PruneEmptyProperties_KeepsPropertyWithValueInAnySingleRecord() {
         InternalExcelModel model = new();
         MergeRow(model, "10000001", ("color", "blue"));           // color present here
         MergeRow(model, "10000002", ("color", ""));               // blank in the second family
@@ -44,8 +41,7 @@ public class ModelBuilderEmptyColumnPruneTests
     }
 
     [Fact]
-    public void PruneEmptyProperties_NeverDropsPrimaryKey()
-    {
+    public void PruneEmptyProperties_NeverDropsPrimaryKey() {
         InternalExcelModel model = new();
         // Register the primary key as a property that happens to be blank-valued.
         MergeRow(model, "10000001", ("FamilyID", ""));
@@ -56,8 +52,7 @@ public class ModelBuilderEmptyColumnPruneTests
     }
 
     [Fact]
-    public void PruneEmptyProperties_ClearsTokenStoreForDroppedProperty()
-    {
+    public void PruneEmptyProperties_ClearsTokenStoreForDroppedProperty() {
         InternalExcelModel model = new();
         MergeRow(model, "10000001", ("color", "blue"), ("weight", ""));
 
@@ -72,8 +67,7 @@ public class ModelBuilderEmptyColumnPruneTests
     //  End-to-end through the builder + diagnostic emission
 
     [Fact]
-    public void BuildFromWorkbooks_ColumnWithValuesInOneFileButNotTheSurvivingFamilies_PrunedModelWide()
-    {
+    public void BuildFromWorkbooks_ColumnWithValuesInOneFileButNotTheSurvivingFamilies_PrunedModelWide() {
         ModelBuilder builder = ExcelTestFixtures.BuildBuilder();
 
         // File A: two families, no Notes column at all.
@@ -109,8 +103,7 @@ public class ModelBuilderEmptyColumnPruneTests
 
     //  Helpers
 
-    private static void MergeRow(InternalExcelModel model, string familyID, params (string Name, string Value)[] properties)
-    {
+    private static void MergeRow(InternalExcelModel model, string familyID, params (string Name, string Value)[] properties) {
         List<ExcelPropertyValue> propertyValues = properties
             .Select(property => new ExcelPropertyValue(property.Name, [property.Value], []))
             .ToList();

@@ -8,13 +8,11 @@ namespace PrismCoreTests.Rename;
 /// (as they would be after the Ordered stage). <see cref="ImageRenamer.Run"/> returns the
 /// (OkRenamed, KoAdded) counts directly — there is no shared pipeline context.
 /// </summary>
-public class ImageRenamerTests
-{
+public class ImageRenamerTests {
     //  OkRenamedCount 
 
     [Fact]
-    public void Run_SingleAcceptedImage_CountsAsRenamed()
-    {
+    public void Run_SingleAcceptedImage_CountsAsRenamed() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("img.jpg", "FAM001", 0)];
 
         (int okRenamed, _) = ImageRenamer.Run(records);
@@ -23,8 +21,7 @@ public class ImageRenamerTests
     }
 
     [Fact]
-    public void Run_TwoImagesUniqueDet_BothCounted()
-    {
+    public void Run_TwoImagesUniqueDet_BothCounted() {
         List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("img1.jpg", "FAM001", 0),
@@ -37,8 +34,7 @@ public class ImageRenamerTests
     }
 
     [Fact]
-    public void Run_MultipleFamilies_CountsAccumulateAcrossFamilies()
-    {
+    public void Run_MultipleFamilies_CountsAccumulateAcrossFamilies() {
         List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("img1.jpg", "FAM001", 0),
@@ -54,8 +50,7 @@ public class ImageRenamerTests
     //  Collision handling 
 
     [Fact]
-    public void Run_SameDetInSameFamily_KosEntireFamily()
-    {
+    public void Run_SameDetInSameFamily_KosEntireFamily() {
         List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("img1.jpg", "FAM001", 0),
@@ -66,8 +61,7 @@ public class ImageRenamerTests
 
         Assert.Equal(0, okRenamed);
         Assert.Equal(2, koAdded);
-        Assert.All(records, r =>
-        {
+        Assert.All(records, r => {
             Assert.True(r.IsKo);
             Assert.Equal("RENAME_COLLISION", r.KoReasonCode);
             Assert.NotNull(r.KoSafeMessage);
@@ -75,8 +69,7 @@ public class ImageRenamerTests
     }
 
     [Fact]
-    public void Run_CollisionInOneFamilyDoesNotAffectOtherFamily()
-    {
+    public void Run_CollisionInOneFamilyDoesNotAffectOtherFamily() {
         List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("ok.jpg",   "FAM001", 0),   // clean family
@@ -96,8 +89,7 @@ public class ImageRenamerTests
     //  KO passthrough 
 
     [Fact]
-    public void Run_AlreadyKoImage_SkippedAndNotCounted()
-    {
+    public void Run_AlreadyKoImage_SkippedAndNotCounted() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("ko.jpg", "FAM001", 0, isKo: true)];
 
         (int okRenamed, int koAdded) = ImageRenamer.Run(records);
@@ -108,8 +100,7 @@ public class ImageRenamerTests
     }
 
     [Fact]
-    public void Run_MixOfKoAndAcceptedInBatch_OnlyAcceptedCounted()
-    {
+    public void Run_MixOfKoAndAcceptedInBatch_OnlyAcceptedCounted() {
         List<ImageRecord_LAMBDA> records =
         [
             MakeLambda("ok.jpg",  "FAM001", 0),
@@ -125,8 +116,7 @@ public class ImageRenamerTests
     //  Unmatched images (no Family) 
 
     [Fact]
-    public void Run_EmptyFamilyField_Skipped()
-    {
+    public void Run_EmptyFamilyField_Skipped() {
         // An image that made it past matching but has no Family set is skipped.
         List<ImageRecord_LAMBDA> records = [new ImageRecord_LAMBDA { InitialFullName = "unmatched.jpg" }];
 
@@ -138,8 +128,7 @@ public class ImageRenamerTests
     //  Overflow images 
 
     [Fact]
-    public void Run_OverflowImage_CountedAndNewNameCorrect()
-    {
+    public void Run_OverflowImage_CountedAndNewNameCorrect() {
         // Overflow images get det slots >= 8 from the Ordered stage.
         List<ImageRecord_LAMBDA> records = [MakeLambda("extra.jpg", "FAM001", 8)];
 
@@ -152,8 +141,7 @@ public class ImageRenamerTests
     //  NewName contract 
 
     [Fact]
-    public void Run_AcceptedImage_NewNameIsCorrectForm()
-    {
+    public void Run_AcceptedImage_NewNameIsCorrectForm() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("img.jpg", "SPACINI29", 0)];
 
         ImageRenamer.Run(records);
@@ -162,8 +150,7 @@ public class ImageRenamerTests
     }
 
     [Fact]
-    public void Run_PartialCollisionInThreeMemberFamily_KosAllThreeMembers()
-    {
+    public void Run_PartialCollisionInThreeMemberFamily_KosAllThreeMembers() {
         // Images 1 and 2 share det0 (collision); image 3 has unique det1.
         // The entire family must be KO'd, including the clean member.
         List<ImageRecord_LAMBDA> records =
@@ -177,8 +164,7 @@ public class ImageRenamerTests
 
         Assert.Equal(0, okRenamed);
         Assert.Equal(3, koAdded);
-        Assert.All(records, r =>
-        {
+        Assert.All(records, r => {
             Assert.True(r.IsKo);
             Assert.Equal("RENAME_COLLISION", r.KoReasonCode);
         });
@@ -194,15 +180,13 @@ public class ImageRenamerTests
         string filename,
         string familyId,
         int detOrder,
-        bool isKo = false)
-    {
-        return new ImageRecord_LAMBDA
-        {
+        bool isKo = false) {
+        return new ImageRecord_LAMBDA {
             InitialFullName = filename,
-            Family          = familyId,
-            DetOrder        = detOrder,
-            IsKo            = isKo,
-            KoReasonCode    = isKo ? "TEST_KO" : null
+            Family = familyId,
+            DetOrder = detOrder,
+            IsKo = isKo,
+            KoReasonCode = isKo ? "TEST_KO" : null
         };
     }
 }

@@ -79,7 +79,8 @@ public static class ConfigLoader {
     private static JsonDocument ParseDocument(string path) {
         try {
             return JsonDocument.Parse(File.ReadAllText(path), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
-        } catch (JsonException ex) {
+        }
+        catch (JsonException ex) {
             throw new PrismConfigurationException($"Config file {path} is not valid JSON: {ex.Message}", ex);
         }
     }
@@ -90,7 +91,8 @@ public static class ConfigLoader {
         try {
             config = JsonSerializer.Deserialize<T>(json, SerializerOptions)
                 ?? throw new PrismConfigurationException($"Failed to deserialize {origin}.");
-        } catch (JsonException ex) {
+        }
+        catch (JsonException ex) {
             throw new PrismConfigurationException($"Cannot load {origin}: {ex.Message}", ex);
         }
 

@@ -6,8 +6,7 @@ namespace Prism.Lib.ImageNGP;
 /// For <c>integer</c>/<c>float</c>/<c>string</c> features <see cref="Values"/> is empty
 /// and validation is by datatype only.
 /// </summary>
-public sealed record FeatureDefinition
-{
+public sealed record FeatureDefinition {
     public string Id { get; init; } = string.Empty;
     public string Datatype { get; init; } = string.Empty;
     public IReadOnlyList<string> Values { get; init; } = [];

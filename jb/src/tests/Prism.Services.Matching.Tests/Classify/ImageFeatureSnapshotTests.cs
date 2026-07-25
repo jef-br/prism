@@ -5,20 +5,17 @@ namespace PrismCoreTests.Classify;
 /// <summary>
 /// Unit tests for <see cref="ImageFeatureSnapshot"/>: the per-image feature dictionary.
 /// </summary>
-public class ImageFeatureSnapshotTests
-{
+public class ImageFeatureSnapshotTests {
     //  Default / UNKNOWN contract 
 
     [Fact]
-    public void GetValue_UnsetFeature_ReturnsUNKNOWN()
-    {
+    public void GetValue_UnsetFeature_ReturnsUNKNOWN() {
         var snapshot = new ImageFeatureSnapshot();
         Assert.Equal("UNKNOWN", snapshot.GetValue("hero-is-human"));
     }
 
     [Fact]
-    public void GetValue_UnsetFeature_NeverReturnsNull()
-    {
+    public void GetValue_UnsetFeature_NeverReturnsNull() {
         var snapshot = new ImageFeatureSnapshot();
         Assert.NotNull(snapshot.GetValue("nonexistent-feature"));
     }
@@ -26,16 +23,14 @@ public class ImageFeatureSnapshotTests
     //  Round-trip: Set → GetValue 
 
     [Fact]
-    public void GetValue_AfterSet_ReturnsValue()
-    {
+    public void GetValue_AfterSet_ReturnsValue() {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("aspect-ratio", "1.3333", 1.0, "geometry");
         Assert.Equal("1.3333", snapshot.GetValue("aspect-ratio"));
     }
 
     [Fact]
-    public void Set_OverwritesPreviousValue()
-    {
+    public void Set_OverwritesPreviousValue() {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("background-type", "REALLIFE", 0.72, "heuristic");
         snapshot.Set("background-type", "SOLIDCOLOR", 0.92, "imagesharp");
@@ -43,8 +38,7 @@ public class ImageFeatureSnapshotTests
     }
 
     [Fact]
-    public void Set_EmptyStringValue_IsStoredNotConvertedToUnknown()
-    {
+    public void Set_EmptyStringValue_IsStoredNotConvertedToUnknown() {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("product-color", "", 0.0, "heuristic");
         Assert.Equal("", snapshot.GetValue("product-color"));
@@ -53,8 +47,7 @@ public class ImageFeatureSnapshotTests
     //  Case-insensitive key lookup 
 
     [Fact]
-    public void GetValue_CaseInsensitive_FindsFeatureRegardlessOfCase()
-    {
+    public void GetValue_CaseInsensitive_FindsFeatureRegardlessOfCase() {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("aspect-ratio", "0.7500", 1.0, "geometry");
 
@@ -66,8 +59,7 @@ public class ImageFeatureSnapshotTests
     //  TryGet contract 
 
     [Fact]
-    public void TryGet_WhenNotSet_ReturnsFalseAndNullValue()
-    {
+    public void TryGet_WhenNotSet_ReturnsFalseAndNullValue() {
         var snapshot = new ImageFeatureSnapshot();
         bool found = snapshot.TryGet("hero-orientation", out ImageFeatureValue? value);
         Assert.False(found);
@@ -75,8 +67,7 @@ public class ImageFeatureSnapshotTests
     }
 
     [Fact]
-    public void TryGet_WhenSet_ReturnsTrueAndPopulatesValue()
-    {
+    public void TryGet_WhenSet_ReturnsTrueAndPopulatesValue() {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("white-background", "true", 0.92, "imagesharp");
 
@@ -90,8 +81,7 @@ public class ImageFeatureSnapshotTests
     }
 
     [Fact]
-    public void TryGet_ConfidencePreservedExactly()
-    {
+    public void TryGet_ConfidencePreservedExactly() {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("skin-tone-area", "0.1234", 0.75, "imagesharp");
 
@@ -100,8 +90,7 @@ public class ImageFeatureSnapshotTests
     }
 
     [Fact]
-    public void TryGet_ZeroConfidence_IsPreserved()
-    {
+    public void TryGet_ZeroConfidence_IsPreserved() {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("pose-type", "UNKNOWN", 0.0, "heuristic");
 
@@ -110,8 +99,7 @@ public class ImageFeatureSnapshotTests
     }
 
     [Fact]
-    public void TryGet_SourcePreservedExactly()
-    {
+    public void TryGet_SourcePreservedExactly() {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("intersection-count", "2", 0.85, "heuristic");
 
@@ -122,8 +110,7 @@ public class ImageFeatureSnapshotTests
     //  All dictionary 
 
     [Fact]
-    public void All_ReturnsAllSetFeatures()
-    {
+    public void All_ReturnsAllSetFeatures() {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("aspect-ratio", "1.0000", 1.0, "geometry");
         snapshot.Set("white-background", "true", 0.92, "imagesharp");
@@ -136,8 +123,7 @@ public class ImageFeatureSnapshotTests
     }
 
     [Fact]
-    public void All_IsReadOnly_CannotBeModifiedDirectly()
-    {
+    public void All_IsReadOnly_CannotBeModifiedDirectly() {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("aspect-ratio", "1.0000", 1.0, "geometry");
 
@@ -146,8 +132,7 @@ public class ImageFeatureSnapshotTests
     }
 
     [Fact]
-    public void All_StartsEmpty()
-    {
+    public void All_StartsEmpty() {
         var snapshot = new ImageFeatureSnapshot();
         Assert.Empty(snapshot.All);
     }

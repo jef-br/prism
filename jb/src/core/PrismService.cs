@@ -6,8 +6,7 @@ namespace Prism.Core;
 /// Initialize sets up validated resources; Process expresses the job lifecycle;
 /// helpers below each method do their named step.
 /// </summary>
-public sealed class PrismService : IDisposable
-{
+public sealed class PrismService : IDisposable {
     private readonly PrismConfiguration configuration;
     private readonly ModelBuilder modelBuilder;
     private readonly Pipeline pipeline;
@@ -20,8 +19,7 @@ public sealed class PrismService : IDisposable
     /// Creates the PRISM facade, loads and validates all configuration on startup.
     /// Throws <see cref="PrismConfigurationException"/> if any required config file or model asset is missing or invalid.
     /// </summary>
-    public PrismService()
-    {
+    public PrismService() {
         (this.configuration, this.modelBuilder) = Initialize();
         this.pipeline = new Pipeline(this.configuration, this.modelBuilder);
     }
@@ -32,10 +30,9 @@ public sealed class PrismService : IDisposable
     /// </summary>
     /// <param name="configuration">Pre-validated PRISM configuration.</param>
     /// <param name="modelBuilder">Pre-loaded Excel model builder.</param>
-    public PrismService(PrismConfiguration configuration, ModelBuilder modelBuilder)
-    {
+    public PrismService(PrismConfiguration configuration, ModelBuilder modelBuilder) {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        this.modelBuilder  = modelBuilder  ?? throw new ArgumentNullException(nameof(modelBuilder));
+        this.modelBuilder = modelBuilder ?? throw new ArgumentNullException(nameof(modelBuilder));
         this.pipeline = new Pipeline(this.configuration, this.modelBuilder);
     }
 
@@ -59,23 +56,20 @@ public sealed class PrismService : IDisposable
     public async Task<PrismJobResult> Process(
         PrismJobRequest request,
         Func<PipelineProgressEvent, Task>? progress = null,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ValidateRequest(request);
 
-        try
-        {
-            IngestResult    normalizedImagesAndFamilies   = await this.Import(request, progress, cancellationToken);
-            MatchingResult  matchedImages                 = await this.Match(normalizedImagesAndFamilies, progress, cancellationToken);
+        try {
+            IngestResult normalizedImagesAndFamilies = await this.Import(request, progress, cancellationToken);
+            MatchingResult matchedImages = await this.Match(normalizedImagesAndFamilies, progress, cancellationToken);
             (MatchingResult matchedWithGenerations, IReadOnlyList<ImageRecord_GENERATED> generatedImages)
                                                           = await this.GenerateSupplementalImages(matchedImages, progress, cancellationToken);
-            TransformResult transformedImages             = await this.TransformImages(matchedWithGenerations, progress, cancellationToken);
-            ExportArtifacts manifestAndZip                = await this.Export(transformedImages, generatedImages, request, progress, cancellationToken);
+            TransformResult transformedImages = await this.TransformImages(matchedWithGenerations, progress, cancellationToken);
+            ExportArtifacts manifestAndZip = await this.Export(transformedImages, generatedImages, request, progress, cancellationToken);
 
             return BuildSuccessResult(request, manifestAndZip);
         }
-        catch (Exception exception) when (exception is not PrismConfigurationException)
-        {
+        catch (Exception exception) when (exception is not PrismConfigurationException) {
             return BuildFailedResult(request, exception);
         }
     }
@@ -91,10 +85,9 @@ public sealed class PrismService : IDisposable
     /// </summary>
     public async Task<MatchOnlyResult> MatchOnlyAsync(
         PrismJobRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ValidateRequest(request);
-        IngestResult ingest   = await this.Import(request, null, cancellationToken);
+        IngestResult ingest = await this.Import(request, null, cancellationToken);
         MatchingResult matched = await this.Match(ingest, null, cancellationToken);
 
         // Mirror the export-time det-gap policy so match-only filenames match the full pipeline.
@@ -112,8 +105,7 @@ public sealed class PrismService : IDisposable
     /// </summary>
     public MatchOnlyResult MatchLite(
         IReadOnlyList<ImageRecord_INPUT> imageInputs,
-        IReadOnlyList<InputExcelFileRecord> excelInputs)
-    {
+        IReadOnlyList<InputExcelFileRecord> excelInputs) {
         IEnumerable<string> excelPaths = excelInputs
             .Where(e => e.TempFilePath is not null)
             .Select(e => e.TempFilePath!);
@@ -136,13 +128,11 @@ public sealed class PrismService : IDisposable
     }
 
     /// <summary>Projects a LAMBDA collection into the client-facing filename mapping.</summary>
-    private static MatchOnlyResult BuildMatchOnlyResult(IReadOnlyList<ImageRecord_LAMBDA> lambdas)
-    {
+    private static MatchOnlyResult BuildMatchOnlyResult(IReadOnlyList<ImageRecord_LAMBDA> lambdas) {
         var map = new Dictionary<string, string?>(lambdas.Count);
         int matched = 0, unmatched = 0;
 
-        foreach (ImageRecord_LAMBDA lambda in lambdas)
-        {
+        foreach (ImageRecord_LAMBDA lambda in lambdas) {
             bool isMatched = !lambda.IsKo && !string.IsNullOrEmpty(lambda.Family);
             map[lambda.InitialFullName] = isMatched ? lambda.NewName : null;
             if (isMatched) matched++; else unmatched++;
@@ -209,8 +199,7 @@ public sealed class PrismService : IDisposable
     /// and pre-loads the Excel model builder so ExcelConfig.json failures surface at startup.
     /// Throws <see cref="PrismConfigurationException"/> if any required asset is missing or invalid.
     /// </summary>
-    private static (PrismConfiguration Config, ModelBuilder ExcelModelBuilder) Initialize()
-    {
+    private static (PrismConfiguration Config, ModelBuilder ExcelModelBuilder) Initialize() {
         PrismConfiguration config = PrismConfiguration.LoadPrismConfig(
             ConfigLoader.RequireFile(PrismConfiguration.FileName));
         ValidateRequiredFolderLocalConfigs();
@@ -218,8 +207,7 @@ public sealed class PrismService : IDisposable
         return (config, modelBuilder);
     }
 
-    private static void ValidateRequiredFolderLocalConfigs()
-    {
+    private static void ValidateRequiredFolderLocalConfigs() {
         string[] requiredFolderLocalConfigs =
         [
             "ExcelConfig.json",
@@ -243,31 +231,25 @@ public sealed class PrismService : IDisposable
     /// Validates that the request satisfies all pre-pipeline requirements.
     /// Throws <see cref="ArgumentException"/> for caller-supplied structural failures.
     /// </summary>
-    private static void ValidateRequest(PrismJobRequest request)
-    {
-        if (request is null)
-        {
+    private static void ValidateRequest(PrismJobRequest request) {
+        if (request is null) {
             throw new ArgumentNullException(nameof(request));
         }
 
-        if (request.JobID == Guid.Empty)
-        {
+        if (request.JobID == Guid.Empty) {
             throw new ArgumentException("PrismJobRequest.JobID is required.", nameof(request));
         }
 
-        if (request.PrismProcessingParameters is null)
-        {
+        if (request.PrismProcessingParameters is null) {
             throw new ArgumentException("PrismProcessingParameters is required.", nameof(request));
         }
 
         // ZIP files are extracted by the Import stage — allow ZIP-only requests through here.
-        if (request.ImageRecords.Count == 0 && request.ZipFileRecords.Count == 0)
-        {
+        if (request.ImageRecords.Count == 0 && request.ZipFileRecords.Count == 0) {
             throw new ArgumentException("At least one accepted image record is required.", nameof(request));
         }
 
-        if (request.ExcelRecords.Count == 0 && request.ZipFileRecords.Count == 0)
-        {
+        if (request.ExcelRecords.Count == 0 && request.ZipFileRecords.Count == 0) {
             throw new ArgumentException("At least one accepted Excel record is required.", nameof(request));
         }
     }
@@ -275,22 +257,20 @@ public sealed class PrismService : IDisposable
     /// <summary>
     /// Projects the completed Export artifacts into the caller-facing <see cref="PrismJobResult"/>.
     /// </summary>
-    private static PrismJobResult BuildSuccessResult(PrismJobRequest request, ExportArtifacts manifestAndZip)
-    {
+    private static PrismJobResult BuildSuccessResult(PrismJobRequest request, ExportArtifacts manifestAndZip) {
         BatchManifest manifest = manifestAndZip.Manifest;
 
-        return new PrismJobResult
-        {
-            JobID              = request.JobID,
+        return new PrismJobResult {
+            JobID = request.JobID,
             ClientRequestToken = request.ClientRequestToken,
-            Status             = "Completed",
-            OutputFormat       = request.PrismProcessingParameters?.Format ?? "json",
-            FailureReason      = null,
-            Warnings           = manifest.Warnings,
-            Manifest           = manifest,
-            ZipBytes           = manifestAndZip.ZipBytes,
-            OkImages           = manifestAndZip.JourneyItems.Where(j => j.Output is not null).ToList(),
-            KoImages           = manifestAndZip.JourneyItems.Where(j => j.Output is null).ToList()
+            Status = "Completed",
+            OutputFormat = request.PrismProcessingParameters?.Format ?? "json",
+            FailureReason = null,
+            Warnings = manifest.Warnings,
+            Manifest = manifest,
+            ZipBytes = manifestAndZip.ZipBytes,
+            OkImages = manifestAndZip.JourneyItems.Where(j => j.Output is not null).ToList(),
+            KoImages = manifestAndZip.JourneyItems.Where(j => j.Output is null).ToList()
         };
     }
 
@@ -298,35 +278,31 @@ public sealed class PrismService : IDisposable
     /// Builds a failed-job result when an unexpected (non-configuration) exception aborts the pipeline.
     /// Every input image is reported as KO; no artifacts are produced.
     /// </summary>
-    private static PrismJobResult BuildFailedResult(PrismJobRequest request, Exception exception)
-    {
-        BatchManifest manifest = new()
-        {
-            JobID   = request.JobID,
-            Summary = new BatchManifestSummary
-            {
+    private static PrismJobResult BuildFailedResult(PrismJobRequest request, Exception exception) {
+        BatchManifest manifest = new() {
+            JobID = request.JobID,
+            Summary = new BatchManifestSummary {
                 ImageCount = request.ImageRecords.Count,
                 ExcelCount = request.ExcelRecords.Count,
-                ZipCount   = request.ZipFileRecords.Count,
-                OkRenamed  = 0,
-                KoRecords  = request.ImageRecords.Count
+                ZipCount = request.ZipFileRecords.Count,
+                OkRenamed = 0,
+                KoRecords = request.ImageRecords.Count
             },
             RouteSummaries = [$"Pipeline failed: {exception.Message}"],
-            Warnings       = []
+            Warnings = []
         };
 
-        return new PrismJobResult
-        {
-            JobID              = request.JobID,
+        return new PrismJobResult {
+            JobID = request.JobID,
             ClientRequestToken = request.ClientRequestToken,
-            Status             = "Failed",
-            OutputFormat       = request.PrismProcessingParameters?.Format ?? "json",
-            FailureReason      = exception.Message,
-            Warnings           = [],
-            Manifest           = manifest,
-            ZipBytes           = null,
-            OkImages           = [],
-            KoImages           = []
+            Status = "Failed",
+            OutputFormat = request.PrismProcessingParameters?.Format ?? "json",
+            FailureReason = exception.Message,
+            Warnings = [],
+            Manifest = manifest,
+            ZipBytes = null,
+            OkImages = [],
+            KoImages = []
         };
     }
 }

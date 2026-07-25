@@ -5,13 +5,11 @@ namespace PrismCoreTests.Match;
 /// <summary>
 /// Unit tests for <see cref="SemanticMatcher"/> — Bracket 4 (combined CLIP + numeric + string).
 /// </summary>
-public class SemanticMatcherTests
-{
+public class SemanticMatcherTests {
     //  Happy path
 
     [Fact]
-    public void TryMatch_ExactlyOneCandidateSurvivesClipFilter_ReturnsEvidence()
-    {
+    public void TryMatch_ExactlyOneCandidateSurvivesClipFilter_ReturnsEvidence() {
         // FAM001 carries a ProductType of "tote" that matches the image's influential CLIP tag;
         // FAM002 carries a contradicting ProductType, so only FAM001 survives Step 1.
         SemanticMatcher matcher = MakeMatcher(semanticThreshold: 0.4);
@@ -30,8 +28,7 @@ public class SemanticMatcherTests
     //  No CLIP tags at all
 
     [Fact]
-    public void TryMatch_NoInfluentialTags_WithProductTypeRuleConfigured_ReturnsNull()
-    {
+    public void TryMatch_NoInfluentialTags_WithProductTypeRuleConfigured_ReturnsNull() {
         // A ProductType label rule is configured and FAM001 carries a ProductType column, but the
         // image has no influential tags — the per-dimension gate skips the CLIP filter (nothing to
         // contradict), and the sole-survivor guard then refuses to assign with no CLIP, numeric, or
@@ -48,8 +45,7 @@ public class SemanticMatcherTests
     //  String tie between two candidates
 
     [Fact]
-    public void TryMatch_StringTokenTieBetweenTwoCandidates_ReturnsNull()
-    {
+    public void TryMatch_StringTokenTieBetweenTwoCandidates_ReturnsNull() {
         // No label rules at all → CLIP filters are no-ops (Step 1/2 return candidates unchanged).
         // No numeric rules → numeric reduction is a no-op. Both families carry the same categorical
         // "ivory" token, so string scoring produces an equal top match count → tie → null.
@@ -67,8 +63,7 @@ public class SemanticMatcherTests
     //  Below semantic threshold
 
     [Fact]
-    public void TryMatch_CombinedScoreBelowHighSemanticThreshold_ReturnsNull()
-    {
+    public void TryMatch_CombinedScoreBelowHighSemanticThreshold_ReturnsNull() {
         // Same scenario as the happy path (single CLIP-filtered survivor, no string/numeric signal),
         // but semanticThreshold is set above the achievable combined score (0.5) so acceptance fails
         // at the Step 5 threshold check rather than at the candidate-reduction steps.
@@ -85,8 +80,7 @@ public class SemanticMatcherTests
     //  String scoring with multiple candidates and overlapping matches
 
     [Fact]
-    public void TryMatch_MultipleOverlappingCandidates_RanksCorrectly()
-    {
+    public void TryMatch_MultipleOverlappingCandidates_RanksCorrectly() {
         // Three families, two of which have overlapping partial matches: FAM_A matches both
         // "tote" (ProductType via CLIP filter) and "leather" (from filename); FAM_B matches
         // only "tote" but NOT "leather"; FAM_C is filtered out by CLIP (contradicting ProductType).
@@ -115,8 +109,7 @@ public class SemanticMatcherTests
     //  totalImageTokens precision (T-3800 item 3)
 
     [Fact]
-    public void TryMatch_TotalImageTokensReflectsRealFilenameTokenCount_NotCandidatePoolSize()
-    {
+    public void TryMatch_TotalImageTokensReflectsRealFilenameTokenCount_NotCandidatePoolSize() {
         // Same shape as TryMatch_MultipleOverlappingCandidates_RanksCorrectly (FAM_A matches 2 of the
         // 3 filename tokens "tote"/"leather"/"bag"; FAM_B matches 1; FAM_C is CLIP-filtered out), but
         // the threshold is tuned to fall strictly between the pre-fix and post-fix combined score:
@@ -151,31 +144,28 @@ public class SemanticMatcherTests
 
     //  Helpers
 
-    private static readonly TranslationConfig EmptyTranslation = new()
-    {
+    private static readonly TranslationConfig EmptyTranslation = new() {
         SynonymGroups = [],
         StopWords = new StopWordConfig { General = [], Domain = [] }
     };
 
     // Production-equivalent tuning values (MatchingConfig.json is required-only now — tests supply
     // their own explicit fixture values rather than relying on constructor defaults).
-    private static readonly StringMatcher.Config DefaultStringCfg = new()
-    {
-        Bracket3MinDistinctTokens    = 1,
-        IdentifierTokenMinLength     = 0,
-        IndexExcelTokenBigrams       = false,
-        FuzzyMinTokenLength          = 4,
-        FuzzyMaxEditDistance         = 1,
-        FuzzyMatchScore              = 0.75,
+    private static readonly StringMatcher.Config DefaultStringCfg = new() {
+        Bracket3MinDistinctTokens = 1,
+        IdentifierTokenMinLength = 0,
+        IndexExcelTokenBigrams = false,
+        FuzzyMinTokenLength = 4,
+        FuzzyMaxEditDistance = 1,
+        FuzzyMatchScore = 0.75,
         NonExactTokenMatchConfidence = 0.85
     };
 
-    private static readonly NumericMatcher.Config DefaultNumericCfg = new()
-    {
-        MinNumericTokenLength      = 1,
-        IndexDigitRunsAllColumns   = false,
-        MinSubstringRescueLength   = 0,
-        SubstringRescueConfidence  = 0.9,
+    private static readonly NumericMatcher.Config DefaultNumericCfg = new() {
+        MinNumericTokenLength = 1,
+        IndexDigitRunsAllColumns = false,
+        MinSubstringRescueLength = 0,
+        SubstringRescueConfidence = 0.9,
         DefaultMaxDistanceFallback = 1.478
     };
 
@@ -192,15 +182,12 @@ public class SemanticMatcherTests
             new StringMatcher(EmptyTranslation, DefaultStringCfg),
             new ClipLabelEnricher(), semanticThreshold, 0.15);
 
-    private static ImageRecord_LAMBDA MakeLambda(string filename, string? influentialLabel = null)
-    {
+    private static ImageRecord_LAMBDA MakeLambda(string filename, string? influentialLabel = null) {
         ImageRecord_LAMBDA record = new() { InitialFullName = filename };
-        if (influentialLabel is not null)
-        {
+        if (influentialLabel is not null) {
             // Mirror what ClassificationService.ApplyTokens produces: the prompt sentence in Label,
             // the resolved feature value in Value — ClipLabelEnricher matches on Value only.
-            record.Tags = new TagCollection
-            {
+            record.Tags = new TagCollection {
                 Influential =
                 [
                     new ClassificationToken
@@ -220,8 +207,7 @@ public class SemanticMatcherTests
         string familyId,
         string propName,
         string propValue,
-        ExcelColumnClassification classification)
-    {
+        ExcelColumnClassification classification) {
         FamilyIDRecord family = new(familyId);
         family.MergeProperty(
             new ExcelPropertyValue(propName, [propValue], []),

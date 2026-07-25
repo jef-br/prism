@@ -22,10 +22,8 @@ namespace Prism.Services.Matching;
 /// Measures the dominant subject colors. Returns the ranked buckets so Analyzer_ProductColor
 /// reuses the same sampling.
 /// </summary>
-internal static class Analyzer_DominantColors
-{
-    public static IReadOnlyList<ColorBucket> Analyze(Image<Rgba32> image, SubjectBox? subject, ImageFeatureSnapshot snapshot, ColorAnalyzerConfig cfg, SkinToneAnalyzerConfig skinCfg)
-    {
+internal static class Analyzer_DominantColors {
+    public static IReadOnlyList<ColorBucket> Analyze(Image<Rgba32> image, SubjectBox? subject, ImageFeatureSnapshot snapshot, ColorAnalyzerConfig cfg, SkinToneAnalyzerConfig skinCfg) {
         if (subject is null) return [];
 
         (float bgR, float bgG, float bgB) = AnalyzerMath.EstimateBackgroundColor(image);
@@ -44,13 +42,10 @@ internal static class Analyzer_DominantColors
         // Stride 2 subsamples every other pixel/row (perf, not a tunable threshold); 128 is the
         // alpha-opaque cutoff on the [0,255] channel scale — both structural, never tuned.
 #pragma warning disable S109
-        image.ProcessPixelRows(accessor =>
-        {
-            for (int y = Math.Max(0, y0); y < Math.Min(accessor.Height, y1); y += 2)
-            {
+        image.ProcessPixelRows(accessor => {
+            for (int y = Math.Max(0, y0); y < Math.Min(accessor.Height, y1); y += 2) {
                 Span<Rgba32> row = accessor.GetRowSpan(y);
-                for (int x = Math.Max(0, x0); x < Math.Min(row.Length, x1); x += 2)
-                {
+                for (int x = Math.Max(0, x0); x < Math.Min(row.Length, x1); x += 2) {
                     Rgba32 p = row[x];
                     if (p.A < 128) continue;
                     sampled++;
@@ -74,8 +69,7 @@ internal static class Analyzer_DominantColors
         if (sampled == 0 || (float)survived / sampled < cfg.MinSampleFraction) return [];
 
         List<ColorBucket> buckets = [];
-        foreach (int idx in Enumerable.Range(0, counts.Length).OrderByDescending(i => counts[i]).Take(cfg.BucketCount))
-        {
+        foreach (int idx in Enumerable.Range(0, counts.Length).OrderByDescending(i => counts[i]).Take(cfg.BucketCount)) {
             float share = (float)counts[idx] / survived;
             if (counts[idx] == 0 || share < cfg.MinBucketShare) break;
             buckets.Add(new ColorBucket((float)(sumR[idx] / counts[idx]), (float)(sumG[idx] / counts[idx]), (float)(sumB[idx] / counts[idx]), share));

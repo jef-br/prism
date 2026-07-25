@@ -6,8 +6,7 @@ namespace Prism.Core;
 /// matching result (Ingest.Parameters), so the remote host derives it; the explicit flag is ignored.
 /// Emits the Generated event client-side.
 /// </summary>
-public sealed class HttpGenerateService : IGenerateService
-{
+public sealed class HttpGenerateService : IGenerateService {
     private readonly HttpClient client;
 
     /// <summary>Creates the client targeting the remote Generate host base address.</summary>
@@ -23,8 +22,7 @@ public sealed class HttpGenerateService : IGenerateService
         MatchingResult matched,
         bool generationEnabled,
         Func<PipelineProgressEvent, Task>? progress,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         await StageProgress.EmitStarted(progress, matched.Ingest.JobID, PipelineStageNames.Generated, cancellationToken);
         return await ServiceHttp.PostJson<MatchingResult, GenerateResult>(
             this.client, PrismServiceRoutes.Generate, matched, cancellationToken);

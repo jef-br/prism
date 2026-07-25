@@ -5,8 +5,7 @@ namespace Prism.Core;
 /// Named for what it carries so the orchestrator line reads <c>var manifestAndZip = await Export(...)</c>.
 /// Replaces the old <c>ExportStageResult</c>.
 /// </summary>
-public sealed record ExportArtifacts
-{
+public sealed record ExportArtifacts {
     /// <summary>Fully-populated batch manifest, reused for both JSON and ZIP responses.</summary>
     public required BatchManifest Manifest { get; init; }
 

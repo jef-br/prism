@@ -9,8 +9,7 @@ namespace Prism.Services.Matching;
 /// which this project does not reference, so it loads its ClassifyConfig.json section directly instead
 /// of riding this bundle.
 /// </summary>
-public sealed class ClassifyParameters
-{
+public sealed class ClassifyParameters {
     internal const string ConfigFile = "ClassifyConfig.json";
 
     public required ImageFeatureAnalyzer.Config ImageFeatureAnalyzer { get; init; }
@@ -22,10 +21,9 @@ public sealed class ClassifyParameters
     /// misspelled key, or an out-of-range value throws here — so calling this at host startup fails the
     /// process loud rather than failing the first image mid-job.
     /// </summary>
-    public static ClassifyParameters FromConfig() => new()
-    {
+    public static ClassifyParameters FromConfig() => new() {
         ImageFeatureAnalyzer = ConfigLoader.Section<ImageFeatureAnalyzer.Config>(ConfigFile, "ImageFeatureAnalyzer"),
-        SubjectEdgeDetector  = ConfigLoader.Section<SubjectEdgeDetector.Config>(ConfigFile, "SubjectEdgeDetector"),
-        VisualHasher         = ConfigLoader.Section<VisualHasher.Config>(ConfigFile, "VisualHasher")
+        SubjectEdgeDetector = ConfigLoader.Section<SubjectEdgeDetector.Config>(ConfigFile, "SubjectEdgeDetector"),
+        VisualHasher = ConfigLoader.Section<VisualHasher.Config>(ConfigFile, "VisualHasher")
     };
 }

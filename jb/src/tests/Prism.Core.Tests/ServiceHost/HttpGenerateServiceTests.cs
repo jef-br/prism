@@ -7,18 +7,15 @@ namespace PrismCoreTests.ServiceHost;
 /// Exercises the HTTP client calling the remote generate service with a MatchingResult payload.
 /// </summary>
 [Collection("Service Host")]
-public class HttpGenerateServiceTests
-{
+public class HttpGenerateServiceTests {
     private readonly ServiceHostFixture fixture;
 
-    public HttpGenerateServiceTests(ServiceHostFixture fixture)
-    {
+    public HttpGenerateServiceTests(ServiceHostFixture fixture) {
         this.fixture = fixture;
     }
 
     [Fact]
-    public async Task GenerateAsync_WithMinimalMatchingResult_ReturnsGenerateResult()
-    {
+    public async Task GenerateAsync_WithMinimalMatchingResult_ReturnsGenerateResult() {
         // Arrange
         var client = new HttpGenerateService(fixture.Client);
         MatchingResult matched = ServiceHostTestHelpers.CreateMinimalMatchingResult();
@@ -34,8 +31,7 @@ public class HttpGenerateServiceTests
     }
 
     [Fact]
-    public async Task GenerateAsync_ResultCarriesInputPhenotypes()
-    {
+    public async Task GenerateAsync_ResultCarriesInputPhenotypes() {
         // Arrange
         var client = new HttpGenerateService(fixture.Client);
         MatchingResult matched = ServiceHostTestHelpers.CreateMinimalMatchingResult();
@@ -46,16 +42,14 @@ public class HttpGenerateServiceTests
 
         // Assert
         Assert.NotNull(result.MatchedWithGenerations.LambdaRecords);
-        if (result.MatchedWithGenerations.LambdaRecords.Count > 0)
-        {
+        if (result.MatchedWithGenerations.LambdaRecords.Count > 0) {
             // Phenotype should be preserved through the generate stage (generation disabled).
             Assert.Equal(expectedPhenotype, result.MatchedWithGenerations.LambdaRecords[0].SelectedPhenotype);
         }
     }
 
     [Fact]
-    public async Task GenerateAsync_HealthEndpoint_ReturnsOk()
-    {
+    public async Task GenerateAsync_HealthEndpoint_ReturnsOk() {
         // Arrange
         var httpClient = fixture.Client;
 

@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// Progress event emitted by a PRISM pipeline stage.
 /// </summary>
-public sealed record PipelineProgressEvent
-{
+public sealed record PipelineProgressEvent {
     /// <summary>
     /// PRISM-owned job identifier.
     /// </summary>

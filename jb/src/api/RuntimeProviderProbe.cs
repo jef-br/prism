@@ -14,7 +14,8 @@ internal static class RuntimeProviderProbe {
     internal static IReadOnlyList<string> AvailableProviders() {
         try {
             return OrtEnv.Instance().GetAvailableProviders();
-        } catch {
+        }
+        catch {
             // Graceful degradation: if the ORT env can't be queried, report the always-present CPU EP
             // rather than failing the health endpoint — never let provider reporting break readiness.
             return ["CPUExecutionProvider"];

@@ -6,8 +6,7 @@ namespace Prism.Core;
 /// the per-image LAMBDA document so any downstream service can read a stage's output without a shared
 /// mutable context. Local filesystem only — there is no cloud backing and never will be.
 /// </summary>
-public interface IArtifactStore
-{
+public interface IArtifactStore {
     /// <summary>Server-level temp root that holds one subfolder per job.</summary>
     string JobTempRoot { get; }
 

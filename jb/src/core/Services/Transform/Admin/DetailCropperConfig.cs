@@ -9,12 +9,10 @@ namespace Prism.Services.Transform;
 /// local to this class. No default — the value must be present in the JSON or deserialization
 /// fails loud.
 /// </summary>
-public sealed class DetailCropperConfig : IValidatableConfig
-{
+public sealed class DetailCropperConfig : IValidatableConfig {
     public required double AdjacentCropCap { get; init; }
 
-    public void Validate()
-    {
+    public void Validate() {
         if (this.AdjacentCropCap is <= 0.0 or >= 1.0)
             throw new PrismConfigurationException("DetailCropper.AdjacentCropCap must be in (0,1)");
     }

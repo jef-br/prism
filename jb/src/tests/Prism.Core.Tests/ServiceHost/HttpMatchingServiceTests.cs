@@ -8,18 +8,15 @@ namespace PrismCoreTests.ServiceHost;
 /// not mocked, against a real in-memory WebApplicationFactory host.
 /// </summary>
 [Collection("Service Host")]
-public class HttpMatchingServiceTests
-{
+public class HttpMatchingServiceTests {
     private readonly ServiceHostFixture fixture;
 
-    public HttpMatchingServiceTests(ServiceHostFixture fixture)
-    {
+    public HttpMatchingServiceTests(ServiceHostFixture fixture) {
         this.fixture = fixture;
     }
 
     [Fact]
-    public async Task MatchAsync_WithMinimalIngestResult_ReturnsMatchingResult()
-    {
+    public async Task MatchAsync_WithMinimalIngestResult_ReturnsMatchingResult() {
         // Arrange
         var client = new HttpMatchingService(fixture.Client);
         IngestResult ingest = ServiceHostTestHelpers.CreateMinimalIngestResult();
@@ -34,8 +31,7 @@ public class HttpMatchingServiceTests
     }
 
     [Fact]
-    public async Task MatchAsync_ResultCarriesInputImageCount()
-    {
+    public async Task MatchAsync_ResultCarriesInputImageCount() {
         // Arrange
         var client = new HttpMatchingService(fixture.Client);
         IngestResult ingest = ServiceHostTestHelpers.CreateMinimalIngestResult();
@@ -54,8 +50,7 @@ public class HttpMatchingServiceTests
     }
 
     [Fact]
-    public async Task MatchAsync_HealthEndpoint_ReturnsOk()
-    {
+    public async Task MatchAsync_HealthEndpoint_ReturnsOk() {
         // Arrange
         var httpClient = fixture.Client;
 

@@ -12,8 +12,7 @@ namespace PrismCoreTests.Classify;
 /// The CiMini JPEGs carry an embedded EXIF (IFD1) thumbnail, so these exercise the fast path where the main
 /// image is never decoded.
 /// </summary>
-public sealed class SubjectEdgeDetectorRealImageTests
-{
+public sealed class SubjectEdgeDetectorRealImageTests {
     // Representative CiMini images: product shots with full background and clean edges.
     private static readonly string[] FixtureImageNames =
     [
@@ -26,8 +25,7 @@ public sealed class SubjectEdgeDetectorRealImageTests
     //  EXIF fast-path
 
     [Fact]
-    public void ExifFastPath_RealCameraJpeg_ExtractsThumbnail()
-    {
+    public void ExifFastPath_RealCameraJpeg_ExtractsThumbnail() {
         string path = FixtureImage(FixtureImageNames[0]);
 
         byte[]? thumb = SubjectEdgeDetector.TryExtractJpegExifThumbnail(path);
@@ -41,10 +39,8 @@ public sealed class SubjectEdgeDetectorRealImageTests
     }
 
     [Fact]
-    public void ExifFastPath_AllFixtureImages_EachExtractsThumbnail()
-    {
-        foreach (string name in FixtureImageNames)
-        {
+    public void ExifFastPath_AllFixtureImages_EachExtractsThumbnail() {
+        foreach (string name in FixtureImageNames) {
             string path = FixtureImage(name);
 
             byte[]? thumb = SubjectEdgeDetector.TryExtractJpegExifThumbnail(path);
@@ -59,8 +55,7 @@ public sealed class SubjectEdgeDetectorRealImageTests
     //  Result validity
 
     [Fact]
-    public void Detect_RealCameraJpeg_ReturnsValidResult()
-    {
+    public void Detect_RealCameraJpeg_ReturnsValidResult() {
         string path = FixtureImage(FixtureImageNames[0]);
 
         SubjectEdgeDetectionResult r = SubjectEdgeDetector.Detect(path);
@@ -72,8 +67,7 @@ public sealed class SubjectEdgeDetectorRealImageTests
     //  Determinism on real images
 
     [Fact]
-    public void Detect_RealCameraJpeg_CalledTwice_SameResult()
-    {
+    public void Detect_RealCameraJpeg_CalledTwice_SameResult() {
         string path = FixtureImage(FixtureImageNames[0]);
 
         SubjectEdgeDetectionResult r1 = SubjectEdgeDetector.Detect(path);
@@ -88,8 +82,7 @@ public sealed class SubjectEdgeDetectorRealImageTests
     /// Resolves a committed CiMini image. Fails the test when absent — CiMini is in git, so a missing file
     /// means a broken checkout or a renamed fixture, both of which must be loud.
     /// </summary>
-    private static string FixtureImage( string fileName )
-    {
+    private static string FixtureImage(string fileName) {
         string path = Path.Combine(PipelineFixture.ResolveTestFixturePath(), "CiMini", fileName);
         Assert.True(File.Exists(path), $"Committed CiMini fixture image not found: {path}");
         return path;

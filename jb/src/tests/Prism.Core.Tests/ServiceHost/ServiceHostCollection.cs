@@ -7,6 +7,5 @@ namespace PrismCoreTests.ServiceHost;
 /// roundtrip tests share one WebApplicationFactory and its model loads.
 /// </summary>
 [CollectionDefinition("Service Host")]
-public class ServiceHostCollection : ICollectionFixture<ServiceHostFixture>
-{
+public class ServiceHostCollection : ICollectionFixture<ServiceHostFixture> {
 }

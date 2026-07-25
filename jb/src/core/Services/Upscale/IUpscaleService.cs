@@ -6,5 +6,5 @@ namespace Prism.Services.Upscale;
 /// </summary>
 public interface IUpscaleService {
     /// <summary>Returns the upscaled JPEG bytes.</summary>
-    Task<byte[]> UpscaleAsync( byte[] imageBytes, double scaleFactor, CancellationToken cancellationToken );
+    Task<byte[]> UpscaleAsync(byte[] imageBytes, double scaleFactor, CancellationToken cancellationToken);
 }

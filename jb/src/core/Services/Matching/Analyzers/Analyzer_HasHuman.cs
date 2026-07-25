@@ -9,14 +9,11 @@ namespace Prism.Services.Matching;
 /// Detection absence is weaker evidence than presence, so absence writes use the configured
 /// absence confidence, and a stronger existing measurement (e.g. CLIP) is never overwritten.
 /// </summary>
-internal static class Analyzer_HasHuman
-{
-    public static void Analyze(IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot, YoloAnalyzerConfig cfg)
-    {
+internal static class Analyzer_HasHuman {
+    public static void Analyze(IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot, YoloAnalyzerConfig cfg) {
         List<YoloDetection> persons = [.. detections.Where(d => d.IsPerson && d.Confidence >= cfg.HumanMinConfidence)];
 
-        if (persons.Count > 0)
-        {
+        if (persons.Count > 0) {
             float best = persons.Max(d => d.Confidence);
             snapshot.Set("has-human", "true", best, "yolo");
             snapshot.Set("human-count", persons.Count.ToString(System.Globalization.CultureInfo.InvariantCulture), best, "yolo");
@@ -24,16 +21,14 @@ internal static class Analyzer_HasHuman
             if (persons.Max(d => d.Area) >= cfg.HeroPersonMinArea)
                 SetIfStronger(snapshot, "hero-is-human", "TRUE", best);
         }
-        else
-        {
+        else {
             snapshot.Set("has-human", "false", cfg.AbsenceConfidence, "yolo");
             snapshot.Set("human-count", "0", cfg.AbsenceConfidence, "yolo");
             SetIfStronger(snapshot, "hero-is-human", "FALSE", cfg.AbsenceConfidence);
         }
     }
 
-    private static void SetIfStronger(ImageFeatureSnapshot snapshot, string featureId, string value, double confidence)
-    {
+    private static void SetIfStronger(ImageFeatureSnapshot snapshot, string featureId, string value, double confidence) {
         bool weaker = !snapshot.TryGet(featureId, out ImageFeatureValue? current)
             || current.IsUnknown
             || current.Confidence < confidence;

@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// Core-facing metadata for one accepted zip archive.
 /// </summary>
-public sealed record InputZipFileRecord
-{
+public sealed record InputZipFileRecord {
     /// <summary>
     /// Safe source filename or remote reference.
     /// </summary>

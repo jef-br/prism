@@ -5,8 +5,7 @@ namespace Prism.Services.Matching;
 /// rules in <c>ImageRoles.json</c> against the measured features (FeatureAnalysis + Classification
 /// outputs) and returns the qualifying phenotype ids in evaluation order.
 /// </summary>
-public interface IImageNgpService
-{
+public interface IImageNgpService {
     /// <summary>Returns all phenotype ids whose rules matched, best candidate first; empty when none matched.</summary>
     string[] EvaluateCandidates(ImageFeatureSnapshot features);
 }

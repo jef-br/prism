@@ -9,8 +9,7 @@ namespace Prism.Services.Transform;
 /// section independently through <see cref="ConfigLoader"/> (each one self-validating), then bundles
 /// the results. Callers build it once per stage run, never per image.
 /// </summary>
-public sealed class TransformParameters
-{
+public sealed class TransformParameters {
     internal const string ConfigFile = "transform_Config.json";
 
     public required CropTransformSettings Crop { get; init; }
@@ -26,14 +25,13 @@ public sealed class TransformParameters
     /// key, or an out-of-range value throws here — so calling this at host startup fails the process
     /// loud rather than failing the first job mid-flight.
     /// </summary>
-    public static TransformParameters FromConfig() => new()
-    {
-        Crop                  = ConfigLoader.Section<CropTransformSettings>(ConfigFile, "Crop"),
+    public static TransformParameters FromConfig() => new() {
+        Crop = ConfigLoader.Section<CropTransformSettings>(ConfigFile, "Crop"),
         ProblemImageProcessor = ConfigLoader.Section<ProblemImageProcessorConfig>(ConfigFile, "ProblemImageProcessor"),
-        BgStretch             = ConfigLoader.Section<BgStretchConfig>(ConfigFile, "BgStretch"),
-        DetailCropper         = ConfigLoader.Section<DetailCropperConfig>(ConfigFile, "DetailCropper"),
+        BgStretch = ConfigLoader.Section<BgStretchConfig>(ConfigFile, "BgStretch"),
+        DetailCropper = ConfigLoader.Section<DetailCropperConfig>(ConfigFile, "DetailCropper"),
         LowContrastEnhancement = ConfigLoader.Section<LowContrastEnhancementConfig>(ConfigFile, "LowContrastEnhancement"),
-        HeadCutter            = ConfigLoader.Section<HeadCutterConfig>(ConfigFile, "HeadCutter"),
-        Output                = ConfigLoader.Section<OutputConfig>(ConfigFile, "Output")
+        HeadCutter = ConfigLoader.Section<HeadCutterConfig>(ConfigFile, "HeadCutter"),
+        Output = ConfigLoader.Section<OutputConfig>(ConfigFile, "Output")
     };
 }

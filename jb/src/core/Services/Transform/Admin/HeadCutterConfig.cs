@@ -8,12 +8,10 @@ namespace Prism.Services.Transform;
 /// face-box height). No default — the value must be present in the JSON or deserialization fails
 /// loud.
 /// </summary>
-public sealed class HeadCutterConfig : IValidatableConfig
-{
+public sealed class HeadCutterConfig : IValidatableConfig {
     public required double FaceHeightCutFactor { get; init; }
 
-    public void Validate()
-    {
+    public void Validate() {
         if (this.FaceHeightCutFactor is <= 0.0 or >= 1.0)
             throw new PrismConfigurationException("HeadCutter.FaceHeightCutFactor must be in (0,1)");
     }

@@ -23,15 +23,13 @@ namespace Prism.Services.Matching;
 /// Measures subject-box geometry features. Returns the resolved subject box so the color
 /// analyzers can sample the same region.
 /// </summary>
-public static class Analyzer_SubjectGeometry
-{
+public static class Analyzer_SubjectGeometry {
     /// <summary>
     /// Thresholds for Analyzer_SubjectGeometry, bound from the "SubjectGeometry" section of
     /// analyzer_Config.json. No defaults — every value must be present in the JSON or deserialization
     /// fails loud.
     /// </summary>
-    public sealed class Config : IValidatableConfig
-    {
+    public sealed class Config : IValidatableConfig {
         /// <summary>Euclidean RGB distance ([0,1] channels) from the background estimate above which a pixel counts as foreground.</summary>
         public required float ForegroundColorDistance { get; init; }
 
@@ -47,15 +45,13 @@ public static class Analyzer_SubjectGeometry
         /// </summary>
         public required float BoxAreaCoverageConfidenceDiscount { get; init; }
 
-        public void Validate()
-        {
+        public void Validate() {
             if (this.ForegroundColorDistance is <= 0f or >= 1f)
                 throw new PrismConfigurationException("SubjectGeometry.ForegroundColorDistance must be in (0,1)");
         }
     }
 
-    public static SubjectBox? Analyze(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot, Config cfg)
-    {
+    public static SubjectBox? Analyze(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot, Config cfg) {
         SubjectBox? subject = ResolveSubjectBox(image, detections, cfg);
         if (subject is null) return null;
 
@@ -78,8 +74,7 @@ public static class Analyzer_SubjectGeometry
         return subject;
     }
 
-    private static SubjectBox? ResolveSubjectBox(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, Config cfg)
-    {
+    private static SubjectBox? ResolveSubjectBox(Image<Rgba32> image, IReadOnlyList<YoloDetection> detections, Config cfg) {
         YoloDetection? best = detections.OrderByDescending(d => d.Confidence).FirstOrDefault();
         if (best is not null)
             return new SubjectBox(best.X1, best.Y1, best.X2, best.Y2, best.Confidence, "yolo");

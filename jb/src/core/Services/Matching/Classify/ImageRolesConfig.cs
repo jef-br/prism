@@ -5,8 +5,7 @@ namespace Prism.Services.Matching;
 /// <summary>
 /// Top-level structure of <c>ImageRoles.json</c>.
 /// </summary>
-public sealed class ImageRolesConfig
-{
+public sealed class ImageRolesConfig {
     /// <summary>
     /// Ordered list of phenotype rules. Evaluation stops at the first matching rule.
     /// Order in this list determines priority: more specific phenotypes come first.

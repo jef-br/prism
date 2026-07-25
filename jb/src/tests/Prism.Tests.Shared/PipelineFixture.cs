@@ -47,7 +47,7 @@ public sealed class PipelineFixture : IAsyncLifetime {
     public async Task InitializeAsync() {
         prism = new PrismService();
         Default = await prism.Process(BuildDefaultJobRequest());
-        Zip     = await prism.Process(BuildZipJobRequest());
+        Zip = await prism.Process(BuildZipJobRequest());
         Minimal = await prism.Process(BuildMinimalJobRequest());
     }
 
@@ -97,7 +97,7 @@ public sealed class PipelineFixture : IAsyncLifetime {
             .ToList();
     }
 
-    private PrismJobRequest BuildJobRequest( List<ImageRecord_INPUT> imageRecords, PrismProcessingParameters parameters ) {
+    private PrismJobRequest BuildJobRequest(List<ImageRecord_INPUT> imageRecords, PrismProcessingParameters parameters) {
         string excelPath = CopyExcelToTemp();
 
         return new PrismJobRequest {

@@ -6,15 +6,12 @@ namespace PrismCoreTests.Excel;
 /// Shared builders for Excel unit tests: an in-memory <see cref="ModelBuilder"/> with a representative
 /// config, and a helper that wraps rows of string cells into an <see cref="ExcelWorkbook"/>.
 /// </summary>
-internal static class ExcelTestFixtures
-{
-    public static ModelBuilder BuildBuilder()
-    {
+internal static class ExcelTestFixtures {
+    public static ModelBuilder BuildBuilder() {
         return new ModelBuilder(BuildExcelConfig(), BuildTranslationConfig());
     }
 
-    public static ExcelWorkbook Workbook(string name, params string[][] rows)
-    {
+    public static ExcelWorkbook Workbook(string name, params string[][] rows) {
         var worksheetRows = rows
             .Select((cells, index) => new ExcelWorksheetRow(index, cells))
             .ToList();
@@ -22,10 +19,8 @@ internal static class ExcelTestFixtures
         return new ExcelWorkbook($"{name}.xlsx", [worksheet]);
     }
 
-    public static ExcelConfig BuildExcelConfig()
-    {
-        return new ExcelConfig
-        {
+    public static ExcelConfig BuildExcelConfig() {
+        return new ExcelConfig {
             RecordPrimaryKey = "FamilyID",
             HeaderRowIndicators =
             [
@@ -35,8 +30,7 @@ internal static class ExcelTestFixtures
             ],
             HeaderRowSearchSpace = new HeaderRowSearchSpace { FirstRow = 0, LastRow = 20, FirstColumn = 0, LastColumn = 20 },
             FamilyIDProperties = new FamilyIdProperties { IsNumeric = true, Length = 8 },
-            HeaderDetection = new HeaderDetectionConfig
-            {
+            HeaderDetection = new HeaderDetectionConfig {
                 MinimumMatchedColumnRatio = 0.4,
                 MaximumEditDistanceRatio = 0.12,
                 EditDistanceOneConfidence = 0.75,
@@ -48,10 +42,8 @@ internal static class ExcelTestFixtures
         };
     }
 
-    public static TranslationConfig BuildTranslationConfig()
-    {
-        return new TranslationConfig
-        {
+    public static TranslationConfig BuildTranslationConfig() {
+        return new TranslationConfig {
             HeaderGroups =
             [
                 new HeaderGroup { Id = "familyid", Terms = ["familyid", "family", "famille", "veepee"] },
@@ -67,8 +59,7 @@ internal static class ExcelTestFixtures
                 new HeaderGroup { Id = "notes", Terms = ["notes", "note", "remarks"] },
                 new HeaderGroup { Id = "ngp", Terms = ["ngp"] }
             ],
-            StopWords = new StopWordConfig
-            {
+            StopWords = new StopWordConfig {
                 General = ["de", "la", "le", "les", "of", "the", "and", "a"],
                 Domain = ["color", "style", "size", "model", "product"]
             }

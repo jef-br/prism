@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// Structured PRISM job request after API ingress has normalized caller inputs into core-facing records.
 /// </summary>
-public sealed record PrismJobRequest
-{
+public sealed record PrismJobRequest {
     /// <summary>
     /// PRISM-owned internal job identifier.
     /// </summary>

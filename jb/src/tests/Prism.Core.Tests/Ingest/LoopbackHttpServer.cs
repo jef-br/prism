@@ -32,9 +32,11 @@ internal sealed class LoopbackHttpServer : IDisposable {
             TcpClient client;
             try {
                 client = await listener.AcceptTcpClientAsync(shutdown.Token);
-            } catch (OperationCanceledException) {
+            }
+            catch (OperationCanceledException) {
                 return;
-            } catch (SocketException) {
+            }
+            catch (SocketException) {
                 return;
             }
             _ = Task.Run(() => HandleConnectionAsync(client));
@@ -65,8 +67,10 @@ internal sealed class LoopbackHttpServer : IDisposable {
                     }
                     await stream.FlushAsync(shutdown.Token);
                 }
-            } catch (OperationCanceledException) {
-            } catch (IOException) {
+            }
+            catch (OperationCanceledException) {
+            }
+            catch (IOException) {
                 // Client closed the connection mid-exchange — normal for HttpClient teardown.
             }
         }

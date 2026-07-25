@@ -25,8 +25,7 @@ public sealed record ZipMemberKoRecord(
     string SafeMessage,
     long? ExpandedByteLength,
     long? LimitByteLength,
-    IReadOnlyDictionary<string, string> SafeDetails)
-{
+    IReadOnlyDictionary<string, string> SafeDetails) {
     /// <summary>
     /// Source stage used for zip extraction KO records.
     /// </summary>

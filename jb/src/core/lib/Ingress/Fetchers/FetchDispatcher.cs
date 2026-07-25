@@ -4,8 +4,7 @@ namespace Prism.Lib.Ingress;
 /// Routes a remote URL to the first <see cref="IFetchStrategy"/> that can handle it
 /// and delegates the download. Priority order: Fetch_DropBox → Fetch_WeTransfer → Fetch_HTTPS_DirectFile.
 /// </summary>
-public sealed class FetchDispatcher
-{
+public sealed class FetchDispatcher {
     private readonly IReadOnlyList<IFetchStrategy> _strategies;
 
     internal FetchDispatcher(IReadOnlyList<IFetchStrategy> strategies) => this._strategies = strategies;
@@ -14,8 +13,7 @@ public sealed class FetchDispatcher
     /// Creates a dispatcher backed by all registered fetch strategies, using HostRules.json
     /// from the config directory discovered via <see cref="ConfigLoader"/>.
     /// </summary>
-    public static FetchDispatcher Create()
-    {
+    public static FetchDispatcher Create() {
         // HostRules_Config.Load takes the directory, not the file — resolve the file, then its folder.
         string configDirectory = Path.GetDirectoryName(ConfigLoader.RequireFile("HostRules.json"))!;
         return Create(configDirectory);

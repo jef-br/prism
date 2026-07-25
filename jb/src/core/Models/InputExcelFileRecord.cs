@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// Core-facing metadata for one accepted Excel workbook.
 /// </summary>
-public sealed record InputExcelFileRecord
-{
+public sealed record InputExcelFileRecord {
     /// <summary>
     /// Safe source filename or remote reference.
     /// </summary>

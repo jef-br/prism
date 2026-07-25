@@ -3,8 +3,7 @@ namespace Prism.Api;
 /// <summary>
 /// Safe public configuration response.
 /// </summary>
-internal sealed record PrismSafeConfigResponse
-{
+internal sealed record PrismSafeConfigResponse {
     public bool ConfigReady { get; init; }
     public bool SafeConfigurationAvailable { get; init; }
     public IReadOnlyList<string> AcceptedMediaTypes { get; init; } = [];

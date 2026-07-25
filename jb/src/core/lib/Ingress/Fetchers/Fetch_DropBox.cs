@@ -5,8 +5,7 @@ namespace Prism.Lib.Ingress;
 /// <see cref="Fetch_HTTPS_DirectFile"/>. Public-only scope: OAuth-authenticated private
 /// links are out of scope (V1 decision, 2026-06).
 /// </summary>
-internal sealed class Fetch_DropBox : IFetchStrategy
-{
+internal sealed class Fetch_DropBox : IFetchStrategy {
     private static readonly string[] _dropboxHosts =
         ["dropbox.com", "www.dropbox.com", "dl.dropboxusercontent.com"];
 
@@ -26,8 +25,7 @@ internal sealed class Fetch_DropBox : IFetchStrategy
     /// Normalizes the share link to a direct-download URL (dl=1) and delegates the
     /// actual download to <see cref="Fetch_HTTPS_DirectFile"/>.
     /// </summary>
-    public Task<ImageRecord_INPUT> FetchAsync(string url, string jobTempFolder, string jobID, CancellationToken cancellationToken)
-    {
+    public Task<ImageRecord_INPUT> FetchAsync(string url, string jobTempFolder, string jobID, CancellationToken cancellationToken) {
         string normalized = NormalizeUrl(url);
         return this._directFile.FetchAsync(normalized, jobTempFolder, jobID, cancellationToken);
     }
@@ -40,8 +38,7 @@ internal sealed class Fetch_DropBox : IFetchStrategy
     /// Converts a Dropbox share URL to a direct-download URL by setting dl=1 in the query string.
     /// dl.dropboxusercontent.com URLs are already direct downloads and pass through unchanged.
     /// </summary>
-    private static string NormalizeUrl(string url)
-    {
+    private static string NormalizeUrl(string url) {
         if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri))
             return url;
 
@@ -60,7 +57,8 @@ internal sealed class Fetch_DropBox : IFetchStrategy
             if (part.StartsWith("dl=", StringComparison.OrdinalIgnoreCase)) {
                 rewritten.Add("dl=1");
                 hasDl = true;
-            } else {
+            }
+            else {
                 rewritten.Add(part);
             }
         }

@@ -18,8 +18,8 @@ public sealed class MatchingCoDeploymentGuardTests {
         string missingFolder = Path.Combine(Path.GetTempPath(), $"PRISM-MISSING-{Guid.NewGuid():N}");
 
         IngestResult ingest = new() {
-            JobID          = Guid.NewGuid(),
-            Parameters     = new PrismProcessingParameters(),
+            JobID = Guid.NewGuid(),
+            Parameters = new PrismProcessingParameters(),
             NormalizedImages = [new ImageRecord_INPUT {
                 InitialFullName   = "one.jpg",
                 ImportStatus      = ImportStatus.Ok,
@@ -27,8 +27,8 @@ public sealed class MatchingCoDeploymentGuardTests {
                 NormalizedWidth   = 100,
                 NormalizedHeight  = 100
             }],
-            FamilyRecords  = [],
-            JobTempFolder  = missingFolder
+            FamilyRecords = [],
+            JobTempFolder = missingFolder
         };
 
         InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(

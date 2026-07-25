@@ -14,7 +14,7 @@ namespace PrismCoreTests;
 public class PipelineIntegrationTests : IClassFixture<PipelineFixture> {
     private readonly PipelineFixture fixture;
 
-    public PipelineIntegrationTests( PipelineFixture fixture ) {
+    public PipelineIntegrationTests(PipelineFixture fixture) {
         this.fixture = fixture;
     }
 

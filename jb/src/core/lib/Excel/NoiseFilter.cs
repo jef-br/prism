@@ -7,8 +7,7 @@ namespace Prism.Lib.Excel;
 /// Removes numeric values that look like measurements, dates, or other non-identity
 /// numbers before text is used as matching evidence.
 /// </summary>
-public static class NoiseFilter
-{
+public static class NoiseFilter {
     private static readonly Regex DimensionPattern = new(
         @"(?<![A-Za-z0-9])\d+(?:[.,]\d+)?\s*[xX]\s*\d+(?:[.,]\d+)?(?:\s*[xX]\s*\d+(?:[.,]\d+)?)?(?![A-Za-z0-9])",
         RegexOptions.Compiled);
@@ -35,15 +34,12 @@ public static class NoiseFilter
     /// <param name="sourceText">The text that may contain numeric noise.</param>
     /// <param name="sourceColumnName">The Excel column name when the text came from Excel.</param>
     /// <returns>Clean text that can be used as matching evidence.</returns>
-    public static string RemoveNumericNoiseForMatching(string? sourceText, string? sourceColumnName = null)
-    {
-        if (string.IsNullOrWhiteSpace(sourceText))
-        {
+    public static string RemoveNumericNoiseForMatching(string? sourceText, string? sourceColumnName = null) {
+        if (string.IsNullOrWhiteSpace(sourceText)) {
             return string.Empty;
         }
 
-        if (IsTrustedIdentifierColumn(sourceColumnName))
-        {
+        if (IsTrustedIdentifierColumn(sourceColumnName)) {
             return sourceText.Trim();
         }
 
@@ -61,15 +57,12 @@ public static class NoiseFilter
     /// <param name="token">The token being evaluated.</param>
     /// <param name="sourceColumnName">The Excel column name when the token came from Excel.</param>
     /// <returns>True when the token is numeric noise and should not match FamilyID.</returns>
-    public static bool IsNumericNoiseForFamilyMatching(string? token, string? sourceColumnName = null)
-    {
-        if (string.IsNullOrWhiteSpace(token))
-        {
+    public static bool IsNumericNoiseForFamilyMatching(string? token, string? sourceColumnName = null) {
+        if (string.IsNullOrWhiteSpace(token)) {
             return true;
         }
 
-        if (IsTrustedIdentifierColumn(sourceColumnName))
-        {
+        if (IsTrustedIdentifierColumn(sourceColumnName)) {
             return false;
         }
 
@@ -82,10 +75,8 @@ public static class NoiseFilter
     /// </summary>
     /// <param name="sourceColumnName">The Excel column name.</param>
     /// <returns>True for configured identity-like columns such as FamilyID and EAN.</returns>
-    public static bool IsTrustedIdentifierColumn(string? sourceColumnName)
-    {
-        if (string.IsNullOrWhiteSpace(sourceColumnName))
-        {
+    public static bool IsTrustedIdentifierColumn(string? sourceColumnName) {
+        if (string.IsNullOrWhiteSpace(sourceColumnName)) {
             return false;
         }
 

@@ -5,8 +5,7 @@ namespace Prism.Core;
 /// a single source of truth. Each pipeline-visible service is reachable at its own path; every service
 /// also exposes a <c>{route}/health</c> endpoint plus a root <see cref="Health"/>.
 /// </summary>
-public static class PrismServiceRoutes
-{
+public static class PrismServiceRoutes {
     /// <summary>POST IngestResult → MatchingResult.</summary>
     public const string Match = "/prism-service/match";
 

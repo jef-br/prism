@@ -11,7 +11,7 @@ internal sealed record UpscaleConfig {
     public int DiscardBandPixels { get; init; }
 
     /// <summary>Loads and parses cfg_Upscale.json from the given path.</summary>
-    internal static UpscaleConfig Load( string configPath ) {
+    internal static UpscaleConfig Load(string configPath) {
         if (!File.Exists(configPath))
             throw new PrismConfigurationException($"cfg_Upscale.json was not found at: {configPath}");
 

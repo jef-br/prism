@@ -4,8 +4,7 @@ namespace Prism.Contracts;
 /// A single measured image attribute value with provenance and confidence.
 /// Feature ids follow <c>jb/docs/ImageNGP/ImageFeatures.md</c>.
 /// </summary>
-public sealed record ImageFeatureValue
-{
+public sealed record ImageFeatureValue {
     /// <summary>
     /// Measured value as a string. Use <c>"UNKNOWN"</c> when the detector could not reach
     /// a reliable conclusion — never default to false or an arbitrary value.

@@ -3,8 +3,7 @@ namespace Prism.Contracts;
 /// <summary>
 /// Outcome of the transform routing and execution decision for a single image.
 /// </summary>
-public enum TransformationStatus
-{
+public enum TransformationStatus {
     /// <summary>The Transformed stage has not yet evaluated this image.</summary>
     NotEvaluated,
 

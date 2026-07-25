@@ -10,15 +10,13 @@ namespace Prism.Lib.Export;
 /// JSON: returns FinalManifest only; the API serializes it via PrismJsonResultEnvelope.
 /// Reads everything it needs from a single explicit <see cref="ExportRequest"/>.
 /// </summary>
-internal static class Exporter
-{
+internal static class Exporter {
     /// <summary>
     /// Builds output records for all non-KO lambdas, then produces the requested export format.
     /// </summary>
     /// <param name="request">Final LAMBDA records, normalized images, and the accumulated manifest counts.</param>
     /// <returns>The canonical manifest plus ZIP bytes when ZIP format was requested.</returns>
-    internal static ExportArtifacts Run(ExportRequest request)
-    {
+    internal static ExportArtifacts Run(ExportRequest request) {
         // Close det-order gaps first so every downstream reader (output records, NewName, manifest rows)
         // sees the compacted indices. Order stage is untouched; this only renumbers, never reorders.
         if (!request.DetOrderGapsAllowed)
@@ -37,13 +35,11 @@ internal static class Exporter
     /// Enriches each non-KO lambda's <see cref="ImageRecord_OUTPUT"/> with the export block.
     /// Uses <see cref="ExportRequest.NormalizedImages"/> to resolve the artifact path.
     /// </summary>
-    private static void BuildOutputRecords(ExportRequest request)
-    {
+    private static void BuildOutputRecords(ExportRequest request) {
         Dictionary<string, ImageRecord_INPUT> inputLookup = request.NormalizedImages
             .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
 
-        foreach (ImageRecord_LAMBDA lambda in request.LambdaRecords)
-        {
+        foreach (ImageRecord_LAMBDA lambda in request.LambdaRecords) {
             if (lambda.IsKo) continue;
 
             if (!inputLookup.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input)) continue;
@@ -60,16 +56,16 @@ internal static class Exporter
             ImageRecord_OUTPUT output = lambda.OutputRecord ?? new ImageRecord_OUTPUT();
 
             output.InitialFullName = lambda.InitialFullName;
-            output.Family          = lambda.Family;
-            output.DetOrder        = lambda.DetOrder;
-            output.Width           = lambda.Width;
-            output.Height          = lambda.Height;
-            output.FinalFileName   = lambda.NewName;
-            output.Extension       = ".jpg";
-            output.MimeType        = "image/jpeg";
-            output.ArtifactPath    = path;
-            output.ByteLength      = byteLength;
-            output.ExportStatus    = "Ok";
+            output.Family = lambda.Family;
+            output.DetOrder = lambda.DetOrder;
+            output.Width = lambda.Width;
+            output.Height = lambda.Height;
+            output.FinalFileName = lambda.NewName;
+            output.Extension = ".jpg";
+            output.MimeType = "image/jpeg";
+            output.ArtifactPath = path;
+            output.ByteLength = byteLength;
+            output.ExportStatus = "Ok";
 
             lambda.OutputRecord = output;
         }
@@ -80,26 +76,22 @@ internal static class Exporter
     /// <summary>
     /// Builds a ZIP archive containing manifest.json, OK images, KO images, and the first Excel file.
     /// </summary>
-    private static ExportArtifacts BuildZip(ExportRequest request)
-    {
+    private static ExportArtifacts BuildZip(ExportRequest request) {
         BatchManifest manifest = BuildManifest(request);
         IReadOnlyList<ImageJourneyItem> journeyItems = BuildJourneyItems(request);
         MemoryStream ms = new();
 
-        using (ZipArchive zip = new(ms, ZipArchiveMode.Create, leaveOpen: true))
-        {
+        using (ZipArchive zip = new(ms, ZipArchiveMode.Create, leaveOpen: true)) {
             AddTextEntry(zip, "manifest.json", JsonSerializer.Serialize(manifest));
 
             Dictionary<string, ImageRecord_INPUT> inputLookup = request.NormalizedImages
                 .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
 
-            foreach (ImageRecord_LAMBDA lambda in request.LambdaRecords)
-            {
+            foreach (ImageRecord_LAMBDA lambda in request.LambdaRecords) {
                 if (lambda.IsKo) continue;
 
                 byte[]? imageBytes = lambda.ProcessedBytes;
-                if (imageBytes is null)
-                {
+                if (imageBytes is null) {
                     string? artifactPath = lambda.OutputRecord?.ArtifactPath;
                     if (artifactPath is null || !File.Exists(artifactPath)) continue;
                     imageBytes = File.ReadAllBytes(artifactPath);
@@ -108,8 +100,7 @@ internal static class Exporter
                 AddBytesEntry(zip, $"OK/{lambda.NewName}", imageBytes);
             }
 
-            foreach (ImageRecord_LAMBDA lambda in request.LambdaRecords)
-            {
+            foreach (ImageRecord_LAMBDA lambda in request.LambdaRecords) {
                 if (!lambda.IsKo) continue;
 
                 if (!inputLookup.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input)) continue;
@@ -132,8 +123,7 @@ internal static class Exporter
     /// <summary>
     /// Builds the manifest for JSON output. ZIP bytes remain null; the API serializes the result via PrismJsonResultEnvelope.
     /// </summary>
-    private static ExportArtifacts BuildJson(ExportRequest request)
-    {
+    private static ExportArtifacts BuildJson(ExportRequest request) {
         return new ExportArtifacts { Manifest = BuildManifest(request), ZipBytes = null, JourneyItems = BuildJourneyItems(request) };
     }
 
@@ -143,48 +133,43 @@ internal static class Exporter
     /// Builds the canonical <see cref="BatchManifest"/> from the export request.
     /// Called once per export; the result is reused for both the response and ZIP entry.
     /// </summary>
-    private static BatchManifest BuildManifest(ExportRequest request)
-    {
+    private static BatchManifest BuildManifest(ExportRequest request) {
         IReadOnlyList<ManifestImageRow> rows = request.LambdaRecords
             .Select(ToManifestRow)
             .ToList();
 
-        return new BatchManifest
-        {
-            JobID     = request.JobID,
-            Summary   = new BatchManifestSummary
-            {
-                ImageCount     = request.ImageCount,
-                ExcelCount     = request.ExcelCount,
-                ZipCount       = request.ZipCount,
-                OkRenamed      = request.OkRenamedCount,
-                KoRecords      = request.KoRecordCount,
-                OkTransformed  = request.OkTransformedCount,
-                KoTransformed  = 0,
+        return new BatchManifest {
+            JobID = request.JobID,
+            Summary = new BatchManifestSummary {
+                ImageCount = request.ImageCount,
+                ExcelCount = request.ExcelCount,
+                ZipCount = request.ZipCount,
+                OkRenamed = request.OkRenamedCount,
+                KoRecords = request.KoRecordCount,
+                OkTransformed = request.OkTransformedCount,
+                KoTransformed = 0,
                 GeneratedCount = request.GeneratedCount
             },
-            ImageRows      = rows,
+            ImageRows = rows,
             RouteSummaries = Pipeline.StageOrder.Select(stage => $"{stage}: completed.").ToArray(),
-            Warnings       = request.Warnings
+            Warnings = request.Warnings
         };
     }
 
     /// <summary>
     /// Projects one <see cref="ImageRecord_LAMBDA"/> into a <see cref="ManifestImageRow"/>.
     /// </summary>
-    private static ManifestImageRow ToManifestRow(ImageRecord_LAMBDA lambda)
-    {
-        return new ManifestImageRow
-        {
-            SourceReference      = lambda.InitialFullName,
-            FinalFileName        = lambda.IsKo ? null : lambda.NewName,
-            Status               = lambda.IsKo ? "Ko" : "Ok",
-            KoReasonCode         = lambda.KoReasonCode,
-            KoSafeMessage        = lambda.KoSafeMessage,
-            FamilyId             = string.IsNullOrEmpty(lambda.Family) ? null : lambda.Family,
-            MatchedBy            = lambda.IsKo ? null : lambda.MatchEvidence?.AcceptedMatcherName,
-            DetOrder             = lambda.IsKo ? null : lambda.DetOrder,
-            TransformerType      = lambda.OutputRecord?.TransformerType,
+    private static ManifestImageRow ToManifestRow(ImageRecord_LAMBDA lambda) {
+        return new ManifestImageRow {
+            SourceReference = lambda.InitialFullName,
+            FinalFileName = lambda.IsKo ? null : lambda.NewName,
+            Status = lambda.IsKo ? "Ko" : "Ok",
+            KoReasonCode = lambda.KoReasonCode,
+            KoSafeMessage = lambda.KoSafeMessage,
+            FamilyId = string.IsNullOrEmpty(lambda.Family) ? null : lambda.Family,
+            MatchedBy = lambda.IsKo ? null : lambda.MatchEvidence?.AcceptedMatcherName,
+            DetOrder = lambda.IsKo ? null : lambda.DetOrder,
+            TransformerType = lambda.OutputRecord?.TransformerType,
             TransformationStatus = lambda.OutputRecord?.TransformStatus?.ToString()
         };
     }
@@ -194,8 +179,7 @@ internal static class Exporter
     /// <summary>
     /// Projects all LAMBDA records into the bounded per-image journey items for the JSON result envelope.
     /// </summary>
-    private static IReadOnlyList<ImageJourneyItem> BuildJourneyItems(ExportRequest request)
-    {
+    private static IReadOnlyList<ImageJourneyItem> BuildJourneyItems(ExportRequest request) {
         return request.LambdaRecords
             .Select(ToImageJourneyItem)
             .ToList();
@@ -205,19 +189,16 @@ internal static class Exporter
     /// Projects one <see cref="ImageRecord_LAMBDA"/> into an <see cref="ImageJourneyItem"/>.
     /// Stages are emitted in pipeline order; each carries its name, status, and optional safe message.
     /// </summary>
-    private static ImageJourneyItem ToImageJourneyItem(ImageRecord_LAMBDA lambda)
-    {
-        return new ImageJourneyItem
-        {
+    private static ImageJourneyItem ToImageJourneyItem(ImageRecord_LAMBDA lambda) {
+        return new ImageJourneyItem {
             SourceReference = lambda.InitialFullName,
-            Lambda          = new ImageLambdaJourney { Stages = BuildSteps(lambda) },
-            Output          = lambda.IsKo ? null : lambda.OutputRecord,
-            KoReasonCode    = lambda.IsKo ? lambda.KoReasonCode : null
+            Lambda = new ImageLambdaJourney { Stages = BuildSteps(lambda) },
+            Output = lambda.IsKo ? null : lambda.OutputRecord,
+            KoReasonCode = lambda.IsKo ? lambda.KoReasonCode : null
         };
     }
 
-    private static IReadOnlyList<ImageStageStep> BuildSteps(ImageRecord_LAMBDA lambda)
-    {
+    private static IReadOnlyList<ImageStageStep> BuildSteps(ImageRecord_LAMBDA lambda) {
         return
         [
             BuildImportStep(),
@@ -227,53 +208,45 @@ internal static class Exporter
         ];
     }
 
-    private static ImageStageStep BuildImportStep()
-    {
+    private static ImageStageStep BuildImportStep() {
         return new ImageStageStep { StageName = PipelineStageNames.Imported, Status = "Ok" };
     }
 
-    private static ImageStageStep BuildClassifyStep()
-    {
+    private static ImageStageStep BuildClassifyStep() {
         return new ImageStageStep { StageName = PipelineStageNames.Classified, Status = "Ok" };
     }
 
-    private static ImageStageStep BuildMatchStep(ImageRecord_LAMBDA lambda)
-    {
+    private static ImageStageStep BuildMatchStep(ImageRecord_LAMBDA lambda) {
         bool koAtMatch = lambda.IsKo && lambda.KoReasonCode?.StartsWith("MATCH", StringComparison.Ordinal) == true;
-        string status  = lambda.MatchEvidence is null ? "Skipped" : (koAtMatch ? "Ko" : "Ok");
+        string status = lambda.MatchEvidence is null ? "Skipped" : (koAtMatch ? "Ko" : "Ok");
 
-        return new ImageStageStep
-        {
-            StageName   = PipelineStageNames.Matched,
-            Status      = status,
+        return new ImageStageStep {
+            StageName = PipelineStageNames.Matched,
+            Status = status,
             SafeMessage = koAtMatch ? lambda.KoSafeMessage : null
         };
     }
 
-    private static ImageStageStep BuildTransformStep(ImageRecord_LAMBDA lambda)
-    {
-        string status      = lambda.OutputRecord?.TransformStatus?.ToString() ?? (lambda.IsKo ? "Skipped" : "Ok");
+    private static ImageStageStep BuildTransformStep(ImageRecord_LAMBDA lambda) {
+        string status = lambda.OutputRecord?.TransformStatus?.ToString() ?? (lambda.IsKo ? "Skipped" : "Ok");
         bool koAtTransform = status == "Ko";
 
-        return new ImageStageStep
-        {
-            StageName   = PipelineStageNames.Transformed,
-            Status      = status,
+        return new ImageStageStep {
+            StageName = PipelineStageNames.Transformed,
+            Status = status,
             SafeMessage = koAtTransform ? lambda.KoSafeMessage : null
         };
     }
 
     //  ZIP helpers
 
-    private static void AddTextEntry(ZipArchive zip, string entryName, string content)
-    {
+    private static void AddTextEntry(ZipArchive zip, string entryName, string content) {
         ZipArchiveEntry entry = zip.CreateEntry(entryName);
         using StreamWriter writer = new(entry.Open(), Encoding.UTF8);
         writer.Write(content);
     }
 
-    private static void AddBytesEntry(ZipArchive zip, string entryName, byte[] bytes)
-    {
+    private static void AddBytesEntry(ZipArchive zip, string entryName, byte[] bytes) {
         ZipArchiveEntry entry = zip.CreateEntry(entryName);
         using Stream stream = entry.Open();
         stream.Write(bytes, 0, bytes.Length);

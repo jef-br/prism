@@ -10,8 +10,7 @@ namespace Prism.Services.Matching;
 /// Matched, Ordered, and Renamed stage events in order and persists each LAMBDA document to the artifact
 /// store so downstream services can read a stage's output without a shared mutable context.
 /// </summary>
-public sealed class MatchingService : IMatchingService, IDisposable
-{
+public sealed class MatchingService : IMatchingService, IDisposable {
     private readonly PrismConfiguration configuration;
     private readonly ImageClassifier _sharedClassifier;
     private readonly ClipPromptCatalog _sharedPromptCatalog;
@@ -20,8 +19,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
     /// <summary>Creates the service with the validated PRISM configuration (thresholds, dedup policy).
     /// Resolves the process-wide shared CLIP ONNX session (see <see cref="ImageClassifier.GetShared"/>) —
     /// loaded once per process regardless of how many MatchingService instances are constructed.</summary>
-    public MatchingService(PrismConfiguration configuration)
-    {
+    public MatchingService(PrismConfiguration configuration) {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         this._sharedPromptCatalog = ClassificationService.LoadPromptCatalog();
 
@@ -34,8 +32,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
         IngestResult ingest,
         IArtifactStore store,
         Func<PipelineProgressEvent, Task>? progress,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         //  Classified: build one LAMBDA per normalized image (FeatureAnalysis + Classification + ImageNGP)
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Classified, cancellationToken);
 
@@ -59,9 +56,9 @@ public sealed class MatchingService : IMatchingService, IDisposable
         if (ingest.FamilyRecords.Count == 0)
             return await this.BuildNoFamiliesResult(ingest, store, okImages, progress, cancellationToken);
 
-        PhenotypeRuleSet ruleSet                 = LoadRuleSet();
-        IImageNgpService ngp                     = new ImageNgpService(ruleSet);
-        IFeatureAnalysisService featureAnalysis  = new FeatureAnalysisService();
+        PhenotypeRuleSet ruleSet = LoadRuleSet();
+        IImageNgpService ngp = new ImageNgpService(ruleSet);
+        IFeatureAnalysisService featureAnalysis = new FeatureAnalysisService();
         using IClassificationService classification =
             new ClassificationService(this._sharedClassifier, this._sharedPromptCatalog, this.configuration);
 
@@ -72,20 +69,18 @@ public sealed class MatchingService : IMatchingService, IDisposable
         // branch across the chunk; a fixed-batch model export transparently degrades to one Run per
         // image inside ApplyClipTagsBatch.
         var results = new (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, UInt128 Hash)[okImages.Count];
-        int classifyKo        = 0;
-        int classifyDegraded  = 0;
+        int classifyKo = 0;
+        int classifyDegraded = 0;
         int phenotypeAssigned = 0;
         bool doClassify = classification.IsReady && !ingest.Parameters.SkipClassification;
 
         var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8) };
 
-        for (int chunkStart = 0; chunkStart < okImages.Count; chunkStart += ClipChunkSize)
-        {
+        for (int chunkStart = 0; chunkStart < okImages.Count; chunkStart += ClipChunkSize) {
             int chunkCount = Math.Min(ClipChunkSize, okImages.Count - chunkStart);
             var chunkImages = new Image<Rgba32>?[chunkCount];
 
-            Parallel.For(0, chunkCount, parallelOptions, i =>
-            {
+            Parallel.For(0, chunkCount, parallelOptions, i => {
                 int index = chunkStart + i;
                 var (lambda, image, hash, wasKo) = PrepareLambda(okImages[index], featureAnalysis);
                 results[index] = (lambda, okImages[index], hash);
@@ -93,36 +88,30 @@ public sealed class MatchingService : IMatchingService, IDisposable
                 if (wasKo) Interlocked.Increment(ref classifyKo);
             });
 
-            if (doClassify)
-            {
+            if (doClassify) {
                 var alive = new List<(Image<Rgba32> Image, ImageRecord_LAMBDA Lambda)>(chunkCount);
-                for (int i = 0; i < chunkCount; i++)
-                {
+                for (int i = 0; i < chunkCount; i++) {
                     if (chunkImages[i] is not null && !results[chunkStart + i].Lambda.IsKo)
                         alive.Add((chunkImages[i]!, results[chunkStart + i].Lambda));
                 }
 
                 // CLIP failure → degrade, never KO: tags are optional enrichment, and FamilyID matching
                 // keys off filename tokens, so the images must still flow to ImageNGP and the waterfall.
-                if (alive.Count > 0)
-                {
-                    try
-                    {
+                if (alive.Count > 0) {
+                    try {
                         // ImageClassifier serializes its own Run() calls internally (RunLock), so no
                         // external lock is needed here even across concurrent MatchingService jobs.
                         classification.ApplyClipTagsBatch(alive,
                             this.configuration.ThresholdForInfluentialTags,
                             this.configuration.ThresholdForDiscardingClassificationTags);
                     }
-                    catch
-                    {
+                    catch {
                         classifyDegraded += alive.Count;
                     }
                 }
             }
 
-            for (int i = 0; i < chunkCount; i++)
-            {
+            for (int i = 0; i < chunkCount; i++) {
                 chunkImages[i]?.Dispose();
 
                 ImageRecord_LAMBDA lambda = results[chunkStart + i].Lambda;
@@ -130,7 +119,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
 
                 string[] candidates = ngp.EvaluateCandidates(lambda.Features);
                 lambda.CandidatePhenotypes = candidates;
-                lambda.SelectedPhenotype   = candidates.Length > 0 ? candidates[0] : null;
+                lambda.SelectedPhenotype = candidates.Length > 0 ? candidates[0] : null;
                 if (lambda.SelectedPhenotype is not null) phenotypeAssigned++;
             }
         }
@@ -140,8 +129,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
         Dictionary<ImageRecord_INPUT, ImageRecord_LAMBDA> lambdaByImage = new(okImages.Count);
         var hashEntries = new List<(ImageRecord_INPUT Record, UInt128 Hash)>(okImages.Count);
 
-        foreach (var (lambda, source, hash) in results)
-        {
+        foreach (var (lambda, source, hash) in results) {
             lambdaRecords.Add(lambda);
             lambdaByImage[source] = lambda;
             hashEntries.Add((source, hash));
@@ -170,15 +158,14 @@ public sealed class MatchingService : IMatchingService, IDisposable
 
         PersistLambdaDocuments(store, ingest.JobID, lambdaRecords);
 
-        return new MatchingResult
-        {
-            Ingest                 = ingest,
-            LambdaRecords          = lambdaRecords,
-            OkRenamedCount         = okRenamed,
-            KoRecordCount          = classifyKo + duplicatesRemoved + matchKo + renameKo,
-            DuplicatesRemoved      = duplicatesRemoved,
+        return new MatchingResult {
+            Ingest = ingest,
+            LambdaRecords = lambdaRecords,
+            OkRenamedCount = okRenamed,
+            KoRecordCount = classifyKo + duplicatesRemoved + matchKo + renameKo,
+            DuplicatesRemoved = duplicatesRemoved,
             PhenotypeAssignedCount = phenotypeAssigned,
-            Warnings               = BuildWarnings(classifyDegraded, refinementFailed)
+            Warnings = BuildWarnings(classifyDegraded, refinementFailed)
         };
     }
 
@@ -191,18 +178,15 @@ public sealed class MatchingService : IMatchingService, IDisposable
         IArtifactStore store,
         IReadOnlyList<ImageRecord_INPUT> okImages,
         Func<PipelineProgressEvent, Task>? progress,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         List<ImageRecord_LAMBDA> lambdas = new(okImages.Count);
-        foreach (ImageRecord_INPUT source in okImages)
-        {
-            lambdas.Add(new ImageRecord_LAMBDA
-            {
+        foreach (ImageRecord_INPUT source in okImages) {
+            lambdas.Add(new ImageRecord_LAMBDA {
                 InitialFullName = source.InitialFullName,
-                Width  = source.NormalizedWidth  > 0 ? source.NormalizedWidth  : source.Width,
+                Width = source.NormalizedWidth > 0 ? source.NormalizedWidth : source.Width,
                 Height = source.NormalizedHeight > 0 ? source.NormalizedHeight : source.Height,
-                IsKo          = true,
-                KoReasonCode  = "NO_FAMILIES",
+                IsKo = true,
+                KoReasonCode = "NO_FAMILIES",
                 KoSafeMessage = "No FamilyID records were parsed from the Excel input."
             });
         }
@@ -213,15 +197,14 @@ public sealed class MatchingService : IMatchingService, IDisposable
 
         PersistLambdaDocuments(store, ingest.JobID, lambdas);
 
-        return new MatchingResult
-        {
-            Ingest                 = ingest,
-            LambdaRecords          = lambdas,
-            OkRenamedCount         = 0,
-            KoRecordCount          = lambdas.Count,
-            DuplicatesRemoved      = 0,
+        return new MatchingResult {
+            Ingest = ingest,
+            LambdaRecords = lambdas,
+            OkRenamedCount = 0,
+            KoRecordCount = lambdas.Count,
+            DuplicatesRemoved = 0,
             PhenotypeAssignedCount = 0,
-            Warnings               = [$"No FamilyID records were parsed from the Excel input; all {okImages.Count} image(s) were rejected."]
+            Warnings = [$"No FamilyID records were parsed from the Excel input; all {okImages.Count} image(s) were rejected."]
         };
     }
 
@@ -229,8 +212,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
     /// Surfaces classification degradation and refinement failures as aggregated, non-silent manifest
     /// warnings. Empty when every image classified and refined cleanly.
     /// </summary>
-    private static IReadOnlyList<string> BuildWarnings(int classifyDegraded, int refinementFailed)
-    {
+    private static IReadOnlyList<string> BuildWarnings(int classifyDegraded, int refinementFailed) {
         List<string> warnings = [];
 
         if (classifyDegraded > 0)
@@ -256,12 +238,10 @@ public sealed class MatchingService : IMatchingService, IDisposable
     /// </summary>
     private static (ImageRecord_LAMBDA Lambda, Image<Rgba32>? Image, UInt128 Hash, bool WasKo) PrepareLambda(
         ImageRecord_INPUT source,
-        IFeatureAnalysisService featureAnalysis)
-    {
-        ImageRecord_LAMBDA lambda = new()
-        {
+        IFeatureAnalysisService featureAnalysis) {
+        ImageRecord_LAMBDA lambda = new() {
             InitialFullName = source.InitialFullName,
-            Width  = source.NormalizedWidth  > 0 ? source.NormalizedWidth  : source.Width,
+            Width = source.NormalizedWidth > 0 ? source.NormalizedWidth : source.Width,
             Height = source.NormalizedHeight > 0 ? source.NormalizedHeight : source.Height
         };
 
@@ -269,8 +249,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
             return (lambda, null, UInt128.Zero, false);
 
         Image<Rgba32> image;
-        try
-        {
+        try {
             // In-process Import->Match fusion (T-3500): when Import ran in this same process it hands
             // forward the encoded normalized JPEG bytes it already produced, so this decode reads from
             // memory instead of re-opening NormalizedJpgPath. Bytes (not a decoded Image) are the carried-
@@ -287,10 +266,9 @@ public sealed class MatchingService : IMatchingService, IDisposable
             // out of scope for this ticket, see AGENT-TICKETS.md T-3500).
             source.NormalizedJpegBytes = null;
         }
-        catch (Exception ex)
-        {
-            lambda.IsKo          = true;
-            lambda.KoReasonCode  = "CLASSIFY_ERROR";
+        catch (Exception ex) {
+            lambda.IsKo = true;
+            lambda.KoReasonCode = "CLASSIFY_ERROR";
             lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
             return (lambda, null, UInt128.Zero, true);
         }
@@ -300,15 +278,13 @@ public sealed class MatchingService : IMatchingService, IDisposable
         try { hash = VisualHasher.ComputeHash(image); } catch { }
 
         // FeatureAnalysis failure → KO: the geometric/visual measurement feeds ImageNGP and ordering.
-        try
-        {
+        try {
             featureAnalysis.Analyze(image, lambda.Features);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             image.Dispose();
-            lambda.IsKo          = true;
-            lambda.KoReasonCode  = "CLASSIFY_ERROR";
+            lambda.IsKo = true;
+            lambda.KoReasonCode = "CLASSIFY_ERROR";
             lambda.KoSafeMessage = $"Feature extraction failed: {ex.Message}";
             return (lambda, null, hash, true);
         }
@@ -328,15 +304,13 @@ public sealed class MatchingService : IMatchingService, IDisposable
         (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, UInt128 Hash)[] results,
         IReadOnlyList<FamilyIDRecord> families,
         IFeatureAnalysisService featureAnalysis,
-        PhenotypeRuleSet ruleSet)
-    {
+        PhenotypeRuleSet ruleSet) {
         Dictionary<string, FamilyIDRecord> familyById = new(StringComparer.OrdinalIgnoreCase);
         foreach (FamilyIDRecord family in families) familyById.TryAdd(family.FamilyID, family);
 
         int assigned = 0;
         int refinementFailed = 0;
-        foreach (var (lambda, source, _) in results)
-        {
+        foreach (var (lambda, source, _) in results) {
             if (lambda.IsKo) continue;
 
             FamilyIDRecord? family = lambda.MatchEvidence?.FinalFamilyId is string familyId
@@ -365,21 +339,18 @@ public sealed class MatchingService : IMatchingService, IDisposable
     private int Deduplicate(
         Dictionary<ImageRecord_INPUT, ImageRecord_LAMBDA> lambdaByImage,
         IClassificationService classification,
-        IReadOnlyList<(ImageRecord_INPUT Record, UInt128 Hash)> hashEntries)
-    {
+        IReadOnlyList<(ImageRecord_INPUT Record, UInt128 Hash)> hashEntries) {
         HashSet<string> exempt = new(this.configuration.DeduplicationExemptPhenotypes, StringComparer.OrdinalIgnoreCase);
         IReadOnlyList<DedupGroup> groups = classification.FindDuplicates(hashEntries);
         int removed = 0;
 
-        foreach (DedupGroup group in groups)
-        {
+        foreach (DedupGroup group in groups) {
             // Skip groups whose canonical was rejected during classification —
             // its duplicates are not confirmed duplicates of a valid image.
             if (lambdaByImage.TryGetValue(group.Canonical, out ImageRecord_LAMBDA? canonLambda) && canonLambda.IsKo)
                 continue;
 
-            foreach (ImageRecord_INPUT duplicate in group.Duplicates)
-            {
+            foreach (ImageRecord_INPUT duplicate in group.Duplicates) {
                 ImageRecord_LAMBDA lambda = lambdaByImage[duplicate];
 
                 // Already rejected (e.g. CLASSIFY_ERROR) — keep its original reason.
@@ -389,8 +360,8 @@ public sealed class MatchingService : IMatchingService, IDisposable
                 // tech drawings pass; packshots, closeups, and zooms are removed as duplicates.
                 if (lambda.SelectedPhenotype is not null && exempt.Contains(lambda.SelectedPhenotype)) continue;
 
-                lambda.IsKo          = true;
-                lambda.KoReasonCode  = "VISUAL_DUPLICATE";
+                lambda.IsKo = true;
+                lambda.KoReasonCode = "VISUAL_DUPLICATE";
                 lambda.KoSafeMessage = $"Visual duplicate of {Path.GetFileName(group.Canonical.InitialFullName)}";
                 removed++;
             }
@@ -408,8 +379,7 @@ public sealed class MatchingService : IMatchingService, IDisposable
 
     //  Helpers
 
-    private static PhenotypeRuleSet LoadRuleSet()
-    {
+    private static PhenotypeRuleSet LoadRuleSet() {
         return PhenotypeRuleSet.Load(ConfigLoader.RequireFile("ImageRoles.json"));
     }
 
@@ -418,15 +388,12 @@ public sealed class MatchingService : IMatchingService, IDisposable
     /// for distributed deployment; a write failure must never fail an otherwise-successful job, so
     /// persistence is best-effort in the modular monolith.
     /// </summary>
-    private static void PersistLambdaDocuments(IArtifactStore store, Guid jobId, IReadOnlyList<ImageRecord_LAMBDA> lambdas)
-    {
-        try
-        {
+    private static void PersistLambdaDocuments(IArtifactStore store, Guid jobId, IReadOnlyList<ImageRecord_LAMBDA> lambdas) {
+        try {
             foreach (ImageRecord_LAMBDA lambda in lambdas)
                 store.SaveLambdaDocument(jobId, lambda.InitialFullName, lambda);
         }
-        catch
-        {
+        catch {
             // Substrate persistence only — never block job completion on a document write.
         }
     }

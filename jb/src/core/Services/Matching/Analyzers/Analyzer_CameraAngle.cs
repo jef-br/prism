@@ -14,10 +14,8 @@ namespace Prism.Services.Matching;
 */
 
 /// <summary>STUB: will set <c>camera-angle</c> and <c>top-view</c>. Currently writes nothing.</summary>
-internal static class Analyzer_CameraAngle
-{
-    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot)
-    {
+internal static class Analyzer_CameraAngle {
+    public static void Analyze(Image<Rgba32> image, ImageFeatureSnapshot snapshot) {
         // Not implemented — camera-angle and top-view stay UNKNOWN.
     }
 }

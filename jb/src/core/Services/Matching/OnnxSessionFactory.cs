@@ -10,7 +10,7 @@ namespace Prism.Services.Matching;
 /// <see cref="SessionOptions"/>/<see cref="InferenceSession"/> directly — enforced by the conventions hook.
 /// </summary>
 internal static class OnnxSessionFactory {
-    internal static InferenceSession Create( string modelPath ) {
+    internal static InferenceSession Create(string modelPath) {
         var opts = new SessionOptions();
         if (GpuProbe.HasHardwareDirectMLAdapter())
             opts.AppendExecutionProvider_DML(0);

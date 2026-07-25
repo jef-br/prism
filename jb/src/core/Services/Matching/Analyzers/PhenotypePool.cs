@@ -6,13 +6,11 @@ namespace Prism.Services.Matching;
 /// for all of them) and each <see cref="Eliminate"/> wave removes phenotypes whose required
 /// conditions are contradicted by KNOWN feature values. UNKNOWN evidence never eliminates.
 /// </summary>
-public sealed class PhenotypePool
-{
+public sealed class PhenotypePool {
     private readonly PhenotypeRuleSet ruleSet;
     private readonly List<string> candidates;
 
-    public PhenotypePool(PhenotypeRuleSet ruleSet)
-    {
+    public PhenotypePool(PhenotypeRuleSet ruleSet) {
         this.ruleSet = ruleSet;
         this.candidates = [.. ruleSet.PhenotypeIds];
     }

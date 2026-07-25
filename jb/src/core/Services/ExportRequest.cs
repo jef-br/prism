@@ -5,8 +5,7 @@ namespace Prism.Core;
 /// gathered explicitly by the orchestrator from the final LAMBDA collection plus the accumulated
 /// counts. Replaces the manifest-summary fields that used to be read off <c>PipelineContext</c>.
 /// </summary>
-public sealed record ExportRequest
-{
+public sealed record ExportRequest {
     /// <summary>PRISM-owned job identifier.</summary>
     public required Guid JobID { get; init; }
 

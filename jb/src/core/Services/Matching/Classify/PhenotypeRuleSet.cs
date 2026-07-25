@@ -12,10 +12,8 @@ namespace Prism.Services.Matching;
 ///
 /// Rules can be updated by editing <c>ImageRoles.json</c> — no recompilation needed.
 /// </summary>
-public sealed class PhenotypeRuleSet
-{
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
+public sealed class PhenotypeRuleSet {
+    private static readonly JsonSerializerOptions JsonOptions = new() {
         AllowTrailingCommas = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         PropertyNameCaseInsensitive = true
@@ -23,8 +21,7 @@ public sealed class PhenotypeRuleSet
 
     private readonly IReadOnlyList<PhenotypeRule> rules;
 
-    private PhenotypeRuleSet(IReadOnlyList<PhenotypeRule> rules)
-    {
+    private PhenotypeRuleSet(IReadOnlyList<PhenotypeRule> rules) {
         this.rules = rules;
     }
 
@@ -34,8 +31,7 @@ public sealed class PhenotypeRuleSet
     /// <param name="jsonPath">Absolute path to <c>ImageRoles.json</c>.</param>
     /// <returns>Loaded rule set ready for evaluation.</returns>
     /// <exception cref="PrismConfigurationException">Thrown when the file is missing or cannot be parsed.</exception>
-    public static PhenotypeRuleSet Load(string jsonPath)
-    {
+    public static PhenotypeRuleSet Load(string jsonPath) {
         if (!File.Exists(jsonPath))
             throw new PrismConfigurationException($"ImageRoles.json not found at: {jsonPath}");
 
@@ -52,10 +48,8 @@ public sealed class PhenotypeRuleSet
     /// Returns <c>null</c> when no phenotype matches — the image is unclassified
     /// and handled by deterministic fallback in the Ordered stage.
     /// </summary>
-    public string? Assign(ImageFeatureSnapshot features)
-    {
-        foreach (PhenotypeRule rule in this.rules)
-        {
+    public string? Assign(ImageFeatureSnapshot features) {
+        foreach (PhenotypeRule rule in this.rules) {
             if (AllConditionsMet(rule.Required, features))
                 return rule.Id;
         }
@@ -71,10 +65,8 @@ public sealed class PhenotypeRuleSet
     /// UNKNOWN features never contradict — absence of evidence keeps the phenotype in play.
     /// Unknown phenotype ids are never contradicted.
     /// </summary>
-    public bool IsContradicted(string phenotypeId, ImageFeatureSnapshot features)
-    {
-        foreach (PhenotypeRule rule in this.rules)
-        {
+    public bool IsContradicted(string phenotypeId, ImageFeatureSnapshot features) {
+        foreach (PhenotypeRule rule in this.rules) {
             if (!string.Equals(rule.Id, phenotypeId, StringComparison.OrdinalIgnoreCase)) continue;
             return rule.Required.Any(c => ConditionDefinitivelyFails(c, features));
         }
@@ -85,11 +77,9 @@ public sealed class PhenotypeRuleSet
     /// Returns all matching phenotype ids in evaluation order.
     /// Used for diagnostics; only the first match is the selected phenotype.
     /// </summary>
-    public string[] EvaluateCandidates(ImageFeatureSnapshot features)
-    {
+    public string[] EvaluateCandidates(ImageFeatureSnapshot features) {
         List<string> candidates = [];
-        foreach (PhenotypeRule rule in this.rules)
-        {
+        foreach (PhenotypeRule rule in this.rules) {
             if (AllConditionsMet(rule.Required, features))
                 candidates.Add(rule.Id);
         }
@@ -98,10 +88,8 @@ public sealed class PhenotypeRuleSet
 
     //  Condition evaluation 
 
-    private static bool AllConditionsMet(IReadOnlyList<FeatureCondition> conditions, ImageFeatureSnapshot features)
-    {
-        foreach (FeatureCondition condition in conditions)
-        {
+    private static bool AllConditionsMet(IReadOnlyList<FeatureCondition> conditions, ImageFeatureSnapshot features) {
+        foreach (FeatureCondition condition in conditions) {
             if (!ConditionMet(condition, features))
                 return false;
         }
@@ -110,8 +98,7 @@ public sealed class PhenotypeRuleSet
 
     // A condition definitively fails only when every feature it touches is known and the
     // comparison still fails. An anyOf group fails only when all of its children do.
-    private static bool ConditionDefinitivelyFails(FeatureCondition condition, ImageFeatureSnapshot features)
-    {
+    private static bool ConditionDefinitivelyFails(FeatureCondition condition, ImageFeatureSnapshot features) {
         if (condition.IsAnyOfGroup)
             return condition.AnyOf!.All(c => ConditionDefinitivelyFails(c, features));
 
@@ -125,8 +112,7 @@ public sealed class PhenotypeRuleSet
         return !ConditionMet(condition, features);
     }
 
-    private static bool ConditionMet(FeatureCondition condition, ImageFeatureSnapshot features)
-    {
+    private static bool ConditionMet(FeatureCondition condition, ImageFeatureSnapshot features) {
         if (condition.IsAnyOfGroup)
             return condition.AnyOf!.Any(c => ConditionMet(c, features));
 
@@ -145,8 +131,7 @@ public sealed class PhenotypeRuleSet
         if (condition.In is not null)
             return condition.In.Any(opt => string.Equals(value, opt, StringComparison.OrdinalIgnoreCase));
 
-        if (condition.Min is not null || condition.Max is not null)
-        {
+        if (condition.Min is not null || condition.Max is not null) {
             if (!double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out double numValue))
                 return false;
             if (condition.Min is not null && numValue < condition.Min.Value) return false;

@@ -7,18 +7,15 @@ namespace PrismCoreTests.ServiceHost;
 /// Exercises the HTTP client calling the remote transform service with a MatchingResult payload.
 /// </summary>
 [Collection("Service Host")]
-public class HttpTransformServiceTests
-{
+public class HttpTransformServiceTests {
     private readonly ServiceHostFixture fixture;
 
-    public HttpTransformServiceTests(ServiceHostFixture fixture)
-    {
+    public HttpTransformServiceTests(ServiceHostFixture fixture) {
         this.fixture = fixture;
     }
 
     [Fact]
-    public async Task TransformAsync_WithMinimalMatchingResult_ReturnsTransformResult()
-    {
+    public async Task TransformAsync_WithMinimalMatchingResult_ReturnsTransformResult() {
         // Arrange
         var client = new HttpTransformService(fixture.Client);
         MatchingResult matched = ServiceHostTestHelpers.CreateMinimalMatchingResult();
@@ -34,8 +31,7 @@ public class HttpTransformServiceTests
     }
 
     [Fact]
-    public async Task TransformAsync_ResultCarriesFamilyIDAndPhenotype()
-    {
+    public async Task TransformAsync_ResultCarriesFamilyIDAndPhenotype() {
         // Arrange
         var client = new HttpTransformService(fixture.Client);
         MatchingResult matched = ServiceHostTestHelpers.CreateMinimalMatchingResult();
@@ -47,8 +43,7 @@ public class HttpTransformServiceTests
 
         // Assert
         Assert.NotNull(result.Matched.LambdaRecords);
-        if (result.Matched.LambdaRecords.Count > 0)
-        {
+        if (result.Matched.LambdaRecords.Count > 0) {
             // Family and phenotype should pass through unchanged (transform disabled).
             Assert.Equal(expectedFamilyID, result.Matched.LambdaRecords[0].Family);
             Assert.Equal(expectedPhenotype, result.Matched.LambdaRecords[0].SelectedPhenotype);
@@ -56,8 +51,7 @@ public class HttpTransformServiceTests
     }
 
     [Fact]
-    public async Task TransformAsync_HealthEndpoint_ReturnsOk()
-    {
+    public async Task TransformAsync_HealthEndpoint_ReturnsOk() {
         // Arrange
         var httpClient = fixture.Client;
 

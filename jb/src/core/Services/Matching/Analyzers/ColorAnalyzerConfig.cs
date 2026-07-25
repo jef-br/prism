@@ -7,8 +7,7 @@ namespace Prism.Services.Matching;
 /// Analyzer_BackgroundColor, bound from the "Colors" section of analyzer_Config.json. No defaults —
 /// every value must be present in the JSON or deserialization fails loud.
 /// </summary>
-public sealed class ColorAnalyzerConfig : IValidatableConfig
-{
+public sealed class ColorAnalyzerConfig : IValidatableConfig {
     // BinsPerChannel needs at least 2 bins to quantize anything — validation bound, not tunable.
     private const int MinBinsPerChannel = 2;
 
@@ -39,8 +38,7 @@ public sealed class ColorAnalyzerConfig : IValidatableConfig
     /// <summary>Named palette (name → #rrggbb); measured colors map to the nearest entry.</summary>
     public required Dictionary<string, string> Palette { get; init; }
 
-    public void Validate()
-    {
+    public void Validate() {
         List<string> problems = [];
 
         if (this.BucketCount < 1) problems.Add("Colors.BucketCount must be >= 1");

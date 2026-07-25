@@ -8,16 +8,13 @@ namespace Prism.Contracts;
 /// <summary>
 /// Represents one deduplicated product family record built from the Internal Excel Model.
 /// </summary>
-public sealed class FamilyIDRecord
-{
+public sealed class FamilyIDRecord {
     /// <summary>
     /// Creates a family record with the configured primary-key value.
     /// </summary>
     /// <param name="familyID">The validated family identifier.</param>
-    public FamilyIDRecord(string familyID)
-    {
-        if (string.IsNullOrWhiteSpace(familyID))
-        {
+    public FamilyIDRecord(string familyID) {
+        if (string.IsNullOrWhiteSpace(familyID)) {
             throw new ArgumentException("FamilyID is required.", nameof(familyID));
         }
 
@@ -38,8 +35,7 @@ public sealed class FamilyIDRecord
         IReadOnlyDictionary<string, IReadOnlyList<string>>? normalizedTokens,
         IReadOnlyDictionary<string, IReadOnlyList<string>>? originalSourceCellValues,
         IReadOnlyList<FamilyConflictEvidence>? conflictEvidence)
-        : this(familyID)
-    {
+        : this(familyID) {
         if (canonicalProperties is not null)
             foreach (KeyValuePair<string, string> kv in canonicalProperties) this.canonicalProperties[kv.Key] = kv.Value;
         if (columnClassifications is not null)
@@ -93,10 +89,8 @@ public sealed class FamilyIDRecord
     /// </summary>
     /// <param name="propertyValue">The property value extracted from a worksheet row.</param>
     /// <param name="classification">The dynamic column classification.</param>
-    public void MergeProperty(ExcelPropertyValue propertyValue, ExcelColumnClassification classification)
-    {
-        if (string.IsNullOrWhiteSpace(propertyValue.PropertyName))
-        {
+    public void MergeProperty(ExcelPropertyValue propertyValue, ExcelColumnClassification classification) {
+        if (string.IsNullOrWhiteSpace(propertyValue.PropertyName)) {
             throw new ArgumentException("Property name is required.", nameof(propertyValue));
         }
 
@@ -116,15 +110,13 @@ public sealed class FamilyIDRecord
 
         string incomingCanonicalValue = BuildCanonicalValue(propertyValue.SourceValues);
 
-        if (string.IsNullOrWhiteSpace(currentCanonicalValue))
-        {
+        if (string.IsNullOrWhiteSpace(currentCanonicalValue)) {
             this.canonicalProperties[propertyValue.PropertyName] = incomingCanonicalValue;
             this.AddConflictEvidenceWhenNeeded(propertyValue, "duplicate-column");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(incomingCanonicalValue) || ValuesAreEquivalent(currentCanonicalValue, incomingCanonicalValue))
-        {
+        if (string.IsNullOrWhiteSpace(incomingCanonicalValue) || ValuesAreEquivalent(currentCanonicalValue, incomingCanonicalValue)) {
             this.AddConflictEvidenceWhenNeeded(propertyValue, "duplicate-column");
             return;
         }
@@ -150,37 +142,32 @@ public sealed class FamilyIDRecord
     /// Used by the model-wide empty-column prune after collation.
     /// </summary>
     /// <param name="propertyName">Canonical property name to remove.</param>
-    public void RemoveProperty(string propertyName)
-    {
+    public void RemoveProperty(string propertyName) {
         this.canonicalProperties.Remove(propertyName);
         this.columnClassifications.Remove(propertyName);
         this.normalizedTokens.Remove(propertyName);
         this.originalSourceCellValues.Remove(propertyName);
     }
 
-    private List<string> GetExistingSourceValues(string propertyName)
-    {
+    private List<string> GetExistingSourceValues(string propertyName) {
         return this.originalSourceCellValues.TryGetValue(propertyName, out IReadOnlyList<string>? existingValues)
             ? existingValues.ToList()
             : [];
     }
 
-    private List<string> GetExistingTokens(string propertyName)
-    {
+    private List<string> GetExistingTokens(string propertyName) {
         return this.normalizedTokens.TryGetValue(propertyName, out IReadOnlyList<string>? existingTokens)
             ? existingTokens.ToList()
             : [];
     }
 
-    private void AddConflictEvidenceWhenNeeded(ExcelPropertyValue propertyValue, string reasonCode)
-    {
+    private void AddConflictEvidenceWhenNeeded(ExcelPropertyValue propertyValue, string reasonCode) {
         string[] uniqueValues = propertyValue.SourceValues
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        if (uniqueValues.Length <= 1)
-        {
+        if (uniqueValues.Length <= 1) {
             return;
         }
 
@@ -199,21 +186,18 @@ public sealed class FamilyIDRecord
             propertyValue.SourceLocations));
     }
 
-    private static bool ValuesAreEquivalent(string leftValue, string rightValue)
-    {
+    private static bool ValuesAreEquivalent(string leftValue, string rightValue) {
         return string.Equals(leftValue.Trim(), rightValue.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string BuildCanonicalValue(IReadOnlyList<string> sourceValues)
-    {
+    private static string BuildCanonicalValue(IReadOnlyList<string> sourceValues) {
         string[] uniqueValues = sourceValues
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => value.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        if (uniqueValues.Length <= 1)
-        {
+        if (uniqueValues.Length <= 1) {
             return uniqueValues.FirstOrDefault() ?? string.Empty;
         }
 
@@ -226,10 +210,8 @@ public sealed class FamilyIDRecord
         return string.Join(" ", uniqueTokens);
     }
 
-    private static IReadOnlyList<string> TokenizeCellValue(string sourceValue)
-    {
-        if (string.IsNullOrWhiteSpace(sourceValue))
-        {
+    private static IReadOnlyList<string> TokenizeCellValue(string sourceValue) {
+        if (string.IsNullOrWhiteSpace(sourceValue)) {
             return [];
         }
 
