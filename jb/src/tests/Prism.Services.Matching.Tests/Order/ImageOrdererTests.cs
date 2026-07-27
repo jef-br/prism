@@ -14,30 +14,24 @@ public class ImageOrdererTests {
     //  DetOrderConfig.Load contract 
 
     [Fact]
-    public void Load_ValidPath_Has19ProductTypesIncludingDefault() {
+    public void Load_ValidPath_Has5ProductTypesIncludingDefault() {
         DetOrderConfig config = DetOrderConfig.Load(RulesPath, StemsPath);
 
-        // 18 named product types + default
-        string[] expectedTypes =
-        [
-            "default",
-            "clothing-tops", "clothing-bottoms", "clothing-outerwear", "clothing-dresses",
-            "footwear", "bags-accessories",
-            "fmcg-packaged-food", "fmcg-personal-care", "beauty-cosmetics",
-            "electronics-small", "electronics-large",
-            "homeware-soft", "homeware-hard",
-            "toys-children", "diy-tools", "gardening", "sports-equipment", "furniture"
-        ];
+        // 4 named product types + default (collapsed from 18+default by the follow-up ticket
+        // to T-4700 — the other 13 now fall back to "default").
+        string[] expectedTypes = ["default", "topwear", "bottomwear", "footwear", "bags-accessories"];
 
         foreach (string type in expectedTypes) {
             Assert.True(config.HasProductType(type), $"Expected product type '{type}' not found in DetOrderRules.json.");
         }
+        Assert.False(config.HasProductType("clothing-tops"), "clothing-tops was renamed to topwear.");
+        Assert.False(config.HasProductType("furniture"), "furniture was retired; falls back to default.");
     }
 
     [Fact]
-    public void GetSlots_ClothingTops_Returns8Slots() {
+    public void GetSlots_Topwear_Returns8Slots() {
         DetOrderConfig config = DetOrderConfig.Load(RulesPath, StemsPath);
-        IReadOnlyList<DetSlotRule> slots = config.GetSlots("clothing-tops");
+        IReadOnlyList<DetSlotRule> slots = config.GetSlots("topwear");
         Assert.Equal(8, slots.Count);
     }
 

@@ -81,7 +81,7 @@ public class ImageRecord_LAMBDA : ImageRecord_Base {
     public OrderEvidence? OrderEvidence { get; set; }
 
     /// <summary>
-    /// Product type identifier resolved by the Ordered stage (e.g. <c>"clothing-tops"</c>).
+    /// Product type identifier resolved by the Ordered stage (e.g. <c>"topwear"</c>).
     /// Used by the Transformed stage to apply product-type-specific det-slot exclusion rules.
     /// Null until the Ordered stage completes for this record.
     /// </summary>

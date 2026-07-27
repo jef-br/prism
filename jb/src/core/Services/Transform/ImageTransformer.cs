@@ -65,12 +65,13 @@ public static class ImageTransformer {
     /// <summary>
     /// Returns true when the image's det-slot falls in the exclusion range for its product type,
     /// disqualifying it from <see cref="Tx_DetailCropper"/> routing.
-    /// Default products exclude slots 0–2; clothing products (<c>clothing-*</c>) exclude slots 0–1.
+    /// Default products exclude slots 0–2; clothing products (<c>topwear</c>, <c>bottomwear</c>)
+    /// exclude slots 0–1.
     /// </summary>
     private const int DefaultDetSlotExclusionMax = 2;
 
     private static bool IsDetailCropperDetSlotExcluded(ImageRecord_LAMBDA lambda) {
-        bool isClothing = lambda.ProductTypeId?.StartsWith("clothing-", System.StringComparison.OrdinalIgnoreCase) == true;
+        bool isClothing = lambda.ProductTypeId is "topwear" or "bottomwear";
         return isClothing ? lambda.DetOrder <= 1 : lambda.DetOrder <= DefaultDetSlotExclusionMax;
     }
     private static bool hasEdgeIntersect(ImageFeatureSnapshot ImgFeat) {

@@ -4,8 +4,7 @@ namespace Prism.Services.Matching;
  Proposed workings
  -----------------
  Client filenames often encode product type and orientation directly:
-   headphone_4435345_A_FRONT.jpg  ->  product type "headphone" (electronics-small),
-                                      hero-orientation FRONT
+   hoodie_4435345_A_FRONT.jpg  ->  product type "hoodie" (topwear), hero-orientation FRONT
  The filename is tokenized on non-alphanumerics and:
    1. Product type: when the IEM gave no ProductTypeId, the first token mapping through
       ProductTypeMap.json supplies it (supporting evidence — never overrides Excel).

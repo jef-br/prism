@@ -62,7 +62,7 @@ public sealed class ProductTypeResolver {
     }
 
     /// <summary>
-    /// Resolves a single raw value ("camiseta", "clothing-tops", "Tote bag") to a canonical slug,
+    /// Resolves a single raw value ("camiseta", "topwear", "Tote bag") to a canonical slug,
     /// or null when nothing maps.
     /// </summary>
     public string? ResolveValue(string? value) {

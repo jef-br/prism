@@ -27,8 +27,8 @@ public class ProductTypeResolverTests {
     }
 
     [Fact]
-    public void ResolveValue_SpanishTerm_MapsToClothingTops() {
-        Assert.Equal("clothing-tops", LoadResolver().ResolveValue("camiseta"));
+    public void ResolveValue_SpanishTerm_MapsToTopwear() {
+        Assert.Equal("topwear", LoadResolver().ResolveValue("camiseta"));
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class ProductTypeResolverTests {
     [Fact]
     public void ResolveFromFamily_ProducttypeWinsOverNgp() {
         FamilyIDRecord family = Family("10000001", ("producttype", "camiseta"), ("ngp", "sneakers"));
-        Assert.Equal("clothing-tops", LoadResolver().ResolveFromFamily(family));
+        Assert.Equal("topwear", LoadResolver().ResolveFromFamily(family));
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class ProductTypeResolverTests {
 
         Analyzer_ProductType.Analyze(lambda, family, LoadResolver());
 
-        Assert.Equal("clothing-tops", lambda.ProductTypeId);
+        Assert.Equal("topwear", lambda.ProductTypeId);
     }
 
     [Fact]
@@ -81,11 +81,11 @@ public class ProductTypeResolverTests {
 
     [Fact]
     public void FilenameEvidence_ProductTypeAndOrientationFromTokens() {
-        var lambda = new ImageRecord_LAMBDA { InitialFullName = "headphone_4435345_A_FRONT.jpg" };
+        var lambda = new ImageRecord_LAMBDA { InitialFullName = "hoodie_4435345_A_FRONT.jpg" };
 
         Analyzer_FilenameEvidence.Analyze(lambda, LoadResolver(), FilenameCfg);
 
-        Assert.Equal("electronics-small", lambda.ProductTypeId);
+        Assert.Equal("topwear", lambda.ProductTypeId);
         Assert.Equal("FRONT", lambda.Features.GetValue("hero-orientation"));
     }
 
@@ -101,10 +101,10 @@ public class ProductTypeResolverTests {
 
     [Fact]
     public void FilenameEvidence_DoesNotOverrideIemProductType() {
-        var lambda = new ImageRecord_LAMBDA { InitialFullName = "headphone_1.jpg", ProductTypeId = "clothing-tops" };
+        var lambda = new ImageRecord_LAMBDA { InitialFullName = "boot_1.jpg", ProductTypeId = "topwear" };
 
         Analyzer_FilenameEvidence.Analyze(lambda, LoadResolver(), FilenameCfg);
 
-        Assert.Equal("clothing-tops", lambda.ProductTypeId);
+        Assert.Equal("topwear", lambda.ProductTypeId);
     }
 }

@@ -1,5 +1,20 @@
 # Product Type Catalog
 
+> **STALE (2026-07-27, T-4700 + follow-up ticket):** this catalog predates two collapses and has
+> not been reconciled with either. (1) 6 phenotypes (`packaging-shot`, `scale-reference-shot`,
+> `size-chart`, `sitting-on-model`, `flatlay-front`, `flatlay-styled`) were removed — every
+> section below still references some of them. (2) `DetOrderRules.json`/`ProductTypeMap.json`
+> were collapsed from 19 product types (`default` + 18 bespoke) to 5 (`default`, `topwear` [was `clothing-tops`],
+> `bottomwear` [merged `clothing-bottoms`+`clothing-dresses`], `footwear`, `bags-accessories`) —
+> the other 13 sections here (`clothing-outerwear`, `fmcg-*`, `beauty-cosmetics`,
+> `electronics-*`, `homeware-*`, `toys-children`, `diy-tools`, `gardening`,
+> `sports-equipment`, `furniture`) no longer have a corresponding `DetOrderRules.json` table —
+> those product types now use `default`. The "DetOrderRules.json is indicative only, this
+> catalog is authoritative" architecture decision below is also no longer how this actually
+> works in practice — the two live config files (`DetOrderRules.json`, `ProductTypeMap.json`)
+> are the current source of truth; treat this catalog as historical context pending a full
+> rewrite, not as an instruction to follow.
+
 This catalog defines common e-commerce product types, the expected 8-image sequence per type, and the acceptable image phenotypes per `DetOrder` slot.
 
 All phenotype references use ids from `imagePhenotypes.md`.

@@ -28,6 +28,9 @@ public sealed record ManifestImageRow {
     /// <summary>Zero-based det-slot index. Null for KO images.</summary>
     public int? DetOrder { get; init; }
 
+    /// <summary>Phenotype id that won this image its det slot. Null for overflow-assigned or KO images.</summary>
+    public string? WinningPhenotype { get; init; }
+
     /// <summary>Name of the transformer strategy applied. Null when not transformed.</summary>
     public string? TransformerType { get; init; }
 

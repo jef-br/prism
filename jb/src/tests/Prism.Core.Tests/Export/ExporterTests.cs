@@ -156,6 +156,32 @@ public class ExporterTests : IDisposable {
         Assert.Equal("Ok", row.TransformationStatus);
     }
 
+    [Fact]
+    public void Run_ManifestRow_SourcesWinningPhenotypeFromOrderEvidence() {
+        string imgPath = WriteTempJpeg("ok_img.jpg");
+        ImageRecord_LAMBDA lambda = MakeLambda("ok_img.jpg", "FAM001", 0);
+        lambda.OrderEvidence = new OrderEvidence { AssignedDetSlot = 0, WinningPhenotype = "front-packshot" };
+
+        ExportArtifacts result = Exporter.Run(
+            MakeRequest([MakeInput("ok_img.jpg", imgPath)], [lambda], "json"));
+
+        ManifestImageRow row = result.Manifest.ImageRows.Single();
+        Assert.Equal("front-packshot", row.WinningPhenotype);
+    }
+
+    [Fact]
+    public void Run_ManifestRow_KoImage_WinningPhenotypeIsNull() {
+        string imgPath = WriteTempJpeg("ko_img.jpg");
+        ImageRecord_LAMBDA lambda = MakeLambda("ko_img.jpg", null, 0, isKo: true);
+        lambda.OrderEvidence = new OrderEvidence { AssignedDetSlot = 0, WinningPhenotype = "front-packshot" };
+
+        ExportArtifacts result = Exporter.Run(
+            MakeRequest([MakeInput("ko_img.jpg", imgPath)], [lambda], "json"));
+
+        ManifestImageRow row = result.Manifest.ImageRows.Single();
+        Assert.Null(row.WinningPhenotype);
+    }
+
     //  JSON: ZipBytes is null
 
     [Fact]

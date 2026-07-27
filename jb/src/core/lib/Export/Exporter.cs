@@ -169,6 +169,7 @@ internal static class Exporter {
             FamilyId = string.IsNullOrEmpty(lambda.Family) ? null : lambda.Family,
             MatchedBy = lambda.IsKo ? null : lambda.MatchEvidence?.AcceptedMatcherName,
             DetOrder = lambda.IsKo ? null : lambda.DetOrder,
+            WinningPhenotype = lambda.IsKo ? null : lambda.OrderEvidence?.WinningPhenotype,
             TransformerType = lambda.OutputRecord?.TransformerType,
             TransformationStatus = lambda.OutputRecord?.TransformStatus?.ToString()
         };

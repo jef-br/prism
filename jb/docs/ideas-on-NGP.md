@@ -48,11 +48,10 @@ Think of an e-commerce product page as a photo album with numbered pages: page 1
 Different products have different albums. Shoes need a diagonal view at position 1 because shoppers want to see the shape. T-shirts need a front ghost or on-model view at position 1. PRISM reads the rules for each product type and places each image in the right slot.
 
 **Developer note:**
-`DetOrderRules.json` maps `ProductType → det# → role keyword`. The current file has 19 rules: `default`
-plus 18 product-type-specific rules (`clothing-tops`, `clothing-bottoms`, `clothing-outerwear`,
-`clothing-dresses`, `footwear`, `bags-accessories`, `fmcg-packaged-food`, `fmcg-personal-care`,
-`beauty-cosmetics`, `electronics-small`, `electronics-large`, `homeware-soft`, `homeware-hard`,
-`toys-children`, `diy-tools`, `gardening`, `sports-equipment`, `furniture`). The keyword (e.g.,
+`DetOrderRules.json` maps `ProductType → det# → role keyword`. The current file has 5 rules: `default`
+plus 4 product-type-specific rules (`topwear`, `bottomwear`, `footwear`, `bags-accessories`) —
+collapsed from 18 product-type-specific rules by a follow-up ticket that merged/retired the rest
+(`clothing-dresses` merged into `bottomwear`; the other 13 now fall back to `default`). The keyword (e.g.,
 `"front"`, `"diagonal"`, `"detail"`) is matched against derived ImageNGP phenotypes. The ordering stage
 in `jb/src/core/Services/Matching/Order/` implements this lookup.
 

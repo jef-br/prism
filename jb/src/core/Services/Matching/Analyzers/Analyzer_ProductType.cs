@@ -11,8 +11,9 @@ namespace Prism.Services.Matching;
       NOTE: this Excel "NGP" column is UNRELATED to the ImageNGP phenotype taxonomy.
    3. CLIP product-type-label feature — image-derived supporting evidence, used only when
       the Excel columns resolve nothing.
- Raw values map to the 18 canonical DetOrderRules slugs via ProductTypeResolver +
- ProductTypeMap.json ("camiseta" -> clothing-tops). No match leaves ProductTypeId null;
+ Raw values map to the canonical DetOrderRules slugs (topwear, bottomwear, footwear,
+ bags-accessories, default — T-4710 collapsed 19 product types to 5) via ProductTypeResolver +
+ ProductTypeMap.json ("camiseta" -> topwear). No match leaves ProductTypeId null;
  the Order stage then falls back to value sniffing and finally "default".
 */
 

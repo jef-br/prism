@@ -54,7 +54,7 @@ public sealed class DetOrderConfig {
     /// Returns the ordered det slot rules for the given product type id.
     /// Falls back to "default" when <paramref name="productTypeId"/> is not in the config.
     /// </summary>
-    /// <param name="productTypeId">Product type id (e.g. "clothing-tops"), or null.</param>
+    /// <param name="productTypeId">Product type id (e.g. "topwear"), or null.</param>
     public IReadOnlyList<DetSlotRule> GetSlots(string? productTypeId) {
         if (productTypeId is not null &&
             this.slotsByProductType.TryGetValue(productTypeId, out List<DetSlotRule>? found)) {
@@ -99,7 +99,7 @@ public sealed class DetOrderConfig {
     /// <summary>
     /// Parses DetOrderRules.json.
     /// Expected structure:
-    /// <code>{ "productTypes": { "clothing-tops": { "det0": { "keyword": "front", "phenotypes": [...] }, ... }, ... } }</code>
+    /// <code>{ "productTypes": { "topwear": { "det0": { "keyword": "front", "phenotypes": [...] }, ... }, ... } }</code>
     /// </summary>
     private static Dictionary<string, List<DetSlotRule>> ParseRules(string path) {
         string json = ReadJsonFile(path);
