@@ -124,6 +124,48 @@ Closed this session (no longer in `jbtodo.md`): item 2 (`TryMatchBySubstringResc
 
 ---
 
+### T-4700 · Remove unimplemented analyzers; trim ImageNGP/ImageRoles/DetOrderRules to real+reachable only
+**Status:** Ready | **Profile:** P1-feature-worker
+
+`ImageNGP.json` declares 60 features and 26 phenotypes, but only 11 of 21 analyzer classes are
+actually implemented — the other 10 (`Analyzer_FacePose`, `Analyzer_TextPresent`,
+`Analyzer_Mannequin`, `Analyzer_LogoPresent`, `Analyzer_CameraAngle`, `Analyzer_IndoorOutdoor`,
+`Analyzer_ShadowReflection`, `Analyzer_Packaging`, `Analyzer_MaterialTexture`,
+`Analyzer_LightingDetail`) are empty-body stubs. Because `PhenotypeRuleSet` treats `UNKNOWN` as
+never satisfying a required condition, every phenotype gated on a stub-only feature is
+mathematically unreachable — 6 of 26 phenotypes are dead on arrival, cascading into 13 of 19
+`DetOrderRules.json` product-type tables having an inert det-slot. First half of a user-directed
+"simplify by subtraction, then re-expand piecemeal" effort (see [[T-4000]], [[T-2600]]); a
+follow-up ticket collapses `DetOrderRules.json`/`ProductTypeMap.json` from 19 product types to 5.
+
+**What to do:** delete the 10 stub `.cs`/`.md` pairs and their call sites in
+`ImageFeatureAnalyzer.cs`; remove the 23 features they would have produced plus the
+structurally-dead `background-type=STUDIO` enum value from `ImageNGP.json` (60→37 features);
+remove the 6 now-unreachable phenotypes from `ImageNGP.json`/`ImageRoles.json` (26→20), dropping
+`ghost-front`'s dead `contains-mannequin` clause without reordering; strip the 6 dead phenotype
+ids from every `DetOrderRules.json` slot; update `Analyzers/jbtodo.md`, `Classify/jbtodo.md`,
+`ImageFeatures.md`, `imagePhenotypes.md`, `PRISM-index.md`, and 3 Classify test files
+accordingly; write a new `jb/docs/ImageNGP/HowToAddAPhenotype.md` reference doc covering the
+full analyzer→feature→phenotype→det-order wiring chain with a worked hero-image example.
+
+**Acceptance:** `dotnet build jb/src/PRISM.sln` and `dotnet test jb/src/PRISM.sln` green; startup
+`ImageNgpValidator` passes (no dangling id references across `ImageNGP.json`/`ImageRoles.json`/
+`DetOrderRules.json`/`ClipPrompts.json`); no behavior change for any image that previously
+exercised a real (non-stub) code path — pure removal of unreachable paths.
+
+**Files:** `jb/src/core/Services/Matching/Analyzers/*.cs`, `jb/src/core/Services/Matching/Analyzers/*.md`,
+`jb/src/core/Services/Matching/Analyzers/jbtodo.md`, `jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`,
+`jb/src/core/Services/Matching/Classify/jbtodo.md`, `jb/src/core/config/ImageNGP.json`,
+`jb/src/core/config/ImageRoles.json`, `jb/src/core/config/DetOrderRules.json`,
+`jb/docs/ImageNGP/ImageFeatures.md`, `jb/docs/ImageNGP/imagePhenotypes.md`,
+`jb/docs/ImageNGP/HowToAddAPhenotype.md` (new), `jb/docs/PRISM-index.md`,
+`jb/src/tests/Prism.Services.Matching.Tests/Classify/ImageFeatureAnalyzerTests.cs`,
+`jb/src/tests/Prism.Services.Matching.Tests/Classify/PhenotypeRuleSetTests.cs`,
+`jb/src/tests/Prism.Services.Matching.Tests/Classify/ImageFeatureSnapshotTests.cs`,
+`AGENT-TICKETS.md`.
+
+---
+
 ## Verification Rules
 
 - After project/solution setup: `dotnet build jb/src/PRISM.sln`, API run smoke, web `npm run typecheck` + `npm run build`.
