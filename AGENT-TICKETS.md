@@ -167,6 +167,53 @@ exercised a real (non-stub) code path — pure removal of unreachable paths.
 
 ---
 
+### T-4710 · Collapse DetOrderRules/ProductTypeMap to 5 product types; expose WinningPhenotype
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-4700]] — direct follow-up, same "subtract, then get a reliable catch-all
+working" effort.
+
+`DetOrderRules.json`/`ProductTypeMap.json` had 19 product types (`default` + 18 bespoke ones),
+none validated in production. Per user direction: subtract down to `default` + 4 categories that
+are actually in scope right now (`topwear`, `bottomwear`, `footwear`, `bags-accessories`); the
+other 13 (`clothing-outerwear`, `fmcg-*`, `beauty-cosmetics`, `electronics-*`, `homeware-*`,
+`toys-children`, `diy-tools`, `gardening`, `sports-equipment`, `furniture`) fall back to
+`default`. `clothing-tops`→`topwear` (unchanged synonym list); `clothing-bottoms`+
+`clothing-dresses`→`bottomwear` (merged per explicit user tie-breaks: allow back/side-packshot
+fallback at det1/det2, and rank `front-on-model-partial` ahead of `lifestyle-hero` at det4 —
+both resolved in `clothing-bottoms`' favor, so the merged table is `clothing-bottoms`' content
+verbatim under the new id). Also exposes `OrderEvidence.WinningPhenotype` (computed by
+`ImageOrderer` but never surfaced) on the export manifest, so a downstream consumer can see
+*why* an image landed in a given det slot instead of inferring it from position alone.
+
+**What to do:** rename/merge `ProductTypeMap.json` groups and `DetOrderRules.json` tables per
+above; fix `ImageTransformer.IsDetailCropperDetSlotExcluded`'s `StartsWith("clothing-")` check
+to match the renamed ids (`topwear`/`bottomwear`) — note this method is currently unreachable
+dead code while `BypassPhenotypes = true` gates the whole `DetailCropper` branch off, so the fix
+is a correctness-for-later change, not something testable end-to-end today; add
+`ManifestImageRow.WinningPhenotype`, wire it in `Exporter.ToManifestRow`; update
+`ImageOrdererTests.cs`, `ProductTypeResolverTests.cs`, and `ExporterTests.cs` for the
+renamed/removed ids and the new field.
+
+**Acceptance:** `dotnet build jb/src/PRISM.sln` and `dotnet test jb/src/PRISM.sln` green;
+`DetOrderConfig.Load` reports exactly 5 product types (`default`, `topwear`, `bottomwear`,
+`footwear`, `bags-accessories`); no dangling `clothing-*`/retired-category id anywhere in
+production code, tests, or `ProductTypeMap.json`/`DetOrderRules.json`.
+
+**Files:** `jb/src/core/config/ProductTypeMap.json`, `jb/src/core/config/DetOrderRules.json`,
+`jb/src/core/Services/Transform/ImageTransformer.cs`, `jb/src/core/lib/Export/ManifestImageRow.cs`,
+`jb/src/core/lib/Export/Exporter.cs`, `jb/src/core/Models/ImageRecord_LAMBDA.cs`,
+`jb/src/core/Services/Matching/Order/DetOrderConfig.cs`,
+`jb/src/core/Services/Matching/Analyzers/Analyzer_ProductType.cs`,
+`jb/src/core/Services/Matching/Analyzers/ProductTypeResolver.cs`,
+`jb/src/core/Services/Matching/Analyzers/Analyzer_Interior.md`,
+`jb/src/tests/Prism.Services.Matching.Tests/Order/ImageOrdererTests.cs`,
+`jb/src/tests/Prism.Services.Matching.Tests/Analyzers/ProductTypeResolverTests.cs`,
+`jb/src/tests/Prism.Core.Tests/Export/ExporterTests.cs`,
+`jb/docs/ImageNGP/PRODUCTTYPES.MD` (flagged stale, not fully rewritten — see note in file),
+`jb/docs/ideas-on-NGP.md`.
+
+---
+
 ## Verification Rules
 
 - After project/solution setup: `dotnet build jb/src/PRISM.sln`, API run smoke, web `npm run typecheck` + `npm run build`.
