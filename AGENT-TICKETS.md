@@ -127,6 +127,16 @@ Closed this session (no longer in `jbtodo.md`): item 2 (`TryMatchBySubstringResc
 
 ### T-4700 · Remove unimplemented analyzers; trim ImageNGP/ImageRoles/DetOrderRules to real+reachable only
 **Status:** Ready | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-27) — verified deletion completeness (all 10 stub `.cs`/`.md` pairs
+and their `Prism.Services.Matching.Classify.csproj` `Compile Include` entries gone), zero
+dangling references to any of the 23 removed features or 6 removed phenotypes anywhere
+(`ImageRoles.json`, `DetOrderRules.json`, `ClipPrompts.json`, `ImageFeatureAnalyzer.cs`, tests),
+`ghost-front`'s dead clause removed without reordering (confirmed against
+`PhenotypeRuleSetTests.cs`'s new overlap/reachability tests), and every `DetOrderRules.json` slot
+that lost its only phenotypes became `[]` rather than being deleted (preserving overflow slot
+numbering). Build 0 errors, full suite 415/415 (then 417/417 after T-4710). Two non-blocking doc
+nits (a feature-count off-by-one, a doc example citing a just-deleted feature) fixed same session.
+Commit `fe9ac38`.
 
 `ImageNGP.json` declares 60 features and 26 phenotypes, but only 11 of 21 analyzer classes are
 actually implemented — the other 10 (`Analyzer_FacePose`, `Analyzer_TextPresent`,
@@ -171,6 +181,18 @@ exercised a real (non-stub) code path — pure removal of unreachable paths.
 **Status:** Ready | **Profile:** P1-feature-worker
 **Found by:** [[T-4700]] — direct follow-up, same "subtract, then get a reliable catch-all
 working" effort.
+**Review:** Approve (2026-07-27) — verified `topwear`'s synonym list is byte-identical to the
+old `clothing-tops`, `bottomwear`'s list is the clean union of `clothing-bottoms`+
+`clothing-dresses` with no cross-group term collisions, and all 13 retired groups' raw terms are
+fully gone (not just renamed). `DetOrderRules.json` diffed against git history: `topwear`/
+`bottomwear` tables are byte-for-byte the old `clothing-tops`/`clothing-bottoms` content under
+new keys, confirming the user's tie-break choices landed correctly. `ImageTransformer`'s
+`IsDetailCropperDetSlotExcluded` fix re-derived as correct and confirmed still dead code (gated
+behind `BypassPhenotypes=true`, same limitation the existing test file already documents — no
+coverage was lost). `WinningPhenotype` export gated identically to `DetOrder`, both new
+`ExporterTests.cs` cases non-vacuous (positive + KO-null). Build 0 errors, full suite 417/417.
+Two non-blocking doc nits (a wrong ticket-number attribution, a stale `headphone`/
+`electronics-small` example) fixed same session. Commit `fd894aa`.
 
 `DetOrderRules.json`/`ProductTypeMap.json` had 19 product types (`default` + 18 bespoke ones),
 none validated in production. Per user direction: subtract down to `default` + 4 categories that
@@ -211,6 +233,148 @@ production code, tests, or `ProductTypeMap.json`/`DetOrderRules.json`.
 `jb/src/tests/Prism.Core.Tests/Export/ExporterTests.cs`,
 `jb/docs/ImageNGP/PRODUCTTYPES.MD` (flagged stale, not fully rewritten — see note in file),
 `jb/docs/ideas-on-NGP.md`.
+
+---
+
+### T-4800 · Model-aware subject isolation for Transform (epic)
+**Status:** Ready | **Profile:** P0-orchestrator
+**Found by:** [[T-4700]] follow-up; folds in the removed root note `TRANSFORM-SUBJECT-ISOLATION-NOTE.md`
+
+Tracking ticket. Design lives in `jb/src/core/Services/Transform/Engine/jbtodo.md` ("Subject Isolation &
+Model-Aware Transformation"). Goal: give Transform a real subject mask/box (shadow- and
+background-excluded) produced upstream and consumed as pure geometry+fill, plus Excel+CLIP seeding that
+steers transform behavior. v1 ports the vendored classical-CV prototype
+`jb/docs/reference/process_images.py`; ONNX stays upstream (Transform stays deterministic). Children:
+T-4805, T-4810, T-4820 (Wave 0); T-4830 (Wave 1); T-4850, T-4860 (Wave 2); T-4870 (Wave 3). T-4840
+(vendor the reference script) is already done. This ticket is an index, not a unit of work.
+
+**Files:** `jb/src/core/Services/Transform/Engine/jbtodo.md`, `AGENT-TICKETS.md`.
+
+---
+
+### T-4805 · Unify Transform/Process entry points (fix latent divergence)
+**Status:** Ready | **Profile:** P4-critical-architecture
+**Found by:** [[T-4800]]
+
+`Tx_CenterAndStretch.Process` (and the other Tx `Process` methods, per the "precedent" comment in
+`Tx_DetailCropper`) ignore the `lambda` parameter and always crop to `FullImageBounds(arr)`, violating
+the `IImageTransformation` contract (reuse the lambda's BoundingBox when provided). Not live today — the
+deployed transform service routes through `Transform(lambda)` — but a future per-image webservice on
+`Process` would diverge from pipeline behavior and ignore the persisted SubjectBox from T-4810.
+Acceptance: `Transform(lambda)` and `Process(...,lambda)` funnel through one shared core so identical
+geometry → identical output; `Process` reuses the lambda's box when present; all four Tx classes audited;
+dead `Tx_LowContrastEnhancement.Enhance` removed (CLAHE moves upstream via T-4830), standalone
+`Tx_LowContrastEnhancement.Process` utility retained; build + tests green. Scope: no new transform
+behavior — pure de-duplication of the two paths.
+
+**Files:** `jb/src/core/Services/Transform/Engine/IImageTransformation.cs`,
+`jb/src/core/Services/Transform/Engine/Tx_*.cs`,
+`jb/src/core/Services/Transform/Engine/Utils/Tx_LowContrastEnhancement.cs`.
+
+---
+
+### T-4810 · Persisted subject mask/box contract
+**Status:** Ready | **Profile:** P4-critical-architecture
+**Found by:** [[T-4800]]
+
+Add a persisted `SubjectMask` + `SubjectBox` (+ per-edge intersect flags) to the image record, produced
+upstream and read by Transform. Define the pluggable-producer seam so a segmentation producer
+(SAM3 / yolo26s-seg, [[T-2600]]) can replace the v1 classical-CV producer later without touching
+Transform. Acceptance: contract types added following the no-shadow-defaults rule; producer interface
+defined; round-trips across the service HTTP boundary (get-only dict trap — mirror the microservices-split
+`[JsonConstructor]` + round-trip test); no behavior change until a producer populates it. Scope: contract
++ plumbing only, not the detector (T-4830).
+
+**Files:** `jb/src/core/Models/ImageRecord_LAMBDA.cs`, `jb/src/core/Models/ImageRecord_Base.cs`,
+`jb/src/core/Services/Matching/ImagePreProcessor.cs`.
+
+---
+
+### T-4820 · Seeding access in Transform
+**Status:** Ready | **Profile:** P4-critical-architecture
+**Found by:** [[T-4800]]
+
+Thread the already-measured features `product-color`, `background-type`, `background-color`,
+`product-type-label` to Transform, and give each lambda access to its `FamilyIDRecord` (today only the
+`Family` id string + `ProductTypeId` reach the record). `background-type` is already settled by T-4700
+(`SOLIDCOLOR`/`REALLIFE`/`UNKNOWN`) — "flat" = `SOLIDCOLOR`, no reconciliation. (Product-type ids are
+being collapsed to 5 by [[T-4710]]; seeding is slug-agnostic.) Acceptance: the four signals +
+FamilyIDRecord reachable inside Transform without recomputation; no seeding logic yet (that is T-4860).
+Scope: data access only.
+
+**Files:** `jb/src/core/Services/Transform/TransformService.cs`,
+`jb/src/core/Services/Matching/Classify/ImageFeatureSnapshot.cs`, `jb/src/core/lib/Excel/FamilyIDRecord.cs`,
+`jb/src/core/Models/ImageRecord_LAMBDA.cs`.
+
+---
+
+### T-4830 · Port the v1 subject detector (+ ingress alpha path)
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** [[T-4810]] (needs the SubjectMask/SubjectBox contract)
+**Found by:** [[T-4800]]
+
+Port the vendored `jb/docs/reference/process_images.py` detector to C#/OpenCvSharp4 in the upstream
+producer, one named helper per step (recipe-readable, K&R). Populate `SubjectMask`/`SubjectBox`/intersects/
+candidate-shadow evidence. Chroma-plane + texture + shadow-strip-by-shape + Canny corroboration; lightness
+never a criterion (shadow exclusion). Add the ingress alpha path: real alpha → build+persist box/mask
+before jpg normalization, skip the heuristic path. New detector config follows no-shadow-defaults.
+Acceptance: producer populates the contract; unit tests on white-on-white, cast-shadow, gradient
+background, bleed-off cases; classify-stage perf delta measured on SPACINI29 vs the 156.5s baseline.
+
+**Files:** `jb/src/core/Services/Matching/ImagePreProcessor.cs` (+ new detector class/config under
+Classify), `jb/src/core/lib/Ingress/Importer.cs` (ingress alpha capture, pre-normalization),
+`jb/src/core/config/analyzer_Config.json` or `ClassifyConfig.json`.
+
+---
+
+### T-4850 · Consume subject mask/box in Transform
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** [[T-4810]], [[T-4830]]
+**Found by:** [[T-4800]]
+
+Center/stretch/detail-crop geometry operates on the real SubjectMask/SubjectBox instead of the salient
+rectangle; routing (`ImageTransformer.SelectTransformer`) uses the detector's cleaner intersect signals.
+Fill stays the existing `Tx_util_BgStretch` (unchanged), just fed the better geometry. Acceptance: routing
++ geometry read the persisted mask/box; A/B vs the current salient box shows equal-or-better centering on
+the test set; no fill-tier changes.
+
+**Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`,
+`jb/src/core/Services/Transform/Engine/Tx_CenterAndStretch.cs`,
+`jb/src/core/Services/Transform/Engine/Tx_DetailCropper.cs`.
+
+---
+
+### T-4860 · Behavior toggles + shadow wiring
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** [[T-4820]], [[T-4830]]
+**Found by:** [[T-4800]]
+
+Implement the three seeding toggles: (a) product-color ≈ background-color → harder isolation;
+(b) background-type not `SOLIDCOLOR` → more hero-detection effort (skip when `SOLIDCOLOR`, for speed);
+(c) detector candidate-shadow evidence → shadow-accounting, driving the existing `Tx_CenterAndStretch`
+shrink (`shadow-present` was removed by T-4700, so read the detector evidence off the record directly).
+Optionally re-declare a detector-measured `shadow-present` feature via `HowToAddAPhenotype.md`. All
+thresholds config-driven (no shadow defaults). Acceptance: each toggle unit-tested on a positive and a
+negative case; evidence-harness run confirms real behavior, not just green tests.
+
+**Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`,
+`jb/src/core/Services/Transform/Engine/Tx_CenterAndStretch.cs`, `jb/src/core/config/transform_Config.json`,
+`jb/src/core/Services/Transform/Admin/TransformParameters.cs`.
+
+---
+
+### T-4870 · Extend transform-manifest with detection/toggle evidence
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** [[T-4830]], [[T-4850]], [[T-4860]]
+**Found by:** [[T-4800]]
+
+Fold detection/mask/box/signal/toggle evidence into the Export `transform-manifest.json` (Todo 4 in
+`jb/src/core/lib/Export/jbtodo.md`), via `OutputRecord.SafeSummaryText` per that todo's settled approach.
+Do not spawn a parallel evidence store. Acceptance: the transform manifest carries the new evidence for
+each image; coordinated with the Export evidence-manifest todo so the two don't collide.
+
+**Files:** `jb/src/core/Services/Transform/Engine/Tx_*.cs`, `jb/src/core/Models/ImageRecord_OUTPUT.cs`,
+`jb/src/core/lib/Export/Exporter.cs`, `jb/src/core/config/Prism_Config.json`.
 
 ---
 
