@@ -59,18 +59,6 @@
     },
 
     {
-      "id": "sitting-on-model",
-      "required": [
-        { "feature": "hero-is-human", "equals": "TRUE" },
-        { "feature": "pose-type", "equals": "sitting" },
-        { "anyOf": [
-            { "feature": "occlusion-level", "equals": "full-product" },
-            { "feature": "occlusion-level", "equals": "mostly-visible" }
-        ]}
-      ]
-    },
-
-    {
       "id": "on-model-with-accessories",
       "required": [
         { "feature": "hero-is-human", "equals": "TRUE" },
@@ -176,7 +164,6 @@
       "required": [
         { "feature": "hero-is-human", "equals": "FALSE" },
         { "feature": "hero-orientation", "equals": "FRONT" },
-        { "feature": "contains-mannequin", "equals": "false" },
         { "anyOf": [
             { "feature": "background-type", "equals": "SOLIDCOLOR" },
             { "feature": "clipping-path", "equals": "true" }
@@ -213,28 +200,6 @@
     },
 
     {
-      "id": "flatlay-front",
-      "required": [
-        { "feature": "hero-is-human", "equals": "FALSE" },
-        { "feature": "hero-orientation", "equals": "TOP" },
-        { "feature": "top-view", "equals": "true" },
-        { "feature": "intersection-count", "equals": "0" }
-      ]
-    },
-
-    {
-      "id": "flatlay-styled",
-      "required": [
-        { "feature": "hero-is-human", "equals": "FALSE" },
-        { "feature": "top-view", "equals": "true" },
-        { "anyOf": [
-            { "feature": "multiple-products", "equals": "true" },
-            { "feature": "lifestyle-background", "equals": "true" }
-        ]}
-      ]
-    },
-
-    {
       "id": "closeup-image",
       "required": [
         { "feature": "hero-is-human", "equals": "FALSE" },
@@ -244,41 +209,9 @@
     },
 
     {
-      "id": "packaging-shot",
-      "required": [
-        { "feature": "packaging-visible", "equals": "true" },
-        { "feature": "hero-is-human", "equals": "FALSE" },
-        { "anyOf": [
-            { "feature": "occlusion-level", "equals": "full-product" },
-            { "feature": "occlusion-level", "equals": "mostly-visible" }
-        ]}
-      ]
-    },
-
-    {
-      "id": "size-chart",
-      "required": [
-        { "feature": "text-present", "equals": "true" },
-        { "feature": "product-coverage-ratio", "max": 0.30 },
-        { "feature": "image-occupancy", "min": 0.60 }
-      ]
-    },
-
-    {
       "id": "lifestyle-hero",
       "required": [
         { "feature": "lifestyle-background", "equals": "true" },
-        { "anyOf": [
-            { "feature": "occlusion-level", "equals": "full-product" },
-            { "feature": "occlusion-level", "equals": "mostly-visible" }
-        ]}
-      ]
-    },
-
-    {
-      "id": "scale-reference-shot",
-      "required": [
-        { "feature": "scale-reference-present", "equals": "true" },
         { "anyOf": [
             { "feature": "occlusion-level", "equals": "full-product" },
             { "feature": "occlusion-level", "equals": "mostly-visible" }

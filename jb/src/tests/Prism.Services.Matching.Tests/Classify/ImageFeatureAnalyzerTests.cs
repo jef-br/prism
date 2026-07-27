@@ -249,15 +249,11 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
         string[] modelFeatures =
         [
             "hero-is-human", "hero-orientation", "has-human", "human-count",
-            "has-head", "head-visible", "has-face", "face-visible",
-            "body-visible", "pose-type", "contains-mannequin", "product-type-label",
-            "packaging-visible", "multiple-products", "overlap-count",
-            "scale-reference-present", "logo-present", "material-texture-visible",
-            "text-present", "top-view", "shadow-present", "reflection-present",
-            "lighting", "camera-angle", "product-coverage-ratio",
+            "head-visible", "body-visible", "product-type-label",
+            "multiple-products", "overlap-count", "product-coverage-ratio",
             "image-occupancy", "crop-tightness", "dominant-colors", "product-color",
-            "background-color", "indoor", "outdoor", "symmetry-score",
-            "product-aspect-ratio", "vertical-centering", "horizontal-centering"
+            "background-color", "product-aspect-ratio", "vertical-centering",
+            "horizontal-centering"
         ];
 
         foreach (string feature in modelFeatures) {

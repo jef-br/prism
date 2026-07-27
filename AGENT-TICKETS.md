@@ -46,13 +46,13 @@ Done tickets are moved to `AGENT-TICKETS-ARCHIVE.md` (via /ticket-finish) — th
 
 | Milestone | Feature area | Gate condition |
 |---|---|---|
-| M5 Classification Groundwork | ImageNGP taxonomy + rule correctness | All Classify `jbtodo.md` decisions answered; ONNX session migrated to singleton ✅ (done 2026-06-29) |
-| M6 Human & Model Detection | `hero-is-human`, `contains-mannequin`, `has-human`, `head-visible`, `face-visible` | On-model and ghost phenotypes (`front-on-model-*`, `ghost-front/back/side`) fire correctly on labeled images |
-| M7 Orientation & Pose | `hero-orientation`, `pose-type`, `camera-angle`, `top-view` | Packshot orientation-split phenotypes (`front-packshot`, `back-packshot`, `side-packshot`) fire from real signal |
-| M8 Product & Packaging | `packaging-visible`, `product-type-label`, `multiple-products` | packshot phenotypes fire from CLIP; `packaging-visible` no longer always UNKNOWN |
+| M5 Classification Groundwork | ImageNGP taxonomy + rule correctness | All Classify `jbtodo.md` decisions answered; ONNX session migrated to singleton ✅ (done 2026-06-29); taxonomy trimmed to real/reachable-only ✅ ([[T-4700]], 2026-07-27) |
+| M6 Human & Model Detection | **Superseded** — `hero-is-human`, `has-human`, `head-visible` (real, unaffected); ~~`contains-mannequin`, `face-visible`~~ (stub-only, removed [[T-4700]] 2026-07-27) | Re-defined only if/when the removed features are re-introduced — see `Analyzers/jbtodo.md`'s "Removed" section |
+| M7 Orientation & Pose | **Superseded** — `hero-orientation` (real, unaffected); ~~`pose-type`, `camera-angle`, `top-view`~~ (stub-only, removed [[T-4700]] 2026-07-27) | Re-defined only if/when the removed features are re-introduced |
+| M8 Product & Packaging | **Superseded** — `product-type-label`, `multiple-products` (real, unaffected); ~~`packaging-visible`~~ (stub-only, removed [[T-4700]] 2026-07-27) | Re-defined only if/when `packaging-visible` is re-introduced |
 | M9 Composition & Spatial | `product-coverage-ratio`, `image-occupancy`, `salient-bbox`, `vertical-centering`, `horizontal-centering` | Composition phenotypes measured; overflow slot assignment accuracy confirmed |
-| M10 Semantic & Content | `text-present`, `logo-present`, `dominant-colors`, `lighting` | Content features populated; transform routing that depends on them verified |
-| M11 Production Validation | All 26 phenotypes | < 5% misassignment on labeled validation set; no systematic error on any single phenotype |
+| M10 Semantic & Content | **Superseded** — `dominant-colors` (real, unaffected, not yet consumed by any phenotype rule); ~~`text-present`, `logo-present`, `lighting`~~ (stub-only, removed [[T-4700]] 2026-07-27) | Re-defined only if/when the removed features are re-introduced |
+| M11 Production Validation | All 20 phenotypes | < 5% misassignment on labeled validation set; no systematic error on any single phenotype |
 
 ## Tickets
 
@@ -68,14 +68,14 @@ Done tickets are moved to `AGENT-TICKETS-ARCHIVE.md` (via /ticket-finish) — th
 - **`RecordUnknownFeatures()` stub** — **still a live stub** (`ImageFeatureAnalyzer.cs:326`, marks 35+ features UNKNOWN). Not closed with a doc decision; its remaining work — replacing each UNKNOWN with a real measurement — is exactly what [[T-4000]]'s per-feature Analyzer backlog does, so it's effectively relocated to T-4000, not resolved here.
 
 Tracks the 2 remaining items in `jb/src/core/Services/Matching/Classify/jbtodo.md`, both `FROZEN`:
-1. ImageNGP taxonomy/feature-combination reconciliation — FROZEN: "Taxonomy is captured in canonical files (ImageNGP.json, ImageRoles.json, imagePhenotypes.md, ImageFeatures.md). No reconciliation action needed at this time."
-2. Phenotype production validation (labeled set, confusion matrix, <5% misassignment across 26 phenotypes) — FROZEN: "Premature. Revisit after per-feature Analyzer stubs are substantially resolved and BypassPhenotypes flip is planned."
+1. ImageNGP taxonomy/feature-combination reconciliation — **answered for real by [[T-4700]] (2026-07-27)**, superseding the earlier "no reconciliation action needed" answer: the taxonomy was actually trimmed to 37 features / 20 phenotypes, all real/reachable, and a `jb/docs/ImageNGP/HowToAddAPhenotype.md` guide now documents the reconciliation process going forward.
+2. Phenotype production validation (labeled set, confusion matrix, <5% misassignment across **20** phenotypes, not 26 — [[T-4700]] removed 6 unreachable ones) — still FROZEN: "Premature. Revisit after per-feature Analyzer stubs are substantially resolved and BypassPhenotypes flip is planned." A lighter first-pass validation approach (before/after `prism-evidence-report` diff on the standard dataset, not the full 200-images/phenotype protocol) is defined as part of the Transform-routing follow-up ticket that collapses DetOrderRules.json to 5 product types — that lighter bar is the near-term next step, not this FROZEN item's full bar.
 
-**Why this ticket is genuinely blocked (not just unattended):** both FROZEN items depend on features no longer being UNKNOWN, which depends on [[T-4000]] replacing the `RecordUnknownFeatures` stub analyzer-by-analyzer. Until enough analyzers land, phenotype assignment can't be validated, so `BypassPhenotypes` stays on and item 2 stays frozen. T-2600 is downstream of T-4000, full stop.
+**Why this ticket is genuinely blocked (not just unattended):** item 2 depends on features no longer being UNKNOWN, which depends on [[T-4000]] replacing the `RecordUnknownFeatures` stub analyzer-by-analyzer. Until enough analyzers land, full phenotype assignment validation can't happen, so `BypassPhenotypes` stays on and item 2 stays frozen. T-2600 is downstream of T-4000, full stop. Item 1 is no longer blocking — it's closed.
 
 Per-feature CLIP confidence calibration remains a live open concern feeding into this ticket (referenced by `AGENTFEEDBACK.md`'s S109 entry and T-4400's phase-2 closeout review) but is not currently a tracked checkbox in Classify's own `jbtodo.md` — it surfaces wherever a new confidence literal is discovered elsewhere in the codebase.
 
-M5 gate condition: both FROZEN items thaw and get answered (needs T-4000's Analyzer stubs substantially landed + a BypassPhenotypes flip decision); ONNX session migrated to shared/singleton ✅ already done.
+M5 gate condition: item 1 answered ✅ ([[T-4700]], 2026-07-27); item 2 thaws once T-4000's Analyzer stubs are substantially landed + a BypassPhenotypes flip decision is made; ONNX session migrated to shared/singleton ✅ already done.
 
 **Files:** `jb/src/core/Services/Matching/Classify/jbtodo.md`, `jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`
 
@@ -104,21 +104,22 @@ Closed this session (no longer in `jbtodo.md`): item 2 (`TryMatchBySubstringResc
 
 ---
 
-### T-4000 · Per-feature Analyzer TOC: calibration + stub implementation backlog
+### T-4000 · Per-feature Analyzer TOC: calibration backlog (stub-implementation item retired by T-4700)
 **Status:** Ready | **Profile:** P0-orchestrator
-**Tracks:** `jb/src/core/Services/Matching/Analyzers/jbtodo.md` (triaged 2026-07-11) — a TOC of 26 items across 3 sections, none previously represented on the ticket board.
+**Tracks:** `jb/src/core/Services/Matching/Analyzers/jbtodo.md` (triaged 2026-07-11) — a TOC of items across 3 sections, none previously represented on the ticket board.
 **Board sync (2026-07-24):** this entry previously claimed 27 items incl. a 4th "OPEN(1)" item — centralize per-analyzer `*Config.cs` files into a single `AnalyzerConfig.cs` with nested objects. That item is no longer in the source `jbtodo.md` (not present in current file, no history of it being explicitly closed either) and the underlying concern was functionally superseded this week by T-4400's S109 pass: single-consumer `*AnalyzerConfig.cs` classes (`Interior`, `Exposure`, `IsIllustration`, `SubjectGeometry`, `FilenameEvidence`, `MultipleProducts`) were folded as nested `Config` types into their owning `Analyzer_*.cs` files — the opposite direction (decentralized-per-file, not one shared `AnalyzerConfig.cs`), but it resolves the same "scattered standalone config files" complaint. `ColorAnalyzerConfig`/`YoloAnalyzerConfig` stay standalone (genuinely multi-consumer). Item count corrected to 26.
+**Board sync (2026-07-27, [[T-4700]]):** item 2 below (the 10 stubs) is **no longer a pending-implementation backlog — those analyzers were deleted**, not left unstarted. Their features made 6 phenotypes mathematically unreachable (`PhenotypeRuleSet` never treats `UNKNOWN` as satisfying a `required` condition), so T-4700 removed the stub `.cs`/`.md` files, their features from `ImageNGP.json`, and the phenotypes/DetOrderRules entries that depended only on them. Each stub's proposed workings are preserved in `Analyzers/jbtodo.md`'s new "Removed (deferred pending future re-introduction)" section and in git history. Re-introduction is gated on a reliable DetOrderRules catch-all proving out first (see the Transform-routing follow-up ticket) — pick analyzers back up one at a time then, not as a batch.
 
 **Problem:** `Analyzers/jbtodo.md` is a checklist pointing at per-analyzer working docs, split into:
-1. **Implemented, calibration open (11)** — `Analyzer_ProductType`, `Analyzer_FilenameEvidence`, `Analyzer_HasHuman`, `Analyzer_SubjectGeometry`, `Analyzer_DominantColors`, `Analyzer_ProductColor`, `Analyzer_BackgroundColor`, `Analyzer_Exposure`, `Analyzer_MultipleProducts`, `Analyzer_Interior`, `Analyzer_IsIllustration` — each has a named open calibration/validation question in its own `.md`.
-2. **Stubs, implementation open (10)** — `Analyzer_FacePose` (highest value: 6 features, unblocks most on-model phenotypes), `Analyzer_TextPresent`, `Analyzer_Mannequin`, `Analyzer_LogoPresent`, `Analyzer_CameraAngle`, `Analyzer_IndoorOutdoor`, `Analyzer_ShadowReflection`, `Analyzer_Packaging`, `Analyzer_MaterialTexture`, `Analyzer_LightingDetail`.
-3. **Cross-cutting (5)** — retire `ImageOrderer.ResolveProductType`'s value-sniffing fallback once `Analyzer_ProductType` is validated; unify `ProductTypeMap.json`/`TranslationDictionary.json` vocabulary; segmentation-model milestone for true coverage-ratio masks; `Analyzer_Symmetry` stays dropped unless an orientation rule wants it; standardize CLIP-vs-analyzer write precedence.
+1. **Implemented, calibration open (11)** — `Analyzer_ProductType`, `Analyzer_FilenameEvidence`, `Analyzer_HasHuman`, `Analyzer_SubjectGeometry`, `Analyzer_DominantColors`, `Analyzer_ProductColor`, `Analyzer_BackgroundColor`, `Analyzer_Exposure`, `Analyzer_MultipleProducts`, `Analyzer_Interior`, `Analyzer_IsIllustration` — each has a named open calibration/validation question in its own `.md`. **This is now the only live backlog item** — the 10 stubs (item 2, below) are deleted, not pending.
+2. ~~**Stubs, implementation open (10)**~~ — **removed by [[T-4700]] (2026-07-27)**: `Analyzer_FacePose`, `Analyzer_TextPresent`, `Analyzer_Mannequin`, `Analyzer_LogoPresent`, `Analyzer_CameraAngle`, `Analyzer_IndoorOutdoor`, `Analyzer_ShadowReflection`, `Analyzer_Packaging`, `Analyzer_MaterialTexture`, `Analyzer_LightingDetail`. See the board-sync note above.
+3. **Cross-cutting (4, was 5)** — retire `ImageOrderer.ResolveProductType`'s value-sniffing fallback once `Analyzer_ProductType` is validated; unify `ProductTypeMap.json`/`TranslationDictionary.json` vocabulary; segmentation-model milestone for true coverage-ratio masks; standardize CLIP-vs-analyzer write precedence (for whichever stub is re-introduced first). The `Analyzer_Symmetry` bullet closed out for good in T-4700 — `symmetry-score` itself was removed from `ImageNGP.json`, not just left dropped.
 
-**This ticket is an index, not a single unit of work.** Individual items are gated by the Milestone Gates table (M6 Human & Model Detection through M10 Semantic & Content each name the specific analyzers they depend on); pick items in milestone order, starting with `Analyzer_FacePose` (blocks the most downstream phenotypes, milestone-independent, can start anytime).
+**This ticket is an index, not a single unit of work.** Only item 1 (11 real analyzers) remains open now; pick items up individually as calibration/validation work is prioritized. The old Milestone Gates table rows (M6–M8, M10) that depended on the deleted stubs are marked **Superseded** — see the table above.
 
-**What to do:** Orchestrator splits this into per-analyzer or per-milestone-batch follow-up tickets as work is picked up, rather than one agent attempting all 26 items at once.
+**What to do:** Orchestrator splits item 1 into per-analyzer follow-up tickets as calibration work is picked up.
 
-**Acceptance:** Each analyzer's `.md` open question is answered and its `jbtodo.md` checkbox checked, in milestone order; `jb/src/core/Services/Matching/Analyzers/jbtodo.md` reflects real remaining state at all times (not batch-updated at the end).
+**Acceptance:** Each of the 11 remaining analyzers' `.md` open question is answered and its `jbtodo.md` checkbox checked; `jb/src/core/Services/Matching/Analyzers/jbtodo.md` reflects real remaining state at all times (not batch-updated at the end).
 
 **Files:** `jb/src/core/Services/Matching/Analyzers/jbtodo.md`, `jb/src/core/Services/Matching/Analyzers/*.md`, `jb/src/core/Services/Matching/Analyzers/*.cs`.
 

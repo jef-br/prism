@@ -18,23 +18,38 @@ still has open work (implementation for stubs, calibration for implemented ones)
 - [ ] [Analyzer_Interior](Analyzer_Interior.md) — cavity detection; product-type-gating doc discrepancy to reconcile
 - [ ] [Analyzer_IsIllustration](Analyzer_IsIllustration.md) — 3-signal topology; stale doc path to fix
 
-## Stubs — implementation open
+## Removed (deferred pending future re-introduction)
 
-- [ ] [Analyzer_FacePose](Analyzer_FacePose.md) — Haar cascades or yolo26s-pose in the person box; highest-value stub (6 features, unblocks most on-model phenotypes)
-- [ ] [Analyzer_TextPresent](Analyzer_TextPresent.md) — SWT/MSER heuristic or EAST/DBNet ONNX; unblocks size-chart
-- [ ] [Analyzer_Mannequin](Analyzer_Mannequin.md) — person box + no skin + no face; depends on FacePose
-- [ ] [Analyzer_LogoPresent](Analyzer_LogoPresent.md) — compact high-contrast component heuristic
-- [ ] [Analyzer_CameraAngle](Analyzer_CameraAngle.md) — box placement + shadow direction + CLIP prompts
-- [ ] [Analyzer_IndoorOutdoor](Analyzer_IndoorOutdoor.md) — CLIP scene prompts, gated on lifestyle-background
-- [ ] [Analyzer_ShadowReflection](Analyzer_ShadowReflection.md) — strip below subject box on solid backgrounds
-- [ ] [Analyzer_Packaging](Analyzer_Packaging.md) — CLIP prompts + YOLO class support
-- [ ] [Analyzer_MaterialTexture](Analyzer_MaterialTexture.md) — HF energy at high crop-tightness
-- [ ] [Analyzer_LightingDetail](Analyzer_LightingDetail.md) — histogram shape + gradient coherence
+T-4700 deleted these 10 empty-body stubs, and the 22 features they would have written (23
+including `type-of-shot`, which was removed alongside them for the same UNKNOWN-forever reason
+despite never having even a stub producer), because `PhenotypeRuleSet` never treats `UNKNOWN` as
+satisfying a required condition — a stub-only feature makes every phenotype that hard-requires it
+permanently unreachable, not just "not yet calibrated." Re-introduction is gated on Ticket B's
+5-product-type catch-all proving reliable first (see `project_imagengp_phenotype_simplification`
+memory / T-4700's ticket note); pick these
+back up one at a time via git history for the proposed workings, not all at once:
+
+- `Analyzer_FacePose` — would have set has-head, head-visible, has-face, face-visible,
+  body-visible, pose-type from Haar cascades or yolo26s-pose in the person box; highest-value
+  (unblocks most on-model phenotype nuance) if re-introduced.
+- `Analyzer_TextPresent` — text-present via SWT/MSER heuristic or EAST/DBNet ONNX.
+- `Analyzer_Mannequin` — contains-mannequin via person box + no skin + no face; depended on
+  FacePose.
+- `Analyzer_LogoPresent` — logo-present via compact high-contrast component heuristic.
+- `Analyzer_CameraAngle` — camera-angle/top-view via box placement + shadow direction + CLIP
+  prompts.
+- `Analyzer_IndoorOutdoor` — indoor/outdoor via CLIP scene prompts, gated on lifestyle-background.
+- `Analyzer_ShadowReflection` — shadow-present/reflection-present via a strip below the subject
+  box on solid backgrounds.
+- `Analyzer_Packaging` — packaging-visible/scale-reference-present via CLIP prompts + YOLO class
+  support.
+- `Analyzer_MaterialTexture` — material-texture-visible via HF energy at high crop-tightness.
+- `Analyzer_LightingDetail` — lighting/lighting-detail via histogram shape + gradient coherence.
 
 ## Cross-cutting
 
 - [ ] Retire ImageOrderer.ResolveProductType value-sniffing fallback once Analyzer_ProductType is validated on real batches (the refined ProductTypeId path already wins when set).
 - [ ] Unify ProductTypeMap.json vocabulary with TranslationDictionary.json synonymGroups (domain productType) — or document why they stay separate (project reference direction blocks Classify → TranslationConfig).
 - [ ] Segmentation model (yolo26s-seg): true product-coverage-ratio pixel masks; retires SubjectGeometry's color-distance fallback.
-- [ ] Analyzer_Symmetry was consciously DROPPED (no phenotype rule consumes symmetry-score; only plausible use was FRONT-orientation support). Revisit only if an orientation rule ever wants it.
-- [ ] CLIP-vs-analyzer write precedence: standardize the "only overwrite when higher confidence" convention (FilenameEvidence has it; FacePose will need it).
+- Analyzer_Symmetry closed out for good: symmetry-score was consciously dropped (no phenotype rule ever consumed it) and the feature itself was removed from ImageNGP.json in T-4700 — no longer a "revisit if" item.
+- [ ] CLIP-vs-analyzer write precedence: standardize the "only overwrite when higher confidence" convention (FilenameEvidence has it) for whichever stub analyzer is re-introduced first.

@@ -133,31 +133,21 @@ public static class ImageFeatureAnalyzer {
         if (imagePath is not null && File.Exists(imagePath)) {
             using Image<Rgba32> image = Image.Load<Rgba32>(imagePath);
 
-            // Wave 2 — human/face evidence: YOLO person detections, then face/pose refinement.
+            // Wave 2 — human evidence: YOLO person detections.
             IReadOnlyList<YoloDetection> detections = yoloModelPath is null
                 ? []
                 : YoloDetector.GetShared(yoloModelPath).Detect(image, parameters.Yolo);
             Analyzer_HasHuman.Analyze(detections, lambda.Features, parameters.Yolo);
-            Analyzer_FacePose.Analyze(image, detections, lambda.Features);
-            Analyzer_Mannequin.Analyze(image, detections, lambda.Features);
             pool.Eliminate(lambda.Features);
 
             // Wave 3 — remaining visual analyzers: geometry from the shared subject box, then
-            // colors sampling the same box, exposure, detection-count features, and the stubs.
+            // colors sampling the same box, exposure, and detection-count features.
             SubjectBox? subject = Analyzer_SubjectGeometry.Analyze(image, detections, lambda.Features, parameters.SubjectGeometry);
             IReadOnlyList<ColorBucket> buckets = Analyzer_DominantColors.Analyze(image, subject, lambda.Features, parameters.Colors, parameters.SkinTone);
             Analyzer_ProductColor.Analyze(buckets, lambda.Features, parameters.Colors);
             Analyzer_BackgroundColor.Analyze(image, lambda.Features, parameters.Colors);
             Analyzer_Exposure.Analyze(image, lambda.Features, parameters.Exposure, parameters.Colors);
             Analyzer_MultipleProducts.Analyze(detections, lambda.Features, parameters.MultipleProducts);
-            Analyzer_TextPresent.Analyze(image, lambda.Features);
-            Analyzer_LogoPresent.Analyze(image, lambda.Features);
-            Analyzer_CameraAngle.Analyze(image, lambda.Features);
-            Analyzer_IndoorOutdoor.Analyze(lambda.Features);
-            Analyzer_ShadowReflection.Analyze(image, lambda.Features);
-            Analyzer_Packaging.Analyze(lambda.Features);
-            Analyzer_MaterialTexture.Analyze(image, lambda.Features);
-            Analyzer_LightingDetail.Analyze(image, lambda.Features);
         }
 
         pool.Eliminate(lambda.Features);
@@ -306,35 +296,17 @@ public static class ImageFeatureAnalyzer {
         SetUnknownIfNotSet(snapshot, "hero-orientation");
         SetUnknownIfNotSet(snapshot, "has-human");
         SetUnknownIfNotSet(snapshot, "human-count");
-        SetUnknownIfNotSet(snapshot, "has-head");
         SetUnknownIfNotSet(snapshot, "head-visible");
-        SetUnknownIfNotSet(snapshot, "has-face");
-        SetUnknownIfNotSet(snapshot, "face-visible");
         SetUnknownIfNotSet(snapshot, "body-visible");
-        SetUnknownIfNotSet(snapshot, "pose-type");
-        SetUnknownIfNotSet(snapshot, "contains-mannequin");
         SetUnknownIfNotSet(snapshot, "product-type-label");
-        SetUnknownIfNotSet(snapshot, "packaging-visible");
         SetUnknownIfNotSet(snapshot, "multiple-products");
         SetUnknownIfNotSet(snapshot, "overlap-count");
-        SetUnknownIfNotSet(snapshot, "scale-reference-present");
-        SetUnknownIfNotSet(snapshot, "logo-present");
-        SetUnknownIfNotSet(snapshot, "material-texture-visible");
-        SetUnknownIfNotSet(snapshot, "text-present");
-        SetUnknownIfNotSet(snapshot, "top-view");
-        SetUnknownIfNotSet(snapshot, "shadow-present");
-        SetUnknownIfNotSet(snapshot, "reflection-present");
-        SetUnknownIfNotSet(snapshot, "lighting");
-        SetUnknownIfNotSet(snapshot, "camera-angle");
         SetUnknownIfNotSet(snapshot, "product-coverage-ratio");
         SetUnknownIfNotSet(snapshot, "image-occupancy");
         SetUnknownIfNotSet(snapshot, "crop-tightness");
         SetUnknownIfNotSet(snapshot, "dominant-colors");
         SetUnknownIfNotSet(snapshot, "product-color");
         SetUnknownIfNotSet(snapshot, "background-color");
-        SetUnknownIfNotSet(snapshot, "indoor");
-        SetUnknownIfNotSet(snapshot, "outdoor");
-        SetUnknownIfNotSet(snapshot, "symmetry-score");
         SetUnknownIfNotSet(snapshot, "product-aspect-ratio");
         SetUnknownIfNotSet(snapshot, "vertical-centering");
         SetUnknownIfNotSet(snapshot, "horizontal-centering");

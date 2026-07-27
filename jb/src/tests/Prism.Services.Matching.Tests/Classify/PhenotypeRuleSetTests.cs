@@ -22,12 +22,14 @@ public class PhenotypeRuleSetTests {
     }
 
     [Fact]
-    public void Load_ValidPath_JsonContains26Phenotypes() {
-        // Verify the configuration file itself carries the expected 26 phenotypes.
+    public void Load_ValidPath_JsonContains20Phenotypes() {
+        // Verify the configuration file itself carries the expected 20 phenotypes (T-4700 trimmed
+        // 6 unreachable ones — every hard-required condition on each depended solely on a
+        // stub-only feature).
         string json = File.ReadAllText(ImageRolesPath, System.Text.Encoding.UTF8);
         using var doc = JsonDocument.Parse(json);
         int count = doc.RootElement.GetProperty("phenotypes").GetArrayLength();
-        Assert.Equal(26, count);
+        Assert.Equal(20, count);
     }
 
     [Fact]
@@ -137,30 +139,6 @@ public class PhenotypeRuleSetTests {
     }
 
     [Fact]
-    public void Assign_MaxCondition_MatchesNumericBelowThreshold() {
-        // size-chart: product-coverage-ratio max 0.30, image-occupancy min 0.60, text-present=true.
-        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
-        var snapshot = new ImageFeatureSnapshot();
-        snapshot.Set("text-present", "true", 1.0, "test");
-        snapshot.Set("product-coverage-ratio", "0.20", 1.0, "test"); // <= 0.30 ✓
-        snapshot.Set("image-occupancy", "0.65", 1.0, "test"); // >= 0.60 ✓
-
-        Assert.Equal("size-chart", ruleSet.Assign(snapshot));
-    }
-
-    [Fact]
-    public void Assign_MaxCondition_FailsAboveThreshold() {
-        // size-chart: product-coverage-ratio max 0.30. With 0.50 the rule fails.
-        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
-        var snapshot = new ImageFeatureSnapshot();
-        snapshot.Set("text-present", "true", 1.0, "test");
-        snapshot.Set("product-coverage-ratio", "0.50", 1.0, "test"); // > 0.30 ✗
-        snapshot.Set("image-occupancy", "0.65", 1.0, "test");
-
-        Assert.NotEqual("size-chart", ruleSet.Assign(snapshot));
-    }
-
-    [Fact]
     public void Assign_AnyOfGroup_MatchesWhenOneChildMet() {
         // front-on-model-full-product has anyOf: head-visible=FULL OR PARTIAL.
         // Supply PARTIAL only — rule should still fire.
@@ -239,15 +217,18 @@ public class PhenotypeRuleSetTests {
         Assert.Equal("lifestyle-context", ruleSet.Assign(snapshot));
     }
 
-    //  Ordering bug: ghost-front unreachable 
+    //  ghost-front / front-packshot overlap (accepted, not a bug)
 
     [Fact]
-    public void Assign_GhostFront_OrderingBug_CurrentlyReturnsFrontPackshot() {
-        // BUG: ghost-front must precede front-packshot in ImageRoles.json.
-        // ghost-front has the same 5 conditions as front-packshot PLUS contains-mannequin=false.
-        // Because front-packshot appears first, it always wins — ghost-front is unreachable.
-        // This test documents the CURRENT (broken) behavior. When the ordering is fixed,
-        // this test should be updated to assert "ghost-front".
+    public void Assign_GhostFrontConditions_ReturnsFrontPackshot() {
+        // ghost-front and front-packshot now have identical trigger conditions whenever
+        // background-type=SOLIDCOLOR (T-4700 removed ghost-front's contains-mannequin=false
+        // clause — its sole producer was a stub, so the clause could never be satisfied anyway).
+        // No feature currently distinguishes a ghost-mannequin shot from a flat packshot in this
+        // case; front-packshot wins because it's earlier in ImageRoles.json (first-match-wins).
+        // This is an accepted design tradeoff (see imagePhenotypes.md's architecture note), not a
+        // defect — ghost-front remains reachable via its other branch (clipping-path=true with a
+        // non-solidcolor background).
         var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("hero-is-human", "FALSE", 1.0, "test");
@@ -255,11 +236,24 @@ public class PhenotypeRuleSetTests {
         snapshot.Set("background-type", "SOLIDCOLOR", 1.0, "test");
         snapshot.Set("occlusion-level", "full-product", 1.0, "test");
         snapshot.Set("intersection-count", "0", 1.0, "test");
-        snapshot.Set("contains-mannequin", "false", 1.0, "test");
 
-        // Expected correct result: "ghost-front"
-        // Actual (buggy) result: "front-packshot" due to wrong rule ordering.
         Assert.Equal("front-packshot", ruleSet.Assign(snapshot));
+    }
+
+    [Fact]
+    public void Assign_GhostFront_ReachableViaClippingPathBranch() {
+        // ghost-front's other anyOf branch (clipping-path=true, non-solidcolor background) has no
+        // overlap with front-packshot (which only accepts background-type=SOLIDCOLOR) — reachable.
+        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
+        var snapshot = new ImageFeatureSnapshot();
+        snapshot.Set("hero-is-human", "FALSE", 1.0, "test");
+        snapshot.Set("hero-orientation", "FRONT", 1.0, "test");
+        snapshot.Set("background-type", "REALLIFE", 1.0, "test");
+        snapshot.Set("clipping-path", "true", 1.0, "test");
+        snapshot.Set("occlusion-level", "full-product", 1.0, "test");
+        snapshot.Set("intersection-count", "0", 1.0, "test");
+
+        Assert.Equal("ghost-front", ruleSet.Assign(snapshot));
     }
 
     //  EvaluateCandidates 

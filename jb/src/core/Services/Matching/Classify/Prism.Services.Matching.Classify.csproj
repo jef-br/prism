@@ -37,16 +37,6 @@
     <Compile Include="..\Analyzers\SubjectBox.cs" />
     <Compile Include="..\Analyzers\ColorBucket.cs" />
     <Compile Include="..\Analyzers\ColorAnalyzerConfig.cs" />
-    <Compile Include="..\Analyzers\Analyzer_TextPresent.cs" />
-    <Compile Include="..\Analyzers\Analyzer_FacePose.cs" />
-    <Compile Include="..\Analyzers\Analyzer_Mannequin.cs" />
-    <Compile Include="..\Analyzers\Analyzer_LogoPresent.cs" />
-    <Compile Include="..\Analyzers\Analyzer_CameraAngle.cs" />
-    <Compile Include="..\Analyzers\Analyzer_IndoorOutdoor.cs" />
-    <Compile Include="..\Analyzers\Analyzer_ShadowReflection.cs" />
-    <Compile Include="..\Analyzers\Analyzer_Packaging.cs" />
-    <Compile Include="..\Analyzers\Analyzer_MaterialTexture.cs" />
-    <Compile Include="..\Analyzers\Analyzer_LightingDetail.cs" />
     <Compile Include="..\Analyzers\YoloAnalyzerConfig.cs" />
     <Compile Include="..\Analyzers\YoloClassNames.cs" />
     <Compile Include="..\Analyzers\YoloDetection.cs" />
