@@ -2,17 +2,18 @@ using System.Text.Json;
 
 namespace Prism.Services.Generate;
 
-/// <summary>
-/// Evaluates each FamilyID group and creates <see cref="ImageRecord_GENERATED"/> records
-/// for families below the minimum image count threshold.
-/// Actual inference is gated behind <see cref="GenerationBackendAvailable"/>; all records
-/// produced today receive <see cref="GenerationStatus.Gated"/>.
-/// </summary>
+/// <summary> Evaluates each FamilyID group and creates <see cref="ImageRecord_GENERATED"/> records
+/// for families below the minimum image count threshold. Currently gated by <see cref="GenerationBackendAvailable"/>;
+/// Records produced today receive <see cref="GenerationStatus.Gated"/>. </summary>
 internal static class ImageGenerator {
-    /// <summary>
-    /// Runs the generation decision over all non-KO images, enriching each hero LAMBDA in place and
-    /// returning the new synthetic records it created.
-    /// </summary>
+
+    /// <summary> Generation backend gate. To replace by a connectivity check when ComfyUI / SD infrastructure is available. </summary>
+    private static bool GenerationBackendAvailable = false;
+
+
+
+    /// <summary> Runs the generation decision over all non-KO images, enriching each hero LAMBDA in place
+    /// and returning the new synthetic records it created. </summary>
     /// <param name="records">Matched LAMBDA records.</param>
     /// <param name="generationEnabled">Whether generation is enabled for this job.</param>
     /// <returns>The generated synthetic image records (empty when generation produced none).</returns>
@@ -47,14 +48,11 @@ internal static class ImageGenerator {
             if (!MeetsQuality(hero, config)) {
                 foreach (ImageRecord_LAMBDA img in images)
                     img.GenerationRouteState = GenerationRouteState.SkippedLowQuality;
-
                 continue;
             }
 
-            if (GenerationBackendAvailable()) {
-                // Future: run inference and create real generated records.
-                continue;
-            }
+            // Future: run inference and create real generated records.
+            if (GenerationBackendAvailable) continue;
 
             ImageRecord_GENERATED generated = BuildGeneratedRecord(hero, GenerationMethod.DetailCrop);
             hero.GeneratedChildren = [generated];
@@ -94,11 +92,6 @@ internal static class ImageGenerator {
         return true;
     }
 
-    /// <summary>
-    /// Returns <c>false</c>; no generation backend is deployed in the current environment.
-    /// Replace with a real connectivity check when ComfyUI / SD infrastructure is available.
-    /// </summary>
-    private static bool GenerationBackendAvailable() => false;
 
     /// <summary>
     /// Constructs a <see cref="ImageRecord_GENERATED"/> for the given hero using the specified method.
