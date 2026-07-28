@@ -134,8 +134,12 @@ public static class Upscaler {
     /// </summary>
     private static Mat RunTiled(InferenceSession session, Mat src) {
         bool tiling = _tileHeight > 0 && _tileWidth > 0;
-        int tileH = tiling ? _tileHeight : src.Rows;
-        int tileW = tiling ? _tileWidth : src.Cols;
+        // Dynamic-shape model → whole image as one tile. Round that single tile up to even H/W: the model's
+        // pixel_unshuffle(2) reshape requires even dimensions (an odd side fails at the Reshape node). The
+        // CopyMakeBorder below pads to the tile size and the accumulator clips the ×2 overshoot back to
+        // src×2, so rounding up is transparent. Fixed 64px tiles are already even, so tiling is unaffected.
+        int tileH = tiling ? _tileHeight : RoundUpToEven(src.Rows);
+        int tileW = tiling ? _tileWidth : RoundUpToEven(src.Cols);
         int overlap = tiling ? _tileOverlapPixels : 0;
         int discard = tiling ? _discardBandPixels : 0;
 
@@ -271,6 +275,8 @@ public static class Upscaler {
 
         return output;
     }
+
+    private static int RoundUpToEven(int n) => n + (n & 1);
 
     /// <summary>Runs one fixed-size tile through the ONNX session and returns the BGR uint8 result.</summary>
     private static Mat RunSingleTile(InferenceSession session, Mat tileBgrUint8) {

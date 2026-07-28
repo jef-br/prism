@@ -1,3 +1,5 @@
+using OpenCvSharp;
+using Prism.Config;
 using Xunit;
 
 namespace PrismCoreTests.Upscale;
@@ -56,6 +58,32 @@ public class UpscalerTests {
         finally {
             File.Delete(corruptPath);
         }
+    }
+
+    // Dynamic-shape model regression: the committed Real-ESRGAN export has a fixed pixel_unshuffle(2)
+    // that rejects odd H/W outright, so RunTiled's whole-image path must pad to even and clip the ×2
+    // overshoot back. Skips when the model asset isn't deployed (e.g. CI without PRISM_ONNX_MODEL_DIR).
+    [Fact]
+    public void Upscale_OddSizedImage_ProducesExactlyDoubledOutput() {
+        try {
+            PrismConfiguration config = PrismConfiguration.LoadPrismConfig(ConfigLoader.RequireFile(PrismConfiguration.FileName));
+            UpscaleService.Create(config);
+        }
+        catch (PrismConfigurationException) {
+            return; // model/config asset not present in this context — nothing to exercise
+        }
+
+        // Odd width (401) AND odd height (399): both must be padded up to even before inference.
+        using Mat src = new(399, 401, MatType.CV_8UC3);
+        Cv2.Randu(src, Scalar.All(0), Scalar.All(255));
+        Cv2.ImEncode(".jpg", src, out byte[] jpg);
+
+        byte[] outBytes = Upscaler.Upscale(jpg, 2.0);
+
+        using Mat outMat = Cv2.ImDecode(outBytes, ImreadModes.Color);
+        Assert.False(outMat.Empty());
+        Assert.Equal(401 * 2, outMat.Width);    // exact ×2 — even-padding overshoot clipped by the accumulator
+        Assert.Equal(399 * 2, outMat.Height);
     }
 
     [Fact]

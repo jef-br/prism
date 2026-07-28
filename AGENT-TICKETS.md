@@ -274,6 +274,147 @@ each image; coordinated with the Export evidence-manifest todo so the two don't 
 
 ---
 
+### T-4900 · ESRGAN toggle + unified final-size upscale (epic)
+**Status:** Ready | **Profile:** P0-orchestrator
+**Found by:** 2026-07-28 upscale-perf investigation (see `memory/project_transform_upscale_bottleneck.md`)
+
+Tracking ticket. **Problem:** the upscale stage (Real-ESRGAN, in `ImagePreProcessor.UpscaleAsync`) is the
+pipeline's dominant cost — measured **122.9s per 800×800 image on the GPU** with the old fixed-64 model,
+and even after the dynamic-model fix (T-4905) it's ~**10s/image** of genuine Real-ESRGAN compute. On a
+~1900-image set that is still hours, and desktop users without a capable GPU will not tolerate it.
+**Goal:** make ESRGAN opt-in. Add a user-set toggle (**default OFF**); when OFF, upscale with plain
+Lanczos, and only *as little as needed* to clear the final-image 800px bar (capped at +33%). When ON,
+ESRGAN runs (now fast via the dynamic model). Both paths target the **same** exact final-output-size bar
+(unified — user decision 2026-07-28).
+
+**Settled decisions (user, 2026-07-28):** (1) shortfall — if the applicable cap can't reach the bar,
+**KO the image** (fail-loud, like today's upscale-exceeded KO); (2) targeting — **unified**: ON and OFF
+both target final ≥ bar (ON caps at the existing ESRGAN `MaxUpScaleFactor`, OFF caps at the new
+Lanczos-only cap); (3) scope — **includes the workbench UI** toggle; (4) bleed images — target the output
+dimension **directly, no margin term** (only zero-intersection images get the `×(1+2·margin)` discount);
+(5) **exactly one upscale location** is mandatory — the final size is *exactly* computable pre-transform
+from the already-known bbox + intersection state + margin config (reuse each routing's canvas-size
+formula), so upscale stays where it is (`ImagePreProcessor.UpscaleAsync`) with an exact final-size calc —
+no post-transform move, no split, no prediction/approximation.
+
+**All values from config, never hardcoded** (no-shadow-defaults rule): reuse `MinOutputWidth` (800) as the
+FINAL-image bar; new Lanczos-only cap key (proposed `Output.Images.Resize.MAXIMUM_UpScale_LanczosOnly` =
+1.33 → `PrismConfiguration.MaxLanczosOnlyUpScaleFactor`); margin from `CropTransformSettings.WhiteSpaceMargin`
+(0.042, transform_Config — note the cross-config read). Children: T-4905 (done, review pending), T-4910,
+T-4920, T-4930, T-4940. Index ticket, not a unit of work.
+
+**Files:** `AGENT-TICKETS.md`, `memory/project_transform_upscale_bottleneck.md`.
+
+---
+
+### T-4905 · Dynamic-shape ESRGAN export + even-dimension padding
+**Status:** Review | **Profile:** P4-critical-architecture
+**Found by:** [[T-4900]]
+
+**Implemented this session (2026-07-28) — awaiting reviewer Approve.** The committed `Real-ESRGAN_x2plus.onnx`
+had a fixed `[1,3,64,64]` input, so an 800px image was upscaled as **625 serialized 64×64 tile Runs**
+(~0.2s DirectML dispatch overhead each = 122.9s). The RRDBNet is already spatially size-agnostic
+internally (pixel_unshuffle derives shape from `Shape(input)`; both Resize use scales `[1,1,2,2]`); only
+the declared input shape pinned it to 64. A **metadata-only** edit (input dims → dynamic `height`/`width`,
+weights untouched, bit-identical output) makes it accept whole images in one Run. Proven on the GPU:
+**122.9s → 10.19s, ~12×**, correct 1600×1600 output. Changes landed: `Prism_Config.json`
+`Models.Upscale.Path` → `Real-ESRGAN_x2plus_dynamic.onnx`; `Upscaler.RunTiled` rounds the whole-image
+(dynamic) tile up to even H/W — the `pixel_unshuffle(2)` rejects odd dims and the existing pad+accumulator
+clips the ×2 overshoot back; new `UpscalerTests.Upscale_OddSizedImage_ProducesExactlyDoubledOutput` (401×399
+→ 802×798 real inference). Whole-image single-pass is the chosen mode; a configurable capped tile (e.g.
+512) is the documented fallback if a large image ever OOMs the GPU. Acceptance: reviewer confirms the
+metadata-only diff is lossless and the even-padding math; Upscale suite green (17/17). The dynamic `.onnx`
+is gitignored (too big for git) and lives in the source tree next to the fixed-64 backup.
+
+**Files:** `jb/src/core/config/Prism_Config.json`,
+`jb/src/core/Services/Upscale/Engine/Upscaler.cs`,
+`jb/src/tests/Prism.Services.Upscale.Tests/Upscale/UpscalerTests.cs`.
+
+---
+
+### T-4910 · Exact final-output-size calculator (shared helper)
+**Status:** Blocked | **Profile:** P4-critical-architecture
+**Blocked-by:** [[T-4905]]
+**Found by:** [[T-4900]]
+
+Extract a single deterministic function that, given the salient bbox + intersection state + margin, returns
+the **exact** final-output longest dimension the pipeline will produce — reusing each routing's own
+canvas-size formula so upscale and the Transform stage never disagree. Two branches (user decision 4):
+**zero-intersection** → `Tx_CenterAndStretch` canvas geometry: `canvasSize = (floor(bbox_longest·(1+2·margin))`
+`made even) − 2`; **bleed/intersection** → the bleed routing's output longest dim, **no margin term**. The
+routing split (zero-intersection vs bleed) must use the *same* predicate as `ImageTransformer.SelectTransformer`
+so the calc matches the routing that will actually run. Both the upscale-scale logic (T-4920) and, ideally,
+the Tx stage reference this one helper. Cross-stage note: the calc lives where upscale runs
+(`ImagePreProcessor`, preprocess) but encodes Transform-stage geometry — keep it a pure function of
+(bbox, intersection, margin, routing-config) with no side effects. Acceptance: unit tests pin exact sizes
+against `Tx_CenterAndStretch`'s worked example (bbox 1800, margin 0.042 → canvas 1948) and a bleed case;
+helper is the single source of truth. No behavior change yet.
+
+**Files:** `jb/src/core/Services/Matching/ImagePreProcessor.cs` (or a new shared geometry helper class),
+`jb/src/core/Services/Transform/Engine/Tx_CenterAndStretch.cs`,
+`jb/src/core/Services/Transform/ImageTransformer.cs`.
+
+---
+
+### T-4920 · Unified upscale-scale + ESRGAN/Lanczos gate + KO
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** [[T-4910]], [[T-4930]]
+**Found by:** [[T-4900]]
+
+Rewrite `ImagePreProcessor.UpscaleAsync` to the unified model. Using T-4910's exact final-size calc,
+compute the **minimal** scale `s ≥ 1.0` such that the computed final output ≥ `MinOutputWidth` (as little as
+possible to cross the bar). Then branch on the toggle: **ON** → ESRGAN (dynamic model), cap `s ≤`
+`MaxUpScaleFactor` (existing, 1.42); **OFF (default)** → Lanczos, cap `s ≤ MaxLanczosOnlyUpScaleFactor`
+(new config, 1.33). If the required `s` exceeds the applicable cap → **KO** (reuse `PREPROCESS_UPSCALE_EXCEEDED`;
+OFF message names the toggle: "enable ESRGAN upscaling to process this image"). Retain the existing
+too-small KO (`largest < MinInputSizeInPixels`). Add the new config key following no-shadow-defaults
+(`required`, no in-code default). Note the current ON path targets the *bbox* reaching `MinOutputWidth`;
+unifying moves it to the *final-image* bar (margin-aware for zero-intersection), which reduces ESRGAN work.
+Acceptance: unit tests for OFF (Lanczos, +33% cap, KO past it, margin discount on zero-intersection, direct
+on bleed), ON (ESRGAN, 1.42 cap), and the minimal-scale property; the Lanczos path uses the same resampler
+family as the existing top-up. Lanczos-only default keeps a full run's upscale cost near-zero.
+
+**Files:** `jb/src/core/Services/Matching/ImagePreProcessor.cs`,
+`jb/src/core/config/Prism_Config.json`,
+`jb/src/core/config/` (new `MaxLanczosOnlyUpScaleFactor` binding + its config class),
+`jb/src/tests/Prism.Services.Matching.Tests/` (or the suite owning ImagePreProcessor).
+
+---
+
+### T-4930 · ESRGAN toggle plumbing (per-job parameter, default OFF)
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** [[T-4905]]
+**Found by:** [[T-4900]]
+
+Add a per-job boolean (proposed `AllowEsrganUpscale`, **default false**) to `PrismProcessingParameters`,
+accept it on the `POST /PRISM/process` multipart request, and thread it through `TransformService` →
+`ImagePreProcessor.PreprocessAsync`/`UpscaleAsync` so the T-4920 gate can read it. Confirm every call site
+of `PreprocessAsync` (at least `TransformService`; verify Match-stage usage) receives it. Default-off means
+an omitted field yields Lanczos-only. Acceptance: request round-trips the flag; default-off verified when
+absent; a job with the flag on routes to ESRGAN; service-boundary round-trip test (mind the get-only-dict
+trap from the microservices split — `[JsonConstructor]` if needed). Scope: plumbing only; the OFF/ON
+behavior is T-4920.
+
+**Files:** `jb/src/core/Models/PrismProcessingParameters.cs` (or wherever job params live),
+`jb/src/api/` (process endpoint), `jb/src/core/Services/Transform/TransformService.cs`,
+`jb/src/core/Services/Matching/ImagePreProcessor.cs`.
+
+---
+
+### T-4940 · Workbench UI toggle for ESRGAN upscaling
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** [[T-4930]]
+**Found by:** [[T-4900]]
+
+Surface the toggle in the Next.js workbench (`jb/src/workbench/web`) as an unchecked-by-default checkbox
+(e.g. "High-quality upscaling (ESRGAN — slower)"), wired to the T-4930 request field. Match existing
+process-option controls (Transform/Headcut). Acceptance: unchecked by default; submitting checked sends the
+flag on; `npm run typecheck` + `npm run build` green. Scope: UI + request wiring only.
+
+**Files:** `jb/src/workbench/web/` (process-options component + API client).
+
+---
+
 ## Verification Rules
 
 - After project/solution setup: `dotnet build jb/src/PRISM.sln`, API run smoke, web `npm run typecheck` + `npm run build`.

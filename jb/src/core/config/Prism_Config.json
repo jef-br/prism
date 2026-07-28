@@ -138,7 +138,7 @@
             "Merges": "merges.txt"
         },
         "Upscale": {
-            "Path": "Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus.onnx"
+            "Path": "Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus_dynamic.onnx"
         }
     }
 }
