@@ -125,154 +125,13 @@ Closed this session (no longer in `jbtodo.md`): item 2 (`TryMatchBySubstringResc
 
 ---
 
-### T-4800 · Model-aware subject isolation for Transform (epic)
-**Status:** Ready | **Profile:** P0-orchestrator
-**Found by:** [[T-4700]] follow-up; folds in the removed root note `TRANSFORM-SUBJECT-ISOLATION-NOTE.md`
 
-Tracking ticket. Design lives in `jb/src/core/Services/Transform/Engine/jbtodo.md` ("Subject Isolation &
-Model-Aware Transformation"). Goal: give Transform a real subject mask/box (shadow- and
-background-excluded) produced upstream and consumed as pure geometry+fill, plus Excel+CLIP seeding that
-steers transform behavior. v1 ports the vendored classical-CV prototype
-`jb/docs/reference/process_images.py`; ONNX stays upstream (Transform stays deterministic). Children:
-T-4805, T-4810, T-4820 (Wave 0); T-4830 (Wave 1); T-4850, T-4860 (Wave 2); T-4870 (Wave 3). T-4840
-(vendor the reference script) is already done. This ticket is an index, not a unit of work.
 
-**Board sync (2026-07-28):** all seven children implemented + unit-tested this session (Transform suite
-67 green, Core unit 127 green, Matching 204 green). Two documented deferrals remain (see
-`Services/Transform/Engine/jbtodo.md` → "Implementation status"): the T-4830 ingress-alpha capture (needs
-a Contracts `ImageRecord_INPUT.Subject` field + hot-import-path change), and behavioural effect of
-toggles (a)/(b) (needs the upstream detector to be seed-aware). P1/P4 children still need the reviewer
-Approve gate before /ticket-finish can mark them Done — implementation is landed, review is pending.
 
-**Files:** `jb/src/core/Services/Transform/Engine/jbtodo.md`, `AGENT-TICKETS.md`.
 
----
 
-### T-4805 · Unify Transform/Process entry points (fix latent divergence)
-**Status:** Ready | **Profile:** P4-critical-architecture
-**Found by:** [[T-4800]]
 
-`Tx_CenterAndStretch.Process` (and the other Tx `Process` methods, per the "precedent" comment in
-`Tx_DetailCropper`) ignore the `lambda` parameter and always crop to `FullImageBounds(arr)`, violating
-the `IImageTransformation` contract (reuse the lambda's BoundingBox when provided). Not live today — the
-deployed transform service routes through `Transform(lambda)` — but a future per-image webservice on
-`Process` would diverge from pipeline behavior and ignore the persisted SubjectBox from T-4810.
-Acceptance: `Transform(lambda)` and `Process(...,lambda)` funnel through one shared core so identical
-geometry → identical output; `Process` reuses the lambda's box when present; all four Tx classes audited;
-dead `Tx_LowContrastEnhancement.Enhance` removed (CLAHE moves upstream via T-4830), standalone
-`Tx_LowContrastEnhancement.Process` utility retained; build + tests green. Scope: no new transform
-behavior — pure de-duplication of the two paths.
 
-**Files:** `jb/src/core/Services/Transform/Engine/IImageTransformation.cs`,
-`jb/src/core/Services/Transform/Engine/Tx_*.cs`,
-`jb/src/core/Services/Transform/Engine/Utils/Tx_LowContrastEnhancement.cs`.
-
----
-
-### T-4810 · Persisted subject mask/box contract
-**Status:** Ready | **Profile:** P4-critical-architecture
-**Found by:** [[T-4800]]
-
-Add a persisted `SubjectMask` + `SubjectBox` (+ per-edge intersect flags) to the image record, produced
-upstream and read by Transform. Define the pluggable-producer seam so a segmentation producer
-(SAM3 / yolo26s-seg, [[T-2600]]) can replace the v1 classical-CV producer later without touching
-Transform. Acceptance: contract types added following the no-shadow-defaults rule; producer interface
-defined; round-trips across the service HTTP boundary (get-only dict trap — mirror the microservices-split
-`[JsonConstructor]` + round-trip test); no behavior change until a producer populates it. Scope: contract
-+ plumbing only, not the detector (T-4830).
-
-**Files:** `jb/src/core/Models/ImageRecord_LAMBDA.cs`, `jb/src/core/Models/ImageRecord_Base.cs`,
-`jb/src/core/Services/Matching/ImagePreProcessor.cs`.
-
----
-
-### T-4820 · Seeding access in Transform
-**Status:** Ready | **Profile:** P4-critical-architecture
-**Found by:** [[T-4800]]
-
-Thread the already-measured features `product-color`, `background-type`, `background-color`,
-`product-type-label` to Transform, and give each lambda access to its `FamilyIDRecord` (today only the
-`Family` id string + `ProductTypeId` reach the record). `background-type` is already settled by T-4700
-(`SOLIDCOLOR`/`REALLIFE`/`UNKNOWN`) — "flat" = `SOLIDCOLOR`, no reconciliation. (Product-type ids are
-being collapsed to 5 by [[T-4710]]; seeding is slug-agnostic.) Acceptance: the four signals +
-FamilyIDRecord reachable inside Transform without recomputation; no seeding logic yet (that is T-4860).
-Scope: data access only.
-
-**Files:** `jb/src/core/Services/Transform/TransformService.cs`,
-`jb/src/core/Services/Matching/Classify/ImageFeatureSnapshot.cs`, `jb/src/core/lib/Excel/FamilyIDRecord.cs`,
-`jb/src/core/Models/ImageRecord_LAMBDA.cs`.
-
----
-
-### T-4830 · Port the v1 subject detector (+ ingress alpha path)
-**Status:** Blocked | **Profile:** P1-feature-worker
-**Blocked-by:** [[T-4810]] (needs the SubjectMask/SubjectBox contract)
-**Found by:** [[T-4800]]
-
-Port the vendored `jb/docs/reference/process_images.py` detector to C#/OpenCvSharp4 in the upstream
-producer, one named helper per step (recipe-readable, K&R). Populate `SubjectMask`/`SubjectBox`/intersects/
-candidate-shadow evidence. Chroma-plane + texture + shadow-strip-by-shape + Canny corroboration; lightness
-never a criterion (shadow exclusion). Add the ingress alpha path: real alpha → build+persist box/mask
-before jpg normalization, skip the heuristic path. New detector config follows no-shadow-defaults.
-Acceptance: producer populates the contract; unit tests on white-on-white, cast-shadow, gradient
-background, bleed-off cases; classify-stage perf delta measured on SPACINI29 vs the 156.5s baseline.
-
-**Files:** `jb/src/core/Services/Matching/ImagePreProcessor.cs` (+ new detector class/config under
-Classify), `jb/src/core/lib/Ingress/Importer.cs` (ingress alpha capture, pre-normalization),
-`jb/src/core/config/analyzer_Config.json` or `ClassifyConfig.json`.
-
----
-
-### T-4850 · Consume subject mask/box in Transform
-**Status:** Blocked | **Profile:** P1-feature-worker
-**Blocked-by:** [[T-4810]], [[T-4830]]
-**Found by:** [[T-4800]]
-
-Center/stretch/detail-crop geometry operates on the real SubjectMask/SubjectBox instead of the salient
-rectangle; routing (`ImageTransformer.SelectTransformer`) uses the detector's cleaner intersect signals.
-Fill stays the existing `Tx_util_BgStretch` (unchanged), just fed the better geometry. Acceptance: routing
-+ geometry read the persisted mask/box; A/B vs the current salient box shows equal-or-better centering on
-the test set; no fill-tier changes.
-
-**Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`,
-`jb/src/core/Services/Transform/Engine/Tx_CenterAndStretch.cs`,
-`jb/src/core/Services/Transform/Engine/Tx_DetailCropper.cs`.
-
----
-
-### T-4860 · Behavior toggles + shadow wiring
-**Status:** Blocked | **Profile:** P1-feature-worker
-**Blocked-by:** [[T-4820]], [[T-4830]]
-**Found by:** [[T-4800]]
-
-Implement the three seeding toggles: (a) product-color ≈ background-color → harder isolation;
-(b) background-type not `SOLIDCOLOR` → more hero-detection effort (skip when `SOLIDCOLOR`, for speed);
-(c) detector candidate-shadow evidence → shadow-accounting, driving the existing `Tx_CenterAndStretch`
-shrink (`shadow-present` was removed by T-4700, so read the detector evidence off the record directly).
-Optionally re-declare a detector-measured `shadow-present` feature via `HowToAddAPhenotype.md`. All
-thresholds config-driven (no shadow defaults). Acceptance: each toggle unit-tested on a positive and a
-negative case; evidence-harness run confirms real behavior, not just green tests.
-
-**Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`,
-`jb/src/core/Services/Transform/Engine/Tx_CenterAndStretch.cs`, `jb/src/core/config/transform_Config.json`,
-`jb/src/core/Services/Transform/Admin/TransformParameters.cs`.
-
----
-
-### T-4870 · Extend transform-manifest with detection/toggle evidence
-**Status:** Blocked | **Profile:** P1-feature-worker
-**Blocked-by:** [[T-4830]], [[T-4850]], [[T-4860]]
-**Found by:** [[T-4800]]
-
-Fold detection/mask/box/signal/toggle evidence into the Export `transform-manifest.json` (Todo 4 in
-`jb/src/core/lib/Export/jbtodo.md`), via `OutputRecord.SafeSummaryText` per that todo's settled approach.
-Do not spawn a parallel evidence store. Acceptance: the transform manifest carries the new evidence for
-each image; coordinated with the Export evidence-manifest todo so the two don't collide.
-
-**Files:** `jb/src/core/Services/Transform/Engine/Tx_*.cs`, `jb/src/core/Models/ImageRecord_OUTPUT.cs`,
-`jb/src/core/lib/Export/Exporter.cs`, `jb/src/core/config/Prism_Config.json`.
-
----
 
 ### T-4900 · ESRGAN toggle + unified final-size upscale (epic)
 **Status:** Ready | **Profile:** P0-orchestrator
@@ -412,6 +271,181 @@ process-option controls (Transform/Headcut). Acceptance: unchecked by default; s
 flag on; `npm run typecheck` + `npm run build` green. Scope: UI + request wiring only.
 
 **Files:** `jb/src/workbench/web/` (process-options component + API client).
+
+---
+
+### T-4942 · PipelineIntegrationTests fail when the solution runs projects in parallel
+**Status:** Ready | **Profile:** P4-critical-architecture
+**Found by:** [[T-4800]] completion pass, 2026-07-28 — **blocks Done on the T-4800 children**
+
+`dotnet test jb/src/PRISM.sln` fails all 7 `PipelineIntegrationTests.CiMini_*` tests, each in under 1ms —
+the signature of the shared `PipelineFixture` failing to construct, not seven independent failures. The
+same project passes **142/142 when run on its own**, reproducibly.
+
+**Cause:** the runner executes test projects in parallel, and the T-4800 stage move made the Matching
+suite heavy and long-running (~3s → ~95s of OpenCV subject detection plus the shared DirectML YOLO
+session). It now overlaps `Prism.Core.Tests`'s pipeline fixture, which runs a whole real pipeline of its
+own. **Effect:** two projects contend for the same GPU/ONNX and job-temp resources at the same time.
+**Consequence:** the solution-wide command — the one in `CLAUDE.md` and the one CI runs — is red, while
+every project is green individually. Verified reproducible across three solution runs.
+
+**Already fixed and NOT part of this ticket:** the intermittent `Test host process crashed` in the
+Matching suite was root-caused to a test bug, not contention — `img.Set(y, x, new Scalar(...))` against a
+`CV_8UC3` Mat in three `SubjectDetectorTests` cases. `Mat.Set<T>` writes `sizeof(T)` bytes, and `Scalar`
+is four doubles (32 bytes) into a 3-byte pixel: a 29-byte overrun per call that ran off the end of the
+buffer and corrupted the native heap. Fixed by using `Vec3b`. The Matching suite now runs 230/230 clean,
+six times consecutively. **That fix also uncovered a real failure the corruption had been masking** — see
+[[T-4948]].
+
+**Production exposure investigated and CLEARED (2026-07-28).** The obvious worry was that the same driver
+fault could hit real deployments, since the three GPU guards (`ImageClassifier.RunLock`,
+`YoloDetector.RunLock`, `Upscaler._sessionLock`) are `static` and therefore coordinate threads within one
+process only. Two measurements say otherwise:
+
+1. **One process, 5 concurrent jobs** (the configured `MaxConcurrentJobs`): all 5 completed, 14/14 images
+   OK each. Durations 73/85/100/112/124s — an even ~12s staircase, which is the signature of the existing
+   locks already serializing GPU work. Nothing runs truly simultaneously, so there is nothing to fault.
+2. **Two real processes on one GPU** — a dedicated `PRISM_SERVICE=upscale` ServiceHost running
+   Real-ESRGAN alongside the API running CLIP + YOLO, wired by `PRISM_UPSCALE_URL`: 4 concurrent jobs, all
+   100% OK, no fault. Confirmed non-vacuous: the upscale host logged real `POST /prism-service/upscale`
+   calls returning 200 after 38.8s / 45.6s / 51.8s, and the API created its own ONNX sessions concurrently.
+
+So the multi-process deployment is **not** demonstrably exposed, and no product-side GPU coordination
+(named mutex, startup GPU-ownership check, queue rework) is justified on current evidence. Caveat: the
+fault is timing-dependent — it reproduces only ~4 runs in 7 even where it does occur — so a single clean
+4-job run is good evidence, not proof.
+
+**What that leaves.** The distinguishing feature of the test harness is not steady-state inference but
+**session churn**: `PipelineFixture` builds a whole `PrismService` (146 MB CLIP + 37 MB YOLO into fresh
+sessions) and disposes it, while the Matching suite does its own session work concurrently. Device
+init/teardown, not inference, is the likely fragile point. Treat this as a test-harness defect.
+
+**Next steps:** serialise the two GPU-touching test projects (`-m:1` in the documented command and
+`ci.yml`), or give the fixtures a cross-process mutex around *session acquisition* specifically. Either
+way, CI should also assert an expected minimum test count — a crashed run still prints
+`Passed! - Failed: 0, Passed: 176`, which reads as success unless you notice the count is short.
+
+**Files:** `jb/src/tests/Prism.Tests.Shared/PipelineFixture.cs`, `jb/src/tests/Prism.Core.Tests/`,
+`jb/src/tests/Prism.Services.Matching.Tests/`, `.github/workflows/ci.yml`, `CLAUDE.md` (test commands).
+
+---
+
+### T-4948 · White-on-white detection has an undocumented contrast floor (~40 grey levels)
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-4800]] completion pass, 2026-07-28
+
+Subject detection opens with `Cv2.BilateralFilter(bgr, denoised, 5, 40, 40)` before the texture measure
+runs. A bilateral filter deliberately smooths variation *below* its `sigmaColor`, so with `sigmaColor = 40`
+any surface texture weaker than roughly 40 grey levels is erased before it can be measured. **Cause:** the
+denoise step and the texture measure disagree about what counts as signal. **Effect:** measured directly —
+an achromatic 80×80 weave at amplitude 15 (240 vs 255 on white) is not detected at all and the detector
+falls back to whole-frame; the same pattern at amplitude 60 (195 vs 255) is detected cleanly.
+**Consequence:** white-on-white is one of the four scenarios this detector was ported to solve, and it
+works only above a contrast floor nobody has characterised against real product photography. Low-contrast
+white fabric on a white sweep — the canonical hard case — may sit under that floor.
+
+Note the reference prototype ran detection at 2400px against our 1024 (`MaxAnalysisSize`), which changes
+how much a fixed-amplitude weave survives downscaling; the two knobs interact and should be calibrated
+together, not in isolation.
+
+**Next steps:** measure the achromatic-contrast distribution of real white-on-white product shots, then
+decide whether to lower `sigmaColor`, move the denoise after the texture measure, or accept the floor and
+document it as a known limitation. The unit test
+`SubjectDetectorTests.Detect_WhiteOnWhiteWithFineTexture_BoxesTextureRegion_NoIntersects` pins the
+currently-supported amplitude and carries a comment saying explicitly not to lower it to force a pass.
+
+**Files:** `jb/src/core/Services/Matching/SubjectDetector.cs` (`BuildAnalysisLayers`),
+`jb/src/core/config/ClassifyConfig.json`.
+
+---
+
+### T-4945 · Validate the hard-shadow threshold against labelled data + visual A/B
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-4800]] SPACINI29 evidence run, 2026-07-28
+
+Two related calibration gaps left open by the T-4800 completion pass, both needing data this repo does
+not have yet.
+
+**Hard-shadow threshold.** `HardShadowEvidenceFraction` was 0.01, which fired on 86/86 SPACINI29 images —
+no discrimination, while trimming 6% off the bottom of every centred image. It is now **0.05** (23/86
+fire), chosen by the user against the measured distribution (min 0.0113 / median 0.0371 / p90 0.0702 /
+max 0.1243). That is a reasoned choice on an *unlabelled studio set*, not ground truth. Label a set for
+hard vs soft shadow and re-tune. `SubjectDetection.HardShadowStrippedFraction` carries the raw per-image
+measurement precisely so this can be redone without re-instrumenting. The user has flagged intent to
+refine the shadow detector itself later, which would change the distribution.
+
+**Centering A/B.** [[T-4850]]'s acceptance asks that the subject box show "equal-or-better centering" than
+the legacy salient box. The measured comparison (71 promoted images) shows close agreement on the bulk —
+centre shift median 15.5px on ~3500px images, 51/71 within 50px, area ratio median 1.027 — with a tail of
+~20 disagreements clustered at mid confidence (0.48–0.61). Geometry alone cannot say which box is
+*better* centred. Eyeball the disagreement tail (port `save_debug_overlay` from the reference prototype)
+or score against labelled product bounds, then close this out.
+
+**Also unexercised:** SPACINI29 is entirely `SOLIDCOLOR`, so toggle (b) never fired and the B2
+`HeroDetectionOnSteroids` path has no real-data coverage at all. Needs a real-life-background dataset.
+
+**Files:** `jb/src/core/config/ClassifyConfig.json`, `jb/src/core/Services/Matching/SubjectDetector.cs`,
+`jb/docs/reference/process_images.py` (overlay reference).
+
+---
+
+### T-4950 · SubjectMask crosses the service boundary unread
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-4800]] completion pass, 2026-07-28
+
+`SubjectDetection.MaskPng` is produced by both producers (`classical-cv` encodes a full-resolution binary
+PNG per image; `alpha` likewise) and asserted in tests, but **no production code reads it** — Transform
+routes and crops on `Box` plus the intersect flags, and T-4870's evidence deliberately excludes the pixel
+mask. Cause: the mask was designed for a v2 consumer (mask-aware fill / seam-carving, deferred) and built
+ahead of it. Effect: since the T-4800 completion pass moved detection upstream into the Classify
+refinement chain, the mask is now created in Matching and serialized across the Matching→Transform HTTP
+boundary in a distributed deployment — where previously it was created inside the Transform service and
+never left the process. Consequence: every image pays a base64 PNG round-trip for a payload nothing
+consumes; on a ~1900-image batch that is real bandwidth for zero benefit. Not a correctness bug and not
+urgent — the mask is a deliberate forward-looking part of the contract. Decide between: keep as-is;
+`[JsonIgnore]` it so it stays in-process only; or gate production behind a config flag until a consumer
+exists. Measure the actual per-image payload before choosing.
+
+**Files:** `jb/src/core/Models/SubjectDetection.cs`, `jb/src/core/Services/Matching/SubjectDetector.cs`,
+`jb/src/core/lib/Ingress/AlphaSubjectCapture.cs`.
+
+---
+
+### T-4955 · Derived edge features go stale when the subject box is promoted
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-4800]] review of [[T-4850]], 2026-07-28
+
+`ImageTransformer.PreferSubjectGeometry` overwrites `intersects-top/bottom/left/right` with the detector's
+signals, but leaves `intersection-count`, `fully-in-frame` and `occlusion-level` holding values
+`ImageFeatureAnalyzer` derived earlier from the *old* heuristic intersects. Cause: promotion updates the
+four source features but not the three derived from them. Effect: after a promotion the feature snapshot
+is internally inconsistent — the intersect booleans describe the detector's geometry while the derived
+three describe the salient-box geometry. Consequence: harmless today, because nothing in Transform reads
+the derived three and phenotype assignment has already run by that point. It becomes a live bug the moment
+anything downstream of Transform reads them, or if phenotype-driven routing is revived. Either recompute
+the three at promotion time or document them as pre-promotion-only.
+
+**Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`,
+`jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`.
+
+---
+
+### T-4960 · Alpha-derived box should retire SubjectGeometry's colour-distance fallback
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-4800]] completion pass, 2026-07-28
+
+`jb/src/core/Services/Matching/Analyzers/Analyzer_SubjectGeometry.md` carries an open todo: *"Fallback box
+on transparent-background images should use alpha instead of color distance."* The T-4830 ingress alpha
+path now captures exactly that — an exact box and mask built from the real transparency channel before
+normalization flattens it onto white — and puts it on the record as `SubjectDetection` with
+`Producer = "alpha"`. Cause: the two pieces were built for different tickets and are not yet connected.
+Effect: `Analyzer_SubjectGeometry` still falls back to colour distance on transparent-background images
+even though exact geometry is now sitting on the same record. Consequence: measurably worse geometry
+features on precisely the images where the best possible answer is already available for free. Wire the
+analyzer to prefer the alpha subject, then close that todo per the todo lifecycle.
+
+**Files:** `jb/src/core/Services/Matching/Analyzers/Analyzer_SubjectGeometry.cs`,
+`jb/src/core/Services/Matching/Analyzers/Analyzer_SubjectGeometry.md`.
 
 ---
 

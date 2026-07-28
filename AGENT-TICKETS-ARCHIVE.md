@@ -3,6 +3,273 @@
 Done tickets, moved here by /ticket-finish to keep AGENT-TICKETS.md (read every session start) lean.
 Newest at the top.
 
+### T-4805 · Unify Transform/Process entry points (fix latent divergence)
+**Status:** Done (2026-07-28) | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-28)
+**Found by:** [[T-4800]]
+
+**Reviewed 2026-07-28:** genuinely one shared core (`CropResizeAndStretch`), not a duplicated patch;
+all four Tx classes independently re-read rather than trusted from the jbtodo claim (`Tx_DetailCropper`
+already honoured the lambda; `Tx_CropSquare`/`Tx_ProblemImageProcessor` never read a bbox at all, so the
+divergence cannot occur in them); dead `Enhance` gone with zero remaining references, standalone CLAHE
+`Process` utility retained and unaffected. One non-blocking note: no failure-path test for a null
+`BoundingBox` reaching `Process` — follow-up material, not a merge blocker.
+
+`Tx_CenterAndStretch.Process` (and the other Tx `Process` methods, per the "precedent" comment in
+`Tx_DetailCropper`) ignore the `lambda` parameter and always crop to `FullImageBounds(arr)`, violating
+the `IImageTransformation` contract (reuse the lambda's BoundingBox when provided). Not live today — the
+deployed transform service routes through `Transform(lambda)` — but a future per-image webservice on
+`Process` would diverge from pipeline behavior and ignore the persisted SubjectBox from T-4810.
+Acceptance: `Transform(lambda)` and `Process(...,lambda)` funnel through one shared core so identical
+geometry → identical output; `Process` reuses the lambda's box when present; all four Tx classes audited;
+dead `Tx_LowContrastEnhancement.Enhance` removed (CLAHE moves upstream via T-4830), standalone
+`Tx_LowContrastEnhancement.Process` utility retained; build + tests green. Scope: no new transform
+behavior — pure de-duplication of the two paths.
+
+**Files:** `jb/src/core/Services/Transform/Engine/IImageTransformation.cs`,
+`jb/src/core/Services/Transform/Engine/Tx_*.cs`,
+`jb/src/core/Services/Transform/Engine/Utils/Tx_LowContrastEnhancement.cs`.
+
+---
+### T-4810 · Persisted subject mask/box contract
+**Status:** Done (2026-07-28) | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-28)
+**Found by:** [[T-4800]]
+
+**Reviewed 2026-07-28:** contract, `ISubjectDetector` seam, and round-trip test all sound. The seam is
+genuinely swappable — Transform consumes `SubjectDetection` generically, never `SubjectDetector`-specific
+state, so a SAM3/yolo-seg producer needs no Transform-side change. Round-trip test exercises the real
+risk (a non-empty `MaskPng` byte array across the boundary); the historical get-only-dictionary trap does
+not apply here as neither type has a get-only dictionary property. **Answered planner question:** the
+reviewer asked whether the no-shadow-defaults rule extends from config classes to runtime data contracts,
+since `SubjectDetection.Producer` carries `= string.Empty`. It does not — the rule is about config that
+loads from JSON and must fail loud on a missing key. `SubjectDetection` is a data-carrying contract and
+follows sibling convention (`ImageRecord_LAMBDA`, `BoundingBox`), which is what landed. No change needed;
+the ticket's "following the no-shadow-defaults rule" phrasing was loose.
+
+Add a persisted `SubjectMask` + `SubjectBox` (+ per-edge intersect flags) to the image record, produced
+upstream and read by Transform. Define the pluggable-producer seam so a segmentation producer
+(SAM3 / yolo26s-seg, [[T-2600]]) can replace the v1 classical-CV producer later without touching
+Transform. Acceptance: contract types added following the no-shadow-defaults rule; producer interface
+defined; round-trips across the service HTTP boundary (get-only dict trap — mirror the microservices-split
+`[JsonConstructor]` + round-trip test); no behavior change until a producer populates it. Scope: contract
++ plumbing only, not the detector (T-4830).
+
+**Files:** `jb/src/core/Models/ImageRecord_LAMBDA.cs`, `jb/src/core/Models/ImageRecord_Base.cs`,
+`jb/src/core/Services/Matching/ImagePreProcessor.cs`.
+
+---
+### T-4820 · Seeding access in Transform
+**Status:** Done (2026-07-28) | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-28)
+**Found by:** [[T-4800]]
+
+**Reviewed 2026-07-28:** `TransformSeed` is genuinely data-access-only — every signal read from the
+already-populated feature snapshot, nothing recomputed. A missing `FamilyIDRecord` is modelled as a
+first-class absent case (unmatched image, or a job with no Excel), not a defensive null-coalesce and not
+a throw. `background-type` compares against `SOLIDCOLOR` only, matching the current T-4700 taxonomy.
+Non-blocking naming note: the ticket named `product-type-label` but the seed surfaces `ProductTypeId`
+(the resolved Excel-authoritative slug) — the better signal, and consistent with "product = Excel + CLIP".
+
+Thread the already-measured features `product-color`, `background-type`, `background-color`,
+`product-type-label` to Transform, and give each lambda access to its `FamilyIDRecord` (today only the
+`Family` id string + `ProductTypeId` reach the record). `background-type` is already settled by T-4700
+(`SOLIDCOLOR`/`REALLIFE`/`UNKNOWN`) — "flat" = `SOLIDCOLOR`, no reconciliation. (Product-type ids are
+being collapsed to 5 by [[T-4710]]; seeding is slug-agnostic.) Acceptance: the four signals +
+FamilyIDRecord reachable inside Transform without recomputation; no seeding logic yet (that is T-4860).
+Scope: data access only.
+
+**Files:** `jb/src/core/Services/Transform/TransformService.cs`,
+`jb/src/core/Services/Matching/Classify/ImageFeatureSnapshot.cs`, `jb/src/core/lib/Excel/FamilyIDRecord.cs`,
+`jb/src/core/Models/ImageRecord_LAMBDA.cs`.
+
+---
+### T-4830 · Port the v1 subject detector (+ ingress alpha path)
+**Status:** Done (2026-07-28) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-28) — second pass, after fixes
+**Found by:** [[T-4800]]
+
+**Second-pass verdict (2026-07-28):** Approve. The `Marshal.Copy` fix is correct (a freshly allocated Mat
+is continuous, the byte count matches, and it mirrors the existing idiom in `ImagePreProcessor`), the
+three missing test scenarios are present and substantive, and the SPACINI29 delta was genuinely run —
+the reviewer corroborated the +18.3s/+11.7% claim against the literal `matching-testlogs.txt` entry rather
+than taking it on trust. Ingress alpha ordering verified as `AutoOrient` → capture → white composite.
+
+**First pass (2026-07-28):** the C# port is algorithmically faithful — lightness verified as never a
+threshold criterion, background genuinely fitted as a least-squares plane (same 500-sample cutoff as the
+reference), Canny confirmed corroboration-only. Mat disposal is well managed; the one finding
+(`CanvasContacts`'s four undisposed `Mat.Row`/`Mat.Col` views) is refcounted views over one buffer, so a
+one-line fix rather than a real leak. **Blocking:** three of the four mandated test scenarios were
+missing — white-on-white/texture-only, cast-shadow exclusion (the algorithm's single defining invariant),
+and gradient background (every test used a uniform backdrop, so the plane-fit coefficients were trivially
+zero and the plane fit was never exercised). Also the mandated SPACINI29 perf/quality delta was never
+run, which matters because `MaxAnalysisSize` was set to 1024 against the reference's 2400 with an explicit
+reference-author warning that fabric weave disappears when this is low. Both being closed this session.
+
+Port the vendored `jb/docs/reference/process_images.py` detector to C#/OpenCvSharp4 in the upstream
+producer, one named helper per step (recipe-readable, K&R). Populate `SubjectMask`/`SubjectBox`/intersects/
+candidate-shadow evidence. Chroma-plane + texture + shadow-strip-by-shape + Canny corroboration; lightness
+never a criterion (shadow exclusion). Add the ingress alpha path: real alpha → build+persist box/mask
+before jpg normalization, skip the heuristic path. New detector config follows no-shadow-defaults.
+Acceptance: producer populates the contract; unit tests on white-on-white, cast-shadow, gradient
+background, bleed-off cases; classify-stage perf delta measured on SPACINI29 vs the 156.5s baseline.
+
+**Files:** `jb/src/core/Services/Matching/ImagePreProcessor.cs` (+ new detector class/config under
+Classify), `jb/src/core/lib/Ingress/Importer.cs` (ingress alpha capture, pre-normalization),
+`jb/src/core/config/analyzer_Config.json` or `ClassifyConfig.json`.
+
+---
+### T-4850 · Consume subject mask/box in Transform
+**Status:** Done (2026-07-28) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-28) — second pass, after fixes
+**Found by:** [[T-4800]]
+
+**Second-pass verdict (2026-07-28):** Approve. Both blocking findings are genuinely fixed, each with a
+positive and a negative test. Confirmed on real data: of 86 SPACINI29 images, 71 promote and the 15 that
+do not are exactly those below the 0.35 confidence floor — the gate does real work rather than being
+decoration.
+
+**First pass (2026-07-28):** routing correctly sees the detector's signals (promotion runs before
+`SelectTransformer`, writes the same feature keys in the same format), and the fill tier is untouched as
+required. **Blocking:** (1) `PreferSubjectGeometry` claims in both its comment and the design doc to
+promote a *confident* subject but never reads `Subject.Confidence` — it gates only on the whole-frame
+flag, so a 0.1-confidence sparse-blob detection overrides the legacy bbox unconditionally, including
+where a null legacy bbox previously routed safely to `Tx_ProblemImageProcessor`. Now gated on a
+config-driven floor. (2) Promotion overwrote the legacy salient bbox with no copy retained, making this
+ticket's own A/B acceptance bar unverifiable from a run's evidence — the pre-promotion box is now kept on
+the record and emitted as evidence. Non-blocking follow-up: `intersection-count`/`fully-in-frame`/
+`occlusion-level` still reflect the old heuristic after promotion (harmless today, nothing in Transform
+reads them, but a trap for later phenotype-driven routing).
+
+Center/stretch/detail-crop geometry operates on the real SubjectMask/SubjectBox instead of the salient
+rectangle; routing (`ImageTransformer.SelectTransformer`) uses the detector's cleaner intersect signals.
+Fill stays the existing `Tx_util_BgStretch` (unchanged), just fed the better geometry. Acceptance: routing
++ geometry read the persisted mask/box; A/B vs the current salient box shows equal-or-better centering on
+the test set; no fill-tier changes.
+
+**Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`,
+`jb/src/core/Services/Transform/Engine/Tx_CenterAndStretch.cs`,
+`jb/src/core/Services/Transform/Engine/Tx_DetailCropper.cs`.
+
+---
+### T-4860 · Behavior toggles + shadow wiring
+**Status:** Done (2026-07-28) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-28) — second pass, after fixes
+**Found by:** [[T-4800]]
+
+**Second-pass verdict (2026-07-28):** Approve. Both blocking findings fixed with tests, and toggles (a)/(b)
+implemented per the settled design. Real-data outcome: toggle (a) fires on 19/86, the shadow toggle on
+23/86 after calibration. Toggle (b) fires on 0/86 because SPACINI29 is entirely `SOLIDCOLOR` — the
+`HeroDetectionOnSteroids` path therefore has no real-data coverage yet, tracked in [[T-4945]].
+
+**First pass (2026-07-28):** the shadow shrink math is correct and its fraction is `required`/validated with
+no in-code default. **Blocking:** (1) `background-type = UNKNOWN` was normalised to null and therefore
+read as *flat*, identical to a known `SOLIDCOLOR` — inverting the spec, since UNKNOWN is precisely not
+SOLIDCOLOR. (2) The shrink was applied unconditionally before routing, so it also perturbed
+`Tx_CropSquare`/`Tx_DetailCropper`/`Tx_ProblemImageProcessor` inputs, where the ticket scopes it to
+`Tx_CenterAndStretch`. Both fixed with tests. Note on toggle (a): the colour comparison is exact
+string equality on categorical palette names, because that is the only product/background colour data
+that reaches Transform — coarse (misses "ivory" vs "white") but the best available from today's signals.
+
+**Seeding behaviour settled (user, 2026-07-28)** — see `Services/Transform/Engine/jbtodo.md`:
+- **(a) product-color ≈ background-color → this is where CLAHE belongs.** When the product colour is
+  clearly distinct from the background, CLAHE is superfluous and is skipped; it earns its cost only when
+  the two nearly match and the weave has to be lifted clear of the noise floor.
+- **(b) background not flat → a second discrimination step decides the treatment.** B1 = soft gradients
+  plus minor noise/dust (a photo-studio sweep) gets one treatment; B2 = a real-life background triggers
+  `HeroDetectionOnSteroids` — the documented everything-we-have escalation path (prior evidence, yolo26n,
+  saliency, whatever helps) for accurate hero detection. Deliberately not built out fully now; the method
+  exists and is named so the escalation path is explicit rather than implied.
+
+Implement the three seeding toggles: (a) product-color ≈ background-color → harder isolation;
+(b) background-type not `SOLIDCOLOR` → more hero-detection effort (skip when `SOLIDCOLOR`, for speed);
+(c) detector candidate-shadow evidence → shadow-accounting, driving the existing `Tx_CenterAndStretch`
+shrink (`shadow-present` was removed by T-4700, so read the detector evidence off the record directly).
+Optionally re-declare a detector-measured `shadow-present` feature via `HowToAddAPhenotype.md`. All
+thresholds config-driven (no shadow defaults). Acceptance: each toggle unit-tested on a positive and a
+negative case; evidence-harness run confirms real behavior, not just green tests.
+
+**Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`,
+`jb/src/core/Services/Transform/Engine/Tx_CenterAndStretch.cs`, `jb/src/core/config/transform_Config.json`,
+`jb/src/core/Services/Transform/Admin/TransformParameters.cs`.
+
+---
+### T-4870 · Populate the transform-evidence carrier (detection/toggle evidence)
+**Status:** Done (2026-07-28) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-28) — second pass, against the re-scoped acceptance below
+**Found by:** [[T-4800]]
+
+**Re-scoped (user, 2026-07-28).** Originally worded as "the transform manifest carries the new evidence",
+which the reviewer correctly failed: `transform-manifest.json` does not exist anywhere in the codebase,
+and `Exporter.cs`/`Prism_Config.json` (both named in this ticket's own file list) were untouched. What
+landed is the *carrier* — detection/mask/box/signal/toggle evidence written into
+`OutputRecord.SafeSummaryText`, which is exactly the approach Export Todo 4 settled on, with the pixel
+mask correctly kept out of the text field. Rather than absorb Todo 4's file-emission work (a `Manifests`
+config section, the `manifest.json` → `prism-manifest.json` rename, and all seven `Tx_*` classes writing
+their full runtime parameter sets) into this epic, the ticket is re-scoped to what it actually is.
+
+**Acceptance (revised):** `OutputRecord.SafeSummaryText` carries the detection evidence (producer, box,
+confidence, per-edge intersects, hard-shadow flag, whole-frame flag), the three toggle states, and — added
+this session — the pre-promotion legacy salient box plus whether promotion fired, in a stable parseable
+`key=value;` encoding. No parallel evidence store. Emission of `transform-manifest.json` itself stays with
+Export Todo 4, which owns the `Manifests` config section and the per-Tx parameter capture; this ticket
+leaves it a pure serialization job with the data already in place.
+
+**Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`, `jb/src/core/Models/ImageRecord_OUTPUT.cs`,
+`jb/src/core/lib/Export/jbtodo.md` (Todo 4 note that the carrier is now populated).
+
+**Files:** `jb/src/core/Services/Transform/Engine/Tx_*.cs`, `jb/src/core/Models/ImageRecord_OUTPUT.cs`,
+`jb/src/core/lib/Export/Exporter.cs`, `jb/src/core/config/Prism_Config.json`.
+
+---
+### T-4800 · Model-aware subject isolation for Transform (epic)
+**Status:** Done (2026-07-28) | **Profile:** P0-orchestrator
+**Found by:** [[T-4700]] follow-up; folds in the removed root note `TRANSFORM-SUBJECT-ISOLATION-NOTE.md`
+
+Tracking ticket. Design lives in `jb/src/core/Services/Transform/Engine/jbtodo.md` ("Subject Isolation &
+Model-Aware Transformation"). Goal: give Transform a real subject mask/box (shadow- and
+background-excluded) produced upstream and consumed as pure geometry+fill, plus Excel+CLIP seeding that
+steers transform behavior. v1 ports the vendored classical-CV prototype
+`jb/docs/reference/process_images.py`; ONNX stays upstream (Transform stays deterministic). Children:
+T-4805, T-4810, T-4820 (Wave 0); T-4830 (Wave 1); T-4850, T-4860 (Wave 2); T-4870 (Wave 3). T-4840
+(vendor the reference script) is already done. This ticket is an index, not a unit of work.
+
+**Board sync (2026-07-28, second pass):** all seven children reviewed. **Approve:** T-4805, T-4810,
+T-4820. **Request Changes:** T-4830 (missing test scenarios + unrun SPACINI29 delta), T-4850 (confidence
+gate claimed but not implemented; legacy bbox destroyed), T-4860 (UNKNOWN background read as flat; shadow
+shrink leaked into unscoped routes). T-4870 re-scoped to the evidence *carrier*, with manifest emission
+left to Export Todo 4 where it belongs. Fixes for all four are in progress this session.
+
+**Both deferrals pulled into scope (user, 2026-07-28)** — they are no longer deferred:
+- **Ingress alpha capture** — build it: capture the alpha-derived box/mask before
+  `Importer.LoadImageWithExifOrientation` flattens transparency onto white, and prefer it over the
+  heuristic producer.
+- **Seed-aware detection** — the stated blocker ("seed resolves after preprocessing") turned out to be an
+  ordering accident, not a constraint: `TransformSeed.Resolve` sits seven lines below the
+  `PreprocessAsync` call in the same method. The real constraint was different and is settled below.
+
+**Completion state (2026-07-28).** All blocking findings closed; both pulled-in deferrals built; CI gate
+restored. Full suite **469 green** (Core 142, Matching 226, Transform 74, Upscale 17, Generate 10) — was
+425 at the start of the pass. Release build with `-warnaserror:SA1402,SA1649,S109,SA1101` is at 0 errors.
+SPACINI29 runs 86/86 OK. **Remaining gate before any child can go Done: a reviewer Approve on *this*
+session's changes** (the stage move, seeding, alpha capture, and the four fixes) — the recorded Approve
+verdicts cover only the original commit. That review was not run because the subagent budget was
+exhausted mid-session.
+
+**Detector stage move (user decision, 2026-07-28).** `SubjectDetector` moves out of
+`ImagePreProcessor.PreprocessAsync` (Transform stage) into `ImageFeatureAnalyzer.Refine` wave 3, directly
+before `FinalizePhenotype`. That is the only point in the pipeline where every precondition holds at once:
+the FamilyIDRecord is resolved (Excel seed available), `Analyzer_ProductColor`/`Analyzer_BackgroundColor`
+have just run two lines earlier (the toggle-(a) seed), the image is already decoded and shared across the
+analyzer chain (no second decode from disk), and the phenotype has not yet been assigned — which is what
+makes a detector-measured `shadow-present` a *usable* feature instead of one that is always UNKNOWN when
+the rules evaluate. Transform then only reads `lambda.Subject` and detects nothing. This also settles the
+jbtodo's open shadow-present sub-decision: **re-declare it as a real ImageNGP feature** (user choice).
+
+**Files:** `jb/src/core/Services/Transform/Engine/jbtodo.md`, `AGENT-TICKETS.md`.
+
+---
+
 ### T-4710 · Collapse DetOrderRules/ProductTypeMap to 5 product types; expose WinningPhenotype
 **Status:** Done (2026-07-27) | **Profile:** P1-feature-worker
 **Found by:** [[T-4700]] — direct follow-up, same "subtract, then get a reliable catch-all
