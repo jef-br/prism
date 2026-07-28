@@ -98,3 +98,9 @@ JB
 2026-07-07 16:18:43 | TinyTest | match-only | images=8 ok=8 ko=0 | OK rate: 100,0% | duration: 10,7s
 2026-07-07 16:43:02 | VINGINO79 | match-only | images=2847 ok=1362 ko=1485 | OK rate: 47,8% | duration: 1442,6s
 2026-07-07 16:43:15 | WOODWIC12 | match-only | images=9 ok=9 ko=0 | OK rate: 100,0% | duration: 9,8s
+2026-07-28 10:17:22 | SPACINI29 | JobID=a6303625-b45c-47fd-8f94-d34559eca8ea | images=86 ok=86 dedup-excluded=0 | Job OK rate: 100% | duration: 00:03:30 (211s)
+2026-07-28 12:17:45 | INPUTMA24 | JobID=eff055b3-3f8e-4d1a-af37-1dcae1cefdc4 | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 02:00:23 (7223s) | TIMEOUT_OR_NO_RESULT (120m) (JB note: KO'd due to 64x64 upscaling tiles. Switched to ESRGAN dynamic tiling for 12x gain.)
+2026-07-28 13:09:22 | INPUTMA27 | JobID=1e7f9edd-1fa3-4a8b-8c2e-807d4a231fc2 | images=569 ok=566 dedup-excluded=0 | Job OK rate: 99.5% | duration: 00:51:34 (3094.3s)
+2026-07-28 15:10:00 | INPUTMA23 | JobID=98696c4d-2ace-456d-97a4-001de2bd4061 | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 02:00:38 (7238.7s) | TIMEOUT_OR_NO_RESULT (120m)  (JB note: KO'd due to 64x64 upscaling tiles. Switched to ESRGAN dynamic tiling for 12x gain.)
+2026-07-28 16:08:50 | HEROAUT3 | JobID=cebe7f6e-f84a-433d-967b-cab2fcecd4a0 | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:58:49 (3529.4s) | NO_IMAGE_ROWS
+2026-07-28 17:32:49 | MMERO26 | JobID=0e5fe5bf-aaa5-47b9-9752-4ac048ca36e2 | images=378 ok=23 dedup-excluded=0 | Job OK rate: 6.1% | duration: 01:23:59 (5039.4s)
