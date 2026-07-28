@@ -53,6 +53,12 @@
             }
         }
     },
+    "Ingress": {
+        "AlphaCapture": {
+            "OpacityThreshold": 128,
+            "EdgeContactFraction": 0.20
+        }
+    },
     "Jobs": {
         "JobRetentionPeriodInHours": 24,
         "MaxQueuedJobs": 100,

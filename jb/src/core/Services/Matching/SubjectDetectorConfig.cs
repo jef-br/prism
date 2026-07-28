@@ -6,6 +6,10 @@ namespace Prism.Services.Matching;
 /// loud. Constants ported from the reference prototype jb/docs/reference/process_images.py.
 /// </summary>
 public sealed class SubjectDetectorConfig : IValidatableConfig {
+    // BorderRingFraction's upper bound: at 0.5 the top/bottom (or left/right) bands would meet in the
+    // middle, leaving no interior — validation bound.
+    private const double BorderRingFractionUpperBound = 0.5;
+
     // Longest side (px) of the analysis image. The detector downscales to this; the mask/box are then
     // rescaled back to the original. Larger preserves fine texture (fabric weave) but costs time.
     public required int MaxAnalysisSize { get; init; }
@@ -59,8 +63,33 @@ public sealed class SubjectDetectorConfig : IValidatableConfig {
     // Fraction of the mask that must be stripped-thin-line (candidate shadow) for hard-shadow evidence.
     public required double HardShadowEvidenceFraction { get; init; }
 
+    // ---- Seeded steering (T-4860 toggle b): non-flat backgrounds split into two treatments ----
+
+    // Mean absolute residual of the border-ring background plane fit, above which a non-flat background
+    // reads as a real-life scene (B2) rather than a studio sweep (B1). A sweep fits its plane closely;
+    // a real scene does not. This is the discriminator, measured — not a second CLIP call.
+    public required double RealLifeResidualThreshold { get; init; }
+
+    // B1 (studio sweep): morphological-open size that clears dust specks and sensor noise off the sweep
+    // without eating into the product.
+    public required int StudioSweepSpeckleKernel { get; init; }
+
+    // B2 (real life, HeroDetectionOnSteroids): analysis resolution for the escalated pass. Higher than
+    // MaxAnalysisSize — a busy backdrop needs the detail a flat sweep does not.
+    public required int RealLifeAnalysisSize { get; init; }
+
+    // B2: stricter minimum blob size (fraction of the largest blob). A real-life scene throws off far more
+    // spurious chroma outliers than a sweep, so the bar for "this blob is part of the product" goes up.
+    public required double RealLifeMinComponentAreaRatio { get; init; }
+
     public void Validate() {
         List<string> problems = [];
+        this.CollectCoreProblems(problems);
+        this.CollectSeededProblems(problems);
+        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
+    }
+
+    private void CollectCoreProblems(List<string> problems) {
         if (this.MaxAnalysisSize < 1) problems.Add("SubjectDetector.MaxAnalysisSize must be >= 1");
         if (this.TextureWindow < 1) problems.Add("SubjectDetector.TextureWindow must be >= 1");
         if (this.TextureDetailSigma <= 0.0) problems.Add("SubjectDetector.TextureDetailSigma must be > 0");
@@ -72,13 +101,19 @@ public sealed class SubjectDetectorConfig : IValidatableConfig {
         if (this.ShadowEdgeKernel < 1) problems.Add("SubjectDetector.ShadowEdgeKernel must be >= 1");
         if (this.CannySigma <= 0.0) problems.Add("SubjectDetector.CannySigma must be > 0");
         if (this.CannyCloseKernel < 1) problems.Add("SubjectDetector.CannyCloseKernel must be >= 1");
-        if (this.BorderRingFraction is <= 0.0 or >= 0.5) problems.Add("SubjectDetector.BorderRingFraction must be in (0,0.5)");
+        if (this.BorderRingFraction is <= 0.0 or >= BorderRingFractionUpperBound) problems.Add("SubjectDetector.BorderRingFraction must be in (0,0.5)");
         if (this.ChromaFloor <= 0.0) problems.Add("SubjectDetector.ChromaFloor must be > 0");
         if (this.TextureFloor <= 0.0) problems.Add("SubjectDetector.TextureFloor must be > 0");
         if (this.ClaheClipLimit <= 0.0) problems.Add("SubjectDetector.ClaheClipLimit must be > 0");
         if (this.ClaheTileSize < 1) problems.Add("SubjectDetector.ClaheTileSize must be >= 1");
         if (this.BleedContact is <= 0.0 or >= 1.0) problems.Add("SubjectDetector.BleedContact must be in (0,1)");
         if (this.HardShadowEvidenceFraction is <= 0.0 or >= 1.0) problems.Add("SubjectDetector.HardShadowEvidenceFraction must be in (0,1)");
-        if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
+    }
+
+    private void CollectSeededProblems(List<string> problems) {
+        if (this.RealLifeResidualThreshold <= 0.0) problems.Add("SubjectDetector.RealLifeResidualThreshold must be > 0");
+        if (this.StudioSweepSpeckleKernel < 1) problems.Add("SubjectDetector.StudioSweepSpeckleKernel must be >= 1");
+        if (this.RealLifeAnalysisSize < 1) problems.Add("SubjectDetector.RealLifeAnalysisSize must be >= 1");
+        if (this.RealLifeMinComponentAreaRatio is <= 0.0 or >= 1.0) problems.Add("SubjectDetector.RealLifeMinComponentAreaRatio must be in (0,1)");
     }
 }

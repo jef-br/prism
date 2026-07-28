@@ -87,10 +87,10 @@ public static class ImagePreProcessor {
 
         lambda.BoundingBox = ParseSalientBox(bbox.coords, bbox.origW, bbox.origH);
 
-        // T-4830: classical-CV subject isolation (shadow- and background-excluded) behind the
-        // ISubjectDetector seam. Additive — the Transformed stage prefers lambda.Subject over BoundingBox.
-        lambda.Subject = SubjectDetector.FromConfig().Detect(colorMat);
-
+        // Subject isolation deliberately does NOT run here. It runs upstream in the refinement chain
+        // (ImageFeatureAnalyzer.Refine wave 3), which is the only point where the Excel/CLIP seed exists
+        // AND the phenotype has not yet been assigned — see Services/Transform/Engine/jbtodo.md. By the
+        // time preprocessing runs, lambda.Subject is already populated; this stage only consumes it.
         byte[]? processedBytes = await UpscaleAsync(flatJpg, bbox, config, lambda, remoteUpscale, cancellationToken);
         if (lambda.IsKo) { colorMat.Dispose(); return (null, null); }
 

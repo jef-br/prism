@@ -6,7 +6,8 @@
         "CropCoverage": 0.8,
         "CropExtensionOneSided": 0.14,
         "CropExtensionBiDirectional": 0.25,
-        "ShadowBottomShrinkFraction": 0.06
+        "ShadowBottomShrinkFraction": 0.06,
+        "SubjectPromotionMinConfidence": 0.35
     },
 
     "ProblemImageProcessor": {

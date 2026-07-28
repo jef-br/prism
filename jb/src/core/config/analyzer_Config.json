@@ -73,5 +73,10 @@
     "MultipleProducts": {
         "OverlapIou": 0.10,
         "Confidence": 0.70
+    },
+
+    "ShadowPresence": {
+        "_comment": "shadow-present is published straight from the subject detector's stripped-thin-line evidence, so the confidence reflects trust in that shape test rather than a separate measurement. Held below the geometry analyzers: a thin texture-only line is good evidence of a hard shadow edge, but a soft shadow leaves no such line and reads as false.",
+        "Confidence": 0.65
     }
 }

@@ -21,6 +21,7 @@ public sealed class AnalyzerParameters {
     public required Analyzer_Exposure.Config Exposure { get; init; }
     public required Analyzer_MultipleProducts.Config MultipleProducts { get; init; }
     public required SkinToneAnalyzerConfig SkinTone { get; init; }
+    public required Analyzer_ShadowPresence.Config ShadowPresence { get; init; }
 
     /// <summary>
     /// Loads every analyzer_Config.json section, then composes them. A missing file, a misspelled key,
@@ -36,6 +37,7 @@ public sealed class AnalyzerParameters {
         Colors = ConfigLoader.Section<ColorAnalyzerConfig>(ConfigFile, "Colors"),
         Exposure = ConfigLoader.Section<Analyzer_Exposure.Config>(ConfigFile, "Exposure"),
         MultipleProducts = ConfigLoader.Section<Analyzer_MultipleProducts.Config>(ConfigFile, "MultipleProducts"),
-        SkinTone = ConfigLoader.Section<SkinToneAnalyzerConfig>(ConfigFile, "SkinTone")
+        SkinTone = ConfigLoader.Section<SkinToneAnalyzerConfig>(ConfigFile, "SkinTone"),
+        ShadowPresence = ConfigLoader.Section<Analyzer_ShadowPresence.Config>(ConfigFile, "ShadowPresence")
     };
 }

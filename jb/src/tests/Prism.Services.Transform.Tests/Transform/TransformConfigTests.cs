@@ -36,6 +36,7 @@ public class TransformConfigTests : IDisposable {
         Assert.Equal(0.14, crop.CropExtensionOneSided);
         Assert.Equal(0.25, crop.CropExtensionBiDirectional);
         Assert.Equal(0.06, crop.ShadowBottomShrinkFraction);
+        Assert.Equal(0.35, crop.SubjectPromotionMinConfidence);
 
         ProblemImageProcessorConfig problem = ConfigLoader.Section<ProblemImageProcessorConfig>(ConfigFile, "ProblemImageProcessor");
         Assert.Equal(570, problem.MinInputPx);
@@ -97,13 +98,26 @@ public class TransformConfigTests : IDisposable {
         // 0.5 collapses Tx_CenterAndStretch's (1 - 2*margin) divisor to zero — the reason for the 0.49 cap.
         string fileName = WriteConfig("""
         {
-            "Crop": { "WhiteSpaceMargin": 0.5, "CropCoverage": 0.8, "CropExtensionOneSided": 0.14, "CropExtensionBiDirectional": 0.25, "ShadowBottomShrinkFraction": 0.06 }
+            "Crop": { "WhiteSpaceMargin": 0.5, "CropCoverage": 0.8, "CropExtensionOneSided": 0.14, "CropExtensionBiDirectional": 0.25, "ShadowBottomShrinkFraction": 0.06, "SubjectPromotionMinConfidence": 0.35 }
         }
         """);
 
         PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
             () => ConfigLoader.Section<CropTransformSettings>(fileName, "Crop"));
         Assert.Contains("Crop.WhiteSpaceMargin", ex.Message);
+    }
+
+    [Fact]
+    public void Section_OutOfRangeSubjectPromotionMinConfidence_ThrowsWithFieldName() {
+        string fileName = WriteConfig("""
+        {
+            "Crop": { "WhiteSpaceMargin": 0.042, "CropCoverage": 0.8, "CropExtensionOneSided": 0.14, "CropExtensionBiDirectional": 0.25, "ShadowBottomShrinkFraction": 0.06, "SubjectPromotionMinConfidence": 0.0 }
+        }
+        """);
+
+        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
+            () => ConfigLoader.Section<CropTransformSettings>(fileName, "Crop"));
+        Assert.Contains("Crop.SubjectPromotionMinConfidence", ex.Message);
     }
 
     [Fact]

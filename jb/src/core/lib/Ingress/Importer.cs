@@ -318,6 +318,7 @@ public sealed class Importer {
             out int normalizedWidth,
             out int normalizedHeight,
             out byte[]? normalizedBytes,
+            out SubjectDetection? subject,
             out ImportKoRecord? koRecord);
 
         if (!normalizedSuccessfully) {
@@ -353,7 +354,8 @@ public sealed class Importer {
             NormalizedHeight = normalizedHeight,
             Width = normalizedWidth,
             Height = normalizedHeight,
-            ImportStatus = ImportStatus.Ok
+            ImportStatus = ImportStatus.Ok,
+            Subject = subject
         });
     }
 
@@ -371,6 +373,11 @@ public sealed class Importer {
     /// <see cref="ImageRecord_INPUT.NormalizedJpegBytes"/>). Null on the fast path, where the source
     /// bytes are copied unchanged and no in-memory encoded image exists to hand forward.
     /// </param>
+    /// <param name="subject">
+    /// Alpha-derived subject detection when the source carried a real alpha channel (see
+    /// <see cref="AlphaSubjectCapture"/>). Null on the fast path (baseline JPEG, never alpha-capable)
+    /// and whenever the source had no alpha or nothing opaque was found.
+    /// </param>
     /// <param name="koRecord">KO record when normalization fails.</param>
     /// <returns>True when normalization succeeded.</returns>
     private bool TryNormalizeToJpeg(
@@ -380,10 +387,12 @@ public sealed class Importer {
         out int width,
         out int height,
         out byte[]? normalizedBytes,
+        out SubjectDetection? subject,
         out ImportKoRecord? koRecord) {
         width = 0;
         height = 0;
         normalizedBytes = null;
+        subject = null;
         koRecord = null;
 
         if (TryFastPathCopyConformingJpeg(sourcePath, destinationPath, out width, out height)) {
@@ -391,7 +400,7 @@ public sealed class Importer {
         }
 
         try {
-            using Image sourceImage = LoadImageWithExifOrientation(sourcePath);
+            using Image sourceImage = this.LoadImageWithExifOrientation(sourcePath, out subject);
 
             width = sourceImage.Width;
             height = sourceImage.Height;
@@ -488,20 +497,33 @@ public sealed class Importer {
     /// #ffffff as required by the import spec.
     /// </summary>
     /// <param name="sourcePath">Readable source file path.</param>
+    /// <param name="subject">
+    /// Alpha-derived subject detection, captured after orientation (so its coordinates match the
+    /// normalized image every downstream stage sees) and strictly before the white composite below
+    /// destroys the alpha channel. Null when the source has no alpha channel, or nothing was opaque.
+    /// </param>
     /// <returns>The loaded and orientation-corrected image. Caller disposes.</returns>
-    private static Image LoadImageWithExifOrientation(string sourcePath) {
+    private Image LoadImageWithExifOrientation(string sourcePath, out SubjectDetection? subject) {
         Image image = Image.Load(sourcePath);
 
         // Apply EXIF orientation correction so downstream stages see the correct orientation.
         // Missing EXIF orientation renders the file as-is per spec.
-        image.Mutate(context => {
-            // AutoOrient reads the EXIF orientation tag and rotates/flips accordingly.
-            context.AutoOrient();
+        image.Mutate(context => context.AutoOrient());
 
-            // Flatten transparency onto white so JPEG encoding produces #ffffff for alpha pixels.
-            // Always applied — JPEG does not support transparency and any alpha must be composited.
-            context.BackgroundColor(SixLabors.ImageSharp.Color.White);
-        });
+        // Alpha is an exact, free subject mask — capture it now, after orientation and strictly
+        // before the white composite below, which is the only place it still exists. PixelType.
+        // AlphaRepresentation is left unset by every decoder in this ImageSharp version (verified for
+        // both JPEG and a genuinely-transparent PNG), so it cannot answer "does this format carry
+        // alpha." JPEG is the only accepted format that structurally never does, so that is the skip:
+        // every other accepted format (PNG/TIFF/WEBP/BMP/GIF) reaches the scan, which returns null on
+        // its own when nothing is opaque.
+        subject = image.Metadata.DecodedImageFormat == JpegFormat.Instance
+            ? null
+            : AlphaSubjectCapture.Capture(image, this.configuration.AlphaCaptureOpacityThreshold, this.configuration.AlphaCaptureEdgeContactFraction);
+
+        // Flatten transparency onto white so JPEG encoding produces #ffffff for alpha pixels.
+        // Always applied — JPEG does not support transparency and any alpha must be composited.
+        image.Mutate(context => context.BackgroundColor(SixLabors.ImageSharp.Color.White));
 
         return image;
     }

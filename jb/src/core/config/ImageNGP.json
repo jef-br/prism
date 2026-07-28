@@ -18,6 +18,7 @@
     { "id": "transparent-background",   "datatype": "boolean", "values": ["true", "false"] },
     { "id": "lifestyle-background",     "datatype": "boolean", "values": ["true", "false"] },
     { "id": "background-color",         "datatype": "string" },
+    { "id": "shadow-present",           "datatype": "boolean", "values": ["true", "false", "unknown"] },
 
     { "id": "intersects-top",           "datatype": "boolean", "values": ["true", "false"] },
     { "id": "intersects-bottom",        "datatype": "boolean", "values": ["true", "false"] },

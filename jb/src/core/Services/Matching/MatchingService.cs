@@ -242,7 +242,8 @@ public sealed class MatchingService : IMatchingService, IDisposable {
         ImageRecord_LAMBDA lambda = new() {
             InitialFullName = source.InitialFullName,
             Width = source.NormalizedWidth > 0 ? source.NormalizedWidth : source.Width,
-            Height = source.NormalizedHeight > 0 ? source.NormalizedHeight : source.Height
+            Height = source.NormalizedHeight > 0 ? source.NormalizedHeight : source.Height,
+            Subject = source.Subject
         };
 
         if (source.NormalizedJpgPath is null)

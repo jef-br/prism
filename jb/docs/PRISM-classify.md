@@ -114,6 +114,84 @@ Intersection at an edge means the object **cannot be repositioned** in that dire
 
 ---
 
+## Subject Isolation (`SubjectDetector`)
+
+Produces the persisted `SubjectDetection` — subject box, binary mask (PNG), per-edge intersect flags, and
+candidate-hard-shadow evidence — that the Transformed stage consumes as pure geometry. Classical CV, no
+ONNX, so the transforms stay deterministic. Ported from `jb/docs/reference/process_images.py`.
+
+**The defining invariant: lightness is never a detection criterion.** A cast shadow is a near-pure
+lightness change, so keying on brightness would pull the shadow into the product box. Detection keys only
+on **chroma** (distance from a least-squares background *plane* fitted over the border ring — a plane, not
+a mean, so a backdrop curving into a floor is modelled rather than mistaken for subject) and on **texture**
+(local standard deviation after a high-pass, which strips slow shadow penumbra). White-on-white is caught
+by texture alone. Thin, texture-only, chroma-unsupported lines are stripped by shape (morphological open);
+that stripped fraction is the hard-shadow evidence. A Canny border flood-fill corroborates only — it can
+never introduce a region on its own, so an isolated shadow silhouette cannot sneak in.
+
+### Where it runs, and why it has to run there
+
+Inside `ImageFeatureAnalyzer.Refine` **wave 3**, immediately before `FinalizePhenotype`. This is the only
+point in the pipeline where four conditions hold simultaneously:
+
+| Condition | Why it holds here |
+|---|---|
+| Excel seed available | `Refine` runs post-match; the FamilyIDRecord is resolved from `MatchEvidence` |
+| CLIP colour seed available | `Analyzer_ProductColor`/`Analyzer_BackgroundColor` ran moments earlier in the same wave |
+| Phenotype not yet assigned | `FinalizePhenotype` is the next step, so `shadow-present` is readable by the rules |
+| No second decode | wave 3 already holds the image decoded and shared across the analyzer chain |
+
+Running it later (at the Transform stage, where it first landed) makes a detector-measured feature always
+read `UNKNOWN` when `ImageRoles.json` evaluates — the UNKNOWN trap in `ImageNGP/HowToAddAPhenotype.md`.
+The detector is OpenCvSharp and the Classify project is ImageSharp-only, so `Refine` takes the detection
+as a callback that `FeatureAnalysisService` (in `Prism.Core`) supplies. Note the concurrency consequence:
+the refinement loop is serial, so detection is serial too.
+
+### Seeded steering
+
+The seed (`SubjectSeedHint`) lets detection decide how hard to work *before* it runs:
+
+- **Product colour ≈ background colour → CLAHE runs.** CLAHE exists to lift a white-on-white weave clear
+  of the noise floor. When the colours are measured as clearly different, chroma already separates product
+  from background and CLAHE is superfluous, so it is skipped along with its cost. Unknown colours keep it
+  on — an unmeasured signal is not evidence of contrast.
+- **Background not `SOLIDCOLOR` → a second step decides the treatment.** "Non-flat" is two conditions, not
+  one. **B1**, a studio sweep (soft gradient, dust specks, sensor noise), fits its background plane closely
+  and gets speckle tolerance. **B2**, a real-life scene, does not fit, and gets `HeroDetectionOnSteroids` —
+  a higher analysis resolution and a stricter significant-blob bar. The discriminator is the **mean
+  absolute residual of the border-ring plane fit**, which detection already computes; no second
+  measurement and no extra CLIP call. A known `REALLIFE` background skips straight to B2. A `SOLIDCOLOR`
+  background skips the whole step, which is the speed win.
+
+`HeroDetectionOnSteroids` is the designated seam for heavier evidence (prior per-family evidence, yolo26n
+boxes, saliency). Extend it there rather than scattering real-life special cases through detection.
+
+### Producers behind one contract
+
+`ISubjectDetector` is a swappable seam. Two producers exist: `"alpha"` (exact geometry recovered from a
+real transparency channel at ingress, before the white composite destroys it — always preferred when
+present) and `"classical-cv"` (the heuristic above). A segmentation model is a future third producer, and
+Transform needs no change to accept one — it consumes `SubjectDetection` generically.
+
+### Hard-shadow evidence
+
+The thin, texture-only, chroma-unsupported lines stripped during detection are the hard-shadow signature.
+`SubjectDetection.HardShadowStrippedFraction` carries the raw measurement (fraction of frame stripped) and
+`HasHardShadowEvidence` is that measurement against `HardShadowEvidenceFraction`. `Analyzer_ShadowPresence`
+publishes the boolean as the `shadow-present` feature; the Transformed stage's shadow toggle reads it to
+trim the box bottom so a cast shadow is not centred as product.
+
+Keep the raw fraction and the verdict separate. The threshold shipped at 0.01 and fired on 86 of 86
+SPACINI29 images — a signal that is always true carries no information, and it was trimming every centred
+image for nothing. Calibrated to 0.05 on 2026-07-28 (23/86). Because the measurement is persisted, the
+threshold can be re-tuned against labelled data without re-instrumenting the detector — see [[T-4945]].
+An alpha-derived detection never publishes `shadow-present`: a transparency channel carries no shadow
+information, and emitting `false` there would be inventing evidence.
+
+Config: `ClassifyConfig.json` → `SubjectDetector`. All values `required`, no in-code defaults.
+
+---
+
 ## Human Detection
 
 **Step 1 — Skin histogram scan:**

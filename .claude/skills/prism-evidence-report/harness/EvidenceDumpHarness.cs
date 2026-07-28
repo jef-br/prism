@@ -53,7 +53,8 @@ public sealed class EvidenceDumpHarness {
     }
 
     private static (PrismConfiguration, ModelBuilder) LoadConfig() {
-        string configPath = PrismConfigLocator.FindPrismConfigPath() ?? throw new InvalidOperationException("Prism_Config.json not found");
+        // PrismConfigLocator/ConfigCache were deleted by T-4560 — ConfigLoader is the only resolver now.
+        string configPath = ConfigLoader.RequireFile(PrismConfiguration.FileName);
         PrismConfiguration config = PrismConfiguration.LoadPrismConfig(configPath);
         string coreDir = Path.GetDirectoryName(configPath)!;
         return (config, ModelBuilder.FromConfigFile(Path.Combine(coreDir, "ExcelConfig.json")));
@@ -148,10 +149,33 @@ public sealed class EvidenceDumpHarness {
             }
             if (sections.Contains("transform")) {
                 img["GenerationRouteState"] = l.GenerationRouteState.ToString();
-                img["TransformationResult"] = l.TransformationResult;
+                img["TransformStatus"] = l.OutputRecord?.TransformStatus?.ToString();
+                img["OutputSize"] = l.OutputRecord is null ? null : $"{l.OutputRecord.OutputWidth}x{l.OutputRecord.OutputHeight}";
+
+                // Subject-isolation evidence (T-4800). Both boxes are dumped so the promoted subject box
+                // can be compared against the salient box it replaced without a second run. MaskPng is
+                // deliberately excluded — it is a full-resolution PNG per image and would bloat the dump.
+                img["SubjectProducer"] = l.Subject?.Producer;
+                img["SubjectConfidence"] = l.Subject?.Confidence;
+                img["SubjectBox"] = l.Subject is null ? null : BoxOf(l.Subject.Box);
+                img["SubjectIsWholeFrameFallback"] = l.Subject?.IsWholeFrameFallback;
+                img["SubjectHasHardShadowEvidence"] = l.Subject?.HasHardShadowEvidence;
+                img["SubjectHardShadowStrippedFraction"] = l.Subject?.HardShadowStrippedFraction;
+                img["SubjectIntersects"] = l.Subject is null ? null
+                    : $"{(l.Subject.IntersectsTop ? "T" : "-")}{(l.Subject.IntersectsBottom ? "B" : "-")}{(l.Subject.IntersectsLeft ? "L" : "-")}{(l.Subject.IntersectsRight ? "R" : "-")}";
+                img["LegacySalientBox"] = l.LegacySalientBox is null ? null : BoxOf(l.LegacySalientBox.Value);
+                img["PromotedSubjectGeometry"] = l.LegacySalientBox is not null;
+                img["FinalBoundingBox"] = l.BoundingBox is null ? null : BoxOf(l.BoundingBox.Value);
+                img["ShadowPresentFeature"] = l.Features.GetValue("shadow-present");
+                img["BackgroundTypeFeature"] = l.Features.GetValue("background-type");
+                img["ProductColorFeature"] = l.Features.GetValue("product-color");
+                img["BackgroundColorFeature"] = l.Features.GetValue("background-color");
+                img["SafeSummaryText"] = l.OutputRecord?.SafeSummaryText;
             }
             return img;
         }).ToArray();
         return root;
     }
+
+    private static object BoxOf(BoundingBox b) => new { b.X, b.Y, b.Width, b.Height, b.Left, b.Top, b.Right, b.Bottom };
 }

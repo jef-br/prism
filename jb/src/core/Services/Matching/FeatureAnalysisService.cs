@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+using OpenCvSharp;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -15,10 +17,15 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService {
     private readonly ClassifyParameters classifyParameters;
     private readonly ProductTypeResolver productTypes;
     private readonly string? yoloModelPath;
+    private readonly SubjectDetector subjectDetector;
 
     public FeatureAnalysisService() {
         this.analyzerParameters = AnalyzerParameters.FromConfig();
         this.classifyParameters = ClassifyParameters.FromConfig();
+
+        // Built once per service, not per image — same rule the Transform stage follows for its own
+        // parameter bundle. A bad SubjectDetector section fails the host at startup, not mid-job.
+        this.subjectDetector = SubjectDetector.FromConfig();
 
         this.productTypes = ProductTypeResolver.Load(ConfigLoader.RequireFile("ProductTypeMap.json"));
 
@@ -37,5 +44,44 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService {
 
     /// <inheritdoc/>
     public void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet)
-        => ImageFeatureAnalyzer.Refine(lambda, family, imagePath, ruleSet, this.analyzerParameters, this.yoloModelPath, this.productTypes);
+        => ImageFeatureAnalyzer.Refine(lambda, family, imagePath, ruleSet, this.analyzerParameters, this.yoloModelPath, this.productTypes,
+            (record, image) => this.DetectSubject(record, image, family));
+
+    // Wave-3 subject isolation. Seeded with the Excel + CLIP signals resolved from the record and its
+    // family, so the detector can decide whether CLAHE is worth its cost and how hard to work on a
+    // non-flat background before it runs, rather than being told after the fact.
+    private void DetectSubject(ImageRecord_LAMBDA lambda, Image<Rgba32> image, FamilyIDRecord? family) {
+        // A real alpha channel captured at ingress is exact geometry; never overwrite it with a heuristic.
+        if (lambda.Subject is not null) return;
+
+        SubjectSeedHint seed = SubjectSeedHint.Resolve(lambda.Features, family);
+        using Mat bgr = ToBgrMat(image);
+        lambda.Subject = this.subjectDetector.Detect(bgr, seed);
+    }
+
+    // ImageSharp RGBA → OpenCvSharp BGR. The analyzer chain already holds this image decoded, so this
+    // conversion replaces a second decode from disk, not a first one.
+    private static Mat ToBgrMat(Image<Rgba32> image) {
+        int w = image.Width, h = image.Height;
+        byte[] bgr = new byte[w * h * 3];
+        image.ProcessPixelRows(accessor => {
+            int i = 0;
+            for (int y = 0; y < h; y++) {
+                Span<Rgba32> row = accessor.GetRowSpan(y);
+                for (int x = 0; x < w; x++) {
+                    bgr[i++] = row[x].B;
+                    bgr[i++] = row[x].G;
+                    bgr[i++] = row[x].R;
+                }
+            }
+        });
+
+        // Copy into the Mat's own buffer. Mat.SetArray rejects a byte[] against CV_8UC3 ("Mat data type is
+        // not compatible"), and the Array-taking constructor wraps the caller's array without owning it,
+        // which would leave the Mat pointing at collectable memory. A freshly allocated Mat is continuous,
+        // so one linear copy is correct.
+        Mat mat = new(h, w, MatType.CV_8UC3);
+        Marshal.Copy(bgr, 0, mat.Data, bgr.Length);
+        return mat;
+    }
 }

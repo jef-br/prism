@@ -13,6 +13,25 @@ namespace Prism.Services.Matching;
 /// hard-shadow evidence).
 /// </summary>
 public sealed class SubjectDetector : ISubjectDetector {
+    // A box was found but reads as covering the whole frame — treated as a weak, not zero, confidence.
+    private const double WholeFrameBoxConfidence = 0.2;
+
+    // Cv2.BilateralFilter tuning shared by the chroma/texture denoise pass and the Canny-edge denoise
+    // pass — same tuning, two call sites (BuildAnalysisLayers, CannyEnclosedRegion).
+    private const int BilateralFilterDiameter = 5;
+    private const int BilateralFilterSigmaColor = 40;
+    private const int BilateralFilterSigmaSpace = 40;
+
+    // Cv2.Canny / mask output range — an 8U binary mask is 0 or 255.
+    private const int MaskMaxValue = 255;
+
+    // Below this many border-ring samples, the least-squares plane fit is unstable, so the fit degrades
+    // to a flat median instead (matches the reference prototype process_images.py).
+    private const int MinRingSamplesForPlaneFit = 500;
+
+    // BoxCoverageConfidence clamp floor — a sparse-blob detection can still be a real detection.
+    private const double MinBoxCoverageConfidence = 0.1;
+
     private readonly SubjectDetectorConfig cfg;
 
     public SubjectDetector(SubjectDetectorConfig cfg) { this.cfg = cfg; }
@@ -20,15 +39,49 @@ public sealed class SubjectDetector : ISubjectDetector {
     public static SubjectDetector FromConfig() =>
         new(ConfigLoader.Section<SubjectDetectorConfig>("ClassifyConfig.json", "SubjectDetector"));
 
-    public SubjectDetection Detect(Mat bgrImage) {
+    // Unseeded entry point: exactly the behaviour that shipped before seeding existed. Kept as its own
+    // overload so a caller with no Excel/CLIP context (a stateless webservice path, a unit test) gets the
+    // documented default rather than having to invent a seed.
+    public SubjectDetection Detect(Mat bgrImage) => this.Detect(bgrImage, null);
+
+    public SubjectDetection Detect(Mat bgrImage, SubjectSeedHint? seed) {
         int origW = bgrImage.Cols, origH = bgrImage.Rows;
         if (origW == 0 || origH == 0) return this.WholeFrameDetection(Math.Max(origW, 1), Math.Max(origH, 1), confidence: 0.0);
 
-        double scale = Math.Min(1.0, (double)this.cfg.MaxAnalysisSize / Math.Max(origH, origW));
+        // Toggle (b) — a non-flat background is not one condition but two, so a known real-life scene goes
+        // straight to the escalated pass rather than paying for a cheap pass it is going to fail anyway.
+        if (seed is not null && this.IsKnownRealLife(seed)) return this.HeroDetectionOnSteroids(bgrImage, seed);
+
+        bool speckle = seed is not null && !seed.IsBackgroundFlat;
+        SubjectDetection detection = this.RunPass(bgrImage, this.cfg.MaxAnalysisSize, this.IsClaheWorthwhile(seed),
+            this.cfg.MinComponentAreaRatio, speckle ? this.cfg.StudioSweepSpeckleKernel : 0, out double ringResidual);
+
+        // The extra discrimination step: an unmeasured background that does NOT fit its plane closely is a
+        // real-life scene wearing an UNKNOWN label. Escalate. A flat sweep never reaches here (speed skip).
+        if (seed is not null && !seed.IsBackgroundFlat && ringResidual > this.cfg.RealLifeResidualThreshold)
+            return this.HeroDetectionOnSteroids(bgrImage, seed);
+
+        return detection;
+    }
+
+    // B2 treatment for a real-life background: everything we have, aimed at an accurate hero detection.
+    // Today that is a higher analysis resolution plus a stricter significant-blob bar, because a real
+    // scene throws off far more spurious chroma outliers than a studio sweep does. This method is the
+    // designated seam for the heavier evidence the design calls for — prior per-family evidence, yolo26n
+    // person/product boxes, saliency — deliberately not built out yet. Extend it here rather than
+    // scattering real-life special cases through the detection pipeline.
+    private SubjectDetection HeroDetectionOnSteroids(Mat bgrImage, SubjectSeedHint seed) {
+        return this.RunPass(bgrImage, this.cfg.RealLifeAnalysisSize, this.IsClaheWorthwhile(seed),
+            this.cfg.RealLifeMinComponentAreaRatio, this.cfg.StudioSweepSpeckleKernel, out _);
+    }
+
+    private SubjectDetection RunPass(Mat bgrImage, int analysisSize, bool useClahe, double minComponentRatio, int speckleKernel, out double ringResidual) {
+        int origW = bgrImage.Cols, origH = bgrImage.Rows;
+        double scale = Math.Min(1.0, (double)analysisSize / Math.Max(origH, origW));
         using Mat small = this.ScaleForAnalysis(bgrImage, scale);
 
-        using Mat mask = this.BuildForegroundMask(small, out bool hasHardShadow);
-        Rect? box = this.SignificantComponentsBox(mask);
+        using Mat mask = this.BuildForegroundMask(small, useClahe, speckleKernel, out bool hasHardShadow, out double strippedFraction, out ringResidual);
+        Rect? box = this.SignificantComponentsBox(mask, minComponentRatio);
         (bool top, bool bottom, bool left, bool right) = this.CanvasContacts(mask);
         byte[] maskPng = this.EncodeMaskPng(mask, origW, origH);
 
@@ -39,12 +92,13 @@ public sealed class SubjectDetector : ISubjectDetector {
             IntersectsBottom = bottom,
             IntersectsLeft = left,
             IntersectsRight = right,
-            HasHardShadowEvidence = hasHardShadow
+            HasHardShadowEvidence = hasHardShadow,
+            HardShadowStrippedFraction = strippedFraction
         };
 
         if (box is null || this.IsWholeFrame(box.Value, small.Cols, small.Rows)) {
             detection.Box = FullBox(origW, origH);
-            detection.Confidence = box is null ? 0.0 : 0.2;
+            detection.Confidence = box is null ? 0.0 : WholeFrameBoxConfidence;
             detection.IsWholeFrameFallback = true;
             return detection;
         }
@@ -54,6 +108,19 @@ public sealed class SubjectDetector : ISubjectDetector {
         detection.IsWholeFrameFallback = false;
         return detection;
     }
+
+    // Toggle (a) — CLAHE exists to lift a white-on-white weave clear of the noise floor. When the product
+    // colour is measured as clearly different from the background, chroma already separates them and CLAHE
+    // is superfluous, so it is skipped along with its cost. Unknown colours keep it on: an unmeasured
+    // signal is not evidence of contrast, and silently weakening detection is the worse failure.
+    private bool IsClaheWorthwhile(SubjectSeedHint? seed) {
+        if (seed is null) return true;
+        if (seed.EffectiveProductColor is null || seed.BackgroundColor is null) return true;
+        return seed.ProductNearBackground;
+    }
+
+    private bool IsKnownRealLife(SubjectSeedHint seed) =>
+        string.Equals(seed.BackgroundType, "REALLIFE", StringComparison.OrdinalIgnoreCase);
 
     // ---- Detection pipeline ----
 
@@ -68,9 +135,9 @@ public sealed class SubjectDetector : ISubjectDetector {
 
     // Product = differs in colour from the sweep, or carries surface texture. Lightness is deliberately
     // never a criterion (that is how shadow is excluded). Returns an 8U 0/255 mask.
-    private Mat BuildForegroundMask(Mat bgr, out bool hasHardShadow) {
+    private Mat BuildForegroundMask(Mat bgr, bool useClahe, int speckleKernel, out bool hasHardShadow, out double strippedFraction, out double ringResidual) {
         int w = bgr.Cols, h = bgr.Rows;
-        (Mat chromaA, Mat chromaB, Mat texture) = this.BuildAnalysisLayers(bgr);
+        (Mat chromaA, Mat chromaB, Mat texture) = this.BuildAnalysisLayers(bgr, useClahe);
         List<Point> ring = this.RingCoords(w, h);
 
         using Mat backgroundA = this.EvaluatePlane(this.FitBackgroundPlane(chromaA, ring, w, h), w, h);
@@ -84,6 +151,12 @@ public sealed class SubjectDetector : ISubjectDetector {
 
         float[] ringChroma = CollectRingValues(chromaDistance, ring);
         float[] ringTexture = CollectRingValues(texture, ring);
+
+        // chromaDistance is already |chroma − fitted plane|, so its mean over the border ring IS the mean
+        // absolute residual of the plane fit. A studio sweep sits close to its plane; a real-life scene
+        // does not. That difference is the B1/B2 discriminator — no second measurement needed.
+        ringResidual = Mean(ringChroma);
+
         double chromaLimit = Math.Max(this.cfg.ChromaFloor, this.cfg.OutlierSpreadMultiplier * RobustSpread(ringChroma));
         double textureLimit = Math.Max(this.cfg.TextureFloor, Median(ringTexture) + this.cfg.OutlierSpreadMultiplier * RobustSpread(ringTexture));
 
@@ -99,7 +172,8 @@ public sealed class SubjectDetector : ISubjectDetector {
         using Mat textureOnly = new();
         Cv2.BitwiseAnd(textureMask, notChroma, textureOnly);
         using Mat textureOnlyOpened = MorphOpen(textureOnly, this.cfg.ShadowEdgeKernel);
-        hasHardShadow = this.StrippedFraction(textureOnly, textureOnlyOpened, w * h) >= this.cfg.HardShadowEvidenceFraction;
+        strippedFraction = this.StrippedFraction(textureOnly, textureOnlyOpened, w * h);
+        hasHardShadow = strippedFraction >= this.cfg.HardShadowEvidenceFraction;
 
         Mat mask = new();
         Cv2.BitwiseOr(chromaMask, textureOnlyOpened, mask);
@@ -113,6 +187,14 @@ public sealed class SubjectDetector : ISubjectDetector {
         // Kill speckle, then bridge separately-detected parts (a print, a sleeve, a shaded fold) into one.
         int bridge = Math.Max(9, ((int)(0.02 * Math.Min(h, w))) | 1);
         using (Mat opened = MorphOpen(mask, 5)) opened.CopyTo(mask);
+
+        // B1 treatment: a studio sweep carries dust specks and sensor noise the flat-background path never
+        // has to deal with. A wider open clears them before the bridging close can glue them to the product.
+        if (speckleKernel > 0) {
+            using Mat despeckled = MorphOpen(mask, speckleKernel);
+            despeckled.CopyTo(mask);
+        }
+
         using (Mat closed = MorphClose(mask, bridge, iterations: 2)) closed.CopyTo(mask);
         return mask;
     }
@@ -120,9 +202,9 @@ public sealed class SubjectDetector : ISubjectDetector {
     // Returns (chroma_a, chroma_b, texture) as 32F mats. CLAHE lifts white-on-white weave clear of the
     // noise floor purely for detection; a high-pass then discards slow ramps (shadow penumbra) before the
     // local-std-dev texture measure.
-    private (Mat chromaA, Mat chromaB, Mat texture) BuildAnalysisLayers(Mat bgr) {
+    private (Mat chromaA, Mat chromaB, Mat texture) BuildAnalysisLayers(Mat bgr, bool useClahe) {
         using Mat denoised = new();
-        Cv2.BilateralFilter(bgr, denoised, 5, 40, 40);
+        Cv2.BilateralFilter(bgr, denoised, BilateralFilterDiameter, BilateralFilterSigmaColor, BilateralFilterSigmaSpace);
         using Mat lab = new();
         Cv2.CvtColor(denoised, lab, ColorConversionCodes.BGR2Lab);
         Mat[] channels = Cv2.Split(lab);
@@ -130,11 +212,7 @@ public sealed class SubjectDetector : ISubjectDetector {
         using Mat aChannel = channels[1];
         using Mat bChannel = channels[2];
 
-        using CLAHE clahe = Cv2.CreateCLAHE(this.cfg.ClaheClipLimit, new Size(this.cfg.ClaheTileSize, this.cfg.ClaheTileSize));
-        using Mat equalized8 = new();
-        clahe.Apply(lightness, equalized8);
-        using Mat equalized = new();
-        equalized8.ConvertTo(equalized, MatType.CV_32F);
+        using Mat equalized = this.BuildDetectionLightness(lightness, useClahe);
 
         using Mat blurred = new();
         Cv2.GaussianBlur(equalized, blurred, new Size(0, 0), this.cfg.TextureDetailSigma);
@@ -161,12 +239,29 @@ public sealed class SubjectDetector : ISubjectDetector {
         return (chromaA, chromaB, texture);
     }
 
+    // The 32F lightness plane the texture measure runs on. CLAHE is applied only when it earns its cost —
+    // see IsClaheWorthwhile. Skipping it does not weaken a chroma-separated subject, because lightness is
+    // never a detection criterion in its own right; it only ever feeds the texture measure.
+    private Mat BuildDetectionLightness(Mat lightness, bool useClahe) {
+        Mat equalized = new();
+        if (!useClahe) {
+            lightness.ConvertTo(equalized, MatType.CV_32F);
+            return equalized;
+        }
+
+        using CLAHE clahe = Cv2.CreateCLAHE(this.cfg.ClaheClipLimit, new Size(this.cfg.ClaheTileSize, this.cfg.ClaheTileSize));
+        using Mat equalized8 = new();
+        clahe.Apply(lightness, equalized8);
+        equalized8.ConvertTo(equalized, MatType.CV_32F);
+        return equalized;
+    }
+
     // Pixels an edge boundary walls off from the frame border — candidate product. Corroboration only.
     private Mat CannyEnclosedRegion(Mat bgr) {
         using Mat gray = new();
         Cv2.CvtColor(bgr, gray, ColorConversionCodes.BGR2GRAY);
         using Mat denoised = new();
-        Cv2.BilateralFilter(gray, denoised, 5, 40, 40);
+        Cv2.BilateralFilter(gray, denoised, BilateralFilterDiameter, BilateralFilterSigmaColor, BilateralFilterSigmaSpace);
         double median = MedianOf8U(denoised);
         int low = (int)Math.Max(0, (1.0 - this.cfg.CannySigma) * median);
         int high = (int)Math.Min(255, (1.0 + this.cfg.CannySigma) * median);
@@ -185,7 +280,7 @@ public sealed class SubjectDetector : ISubjectDetector {
 
         byte[] enclosedData = new byte[labelData.Length];
         for (int i = 0; i < labelData.Length; i++)
-            enclosedData[i] = borderLabels.Contains(labelData[i]) ? (byte)0 : (byte)255;   // ~background
+            enclosedData[i] = borderLabels.Contains(labelData[i]) ? (byte)0 : (byte)MaskMaxValue;   // ~background
         Mat enclosed = new(h, w, MatType.CV_8U);
         enclosed.SetArray(enclosedData);
         return enclosed;
@@ -204,14 +299,14 @@ public sealed class SubjectDetector : ISubjectDetector {
 
         byte[] outData = new byte[labelData.Length];
         for (int i = 0; i < labelData.Length; i++)
-            outData[i] = touching.Contains(labelData[i]) ? (byte)255 : (byte)0;
+            outData[i] = touching.Contains(labelData[i]) ? (byte)MaskMaxValue : (byte)0;
         Mat corroborated = new(mask.Rows, mask.Cols, MatType.CV_8U);
         corroborated.SetArray(outData);
         return corroborated;
     }
 
     // Bounding box over every blob big enough to belong to the product.
-    private Rect? SignificantComponentsBox(Mat mask) {
+    private Rect? SignificantComponentsBox(Mat mask, double minComponentRatio) {
         ConnectedComponents cc = Cv2.ConnectedComponentsEx(mask, PixelConnectivity.Connectivity8);
         if (cc.Blobs.Count <= 1) return null;
 
@@ -220,7 +315,7 @@ public sealed class SubjectDetector : ISubjectDetector {
 
         double threshold = Math.Max(
             this.cfg.MinComponentAreaFraction * mask.Cols * mask.Rows,
-            Math.Max(this.cfg.MinComponentAreaRatio * largest, this.cfg.MinComponentAreaPixels));
+            Math.Max(minComponentRatio * largest, this.cfg.MinComponentAreaPixels));
 
         int x0 = int.MaxValue, y0 = int.MaxValue, x1 = 0, y1 = 0;
         bool any = false;
@@ -239,17 +334,20 @@ public sealed class SubjectDetector : ISubjectDetector {
     // How many canvas edges the product runs off, ignoring incidental touches.
     private (bool top, bool bottom, bool left, bool right) CanvasContacts(Mat mask) {
         int w = mask.Cols, h = mask.Rows;
-        bool top = EdgeCoverage(mask.Row(0)) >= this.cfg.BleedContact;
-        bool bottom = EdgeCoverage(mask.Row(h - 1)) >= this.cfg.BleedContact;
-        bool left = EdgeCoverage(mask.Col(0)) >= this.cfg.BleedContact;
-        bool right = EdgeCoverage(mask.Col(w - 1)) >= this.cfg.BleedContact;
-        return (top, bottom, left, right);
+        // Mat.Row/Mat.Col hand back new Mat headers over the same buffer — cheap, but still Mats, so they
+        // are disposed rather than left to finalization (house rule: every intermediate Mat is released).
+        using Mat topEdge = mask.Row(0);
+        using Mat bottomEdge = mask.Row(h - 1);
+        using Mat leftEdge = mask.Col(0);
+        using Mat rightEdge = mask.Col(w - 1);
+        return (EdgeCoverage(topEdge) >= this.cfg.BleedContact, EdgeCoverage(bottomEdge) >= this.cfg.BleedContact,
+                EdgeCoverage(leftEdge) >= this.cfg.BleedContact, EdgeCoverage(rightEdge) >= this.cfg.BleedContact);
     }
 
     // ---- Background-plane fit ----
 
     private (double c0, double c1, double c2) FitBackgroundPlane(Mat channel, List<Point> ring, int w, int h) {
-        if (ring.Count < 500) {
+        if (ring.Count < MinRingSamplesForPlaneFit) {
             float[] values = CollectRingValues(channel, ring);
             return (Median(values), 0.0, 0.0);
         }
@@ -307,7 +405,7 @@ public sealed class SubjectDetector : ISubjectDetector {
     private double BoxCoverageConfidence(Mat mask, Rect box) {
         using Mat region = new(mask, box);
         double coverage = (double)Cv2.CountNonZero(region) / Math.Max(1, box.Width * box.Height);
-        return Math.Clamp(coverage, 0.1, 1.0);
+        return Math.Clamp(coverage, MinBoxCoverageConfidence, 1.0);
     }
 
     private byte[] EncodeMaskPng(Mat mask, int origW, int origH) {
@@ -331,7 +429,7 @@ public sealed class SubjectDetector : ISubjectDetector {
 
     private static Mat ThresholdMask(Mat src32F, double limit) {
         using Mat binary = new();
-        Cv2.Threshold(src32F, binary, limit, 255, ThresholdTypes.Binary);
+        Cv2.Threshold(src32F, binary, limit, MaskMaxValue, ThresholdTypes.Binary);
         Mat mask = new();
         binary.ConvertTo(mask, MatType.CV_8U);
         return mask;
@@ -365,12 +463,26 @@ public sealed class SubjectDetector : ISubjectDetector {
         return values;
     }
 
+    private static double Mean(float[] values) {
+        if (values.Length == 0) return 0.0;
+        double total = 0;
+        foreach (float value in values) total += Math.Abs(value);
+        return total / values.Length;
+    }
+
+    // Sorted-array middle-index divisor for the (even-length-biased) median.
+    private const int MedianIndexDivisor = 2;
+
     private static double Median(float[] values) {
         if (values.Length == 0) return 0.0;
         float[] copy = (float[])values.Clone();
         Array.Sort(copy);
-        return copy[copy.Length / 2];
+        return copy[copy.Length / MedianIndexDivisor];
     }
+
+    // Median-absolute-deviation-to-standard-deviation scaling constant (1.4826 = 1 / (sqrt(2) * erf^-1(0.5))),
+    // the standard factor for using MAD as a robust, outlier-resistant estimate of standard deviation.
+    private const double MadToStdDevScale = 1.4826;
 
     // Median absolute deviation, scaled to compare with a standard deviation.
     private static double RobustSpread(float[] values) {
@@ -378,25 +490,39 @@ public sealed class SubjectDetector : ISubjectDetector {
         double median = Median(values);
         float[] deviations = new float[values.Length];
         for (int i = 0; i < values.Length; i++) deviations[i] = (float)Math.Abs(values[i] - median);
-        return 1.4826 * Median(deviations);
+        return MadToStdDevScale * Median(deviations);
     }
+
+    // An 8-bit grayscale channel has 256 intensity levels — used as both the histogram bin count and the
+    // upper bound of the bin range.
+    private const int GrayLevelCount = 256;
+
+    // Cumulative-count multiplier for the "have we passed the halfway point of total pixels" median test.
+    private const int CumulativeHalfMultiplier = 2;
+
+    // Histogram median not found (should not happen for a valid image) — mid-grey fallback.
+    private const int MidGreyFallback = 128;
 
     private static double MedianOf8U(Mat gray) {
         using Mat hist = new();
-        Cv2.CalcHist([gray], [0], null, hist, 1, [256], [new Rangef(0, 256)]);
+        Cv2.CalcHist([gray], [0], null, hist, 1, [GrayLevelCount], [new Rangef(0, GrayLevelCount)]);
         long total = (long)gray.Rows * gray.Cols;
         long cumulative = 0;
-        for (int bin = 0; bin < 256; bin++) {
+        for (int bin = 0; bin < GrayLevelCount; bin++) {
             cumulative += (long)hist.At<float>(bin, 0);
-            if (cumulative * 2 >= total) return bin;
+            if (cumulative * CumulativeHalfMultiplier >= total) return bin;
         }
-        return 128;
+        return MidGreyFallback;
     }
+
+    // Below this determinant magnitude, the 3x3 normal-equations matrix is treated as singular (fit
+    // degrades to the constant term only) rather than dividing by a near-zero number.
+    private const double SingularMatrixEpsilon = 1e-9;
 
     private static (double, double, double) Solve3x3(double n, double sx, double sy, double sxx, double sxy, double syy, double sv, double sxv, double syv) {
         // Normal equations: [[n,sx,sy],[sx,sxx,sxy],[sy,sxy,syy]] * c = [sv,sxv,syv], solved by Cramer's rule.
         double det = n * (sxx * syy - sxy * sxy) - sx * (sx * syy - sxy * sy) + sy * (sx * sxy - sxx * sy);
-        if (Math.Abs(det) < 1e-9) return (sv / Math.Max(1.0, n), 0.0, 0.0);
+        if (Math.Abs(det) < SingularMatrixEpsilon) return (sv / Math.Max(1.0, n), 0.0, 0.0);
         double d0 = sv * (sxx * syy - sxy * sxy) - sx * (sxv * syy - sxy * syv) + sy * (sxv * sxy - sxx * syv);
         double d1 = n * (sxv * syy - syv * sxy) - sv * (sx * syy - sy * sxy) + sy * (sx * syv - sxv * sy);
         double d2 = n * (sxx * syv - sxv * sxy) - sx * (sx * syv - sv * sxy) + sv * (sx * sxy - sxx * sy);

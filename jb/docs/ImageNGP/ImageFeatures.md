@@ -41,6 +41,7 @@ Confidence scale: `very-high` ≥ 0.95 | `high` 0.85–0.94 | `medium` 0.70–0.
 | `transparent-background` | Whether the image background is fully transparent (alpha channel present and used) | Boolean | `true`, `false` | low | very-high |
 | `lifestyle-background` | Whether the background contains real-world environmental or decorative content | Boolean | `true`, `false` | medium | high |
 | `background-color` | Dominant background color when background is solid | String (CSS hex or color name) | Any color value or `unknown` | low | high |
+| `shadow-present` | Whether the subject detector found a hard-edged cast shadow (thin, texture-only, chroma-unsupported lines stripped by shape). Published from `SubjectDetection.HasHardShadowEvidence` — not separately measured. Stays `unknown` when nothing was detected, and for alpha-derived detections, which carry no shadow information at all | Boolean | `true`, `false`, `unknown` | medium | medium |
 
 ---
 

@@ -34,6 +34,7 @@
     <Compile Include="..\Analyzers\Analyzer_BackgroundColor.cs" />
     <Compile Include="..\Analyzers\Analyzer_Exposure.cs" />
     <Compile Include="..\Analyzers\Analyzer_MultipleProducts.cs" />
+    <Compile Include="..\Analyzers\Analyzer_ShadowPresence.cs" />
     <Compile Include="..\Analyzers\SubjectBox.cs" />
     <Compile Include="..\Analyzers\ColorBucket.cs" />
     <Compile Include="..\Analyzers\ColorAnalyzerConfig.cs" />

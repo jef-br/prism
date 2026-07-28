@@ -46,9 +46,21 @@ public sealed class PipelineFixture : IAsyncLifetime {
     /// <summary>Loads the ONNX models once, then runs the three distinct pipeline configurations.</summary>
     public async Task InitializeAsync() {
         prism = new PrismService();
-        Default = await prism.Process(BuildDefaultJobRequest());
-        Zip = await prism.Process(BuildZipJobRequest());
-        Minimal = await prism.Process(BuildMinimalJobRequest());
+        Default = RequireCompleted(await prism.Process(BuildDefaultJobRequest()), "Default");
+        Zip = RequireCompleted(await prism.Process(BuildZipJobRequest()), "Zip");
+        Minimal = RequireCompleted(await prism.Process(BuildMinimalJobRequest()), "Minimal");
+    }
+
+    // A job that comes back Failed used to be handed to the tests as if it were a result, so all seven
+    // CiMini assertions failed with "Expected Completed, Actual Failed" and the actual exception —
+    // carried on FailureReason — was silently discarded. Fail here instead, with the reason attached, so
+    // a broken run says what broke rather than making the next reader re-derive it.
+    private static PrismJobResult RequireCompleted(PrismJobResult result, string configuration) {
+        if (string.Equals(result.Status, "Completed", StringComparison.Ordinal)) return result;
+
+        throw new InvalidOperationException(
+            $"PipelineFixture '{configuration}' job did not complete. Status={result.Status}. " +
+            $"FailureReason={result.FailureReason ?? "(none reported)"}");
     }
 
     /// <summary>Releases the ONNX sessions and removes the temp Excel copies made for each run.</summary>

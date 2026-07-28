@@ -38,19 +38,19 @@ public static class ImageTransformer {
     /// behaviour toggles (T-4860) read it. Null when no family/seeding context is available.
     /// </summary>
     public static ImageRecord_LAMBDA TransformImage(ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters, TransformSeed? seed = null) {
-        PreferSubjectGeometry(lambda);
+        bool promoted = PreferSubjectGeometry(lambda, parameters);
         TransformToggles toggles = TransformToggles.Resolve(seed, lambda.Subject);
-        ApplyShadowAccounting(lambda, toggles, parameters);
         IImageTransformation transformer = SelectTransformer(lambda, colorMat, headcut, parameters, seed);
+        ApplyShadowAccounting(lambda, toggles, parameters, transformer);
         ImageRecord_LAMBDA result = transformer.Transform(lambda);
-        AppendTransformEvidence(result, toggles);
+        AppendTransformEvidence(result, toggles, promoted);
         return result;
     }
 
     // T-4870: fold the detection + toggle evidence into OutputRecord.SafeSummaryText — the carrier the
     // Export transform-manifest (lib/Export/jbtodo.md Todo 4) reads back. Compact, parseable, non-sensitive
     // (the pixel mask stays on lambda.Subject.MaskPng, never here).
-    private static void AppendTransformEvidence(ImageRecord_LAMBDA lambda, TransformToggles toggles) {
+    private static void AppendTransformEvidence(ImageRecord_LAMBDA lambda, TransformToggles toggles, bool promoted) {
         if (lambda.OutputRecord is null) return;
         SubjectDetection? s = lambda.Subject;
         string subject = s is null
@@ -60,17 +60,23 @@ public static class ImageTransformer {
                 s.Producer, s.Box.X, s.Box.Y, s.Box.Width, s.Box.Height, s.Confidence,
                 s.IntersectsTop ? "T" : "-", s.IntersectsBottom ? "B" : "-", s.IntersectsLeft ? "L" : "-", s.IntersectsRight ? "R" : "-",
                 s.HasHardShadowEvidence, s.IsWholeFrameFallback);
+        string legacyBox = lambda.LegacySalientBox is { } lb
+            ? string.Format(CultureInfo.InvariantCulture, "legacy.box={0},{1},{2},{3}", lb.X, lb.Y, lb.Width, lb.Height)
+            : "legacy.box=none";
         string toggleEvidence = string.Format(CultureInfo.InvariantCulture,
             "toggle.nearBg={0}; toggle.nonFlat={1}; toggle.shadow={2}",
             toggles.ProductNearBackground, toggles.NonFlatBackground, toggles.ShadowAccounting);
-        lambda.OutputRecord.SafeSummaryText = $"{lambda.OutputRecord.SafeSummaryText} | {subject}; {toggleEvidence}";
+        lambda.OutputRecord.SafeSummaryText = $"{lambda.OutputRecord.SafeSummaryText} | {subject}; {legacyBox}; promoted={promoted}; {toggleEvidence}";
     }
 
     // T-4860 shadow-accounting toggle: when the detector reports hard-shadow evidence and the subject
     // does not run off the bottom edge, trim the box bottom by the configured fraction so a cast shadow
-    // below the product is not centred as product. The other two toggles (product≈background, non-flat
-    // background) are computed for evidence and future upstream detection-effort steering.
-    private static void ApplyShadowAccounting(ImageRecord_LAMBDA lambda, TransformToggles toggles, TransformParameters parameters) {
+    // below the product is not centred as product. Scoped to the Tx_CenterAndStretch route only — the
+    // shrink is not part of the crop-square or detail-crop contracts. The other two toggles
+    // (product≈background, non-flat background) are computed for evidence and future upstream
+    // detection-effort steering.
+    private static void ApplyShadowAccounting(ImageRecord_LAMBDA lambda, TransformToggles toggles, TransformParameters parameters, IImageTransformation transformer) {
+        if (transformer is not Tx_CenterAndStretch) return;
         if (!toggles.ShadowAccounting || lambda.BoundingBox is null) return;
         if (lambda.Features.GetValue("intersects-bottom") == "true") return;
         BoundingBox box = lambda.BoundingBox.Value;
@@ -84,14 +90,19 @@ public static class ImageTransformer {
     // T-4850: a confident subject detection (shadow/background-excluded box + per-edge intersects)
     // supersedes the legacy salient bbox. Promote it into the fields routing and every Tx strategy
     // already read, so the whole stage runs on the better geometry with no per-strategy change. The
-    // whole-frame fallback (no subject found) is ignored — the legacy salient bbox stands.
-    private static void PreferSubjectGeometry(ImageRecord_LAMBDA lambda) {
-        if (lambda.Subject is not { IsWholeFrameFallback: false } subject) return;
+    // whole-frame fallback (no subject found) and a detection below the configured confidence floor are
+    // both ignored — the legacy salient bbox stands, captured on LegacySalientBox for A/B evidence.
+    // Returns true when promotion actually fired.
+    private static bool PreferSubjectGeometry(ImageRecord_LAMBDA lambda, TransformParameters parameters) {
+        if (lambda.Subject is not { IsWholeFrameFallback: false } subject) return false;
+        if (subject.Confidence < parameters.Crop.SubjectPromotionMinConfidence) return false;
+        lambda.LegacySalientBox = lambda.BoundingBox;
         lambda.BoundingBox = subject.Box;
         lambda.Features.Set("intersects-top", subject.IntersectsTop ? "true" : "false", 1.0, "subject-detector");
         lambda.Features.Set("intersects-bottom", subject.IntersectsBottom ? "true" : "false", 1.0, "subject-detector");
         lambda.Features.Set("intersects-left", subject.IntersectsLeft ? "true" : "false", 1.0, "subject-detector");
         lambda.Features.Set("intersects-right", subject.IntersectsRight ? "true" : "false", 1.0, "subject-detector");
+        return true;
     }
 
     //  Strategy selection

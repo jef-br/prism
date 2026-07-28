@@ -28,6 +28,13 @@ public class ImageRecord_LAMBDA : ImageRecord_Base {
     public SubjectDetection? Subject { get; set; }
 
     /// <summary>
+    /// The salient bbox that stood before subject-detection promotion (T-4850), captured so the
+    /// transform manifest can show what the legacy heuristic produced alongside what actually got
+    /// used. Null when promotion never ran, or the legacy bbox was itself null.
+    /// </summary>
+    public BoundingBox? LegacySalientBox { get; set; }
+
+    /// <summary>
     /// All measured ImageFeatures for this image.
     /// Set by <c>ImageFeatureAnalyzer</c> and the CLIP classifier.
     /// </summary>

@@ -83,6 +83,16 @@ Represented by `jb/src/core/Models/BoundingBox.cs`. Fields (all integers): `X`, 
 
 The `salient-bbox` computed by `ImagePreProcessor` is the sole saliency anchor for all Transform-stage work — no additional saliency computation happens downstream. `Tx_CenterAndStretch` and `Tx_DetailCropper` both center their crop/reposition math on this bounding box directly.
 
+**Superseded by the subject box when one is available (T-4850).** `ImageTransformer.PreferSubjectGeometry`
+promotes a persisted `SubjectDetection` — produced upstream in the Classify refinement chain, shadow- and
+background-excluded — into `BoundingBox` and the four `intersects-*` features before routing. Every Tx
+strategy then runs on the better geometry with no per-strategy change. Promotion requires the detection to
+clear `Crop.SubjectPromotionMinConfidence` and not be the whole-frame fallback; below that bar the legacy
+salient bbox stands. The pre-promotion box is retained on `LegacySalientBox` and written to the transform
+evidence, so the two can be compared after the fact rather than only in a side-by-side rerun.
+
+Transform performs **no detection of its own** — it consumes what the Classify stage measured.
+
 ---
 
 ## Background Identification
@@ -91,11 +101,17 @@ Emits: dominant background color + background type, measured by `ImageFeatureAna
 
 | Type | Meaning |
 |---|---|
-| `FLAT_PERFECT` | Single RGB value |
-| `FLAT_NATURAL` | Visually flat with possible studio variance, dust, scratches, noise — no Hough lines |
-| `TEXTURED` | Heavy luminance/chrominance variance or repeated patterns |
-| `AMBIANCE` | Studio decorative objects, nature, urban, indoor location, similar |
+| `SOLIDCOLOR` | Flat backdrop — the only value that counts as "flat" |
+| `REALLIFE` | A real-world scene: location, environment, decorative context |
 | `UNKNOWN` | Cannot be determined safely |
+
+The earlier five-value taxonomy (`FLAT_PERFECT`, `FLAT_NATURAL`, `TEXTURED`, `AMBIANCE`) was retired by
+[[T-4700]] (2026-07-27) along with its stub producers. **`UNKNOWN` is not flat** — an unmeasured background
+is not a known-simple one, and code that collapses the two skips work it cannot justify skipping.
+
+The distinction the retired taxonomy tried to draw between a *flat-natural* sweep and a *textured/ambiance*
+scene is now made where it is actually needed and actually measurable: inside subject detection, from the
+residual of the background plane fit. See "Seeded steering" in `PRISM-classify.md`.
 
 ---
 

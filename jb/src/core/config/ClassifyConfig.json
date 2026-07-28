@@ -65,6 +65,14 @@
         "ClaheClipLimit": 2.0,
         "ClaheTileSize": 8,
         "BleedContact": 0.2,
-        "HardShadowEvidenceFraction": 0.01
+
+        "_comment_hardshadow": "Fraction of the frame that must be stripped as thin texture-only line for hard-shadow evidence. Calibrated 2026-07-28 against SPACINI29 (n=86): the measured fraction runs min 0.0113 / median 0.0371 / p90 0.0702 / max 0.1243, so the previous 0.01 fired on 86/86 images and discriminated nothing — while driving a bottom-trim on every centred image. 0.05 flags 23/86 (27%). This is a calibration choice on an unlabelled studio set, not ground truth; SubjectDetection.HardShadowStrippedFraction carries the raw measurement per image so it can be re-tuned against labelled data later.",
+        "HardShadowEvidenceFraction": 0.05,
+
+        "_comment_seeded": "Toggle (b): a non-flat background is not one condition but two. B1 = a studio sweep (soft gradient, dust specks, sensor noise) fits the border-ring background plane closely; B2 = a real-life scene does not. RealLifeResidualThreshold is that discriminator, in Lab units of mean absolute plane-fit residual. B1 gets speckle tolerance; B2 gets HeroDetectionOnSteroids (higher analysis resolution, stricter blob filter). Toggle (a) needs no value here: it decides whether CLAHE runs at all, using ClaheClipLimit/ClaheTileSize above when it does.",
+        "RealLifeResidualThreshold": 3.5,
+        "StudioSweepSpeckleKernel": 7,
+        "RealLifeAnalysisSize": 1536,
+        "RealLifeMinComponentAreaRatio": 0.12
     }
 }

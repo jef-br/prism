@@ -158,13 +158,59 @@ bleed-off-canvas via `count_canvas_contacts` (cleaner than current `intersects-*
 - **Deferred/optional:** seam-carving Tier-3 replacement; product-type→shadow-expectation table;
   SAM3 / yolo26s-seg producers behind the T-4810 contract.
 
-### Open sub-decisions
+### Settled sub-decisions (user, 2026-07-28)
 
 - jbtodo home confirmed here (Transform Engine); Classify touch points noted per ticket.
 - Transform doc sync: `PRISM-transform-generate.md` may still list the stale 5-value `background-type`
   taxonomy — reconcile to `SOLIDCOLOR`/`REALLIFE`/`UNKNOWN` when T-48x0 lands.
-- Shadow-present re-declaration: detector-measured ImageNGP feature (via `HowToAddAPhenotype.md`) vs
-  record-only detector evidence + toggle input (T-4860).
+- **Shadow-present: re-declare it as a real ImageNGP feature**, measured by the detector, via
+  `HowToAddAPhenotype.md`. Not record-only. This is only viable because of the stage move below.
+
+### Detector stage — settled (user, 2026-07-28)
+
+`SubjectDetector` runs in **`ImageFeatureAnalyzer.Refine` wave 3**, immediately before
+`FinalizePhenotype` — not in `ImagePreProcessor.PreprocessAsync` where it first landed.
+
+Why this exact seam is the only one that works: three requirements have to hold *simultaneously*, and
+they hold together nowhere else in the pipeline.
+
+| Requirement | Why Refine wave 3 satisfies it |
+|---|---|
+| Excel seed available | `Refine` runs post-match; the `FamilyIDRecord` is resolved from `MatchEvidence.FinalFamilyId` |
+| CLIP colour seed available | `Analyzer_ProductColor` + `Analyzer_BackgroundColor` run two lines earlier in the same wave |
+| Phenotype not yet assigned | `FinalizePhenotype` is the very next step, so a detector-measured feature is readable by the rules |
+| No extra decode | wave 3 already holds a shared decoded image across the analyzer chain |
+
+Had detection stayed at the Transform stage, a detector-measured `shadow-present` would be written
+*after* phenotype assignment and would therefore always read `UNKNOWN` when `ImageRoles.json` rules
+evaluate — the exact "UNKNOWN trap" `HowToAddAPhenotype.md` warns about, and the shape of stub that
+T-4700 deleted ten of. Transform now reads `lambda.Subject` and performs no detection of its own.
+
+### Seed steering — what the toggles actually do (user, 2026-07-28)
+
+The design doc said "harder isolation" and "more effort" without naming parameters. Settled:
+
+**(a) product-color ≈ background-color → this is where CLAHE belongs.** CLAHE exists to lift a
+white-on-white weave clear of the noise floor. When the product colour is clearly distinct from the
+background, chroma already carries the signal and **CLAHE is superfluous** — so it is skipped, and its
+cost with it. It earns its place only when product and background nearly match. (Colours unknown → keep
+CLAHE on, the conservative choice, preserving today's behaviour rather than silently weakening detection.)
+
+**(b) background not flat → a second discrimination step, then one of two treatments.** "Non-flat" is not
+one condition, it is two:
+- **B1 — soft gradients, mild noise, a speck of dust: a photo-studio sweep.** The existing least-squares
+  background *plane* already models a smooth ramp; B1 adds speckle tolerance. Cheap.
+- **B2 — a real-life background.** This gets `HeroDetectionOnSteroids`: the everything-we-have escalation
+  for an **accurate** hero detection — prior evidence, yolo26n, saliency, anything that helps. Explicitly
+  **not** built out fully now (user: "do not go bananas"); the method exists and is named so the
+  escalation path is a visible seam rather than an implied one, and so the next person extending it knows
+  exactly where that work goes.
+
+The discriminator between B1 and B2 is the **residual of the background plane fit over the border ring** —
+already computed by `FitBackgroundPlane`. A smooth studio sweep fits the plane closely (low residual); a
+real-life scene does not (high residual). No new measurement is needed to tell them apart.
+
+**(c)** Shadow accounting — settled above: re-declared as an ImageNGP feature.
 
 ### Verification
 
@@ -173,6 +219,72 @@ bleed-off detail shots). Debug overlay (port `save_debug_overlay`) to eyeball ma
 evidence harness (`prism-evidence-report`) on a shadow/background-heavy set. A/B vs current salient box.
 Perf: classify-stage cost delta on SPACINI29 vs the 156.5s baseline; confirm the non-flat toggle saves
 time on flat sweeps.
+
+### Review + completion pass (2026-07-28, second session)
+
+All seven children reviewed. T-4805 / T-4810 / T-4820 approved as landed. Three came back with blocking
+findings, now closed:
+
+- **T-4850** — `PreferSubjectGeometry` claimed a confidence gate it never implemented (it read only the
+  whole-frame flag), so a 0.1-confidence sparse blob overrode the legacy bbox unconditionally — including
+  the null-bbox case that previously routed safely to `Tx_ProblemImageProcessor`. Now gated on
+  `Crop.SubjectPromotionMinConfidence` (0.35). Promotion also destroyed the legacy box, which made this
+  ticket's own A/B acceptance bar unverifiable; the pre-promotion box is retained on `LegacySalientBox`
+  and emitted as evidence.
+- **T-4860** — `background-type = UNKNOWN` normalised to null and therefore read as *flat*, identical to a
+  known `SOLIDCOLOR`, inverting the spec. And the shadow shrink ran before routing, so it perturbed
+  `Tx_CropSquare`/`Tx_DetailCropper`/`Tx_ProblemImageProcessor` inputs it was never scoped for. Both fixed.
+- **T-4830** — three of four mandated test scenarios were missing, including the algorithm's defining
+  invariant. Added: white-on-white (texture-only), gradient background, and a cast-shadow case that now
+  asserts the box **excludes** the shadow strip, not merely that the evidence flag fired.
+
+**Separately found, and worse than any of the above: the epic did not build under CI.** `ci.yml` builds
+Release with `-warnaserror:SA1402,SA1649,S109,SA1101`; the detector port introduced 21 unnamed magic
+numbers (the MAD scale factor, the plane-fit sample cutoff, bilateral-filter tuning, histogram bins), so
+S109 failed the build. A plain local `dotnet build` hides this because S109 is only a warning outside CI —
+which is how it passed both the original implementation and the first review. Fixed as named `private
+const` per the `AGENTFEEDBACK.md` T-4400 policy, zero value changes.
+
+### Real-data verification (SPACINI29, 2026-07-28)
+
+Green tests were not enough — two things only the evidence run could find.
+
+**1. Detection was dead in production while 466 tests passed.** The first evidence run reported
+`SubjectProducer` empty, `promoted=False` and `shadow-present=UNKNOWN` on all 86 images. Cause: the
+ImageSharp→OpenCvSharp conversion used `Mat.SetArray(byte[])`, which OpenCvSharp rejects against a
+`CV_8UC3` Mat ("Mat data type is not compatible"). Effect: `Refine` threw on every image, and
+`MatchingService`'s deliberate non-fatal `catch { refinementFailed++; }` swallowed it — so detection
+produced nothing *and* phenotype assignment silently dropped to 0, surfacing only as a warning counter
+nobody reads. Consequence: every unit test passed because each one builds its Mat with OpenCvSharp
+directly and never crosses the conversion boundary. Fixed with `Marshal.Copy` into the Mat's own buffer,
+plus `SubjectDetectionWiringTests` which drives the real conversion through `FeatureAnalysisService.Refine`
+and fails if that path ever throws again.
+
+**2. The hard-shadow signal was degenerate.** At the shipped `HardShadowEvidenceFraction` of 0.01 it fired
+on **86/86** images, so it discriminated nothing while trimming 6% off the bottom of every centred image
+and publishing `shadow-present=true` for all of them. `SubjectDetection.HardShadowStrippedFraction` now
+carries the raw measurement, which made calibration possible instead of guesswork: min 0.0113, median
+0.0371, p90 0.0702, max 0.1243. User set the threshold to **0.05** (config only — 23/86 fire).
+
+**Measured outcome after both fixes** (86 images, all OK):
+
+| Signal | Result |
+|---|---|
+| Producer | `classical-cv` on 86/86 |
+| Real detections vs whole-frame fallback | 83 / 3 |
+| Promoted into routing geometry | 71; the other 15 are exactly those below the 0.35 confidence floor |
+| `shadow-present` | 23 true / 63 false |
+| Toggle (a) product≈background | fires on 19/86 |
+| Toggle (b) non-flat background | 0/86 — SPACINI29 is entirely `SOLIDCOLOR`, so the B2 `HeroDetectionOnSteroids` path is **not exercised by this dataset** |
+| Refinement failures | 0 (was 86) |
+| Classify-stage cost | 174.8s vs the 156.5s baseline — **+18.3s (+11.7%)** for detection |
+
+**A/B against the legacy salient box** (71 promoted images): centre shift median 15.5px on ~3500px
+images, and 51/71 agree within 50px. Area ratio subject/legacy median 1.027. The five largest
+disagreements all sit at mid confidence (0.48–0.61). So the two agree closely on the bulk and the
+confidence gate withholds the weakest detections — but "equal-or-better **centering**" cannot be claimed
+from geometry alone without labelled data or visual inspection. That remains the one open piece of
+T-4850's acceptance.
 
 ### Implementation status (2026-07-28)
 
@@ -195,14 +307,13 @@ Epic T-4800 implemented across Wave 0–3. Landed:
 
 Tests: Transform suite 67 green; Core unit 127 green; SubjectDetector unit tests green.
 
-**Deferred (documented, not silently dropped):**
-- **T-4830 ingress-alpha path** — NOT implemented. The alpha is flattened onto white inside
-  `Importer.LoadImageWithExifOrientation` before the image reaches record creation; capturing an
-  alpha-derived mask needs a new `ImageRecord_INPUT.Subject` field (Contracts) and a change to the hot
-  import path. Deferred to avoid that risk under this session's scope; the classical-CV detector already
-  isolates alpha-flattened-on-white inputs (its best case). Follow-up: capture alpha at ingress
-  pre-normalization and prefer it over the heuristic producer.
-- **Toggles (a) product≈background and (b) non-flat-background** are computed and recorded as evidence
-  but do not yet change detection effort — that steering belongs upstream in the detector, which is not
-  seed-aware today (seed is resolved at the Transform stage, after preprocessing). Only the shadow toggle
-  (c) drives behaviour so far. Follow-up: make the upstream detector seed-aware to act on (a)/(b).
+**Previously deferred — both pulled into scope by the user on 2026-07-28, no longer deferred:**
+- **T-4830 ingress-alpha path** — being built. Alpha is flattened onto white inside
+  `Importer.LoadImageWithExifOrientation`; the capture goes in after `AutoOrient()` and before the white
+  composite, carried on a new `ImageRecord_INPUT.Subject` field and preferred over the heuristic producer.
+- **Toggles (a)/(b) behavioural effect** — being built. The recorded reason for deferring ("seed is
+  resolved at the Transform stage, after preprocessing") did not survive inspection: `TransformSeed.Resolve`
+  sits seven lines *below* the `PreprocessAsync` call inside the same method, so nothing structural
+  prevented seeding — it was an ordering accident. The genuine constraint was a different one (a
+  detector-measured phenotype feature has to exist before phenotype assignment), and it is resolved by the
+  stage move recorded above, not by reordering two lines.

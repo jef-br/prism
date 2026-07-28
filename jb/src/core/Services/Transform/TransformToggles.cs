@@ -6,7 +6,8 @@ namespace Prism.Services.Transform;
 /// pixel work here. Recorded as transform evidence (T-4870).
 /// <list type="bullet">
 /// <item><see cref="ProductNearBackground"/>: product colour ≈ background colour — isolation is ambiguous.</item>
-/// <item><see cref="NonFlatBackground"/>: measured background is not a solid sweep — hero detection is harder.</item>
+/// <item><see cref="NonFlatBackground"/>: background is not measured as a solid sweep — SOLIDCOLOR is the
+/// only flat case, so REALLIFE and UNKNOWN/absent both count as non-flat — hero detection is harder.</item>
 /// <item><see cref="ShadowAccounting"/>: the detector found hard-shadow evidence — account for a cast shadow.</item>
 /// </list>
 /// </summary>
@@ -24,7 +25,9 @@ public sealed class TransformToggles {
     public static TransformToggles Resolve(TransformSeed? seed, SubjectDetection? subject) {
         bool near = seed?.EffectiveProductColor is { } productColor && seed.BackgroundColor is { } backgroundColor
                     && string.Equals(productColor, backgroundColor, StringComparison.OrdinalIgnoreCase);
-        bool nonFlat = seed is { BackgroundType: not null, IsBackgroundFlat: false };
+        // T-4860: only a measured SOLIDCOLOR background is flat. UNKNOWN/absent is not known to be flat,
+        // so it must not read the same as SOLIDCOLOR — collapse everything that isn't confirmed flat to true.
+        bool nonFlat = seed?.IsBackgroundFlat != true;
         bool shadow = subject?.HasHardShadowEvidence == true;
         return new TransformToggles(near, nonFlat, shadow);
     }

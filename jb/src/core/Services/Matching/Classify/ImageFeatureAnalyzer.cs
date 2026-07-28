@@ -121,7 +121,7 @@ public static class ImageFeatureAnalyzer {
     /// qualifies for every phenotype; each wave eliminates those with strong contra-evidence.
     /// The final assignment overwrites the provisional phenotype set at the Classified stage.
     /// </summary>
-    public static void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet, AnalyzerParameters parameters, string? yoloModelPath, ProductTypeResolver productTypes) {
+    public static void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet, AnalyzerParameters parameters, string? yoloModelPath, ProductTypeResolver productTypes, Action<ImageRecord_LAMBDA, Image<Rgba32>>? subjectStep) {
         PhenotypePool pool = new(ruleSet);
 
         // Wave 1 — IEM + filename evidence. Phase-1 measurements (background, edge intersections)
@@ -148,6 +148,13 @@ public static class ImageFeatureAnalyzer {
             Analyzer_BackgroundColor.Analyze(image, lambda.Features, parameters.Colors);
             Analyzer_Exposure.Analyze(image, lambda.Features, parameters.Exposure, parameters.Colors);
             Analyzer_MultipleProducts.Analyze(detections, lambda.Features, parameters.MultipleProducts);
+
+            // Subject isolation runs last in wave 3 and, critically, before the phenotype is finalized.
+            // It needs product-color/background-color (measured three lines up) to steer itself, and
+            // shadow-present has to exist before the rules evaluate or it would always read UNKNOWN.
+            // The step itself lives in Prism.Core: the detector is OpenCvSharp and this project is not.
+            subjectStep?.Invoke(lambda, image);
+            Analyzer_ShadowPresence.Analyze(lambda.Subject, lambda.Features, parameters.ShadowPresence);
         }
 
         pool.Eliminate(lambda.Features);

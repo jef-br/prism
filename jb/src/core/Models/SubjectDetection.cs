@@ -25,6 +25,11 @@ public class SubjectDetection {
     // regions). Feeds the shadow-accounting toggle in the Transformed stage.
     public bool HasHardShadowEvidence { get; set; }
 
+    // The measurement behind HasHardShadowEvidence: the fraction of the frame that was stripped as
+    // thin texture-only line when the shadow-edge morphological open ran. Carried as evidence so the
+    // threshold that turns it into a boolean can be calibrated against real data rather than guessed.
+    public double HardShadowStrippedFraction { get; set; }
+
     // Detector confidence in [0,1].
     public double Confidence { get; set; }
 
