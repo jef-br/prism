@@ -10,6 +10,30 @@
     ]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/scripts/pair-guard.ps1\"",
+            "shell": "powershell"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$p = \"$env:CLAUDE_PROJECT_DIR/.claude/.pair-consent\"; if (Test-Path $p) { Remove-Item $p -Force }",
+            "shell": "powershell"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",

@@ -19,3 +19,6 @@ node_modules/
 # IDE / editor
 .vs/
 *.user
+
+# /pair consensus gate — per-session state, cleared by the SessionStart hook
+.claude/.pair-consent
