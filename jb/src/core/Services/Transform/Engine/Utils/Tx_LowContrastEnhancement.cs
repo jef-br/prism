@@ -4,16 +4,15 @@ using Prism.Config;
 namespace Prism.Services.Transform;
 
 /// <summary>
-/// Applies CLAHE (Contrast Limited Adaptive Histogram Equalization) to the full image to
-/// improve foreground/background separation before bounding-box detection.
-/// This is a pre-processing step for bbox accuracy — not a visual export enhancement.
+/// Standalone CLAHE (Contrast Limited Adaptive Histogram Equalization) utility webservice.
+/// CLAHE's real job is bounding-box detection accuracy, not visual export — the detector applies it
+/// to a throwaway copy upstream (see the subject-isolation detector, T-4830). This class survives only
+/// as the fixed-signature <see cref="Process"/> webservice entry; there is no in-pipeline sub-step
+/// caller (the former <c>Enhance</c> form was dead code, removed in T-4805).
 /// <para>
-/// CLAHE is applied to the L-channel of the LAB colour space so that colour information
-/// is preserved while only luminance contrast is sharpened. Clip limit and tile size come from the
-/// "LowContrastEnhancement" section of transform_Config.json. Only the fixed-signature webservice
-/// <see cref="Process"/> entry point loads that section itself — it has no parameter to receive one
-/// through. Every in-pipeline caller passes its own config in, so no per-image call ever touches the
-/// config file.
+/// CLAHE is applied to the L-channel of the LAB colour space so that colour information is preserved
+/// while only luminance contrast is sharpened. Clip limit and tile size come from the
+/// "LowContrastEnhancement" section of transform_Config.json, loaded by <see cref="Process"/> itself.
 /// </para>
 /// </summary>
 public static class Tx_LowContrastEnhancement {
@@ -29,23 +28,6 @@ public static class Tx_LowContrastEnhancement {
         // Input: JPEG bytes, colour space BGR (OpenCVSharp default decode).
         using Mat bgrSrc = Cv2.ImDecode(arr, ImreadModes.Color);
         if (bgrSrc.Empty()) return arr;
-
-        using Mat bgrEnhanced = ApplyClahe(bgrSrc, cfg);
-
-        // Output: JPEG bytes, colour space BGR.
-        Cv2.ImEncode(".jpg", bgrEnhanced, out byte[] encoded);
-        return encoded;
-    }
-
-    /// <summary>
-    /// Sub-step form: accepts and returns JPEG <c>byte[]</c> for use as a named
-    /// pipeline step inside <c>Tx_CenterAndStretch</c> and similar tools. Takes its config from the
-    /// caller's TransformParameters bundle — never loads it.
-    /// </summary>
-    internal static byte[] Enhance(byte[] sourceJpeg, LowContrastEnhancementConfig cfg) {
-        // Input: JPEG bytes, colour space BGR.
-        using Mat bgrSrc = Cv2.ImDecode(sourceJpeg, ImreadModes.Color);
-        if (bgrSrc.Empty()) return sourceJpeg;
 
         using Mat bgrEnhanced = ApplyClahe(bgrSrc, cfg);
 

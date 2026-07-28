@@ -137,6 +137,13 @@ steers transform behavior. v1 ports the vendored classical-CV prototype
 T-4805, T-4810, T-4820 (Wave 0); T-4830 (Wave 1); T-4850, T-4860 (Wave 2); T-4870 (Wave 3). T-4840
 (vendor the reference script) is already done. This ticket is an index, not a unit of work.
 
+**Board sync (2026-07-28):** all seven children implemented + unit-tested this session (Transform suite
+67 green, Core unit 127 green, Matching 204 green). Two documented deferrals remain (see
+`Services/Transform/Engine/jbtodo.md` → "Implementation status"): the T-4830 ingress-alpha capture (needs
+a Contracts `ImageRecord_INPUT.Subject` field + hot-import-path change), and behavioural effect of
+toggles (a)/(b) (needs the upstream detector to be seed-aware). P1/P4 children still need the reviewer
+Approve gate before /ticket-finish can mark them Done — implementation is landed, review is pending.
+
 **Files:** `jb/src/core/Services/Transform/Engine/jbtodo.md`, `AGENT-TICKETS.md`.
 
 ---

@@ -21,6 +21,13 @@ public class ImageRecord_LAMBDA : ImageRecord_Base {
     public BoundingBox? BoundingBox { get; set; }
 
     /// <summary>
+    /// Subject-isolation result produced upstream (preprocessing or ingress alpha) behind the
+    /// <c>ISubjectDetector</c> seam. Null until a producer populates it; the Transformed stage prefers
+    /// this over <see cref="BoundingBox"/> when present. See <see cref="SubjectDetection"/>.
+    /// </summary>
+    public SubjectDetection? Subject { get; set; }
+
+    /// <summary>
     /// All measured ImageFeatures for this image.
     /// Set by <c>ImageFeatureAnalyzer</c> and the CLIP classifier.
     /// </summary>

@@ -1,3 +1,4 @@
+using System.Globalization;
 using OpenCvSharp;
 
 namespace Prism.Services.Transform;
@@ -33,15 +34,69 @@ public static class ImageTransformer {
     /// <summary>
     /// Selects and applies the transform strategy for <paramref name="lambda"/>, records the
     /// outcome in <see cref="ImageRecord_LAMBDA.OutputRecord"/>, and returns the record.
+    /// <paramref name="seed"/> carries the resolved Excel + CLIP seeding signals (T-4820); the
+    /// behaviour toggles (T-4860) read it. Null when no family/seeding context is available.
     /// </summary>
-    public static ImageRecord_LAMBDA TransformImage(ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters) {
-        IImageTransformation transformer = SelectTransformer(lambda, colorMat, headcut, parameters);
-        return transformer.Transform(lambda);
+    public static ImageRecord_LAMBDA TransformImage(ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters, TransformSeed? seed = null) {
+        PreferSubjectGeometry(lambda);
+        TransformToggles toggles = TransformToggles.Resolve(seed, lambda.Subject);
+        ApplyShadowAccounting(lambda, toggles, parameters);
+        IImageTransformation transformer = SelectTransformer(lambda, colorMat, headcut, parameters, seed);
+        ImageRecord_LAMBDA result = transformer.Transform(lambda);
+        AppendTransformEvidence(result, toggles);
+        return result;
+    }
+
+    // T-4870: fold the detection + toggle evidence into OutputRecord.SafeSummaryText — the carrier the
+    // Export transform-manifest (lib/Export/jbtodo.md Todo 4) reads back. Compact, parseable, non-sensitive
+    // (the pixel mask stays on lambda.Subject.MaskPng, never here).
+    private static void AppendTransformEvidence(ImageRecord_LAMBDA lambda, TransformToggles toggles) {
+        if (lambda.OutputRecord is null) return;
+        SubjectDetection? s = lambda.Subject;
+        string subject = s is null
+            ? "subject=none"
+            : string.Format(CultureInfo.InvariantCulture,
+                "subject.producer={0}; subject.box={1},{2},{3},{4}; subject.conf={5:F2}; subject.intersects={6}{7}{8}{9}; subject.hardShadow={10}; subject.wholeFrame={11}",
+                s.Producer, s.Box.X, s.Box.Y, s.Box.Width, s.Box.Height, s.Confidence,
+                s.IntersectsTop ? "T" : "-", s.IntersectsBottom ? "B" : "-", s.IntersectsLeft ? "L" : "-", s.IntersectsRight ? "R" : "-",
+                s.HasHardShadowEvidence, s.IsWholeFrameFallback);
+        string toggleEvidence = string.Format(CultureInfo.InvariantCulture,
+            "toggle.nearBg={0}; toggle.nonFlat={1}; toggle.shadow={2}",
+            toggles.ProductNearBackground, toggles.NonFlatBackground, toggles.ShadowAccounting);
+        lambda.OutputRecord.SafeSummaryText = $"{lambda.OutputRecord.SafeSummaryText} | {subject}; {toggleEvidence}";
+    }
+
+    // T-4860 shadow-accounting toggle: when the detector reports hard-shadow evidence and the subject
+    // does not run off the bottom edge, trim the box bottom by the configured fraction so a cast shadow
+    // below the product is not centred as product. The other two toggles (product≈background, non-flat
+    // background) are computed for evidence and future upstream detection-effort steering.
+    private static void ApplyShadowAccounting(ImageRecord_LAMBDA lambda, TransformToggles toggles, TransformParameters parameters) {
+        if (!toggles.ShadowAccounting || lambda.BoundingBox is null) return;
+        if (lambda.Features.GetValue("intersects-bottom") == "true") return;
+        BoundingBox box = lambda.BoundingBox.Value;
+        int shrink = (int)(box.Height * parameters.Crop.ShadowBottomShrinkFraction);
+        if (shrink <= 0) return;
+        box.Height = Math.Max(1, box.Height - shrink);
+        box.Bottom = box.Top + box.Height;
+        lambda.BoundingBox = box;
+    }
+
+    // T-4850: a confident subject detection (shadow/background-excluded box + per-edge intersects)
+    // supersedes the legacy salient bbox. Promote it into the fields routing and every Tx strategy
+    // already read, so the whole stage runs on the better geometry with no per-strategy change. The
+    // whole-frame fallback (no subject found) is ignored — the legacy salient bbox stands.
+    private static void PreferSubjectGeometry(ImageRecord_LAMBDA lambda) {
+        if (lambda.Subject is not { IsWholeFrameFallback: false } subject) return;
+        lambda.BoundingBox = subject.Box;
+        lambda.Features.Set("intersects-top", subject.IntersectsTop ? "true" : "false", 1.0, "subject-detector");
+        lambda.Features.Set("intersects-bottom", subject.IntersectsBottom ? "true" : "false", 1.0, "subject-detector");
+        lambda.Features.Set("intersects-left", subject.IntersectsLeft ? "true" : "false", 1.0, "subject-detector");
+        lambda.Features.Set("intersects-right", subject.IntersectsRight ? "true" : "false", 1.0, "subject-detector");
     }
 
     //  Strategy selection
 
-    private static IImageTransformation SelectTransformer(ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters) {
+    private static IImageTransformation SelectTransformer(ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters, TransformSeed? seed) {
         // Step 1 — prerequisites missing: route to conservative processor.
         // The phenotype-null guard is suppressed while phenotypes are bypassed.
         if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null)) return new Tx_ProblemImageProcessor(parameters.ProblemImageProcessor, parameters.Output);

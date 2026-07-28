@@ -17,6 +17,11 @@ public sealed class CropTransformSettings : IValidatableConfig {
     public required double CropExtensionOneSided { get; init; }
     public required double CropExtensionBiDirectional { get; init; }
 
+    // T-4860 shadow-accounting: fraction of the subject box height trimmed from the bottom when the
+    // detector reports hard-shadow evidence and the subject does not run off the bottom edge, so a cast
+    // shadow below the product is not centred as if it were product.
+    public required double ShadowBottomShrinkFraction { get; init; }
+
     public void Validate() {
         List<string> problems = [];
 
@@ -26,6 +31,7 @@ public sealed class CropTransformSettings : IValidatableConfig {
         if (this.CropCoverage is < 0.0 or > 1.0) problems.Add("Crop.CropCoverage must be in [0,1]");
         if (this.CropExtensionOneSided is < 0.0 or > 1.0) problems.Add("Crop.CropExtensionOneSided must be in [0,1]");
         if (this.CropExtensionBiDirectional is < 0.0 or > 1.0) problems.Add("Crop.CropExtensionBiDirectional must be in [0,1]");
+        if (this.ShadowBottomShrinkFraction is < 0.0 or > 0.5) problems.Add("Crop.ShadowBottomShrinkFraction must be in [0,0.5]");
 
         if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
     }

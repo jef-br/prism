@@ -49,6 +49,12 @@ public sealed class TransformService : ITransformService {
         Dictionary<string, ImageRecord_INPUT> inputByName = matched.Ingest.NormalizedImages
             .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
 
+        // Family lookup so each image can reach its Excel record (product type/colour) for seeding —
+        // the lambda only carries the Family id string. Duplicate FamilyIDs collapse to the first record.
+        Dictionary<string, FamilyIDRecord> familyById = matched.Ingest.FamilyRecords
+            .GroupBy(f => f.FamilyID, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
         // Per-image transforms are independent CPU-bound OpenCV work — safe to fan out. Each thread
         // writes only its own lambda; the GPU upscaler serializes its InferenceSession.Run calls
         // internally (Upscaler._sessionLock), so parallel callers are safe there too.
@@ -64,8 +70,11 @@ public sealed class TransformService : ITransformService {
 
                 lambda.ProcessedBytes = preprocessed;
 
+                familyById.TryGetValue(lambda.Family, out FamilyIDRecord? family);
+                TransformSeed seed = TransformSeed.Resolve(lambda, family);
+
                 using (colorMat) {
-                    ImageTransformer.TransformImage(lambda, colorMat, headcut, parameters);
+                    ImageTransformer.TransformImage(lambda, colorMat, headcut, parameters, seed);
                 }
 
                 Interlocked.Increment(ref okTransformed);

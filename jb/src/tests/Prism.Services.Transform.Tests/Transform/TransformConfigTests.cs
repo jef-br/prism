@@ -35,6 +35,7 @@ public class TransformConfigTests : IDisposable {
         Assert.Equal(0.8, crop.CropCoverage);
         Assert.Equal(0.14, crop.CropExtensionOneSided);
         Assert.Equal(0.25, crop.CropExtensionBiDirectional);
+        Assert.Equal(0.06, crop.ShadowBottomShrinkFraction);
 
         ProblemImageProcessorConfig problem = ConfigLoader.Section<ProblemImageProcessorConfig>(ConfigFile, "ProblemImageProcessor");
         Assert.Equal(570, problem.MinInputPx);
@@ -96,7 +97,7 @@ public class TransformConfigTests : IDisposable {
         // 0.5 collapses Tx_CenterAndStretch's (1 - 2*margin) divisor to zero — the reason for the 0.49 cap.
         string fileName = WriteConfig("""
         {
-            "Crop": { "WhiteSpaceMargin": 0.5, "CropCoverage": 0.8, "CropExtensionOneSided": 0.14, "CropExtensionBiDirectional": 0.25 }
+            "Crop": { "WhiteSpaceMargin": 0.5, "CropCoverage": 0.8, "CropExtensionOneSided": 0.14, "CropExtensionBiDirectional": 0.25, "ShadowBottomShrinkFraction": 0.06 }
         }
         """);
 

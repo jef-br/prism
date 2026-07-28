@@ -173,3 +173,36 @@ bleed-off detail shots). Debug overlay (port `save_debug_overlay`) to eyeball ma
 evidence harness (`prism-evidence-report`) on a shadow/background-heavy set. A/B vs current salient box.
 Perf: classify-stage cost delta on SPACINI29 vs the 156.5s baseline; confirm the non-flat toggle saves
 time on flat sweeps.
+
+### Implementation status (2026-07-28)
+
+Epic T-4800 implemented across Wave 0–3. Landed:
+- **T-4805** — `Tx_CenterAndStretch.Process` now honours the lambda bbox (was `FullImageBounds`); dead
+  `Tx_LowContrastEnhancement.Enhance` removed. `Tx_DetailCropper`/`Tx_CropSquare`/`Tx_ProblemImageProcessor`
+  audited: already compliant (DetailCropper honoured the lambda; the other two are bbox-independent).
+- **T-4810** — `SubjectDetection` contract (`Models/`) + `Subject` on `ImageRecord_LAMBDA` +
+  `ISubjectDetector` seam + round-trip test.
+- **T-4820** — `TransformSeed` read-model (Excel+CLIP signals) threaded via `TransformService` →
+  `ImageTransformer`; FamilyIDRecord lookup by id.
+- **T-4830** — `SubjectDetector` (classical-CV port of `process_images.py`) + `SubjectDetectorConfig` +
+  ClassifyConfig.json `SubjectDetector` section; wired into `ImagePreProcessor.PreprocessAsync`
+  (populates `lambda.Subject`, additive). `MaxAnalysisSize` 1024 (Python used 2400).
+- **T-4850** — `ImageTransformer.PreferSubjectGeometry` promotes a confident (non-whole-frame) Subject
+  into the legacy bbox + intersect features, so routing and every Tx run on the detector geometry.
+- **T-4860** — `TransformToggles` (product≈background, non-flat-background, shadow) computed from
+  seed+subject; shadow toggle trims the box bottom (`Crop.ShadowBottomShrinkFraction`).
+- **T-4870** — detection + toggle evidence appended to `OutputRecord.SafeSummaryText` (Todo-4 carrier).
+
+Tests: Transform suite 67 green; Core unit 127 green; SubjectDetector unit tests green.
+
+**Deferred (documented, not silently dropped):**
+- **T-4830 ingress-alpha path** — NOT implemented. The alpha is flattened onto white inside
+  `Importer.LoadImageWithExifOrientation` before the image reaches record creation; capturing an
+  alpha-derived mask needs a new `ImageRecord_INPUT.Subject` field (Contracts) and a change to the hot
+  import path. Deferred to avoid that risk under this session's scope; the classical-CV detector already
+  isolates alpha-flattened-on-white inputs (its best case). Follow-up: capture alpha at ingress
+  pre-normalization and prefer it over the heuristic producer.
+- **Toggles (a) product≈background and (b) non-flat-background** are computed and recorded as evidence
+  but do not yet change detection effort — that steering belongs upstream in the detector, which is not
+  seed-aware today (seed is resolved at the Transform stage, after preprocessing). Only the shadow toggle
+  (c) drives behaviour so far. Follow-up: make the upstream detector seed-aware to act on (a)/(b).

@@ -67,7 +67,10 @@ public class Tx_CenterAndStretch : IImageTransformation {
 
     /// <inheritdoc/>
     public byte[] Process(byte[] arr, int stride, float upscale_factor, ImageRecord_LAMBDA? lambda = null) {
-        BoundingBox bbox = FullImageBounds(arr);
+        // Honor the IImageTransformation contract: reuse the caller's detected bbox when a lambda is
+        // supplied, so Process and the pipeline Transform produce identical geometry. Only a
+        // lambda-less caller (raw-bytes webservice) falls back to the whole frame.
+        BoundingBox bbox = lambda?.BoundingBox ?? FullImageBounds(arr);
 
         (byte[] result, int canvasSize, _) = CropResizeAndStretch(arr, bbox, this._margin, this._bgStretch);
 

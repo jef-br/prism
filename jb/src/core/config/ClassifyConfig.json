@@ -45,5 +45,26 @@
         "MaxChannelValueD": 255.0,
         "CannySobelApertureSize": 3,
         "DilationKernelSize": 7
+    },
+
+    "SubjectDetector": {
+        "MaxAnalysisSize": 1024,
+        "TextureWindow": 7,
+        "TextureDetailSigma": 4.0,
+        "OutlierSpreadMultiplier": 4.0,
+        "MinComponentAreaFraction": 0.0005,
+        "MinComponentAreaRatio": 0.05,
+        "MinComponentAreaPixels": 25.0,
+        "WholeFrameFraction": 0.985,
+        "ShadowEdgeKernel": 15,
+        "CannySigma": 0.33,
+        "CannyCloseKernel": 5,
+        "BorderRingFraction": 0.02,
+        "ChromaFloor": 2.0,
+        "TextureFloor": 2.0,
+        "ClaheClipLimit": 2.0,
+        "ClaheTileSize": 8,
+        "BleedContact": 0.2,
+        "HardShadowEvidenceFraction": 0.01
     }
 }

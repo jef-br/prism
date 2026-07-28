@@ -87,6 +87,10 @@ public static class ImagePreProcessor {
 
         lambda.BoundingBox = ParseSalientBox(bbox.coords, bbox.origW, bbox.origH);
 
+        // T-4830: classical-CV subject isolation (shadow- and background-excluded) behind the
+        // ISubjectDetector seam. Additive — the Transformed stage prefers lambda.Subject over BoundingBox.
+        lambda.Subject = SubjectDetector.FromConfig().Detect(colorMat);
+
         byte[]? processedBytes = await UpscaleAsync(flatJpg, bbox, config, lambda, remoteUpscale, cancellationToken);
         if (lambda.IsKo) { colorMat.Dispose(); return (null, null); }
 

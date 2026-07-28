@@ -18,7 +18,7 @@ public class ImageTransformerTests {
     // tests below construct Tx_ classes through ImageTransformer and need a bundle whose values they
     // control, not whatever the deployed config happens to say.
     private static readonly TransformParameters Parameters = new() {
-        Crop = new() { WhiteSpaceMargin = 0.042, CropCoverage = 0.8, CropExtensionOneSided = 0.14, CropExtensionBiDirectional = 0.25 },
+        Crop = new() { WhiteSpaceMargin = 0.042, CropCoverage = 0.8, CropExtensionOneSided = 0.14, CropExtensionBiDirectional = 0.25, ShadowBottomShrinkFraction = 0.06 },
         ProblemImageProcessor = new() { MinInputPx = 570, MinOutputPx = 800, MaxUpscale = 1.42 },
         BgStretch = new() { Tier1MaxRatio = 1.25f, Tier2MaxRatio = 1.42f, Tier4MinRatio = 2.50f, FeatherPx = 16 },
         DetailCropper = new() { AdjacentCropCap = 0.14 },

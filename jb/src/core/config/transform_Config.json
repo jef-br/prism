@@ -5,7 +5,8 @@
         "WhiteSpaceMargin": 0.042,
         "CropCoverage": 0.8,
         "CropExtensionOneSided": 0.14,
-        "CropExtensionBiDirectional": 0.25
+        "CropExtensionBiDirectional": 0.25,
+        "ShadowBottomShrinkFraction": 0.06
     },
 
     "ProblemImageProcessor": {
