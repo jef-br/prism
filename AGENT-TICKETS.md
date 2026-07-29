@@ -58,7 +58,8 @@ Done tickets are moved to `AGENT-TICKETS-ARCHIVE.md` (via /ticket-finish) — th
 
 ### T-2600 · M5 Classify groundwork
 **Status:** Blocked | **Profile:** P0-orchestrator
-**Blocked-by:** [[T-4970]] (first-pass phenotype validation), which is itself blocked by the [[T-4900]] epic.
+**Blocked-by:** [[T-4970]] (first-pass phenotype validation), which went Ready on 2026-07-30 when the
+[[T-4900]] epic closed.
 **Board sync (2026-07-29):** rewritten against the code on main after [[T-4700]] and [[T-4800]].
 Tracks the 2 items in `jb/src/core/Services/Matching/Classify/jbtodo.md`.
 
@@ -90,10 +91,13 @@ be written before the rules evaluate, or it reads UNKNOWN forever and every phen
 unreachable.
 
 **What is left to do, in order:**
-1. Finish the [[T-4900]] epic.
-2. [[T-4970]] — run the first-pass phenotype validation and report the real distribution.
+1. ~~Finish the [[T-4900]] epic.~~ ✅ closed 2026-07-30, all five children reviewer-Approve.
+2. [[T-4970]] — run the first-pass phenotype validation and report the real distribution. **Ready now.**
 3. Fix [[T-4955]] (derived edge features go stale on promotion), then decide the `BypassPhenotypes` flip
-   from T-4970's data.
+   from T-4970's data. **The flip has a checklist now** — three things are correct only because the flag is
+   currently `true` and break when it is flipped: [[T-4955]] itself, `FinalOutputSize.RoutesToCenterAndStretch`
+   missing the `SelectedPhenotype is null` condition ([[T-4910]] review), and `Tx_ProblemImageProcessor`
+   deriving output metadata from the unscaled original-resolution field ([[T-4920]] review).
 4. Only then open the full bar: labeled set, confusion matrix, <5% misassignment across the 20 phenotypes,
    no systematic error on any one. Commission **one** labeled set — [[T-4945]] needs the same asset.
 
@@ -174,12 +178,20 @@ below are implemented and unit-tested; only real-data validation is missing.
 
 
 ### T-4900 · ESRGAN toggle + unified final-size upscale (epic)
-**Status:** Review | **Profile:** P0-orchestrator
+**Status:** Done | **Profile:** P0-orchestrator
 **Found by:** 2026-07-28 upscale-perf investigation (see `memory/project_transform_upscale_bottleneck.md`)
 
-**All five children are implemented (2026-07-29).** [[T-4905]] is Done (reviewer Approve). T-4910/T-4920/
-T-4930/T-4940 are code-complete and green but sit at `Review` — the P1/P4 reviewer gate has not run on them.
-Decisions in `jb/docs/PRISM-transform-generate.md` → "Unified upscale"; API field in `PRISM-api.md`.
+**All five children are Done with reviewer Approve (T-4905/T-4930/T-4940 on 2026-07-29; T-4910/T-4920 on
+2026-07-30).** Decisions in `jb/docs/PRISM-transform-generate.md` → "Unified upscale"; API field in
+`PRISM-api.md`. This unblocks [[T-4970]].
+
+**Two dormant defects the reviews surfaced, both keyed to the same future event.** Neither is reachable
+while `BypassPhenotypes = true`, and both become live the moment it is flipped — so they are a checklist
+for that flip, not open work now:
+1. `FinalOutputSize.RoutesToCenterAndStretch` omits the `SelectedPhenotype is null` half of
+   `SelectTransformer`'s Step 1 ([[T-4910]]).
+2. `Tx_ProblemImageProcessor` derives its output metadata from the unscaled original-resolution field
+   ([[T-4920]]).
 
 **Three defects the epic uncovered and fixed along the way** (user decisions, 2026-07-29 — all three were
 blocking the epic's own premise, not scope creep):
@@ -263,10 +275,42 @@ is gitignored (too big for git) and lives in the source tree next to the fixed-6
 ---
 
 ### T-4910 · Exact final-output-size calculator (shared helper)
-**Status:** Review | **Profile:** P4-critical-architecture
+**Status:** Done | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-30)
 **Found by:** [[T-4900]]
 
-**Implemented 2026-07-29 — awaiting reviewer Approve.** New `FinalOutputSize`
+**Reviewer verdict (2026-07-30): Approve, no defects.** The forward/inverse pair was not taken on faith —
+the reviewer re-implemented `CenterAndStretchCanvasSize`/`RequiredBboxLongestSide` in a throwaway console
+app and brute-forced the true minimum against it across margins 0.0001–0.1999 (step 0.0001) × targets
+1–2000: **zero mismatches**, worst-case **3** iterations, matching the "≤3 passes, never a pixel short"
+claim exactly. Single-source-of-truth confirmed by grep — no surviving copy of the canvas formula or the
+routing predicate anywhere in `jb/src/core`.
+
+The ordering change was traced through its one real edge case rather than assumed safe. `PreprocessAsync`
+has a **pre-existing** early-return (`ReadNormalizedJpg` null, or `colorMat.Empty()`) that returns
+`(null, null)` *without* setting `lambda.IsKo`, so `TransformService`'s `if (lambda.IsKo)` guard misses it
+and `TransformImage` still runs with `FinalizeGeometry` never having executed. Not a regression:
+`lambda.BoundingBox` is written in exactly two places (`PreprocessAsync` and `FinalizeGeometry`'s
+promotion), so skipping both leaves it null and `SelectTransformer`'s first guard routes to
+`Tx_ProblemImageProcessor`. The reviewer's read is that the move made this edge case **safer** — under the
+old code promotion ran unconditionally inside `TransformImage`, so a populated `lambda.Subject` could
+promote a box and route to a real crop strategy against a null `colorMat`.
+
+**Three non-blocking findings, worth knowing:**
+1. **`RoutesToCenterAndStretch` encodes 2 of `SelectTransformer`'s 3 branch conditions** — bbox-null and
+   edge-intersect, but not the `SelectedPhenotype is null` half of Step 1. Harmless today because
+   `BypassPhenotypes = true` collapses Step 1 to the bbox-null check, so predicate and routing agree. **Flip
+   `BypassPhenotypes` without revisiting this and they diverge** for a bbox-present/no-intersect/
+   phenotype-null record: the predicate says centre-and-stretch, the real routing says
+   `Tx_ProblemImageProcessor`. Attach this to the flip decision in [[T-2600]]/[[T-4970]].
+2. **Two of the 15 assertions are re-derivations, not literals** (`FinalOutputSizeTests.cs:51` and `:68` call
+   `CenterAndStretchCanvasSize`/`LongestDimension` back on the scaled result). Both sit inside facts that
+   also carry a properly-pinned literal, so coverage stands — but the claim below that the suite pins
+   literals throughout was overstated. Corrected: **9 facts / 15 assertions**, not "10 assertions across 8".
+3. `ImageRecord_LAMBDA.cs` is a `Prism.Core.Contracts` file and wasn't in the original spec's file list. The
+   addition is disclosed in the note below and purely additive; flagged for the record, not as a defect.
+
+**Implemented 2026-07-29.** New `FinalOutputSize`
 (`jb/src/core/Services/Transform/FinalOutputSize.cs`, compiled into the `Prism.Services.Transform` Engine
 assembly so `Tx_CenterAndStretch` can reach it; `Prism.Core` references that assembly, so `ImagePreProcessor`
 can too). It owns four things: `HasEdgeIntersect`, `RoutesToCenterAndStretch` (the routing predicate, now
@@ -286,8 +330,8 @@ promotion result now recorded on `ImageRecord_LAMBDA.SubjectGeometryPromoted` so
 the move), and `Tx_CenterAndStretch` had to be made to read the shared helper for the "single source of
 truth" acceptance to mean anything.
 
-**Acceptance met.** `FinalOutputSizeTests` (10 assertions across 8 facts) pins literal pixel counts, not
-re-derivations of the same expression: the 1800→1948 worked example, the bleed case (`min(W,H)`, no margin
+**Acceptance met.** `FinalOutputSizeTests` (15 assertions across 9 facts — count corrected by the review;
+13 pin literal pixel counts, 2 re-derive, see finding 2 above): the 1800→1948 worked example, the bleed case (`min(W,H)`, no margin
 term), the 740/739 boundary from both sides, minimality at 741 (no scale) vs 739 (scale), and the routing
 predicate's three cases. Transform suite 83/83.
 
@@ -313,10 +357,48 @@ helper is the single source of truth. No behavior change yet.
 ---
 
 ### T-4920 · Unified upscale-scale + ESRGAN/Lanczos gate + KO
-**Status:** Review | **Profile:** P1-feature-worker
+**Status:** Done | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-30)
 **Found by:** [[T-4900]]
 
-**Implemented 2026-07-29 — awaiting reviewer Approve.** `UpscaleAsync` rewritten to the unified model:
+**Reviewer verdict (2026-07-30): Approve.** The three numeric claims below were re-derived by hand rather
+than read and accepted, and all three hold exactly:
+- **Geometry-follows-pixels.** Because `box.Width <= origW` and rounding is monotonic,
+  `w = round(box.Width·scale) <= round(origW·scale) = scaledW` always — so `scaledW − w >= 0`, the origin
+  clamp can never go negative, and `x + w <= scaledW` holds even away from the touching-edge case. Traced
+  on a non-edge example with a non-clean scale factor.
+- **The 740/739 boundary.** `CenterAndStretchCanvasSize(740, 0.042)` = floor(802.16)=802 → even 802 → −2 =
+  **800**; at 739 = floor(801.076)=801 → even 800 → −2 = **798**.
+- **The bleed-route KO window is exact, not approximate.** `800/601 = 1.331` KOs, `800/602 = 1.329` does
+  not — "shorter side under 602px" is the precise statement.
+
+`Tx_CropSquare` confirmed to decode `ProcessedBytes`, crop against the decoded image's own dimensions, and
+record the *same* rectangle object it passed to `Mutate` — so the manifest and the bytes cannot drift. The
+OFF→zero-ESRGAN-calls assertion is real: `RecordingUpscaleService` is injected in the OFF test too and the
+toggle branch is taken before `remoteUpscale` is ever touched, so a wrong branch would flip the call count.
+Core 154/154 and Transform 83/83, both foreground. (Core is 154, not the 153 claimed below — commit
+`5e06f54` added one test after this work; not a regression, just a stale count.)
+
+**One finding, fixed 2026-07-30.** `MaxLanczosOnlyUpScaleFactor` was declared `{ get; private set; }` to
+match its ~40 legacy siblings, but CLAUDE.md's no-shadow-defaults rule binds *new or touched* config code
+regardless of the surrounding class. A missing key already failed loud via `RequireDouble`, so this was
+never a live silent-default risk — but the compiler wasn't enforcing it. Now `required … { get; init; }`.
+Note `private set` **cannot** carry `required` (CS9032: the setter would be less visible than the type), so
+this is an `init` accessor, not a one-word change; it works because `ParseAndValidate` is the class's only
+construction site and already uses an object initializer. Solution builds clean, Core 154/154.
+
+**Non-blocking, and dormant rather than live:** `Tx_ProblemImageProcessor` (untouched here) computes its
+`OutputWidth`/`OutputHeight` metadata from `InputImage.Width`/`Height` — the deliberately-unscaled
+original-resolution field — while its actual resize reads real decoded dimensions. It cannot bite today:
+that route is only selected when `BoundingBox` is null, and a null bbox short-circuits `UpscaleAsync`
+before any scaling happens. It becomes reachable if `BypassPhenotypes` is flipped, so it belongs with the
+same flip checklist as [[T-4910]]'s routing-predicate gap.
+
+**Also unclosed, pre-existing:** no test exercises the new `MaxLanczosOnly > MaxUpScale` invariant or a
+missing-key load failure, because there is no `PrismConfiguration` test file anywhere in the repo. Not a
+hole this work opened.
+
+**Implemented 2026-07-29.** `UpscaleAsync` rewritten to the unified model:
 minimal scale from `FinalOutputSize.MinimalScaleToReach(MinOutputWidth, …)`, then the toggle picks resampler
 and cap only — ESRGAN (local session or the remote host) to `MaxUpScaleFactor`, local Lanczos4 to the new
 `MaxLanczosOnlyUpScaleFactor`. Past the applicable cap → `PREPROCESS_UPSCALE_EXCEEDED`, and the OFF message
@@ -653,8 +735,9 @@ analyzer to prefer the alpha subject, then close that todo per the todo lifecycl
 ---
 
 ### T-4970 · First-pass phenotype assignment validation
-**Status:** Blocked | **Profile:** P1-feature-worker
-**Blocked-by:** the [[T-4900]] epic (user decision, 2026-07-29)
+**Status:** Ready | **Profile:** P1-feature-worker
+**Unblocked 2026-07-30:** the [[T-4900]] epic closed (all five children Approve), so the repeated
+full-dataset run this measurement needs no longer pays the old ESRGAN cost.
 **Found by:** [[T-2600]] rewrite, 2026-07-29 — the near-term step T-2600 had described but never assigned
 to a ticket.
 

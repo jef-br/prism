@@ -80,7 +80,11 @@ public sealed class PrismConfiguration {
     /// <see cref="MaxUpScaleFactor"/> because interpolation invents no detail — past this the result
     /// is soft rather than merely enlarged.
     /// </summary>
-    public double MaxLanczosOnlyUpScaleFactor { get; private set; }
+    // `required` + `init` rather than the private-set convention of its siblings: this property is new
+    // code, so the no-shadow-defaults rule applies to it even though the rest of this class is legacy
+    // debt awaiting a retrofit. `private set` cannot carry `required` (CS9032 — the setter would be less
+    // visible than the type), hence `init`.
+    public required double MaxLanczosOnlyUpScaleFactor { get; init; }
     public double MaxDownScaleFactor { get; private set; }
     public int MinGeneratedImgWidth { get; private set; }
     public int MinGeneratedImgWidthHeight { get; private set; }
