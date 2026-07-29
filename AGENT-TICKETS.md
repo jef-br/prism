@@ -374,10 +374,37 @@ family as the existing top-up. Lanczos-only default keeps a full run's upscale c
 ---
 
 ### T-4930 · ESRGAN toggle plumbing (per-job parameter, default OFF)
-**Status:** Review | **Profile:** P1-feature-worker
+**Status:** Done | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-29)
 **Found by:** [[T-4900]]
 
-**Implemented 2026-07-29 — awaiting reviewer Approve.** `PrismProcessingParameters.AllowEsrganUpscale`
+**Reviewer verdict (2026-07-29): Approve.** Default-off was traced end to end and the casing lines up
+(workbench sends camelCase, `PrismProcessIngressReader` reads with `PropertyNameCaseInsensitive = true`).
+The distributed path was verified concretely rather than assumed: `HttpTransformService` POSTs the whole
+`MatchingResult` via `ServiceHttp.Json` (`PropertyNamingPolicy = null`) and the ServiceHost's
+`ConfigureHttpJsonOptions` sets the same, so the two ends agree. The get-only-collection trap from the
+microservices split does **not** apply — `IngestResult.Parameters` is a required scalar record, not a
+collection.
+
+The reviewer went further than accepting the deviation as defensible and checked whether `transformEnabled`
+/`headcut` are ever supplied independently of `matched.Ingest.Parameters` at any call site — if they were,
+the asymmetry would be a real risk. They are not: `PrismService` and the ServiceHost route both derive those
+"explicit arguments" from the same object one frame up, so reading `AllowEsrganUpscale` a frame deeper is
+bit-identical behaviour with no signature churn.
+
+**One finding, fixed 2026-07-29.** `ProcessingParametersRoundTripTests` claimed to use "the same web defaults
+the ServiceHost routes use", but `JsonSerializerDefaults.Web` is camelCase whereas the ServiceHost overrides
+the naming policy to null. Self-consistent, so it passed either way — it just wasn't a proxy for anything
+real. Rewritten to exercise the actual configurations: serialize with the real `ServiceHttp.Json` object,
+deserialize with the ServiceHost's, pin the literal PascalCase wire text, and assert omitted-means-false
+under both that and the API ingress reader's options. 4/4 green.
+
+**Known gap, accepted:** the `PrismProcessRequest` → `PrismProcessingParameters` mapping is untested (no
+`Prism.Api` test project, internal record). The reviewer confirmed this is pre-existing — `Rename`,
+`Transform`, `Generation`, `Format`, `ReturnOriginalImages` and `SkipClassification` all share it for the
+same reason — so it is not debt this work introduced. Mapping verified by hand.
+
+**Implemented 2026-07-29.** `PrismProcessingParameters.AllowEsrganUpscale`
 (no initializer, so an omitted field is false), `PrismProcessRequest.AllowEsrganUpscale`, mapped in
 `PrismProcessIngressReader`, read once in `TransformService` and passed to `PreprocessAsync`.
 
@@ -416,10 +443,19 @@ behavior is T-4920.
 ---
 
 ### T-4940 · Workbench UI toggle for ESRGAN upscaling
-**Status:** Review | **Profile:** P1-feature-worker
+**Status:** Done | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-29)
 **Found by:** [[T-4900]]
 
-**Implemented 2026-07-29 — awaiting reviewer Approve.** Added as a fifth entry in
+**Reviewer verdict (2026-07-29): Approve, no defects.** Unchecked-by-default confirmed by tracing
+`defaultParameters` state into the checkbox's `checked` prop, not just by reading the literal. Renders
+through the shared `binaryParameterFields` map rather than a parallel control; the TS field is required, not
+optional, so there is no silent-undefined path; both request builders are wired (the match-lite builder's
+hardcoded `false` sits alongside its other disabled options, so it is consistent rather than an oversight).
+`npm run typecheck` and `dotnet build` clean. No web test framework exists in this repo, so there is no
+component-test gap introduced — matches the ticket's own acceptance bar and prior workbench precedent.
+
+**Implemented 2026-07-29.** Added as a fifth entry in
 `JobParameterPanel`'s `binaryParameterFields` ("High-quality upscaling (ESRGAN — slower)",
 `request.allowEsrganUpscale`), so it renders through the same checkbox path as the existing four rather than
 introducing a parallel control. `allowEsrganUpscale` added to the `PrismProcessingParameters` TS interface,
