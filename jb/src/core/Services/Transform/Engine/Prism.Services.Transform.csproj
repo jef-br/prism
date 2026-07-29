@@ -13,6 +13,7 @@
   <ItemGroup>
     <Compile Include="IImageTransformation.cs" />
     <Compile Include="..\ImageTransformer.cs" />
+    <Compile Include="..\FinalOutputSize.cs" />
     <Compile Include="..\TransformSeed.cs" />
     <Compile Include="..\TransformToggles.cs" />
     <Compile Include="Tx_CenterAndStretch.cs" />

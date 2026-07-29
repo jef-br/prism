@@ -75,7 +75,8 @@ public static class ImagePreProcessor {
     /// Returns (null, null) and sets <see cref="ImageRecord_LAMBDA.IsKo"/> when the image fails thresholds.
     /// </summary>
     public static async Task<(byte[]? bytes, Mat? colorMat)> PreprocessAsync(
-        ImageRecord_LAMBDA lambda, string? imagePath, PrismConfiguration config, IUpscaleService? remoteUpscale = null, CancellationToken cancellationToken = default) {
+        ImageRecord_LAMBDA lambda, string? imagePath, PrismConfiguration config, TransformParameters transformParameters,
+        TransformSeed? seed, bool allowEsrganUpscale, IUpscaleService? remoteUpscale = null, CancellationToken cancellationToken = default) {
         byte[]? flatJpg = ReadNormalizedJpg(imagePath);
         if (flatJpg is null) return (null, null);
 
@@ -91,8 +92,22 @@ public static class ImagePreProcessor {
         // (ImageFeatureAnalyzer.Refine wave 3), which is the only point where the Excel/CLIP seed exists
         // AND the phenotype has not yet been assigned — see Services/Transform/Engine/jbtodo.md. By the
         // time preprocessing runs, lambda.Subject is already populated; this stage only consumes it.
-        byte[]? processedBytes = await UpscaleAsync(flatJpg, bbox, config, lambda, remoteUpscale, cancellationToken);
+        //
+        // Settling the transform geometry here, before upscale, is the point of T-4910: subject promotion
+        // and shadow accounting both change the box the Transformed stage crops on, so sizing against the
+        // pre-promotion box would target a canvas the pipeline never builds.
+        ImageTransformer.FinalizeGeometry(lambda, transformParameters, seed);
+
+        byte[]? processedBytes = await UpscaleAsync(
+            flatJpg, bbox.origW, bbox.origH, config, transformParameters, lambda, allowEsrganUpscale, remoteUpscale, cancellationToken);
         if (lambda.IsKo) { colorMat.Dispose(); return (null, null); }
+
+        // The Mat travels on to the head cutter and the detail cropper, which read pixels alongside the
+        // record's geometry — so it has to follow the bytes into the enlarged coordinate space.
+        if (!ReferenceEquals(processedBytes, flatJpg)) {
+            colorMat.Dispose();
+            colorMat = Cv2.ImDecode(processedBytes!, ImreadModes.Color);
+        }
 
         return (processedBytes, colorMat);
     }
@@ -192,32 +207,94 @@ public static class ImagePreProcessor {
         catch { return (DefaultBboxCoords, 0, 0); }
     }
 
-    // Step 4: upscale decision based on the salient bbox's largest pixel dimension
-    private static async Task<byte[]?> UpscaleAsync(byte[] flatJpg, (string coords, int origW, int origH) bbox,
-                                     PrismConfiguration config, ImageRecord_LAMBDA lambda, IUpscaleService? remoteUpscale, CancellationToken cancellationToken) {
-        if (bbox.origW == 0) return flatJpg;
+    // Step 4: unified upscale decision (T-4920).
+    //
+    // Both paths aim at the same bar: the FINAL output image reaching MinOutputWidth on its longest
+    // side. That size is computed exactly from the settled transform geometry (FinalOutputSize), not
+    // predicted — a zero-intersection image gets the margined canvas around its bbox, a bleeding one
+    // gets the centred square, so the required scale is the smallest that clears the bar for the route
+    // this image will actually take. The toggle then only picks the resampler and the cap: ESRGAN up to
+    // MaxUpScaleFactor when the caller opted in, plain Lanczos up to MaxLanczosOnlyUpScaleFactor by
+    // default. Past the applicable cap the image is KO'd rather than shipped undersized.
+    private static async Task<byte[]?> UpscaleAsync(byte[] flatJpg, int origW, int origH, PrismConfiguration config,
+                                     TransformParameters transformParameters, ImageRecord_LAMBDA lambda, bool allowEsrganUpscale,
+                                     IUpscaleService? remoteUpscale, CancellationToken cancellationToken) {
+        if (origW == 0 || lambda.BoundingBox is null) return flatJpg;
 
-        string[] parts = bbox.coords.Split(',');
-        float bboxPixelW = (float.Parse(parts[2], CultureInfo.InvariantCulture) - float.Parse(parts[0], CultureInfo.InvariantCulture)) * bbox.origW;
-        float bboxPixelH = (float.Parse(parts[3], CultureInfo.InvariantCulture) - float.Parse(parts[1], CultureInfo.InvariantCulture)) * bbox.origH;
-        float largest = Math.Max(bboxPixelW, bboxPixelH);
+        BoundingBox box = lambda.BoundingBox.Value;
+        int largest = Math.Max(box.Width, box.Height);
 
         if (largest < config.MinInputSizeInPixels)
-            return Ko(lambda, "PREPROCESS_TOO_SMALL", $"Salient object {largest:F0}px < minimum {config.MinInputSizeInPixels}px.");
+            return Ko(lambda, "PREPROCESS_TOO_SMALL", $"Salient object {largest}px < minimum {config.MinInputSizeInPixels}px.");
 
-        if (largest >= config.MinOutputWidth)
-            return flatJpg;
+        double scale = FinalOutputSize.MinimalScaleToReach(
+            config.MinOutputWidth, lambda, origW, origH, transformParameters.Crop.WhiteSpaceMargin);
+        if (scale <= 1.0) return flatJpg;
 
-        double scale = config.MinOutputWidth / (double)largest;
-        if (scale > config.MaxUpScaleFactor)
-            return Ko(lambda, "PREPROCESS_UPSCALE_EXCEEDED", $"Required scale {scale:F2}× exceeds maximum {config.MaxUpScaleFactor:F2}×.");
+        double maxScale = allowEsrganUpscale ? config.MaxUpScaleFactor : config.MaxLanczosOnlyUpScaleFactor;
+        if (scale > maxScale) {
+            string remedy = allowEsrganUpscale ? string.Empty : " Enable ESRGAN upscaling to process this image.";
+            return Ko(lambda, "PREPROCESS_UPSCALE_EXCEEDED",
+                $"Required scale {scale:F2}× exceeds maximum {maxScale:F2}×.{remedy}");
+        }
 
         // Remote host when PRISM_UPSCALE_URL routed one in (distributed deployment), local static
         // session otherwise. The remote leg is a real await — no thread held during the round-trip.
         // The local leg stays synchronous: it's GPU/CPU compute, not I/O, so there's nothing to yield on.
-        return remoteUpscale is null
-            ? Upscaler.Upscale(flatJpg, scale)
-            : await remoteUpscale.UpscaleAsync(flatJpg, scale, cancellationToken);
+        byte[] upscaled = allowEsrganUpscale
+            ? remoteUpscale is null
+                ? Upscaler.Upscale(flatJpg, scale)
+                : await remoteUpscale.UpscaleAsync(flatJpg, scale, cancellationToken)
+            : LanczosUpscale(flatJpg, scale);
+
+        ScaleGeometryToUpscaledImage(lambda, scale, origW, origH);
+        return upscaled;
+    }
+
+    // Lanczos4 to match the resampler the ESRGAN path already uses for its post-×2 top-up, so the two
+    // modes differ in detail recovery rather than in resampling character. Rounds to the same
+    // round(dimension × scale) target the ESRGAN path lands on, which is what the geometry rescale below
+    // assumes.
+    private static byte[] LanczosUpscale(byte[] imageBytes, double scale) {
+        using Mat src = Cv2.ImDecode(imageBytes, ImreadModes.Color);
+        using Mat dst = new Mat();
+        Cv2.Resize(src, dst, new CvSize((int)Math.Round(src.Cols * scale), (int)Math.Round(src.Rows * scale)),
+            interpolation: InterpolationFlags.Lanczos4);
+        Cv2.ImEncode(".jpg", dst, out byte[] result);
+        return result;
+    }
+
+    // Upscale enlarges the pixels; the record's geometry has to follow, or every downstream consumer
+    // crops original-resolution coordinates out of an enlarged image. Width/Height on the record stay
+    // at their ingress values on purpose — they are the original-resolution contract the upscale
+    // manifest reports against. lambda.Subject is left alone too: it is pre-upscale evidence that stays
+    // self-consistent with its own pixel mask, and the box it contributed is already promoted into
+    // BoundingBox by this point.
+    private static void ScaleGeometryToUpscaledImage(ImageRecord_LAMBDA lambda, double scale, int origW, int origH) {
+        int scaledW = (int)Math.Round(origW * scale);
+        int scaledH = (int)Math.Round(origH * scale);
+        lambda.BoundingBox = ScaleBox(lambda.BoundingBox!.Value, scale, scaledW, scaledH);
+        if (lambda.LegacySalientBox is { } legacy) lambda.LegacySalientBox = ScaleBox(legacy, scale, scaledW, scaledH);
+    }
+
+    // Width and height are scaled first and never clamped, so the longest side lands on exactly the
+    // pixel count the scale was derived from and the final canvas hits the bar. The origin absorbs the
+    // at-most-one-pixel overhang that independent rounding of origin and extent can produce.
+    private static BoundingBox ScaleBox(BoundingBox box, double scale, int scaledW, int scaledH) {
+        int w = (int)Math.Round(box.Width * scale);
+        int h = (int)Math.Round(box.Height * scale);
+        int x = Math.Min((int)Math.Round(box.X * scale), scaledW - w);
+        int y = Math.Min((int)Math.Round(box.Y * scale), scaledH - h);
+        return new BoundingBox {
+            X = x,
+            Y = y,
+            Width = w,
+            Height = h,
+            Left = x,
+            Top = y,
+            Right = x + w,
+            Bottom = y + h
+        };
     }
 
     private static byte[]? Ko(ImageRecord_LAMBDA lambda, string code, string message) {

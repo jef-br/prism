@@ -25,6 +25,11 @@ const binaryParameterFields = [
     key: "ReturnOriginalImages",
     label: "Return originals",
     detail: "request.ReturnOriginalImages"
+  },
+  {
+    key: "allowEsrganUpscale",
+    label: "High-quality upscaling (ESRGAN — slower)",
+    detail: "request.allowEsrganUpscale"
   }
 ] as const;
 

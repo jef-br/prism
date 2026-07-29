@@ -57,50 +57,90 @@ Done tickets are moved to `AGENT-TICKETS-ARCHIVE.md` (via /ticket-finish) — th
 ## Tickets
 
 ### T-2600 · M5 Classify groundwork
-**Status:** Blocked | **Profile:** P0-orchestrator  
-**Blocked-by:** M5 milestone gate — the 2 remaining Classify `jbtodo.md` items are both FROZEN pending prerequisite work, not simply unanswered.
-**Board sync (2026-07-24):** re-synced the item list against the source file (was 6 on the board, 2 in the file).
-**Board sync (2026-07-25):** correcting the 07-24 note, which claimed "4 closed via the todo lifecycle, decisions in jb/docs" — that flattened five removed items into one disposition. Verified the true history: the Classify `jbtodo.md` went from 7 open items (late June) to 2 (by 8 July, `9144f3e`), and the five that left had **mixed** dispositions, not a uniform lifecycle-close:
-- **ONNX session per-run → shared** — resolved: `OnnxSessionFactory.cs` exists, decision recorded in `PRISM-classify.md`/`PRISM-pipeline-core.md`; milestone table dates it 2026-06-29. ✅
-- **illustration-technical-drawing scope** — resolved with a real decision, documented (`PRISM-classify.md:171`: no longer a catch-all, requires an `is-illustration` positive signal). ✅
-- **interior-shot unreachable in CPU-only** — resolved: `Analyzer_Interior.cs` implemented, sets `interior-detected` feeding the phenotype, config-driven. ✅
-- **Gate phenotypes** — not "closed," **implemented and live by design**: the `BypassPhenotypes` PoC flag (`ImageTransformer`) is ON, so routing ignores `SelectedPhenotype` and basic transforms run off geometry alone. It flips off only once phenotype assignment is validated — the same gate as FROZEN item 2 below.
-- **`RecordUnknownFeatures()` stub** — **still a live stub** (`ImageFeatureAnalyzer.cs:326`, marks 35+ features UNKNOWN). Not closed with a doc decision; its remaining work — replacing each UNKNOWN with a real measurement — is exactly what [[T-4000]]'s per-feature Analyzer backlog does, so it's effectively relocated to T-4000, not resolved here.
+**Status:** Blocked | **Profile:** P0-orchestrator
+**Blocked-by:** [[T-4970]] (first-pass phenotype validation), which is itself blocked by the [[T-4900]] epic.
+**Board sync (2026-07-29):** rewritten against the code on main after [[T-4700]] and [[T-4800]].
+Tracks the 2 items in `jb/src/core/Services/Matching/Classify/jbtodo.md`.
 
-Tracks the 2 remaining items in `jb/src/core/Services/Matching/Classify/jbtodo.md`, both `FROZEN`:
-1. ImageNGP taxonomy/feature-combination reconciliation — **answered for real by [[T-4700]] (2026-07-27)**, superseding the earlier "no reconciliation action needed" answer: the taxonomy was actually trimmed to 37 features / 20 phenotypes, all real/reachable, and a `jb/docs/ImageNGP/HowToAddAPhenotype.md` guide now documents the reconciliation process going forward.
-2. Phenotype production validation (labeled set, confusion matrix, <5% misassignment across **20** phenotypes, not 26 — [[T-4700]] removed 6 unreachable ones) — still FROZEN: "Premature. Revisit after per-feature Analyzer stubs are substantially resolved and BypassPhenotypes flip is planned." A lighter first-pass validation approach (before/after `prism-evidence-report` diff on the standard dataset, not the full 200-images/phenotype protocol) is defined as part of the Transform-routing follow-up ticket that collapses DetOrderRules.json to 5 product types — that lighter bar is the near-term next step, not this FROZEN item's full bar.
+**Item 1 — ImageNGP taxonomy reconciliation: settled, no work left.** [[T-4700]] trimmed the taxonomy to real/reachable features only; [[T-4800]] re-declared `shadow-present`, so it now stands at **38 features /
+20 phenotypes**, every one with a live producer. `jb/docs/ImageNGP/HowToAddAPhenotype.md` documents the
+process going forward. Tick this checkbox when item 2 closes.
 
-**Why this ticket is genuinely blocked (not just unattended):** item 2 depends on features no longer being UNKNOWN, which depends on [[T-4000]] replacing the `RecordUnknownFeatures` stub analyzer-by-analyzer. Until enough analyzers land, full phenotype assignment validation can't happen, so `BypassPhenotypes` stays on and item 2 stays frozen. T-2600 is downstream of T-4000, full stop. Item 1 is no longer blocking — it's closed.
+**Item 2 — phenotype production validation: the only open item.**
 
-Per-feature CLIP confidence calibration remains a live open concern feeding into this ticket (referenced by `AGENTFEEDBACK.md`'s S109 entry and T-4400's phase-2 closeout review) but is not currently a tracked checkbox in Classify's own `jbtodo.md` — it surfaces wherever a new confidence literal is discovered elsewhere in the codebase.
+State of play, verified on main 2026-07-29:
+- **Every feature has a producer.** 14 are written by the `Refine` analyzers, 4 by CLIP prompts
+  (`hero-is-human`, `head-visible`, `body-visible`, `product-type-label`), the rest measured in phase 1.
+  `RecordUnknownFeatures` (`ImageFeatureAnalyzer.cs:300`) is a **phase-1 placeholder that `Refine`
+  overwrites**, not a stub backlog. There is no UNKNOWN-forever feature left in the taxonomy.
+- **Phenotype assignment produced zero results on real images until 2026-07-28.** `Refine` threw on every
+  image and `MatchingService`'s non-fatal catch hid it. Fixed; refinement failures went 86 → 0 on
+  SPACINI29. **Nobody has yet reported what the assigned phenotypes actually are** — that measurement is
+  [[T-4970]] and it is the real next step.
+- **`BypassPhenotypes` is still `true`** (`ImageTransformer.cs:32`). [[T-4850]] gives Transform good
+  geometry straight from the subject detector, so flipping it now buys routing nuance rather than basic
+  correctness. Lower urgency than it used to be, not higher.
 
-M5 gate condition: item 1 answered ✅ ([[T-4700]], 2026-07-27); item 2 thaws once T-4000's Analyzer stubs are substantially landed + a BypassPhenotypes flip decision is made; ONNX session migrated to shared/singleton ✅ already done.
+- **The classical-CV subject producer stays. For now.**. Only after the PRISM pipeline is well up and running will we revisit this. (Probably around  the same time we include image generation via ComfyUI) This pertains to archived [[T-4810]], current [[T-4000]], and a listing in `Analyzers/jbtodo.md`
+ 
+
+**Ordering rule — permanent, do not break.** `SubjectDetector` runs in `ImageFeatureAnalyzer.Refine`
+wave 3, *before* `FinalizePhenotype` (`ImageFeatureAnalyzer.cs:152-157`). Any detector-backed feature must
+be written before the rules evaluate, or it reads UNKNOWN forever and every phenotype requiring it becomes
+unreachable.
+
+**What is left to do, in order:**
+1. Finish the [[T-4900]] epic.
+2. [[T-4970]] — run the first-pass phenotype validation and report the real distribution.
+3. Fix [[T-4955]] (derived edge features go stale on promotion), then decide the `BypassPhenotypes` flip
+   from T-4970's data.
+4. Only then open the full bar: labeled set, confusion matrix, <5% misassignment across the 20 phenotypes,
+   no systematic error on any one. Commission **one** labeled set — [[T-4945]] needs the same asset.
+
+Per-feature CLIP confidence calibration stays parked here (see `AGENTFEEDBACK.md`'s S109 entry): newly
+discovered confidence literals get named-const treatment, not config, until this ticket resolves.
+
+M5 gate: item 1 ✅ ([[T-4700]]); ONNX shared session ✅ (2026-06-29); item 2 closes after step 3 above.
 
 **Files:** `jb/src/core/Services/Matching/Classify/jbtodo.md`, `jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`
 
 ---
 
-### T-3800 · Match bracket todos: edit-distance gap, substring-rescue perf, fuzzy-fallback future-work note, totalImageTokens precision
-**Status:** Ready | **Profile:** P1-feature-worker
-**Review:** Approve (2026-07-25) — reviewer pass on the `e2e1f84`+`f40beed` diff, judging the current code on main. Items 1/2/4 verified: fuzzy categorical matching correctly scoped (categorical columns only, distance ≤ 1, both sides ≥ 4 chars, score 0.75, reusing `ModelBuilder.ComputeLevenshteinDistance` same-assembly); `totalImageTokens` = real filename token count, pool size no longer leaks into `stringSignal`; substring-rescue perf a genuine worst-case measurement, not vacuous. All config-driven with no shadow defaults (re-verified `StringMatcher.Config`/`MatchingConfig` all `required`, `MatchingConfig.Load` fail-loud) — the exact thing `f40beed` fixed, confirmed holding. Tests cover fuzzy hits AND misses (distance-2, sub-4-char, non-categorical all correctly rejected) and a real threshold-straddling `totalImageTokens` proof. Build 0 errors, 202/202 Matching tests green (~8 min, foreground). Two non-blocking style nits (Allman braces + property-level XML docs in `StringMatcher.cs`) are pre-existing patterns this diff inherited, not introduced — flagged for a future cleanup, not this ticket. Empirical validation of items 1/4 is a known separately-tracked caveat, not a code defect.
-**Tracks:** `jb/src/core/Services/Matching/Match/jbtodo.md` (triaged 2026-07-11).
-**Board sync (2026-07-24):** this entry previously listed 3 items; the source `jbtodo.md` has always had a 4th (the fuzzy-fallback future-work note) that was never added to the board. Added below as item 3, matching file order.
-**Board sync (2026-07-25):** corrected the 07-24 pass (which mislabeled implemented items as unstarted), then **closed items 2 and 3** via `/todo-finish` (commit `6c60450`) and recorded the reviewer **Approve** above. All four items' code is on main (`e2e1f84`, review-fixed by `f40beed`); verified methods `StringMatcher.CollectFuzzyCategoricalEvidence` (`:309`), `CountFilenameTokens` (`:544`), `SemanticMatcher` using it (`:79`), `SubstringRescuePerfMeasurement.cs`.
+### T-3800 · Match bracket todos: validate the fuzzy-categorical and totalImageTokens changes
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** CiMini expansion (root `jbtodo.md`, **no ticket owns it**).
+**Review:** Approve (2026-07-25) on the `e2e1f84`+`f40beed` diff. Code, tests and config all verified;
+the missing empirical validation was recorded as a known caveat, not a defect. **The review gate is
+already satisfied** — no second review is needed to finish this ticket.
 
-Two items remain open in the source `jbtodo.md`, both **implemented on main, awaiting empirical validation** (not implementation):
-1. **StringMatcher edit-distance gap** — `CollectFuzzyCategoricalEvidence`, categorical columns only, edit-distance ≤ 1, both sides ≥ 4 chars, score 0.75 (thresholds in `MatchingConfig.json` `stringMatcher.fuzzy*`). Doc-vs-code resolved (code was wrong, tolerance added; `PRISM-match.md` updated). Pending: before/after validation on a labeled set / expanded CiMini (needs a Bracket-3 fuzzy case, e.g. grey/gray).
-4. **`SemanticMatcher.totalImageTokens` precision** — `totalImageTokens = stringMatcher.CountFilenameTokens(filename)`; candidate-pool size no longer leaks into `stringSignal`. Unit tests pass. Pending: before/after on a labeled set / expanded CiMini to confirm no accept/reject flips near `SemanticThreshold` — genuinely blocked because 0 of 14 current CiMini goldens reach Bracket 4 (see root `jbtodo.md` CiMini coverage gap).
+All code is on main and unchanged. Two of the four original `jbtodo.md` items closed on 2026-07-25
+(substring-rescue perf, fuzzy-fallback future-work note — decisions live in `PRISM-match.md`). The two
+below are implemented and unit-tested; only real-data validation is missing.
 
-Closed this session (no longer in `jbtodo.md`): item 2 (`TryMatchBySubstringRescue` perf — measured, "not worth an n-gram index," documented at `PRISM-match.md:66`) and item 3 (fuzzy-fallback 4-layer future-work note — recorded as a "Future Work" section in `PRISM-match.md`, decision "do not build speculatively").
+**What is left to do — nothing else:**
 
-**What to do:** The code and the review are done. The only remaining work is the empirical validation of items 1 and 4, which is blocked on the CiMini expansion (root `jbtodo.md`): a Bracket-3 fuzzy case for item 1, a Bracket-4-reaching image for item 4. Once that golden coverage exists and the before/after runs confirm no unwanted accept/reject shifts, items 1 and 4 close and T-3800 is eligible for `/ticket-finish` (review gate already satisfied).
+- [ ] **Expand CiMini** with the two missing cases (root `jbtodo.md` owns the full wish-list; only these
+      two block this ticket): a Bracket-3 fuzzy case (e.g. filename `grey`, Excel colour `gray`) and an
+      image that actually reaches Bracket 4.
+- [ ] **Item 1 — fuzzy categorical matching.** `StringMatcher.CollectFuzzyCategoricalEvidence`. Run
+      before/after on the expanded set; confirm the fuzzy case matches in Bracket 3 and the guardrails
+      still reject distance-2 / sub-4-char / non-categorical hits.
+- [ ] **Item 4 — `totalImageTokens` precision.** `SemanticMatcher` now uses
+      `stringMatcher.CountFilenameTokens(filename)`. Run before/after; confirm no accept/reject flips
+      near `SemanticThreshold`. Blocked today because 0 of the 14 CiMini goldens reach Bracket 4.
+- [ ] Close both `jbtodo.md` items per the todo lifecycle, then `/ticket-finish`.
 
-**Acceptance:**
-- Each of the 4 items has either a code change + passing tests, or a documented "measured, not worth it" close with no code change.
-- `jb/src/core/Services/Matching/Match/jbtodo.md` items closed and moved to `jb/docs/` per the todo lifecycle.
+**Two things an agent needs to know before starting:**
+1. **The goldens do not need re-blessing.** Checked 2026-07-29: `expected-match.json` holds only
+   `SourceReference → FamilyId`, `expected-manifest.json` adds only `Status`/`FinalFileName`/`DetOrder`.
+   Neither carries features, phenotypes or subject geometry, so [[T-4800]] did not invalidate them.
+   Re-capture only after *adding images*, per `test/datasets/CiMini/README.md`.
+2. **Run the pipeline-integration project on its own.** `dotnet test jb/src/PRISM.sln` currently fails all
+   7 `PipelineIntegrationTests.CiMini_*` tests for an unrelated reason ([[T-4942]]: GPU contention between
+   parallel test projects). The project passes 142/142 in isolation. A red solution run is not a
+   regression you caused.
 
-**Files:** `jb/src/core/Services/Matching/Match/jbtodo.md`, `jb/src/core/Services/Matching/Match/StringMatcher.cs`, `jb/src/core/Services/Matching/Match/NumericMatcher.cs`, `jb/src/core/Services/Matching/Match/SemanticMatcher.cs`, `jb/src/core/lib/Excel/ModelBuilder.cs`, `jb/docs/PRISM-match.md`.
+**Files:** `jb/src/core/Services/Matching/Match/jbtodo.md`, `jb/src/core/Services/Matching/Match/StringMatcher.cs`, `jb/src/core/Services/Matching/Match/SemanticMatcher.cs`, `jb/docs/PRISM-match.md`, `test/datasets/CiMini/`.
 
 ---
 
@@ -134,8 +174,28 @@ Closed this session (no longer in `jbtodo.md`): item 2 (`TryMatchBySubstringResc
 
 
 ### T-4900 · ESRGAN toggle + unified final-size upscale (epic)
-**Status:** Ready | **Profile:** P0-orchestrator
+**Status:** Review | **Profile:** P0-orchestrator
 **Found by:** 2026-07-28 upscale-perf investigation (see `memory/project_transform_upscale_bottleneck.md`)
+
+**All five children are implemented (2026-07-29).** [[T-4905]] is Done (reviewer Approve). T-4910/T-4920/
+T-4930/T-4940 are code-complete and green but sit at `Review` — the P1/P4 reviewer gate has not run on them.
+Decisions in `jb/docs/PRISM-transform-generate.md` → "Unified upscale"; API field in `PRISM-api.md`.
+
+**Three defects the epic uncovered and fixed along the way** (user decisions, 2026-07-29 — all three were
+blocking the epic's own premise, not scope creep):
+1. **The bounding box was never rescaled after upscale.** `UpscaleAsync` enlarged the bytes while
+   `lambda.BoundingBox` stayed in original-image pixels, so `Tx_CenterAndStretch` cropped an
+   original-coordinate rect out of an enlarged image — wrong region, and the canvas was still sized off the
+   un-scaled bbox, so the output never reached 800px anyway. The ON path was paying full ESRGAN cost for an
+   output that met neither the crop nor the size it claimed. Geometry now scales with the pixels.
+2. **`Tx_CropSquare.Transform` never applied its crop.** It recorded a `CropRectangle` on the OutputRecord
+   without touching `ProcessedBytes`, and Export ships `ProcessedBytes` — so the exported file was the whole
+   frame while the manifest claimed a square. Under `BypassPhenotypes = true` that is the route every
+   intersecting image takes. It now crops the bytes.
+3. **Upscale sized against the pre-promotion box.** Subject promotion and shadow accounting ran in
+   `ImageTransformer` *after* preprocessing, so upscale measured a box Transform then replaced. Promotion +
+   shadow accounting moved into `ImageTransformer.FinalizeGeometry`, called from `PreprocessAsync` before the
+   upscale decision.
 
 Tracking ticket. **Problem:** the upscale stage (Real-ESRGAN, in `ImagePreProcessor.UpscaleAsync`) is the
 pipeline's dominant cost — measured **122.9s per 800×800 image on the GPU** with the old fixed-64 model,
@@ -167,10 +227,21 @@ T-4920, T-4930, T-4940. Index ticket, not a unit of work.
 ---
 
 ### T-4905 · Dynamic-shape ESRGAN export + even-dimension padding
-**Status:** Review | **Profile:** P4-critical-architecture
+**Status:** Done | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-29)
 **Found by:** [[T-4900]]
 
-**Implemented this session (2026-07-28) — awaiting reviewer Approve.** The committed `Real-ESRGAN_x2plus.onnx`
+**Reviewer verdict (2026-07-29): Approve, no defects.** The review did not take the ticket's prose on faith —
+it loaded both `.onnx` files and hashed all 702 initializers in each: identical SHA256, identical 1226-node
+graph, the sole difference being the declared input (`[batch_size,3,64,64]` → `[batch,3,height,width]`). The
+even-padding math was traced by hand for the dynamic branch: `overlap=0`/`discard=0` forces exactly one tile,
+every in-bounds pixel gets weight 1.0 so `NormalizeAccumulator` never divides by zero, and the bounds checks
+drop precisely the padded-then-doubled rows — a top-left crop to `src×2` with no off-by-one. Fixed-64 tiling
+confirmed untouched. Upscale suite run in the foreground: 17/17. One non-blocking observation: the new test is
+black-box at `Upscaler.Upscale` level, so it would also pass on the old tiling path — not a gap for the
+shipped config, but a more surgical `RunTiled`/`RoundUpToEven` unit test would be sharper.
+
+**Implemented 2026-07-28.** The committed `Real-ESRGAN_x2plus.onnx`
 had a fixed `[1,3,64,64]` input, so an 800px image was upscaled as **625 serialized 64×64 tile Runs**
 (~0.2s DirectML dispatch overhead each = 122.9s). The RRDBNet is already spatially size-agnostic
 internally (pixel_unshuffle derives shape from `Shape(input)`; both Resize use scales `[1,1,2,2]`); only
@@ -192,9 +263,35 @@ is gitignored (too big for git) and lives in the source tree next to the fixed-6
 ---
 
 ### T-4910 · Exact final-output-size calculator (shared helper)
-**Status:** Blocked | **Profile:** P4-critical-architecture
-**Blocked-by:** [[T-4905]]
+**Status:** Review | **Profile:** P4-critical-architecture
 **Found by:** [[T-4900]]
+
+**Implemented 2026-07-29 — awaiting reviewer Approve.** New `FinalOutputSize`
+(`jb/src/core/Services/Transform/FinalOutputSize.cs`, compiled into the `Prism.Services.Transform` Engine
+assembly so `Tx_CenterAndStretch` can reach it; `Prism.Core` references that assembly, so `ImagePreProcessor`
+can too). It owns four things: `HasEdgeIntersect`, `RoutesToCenterAndStretch` (the routing predicate, now
+also used by `ImageTransformer.SelectTransformer` and `ApplyShadowAccounting` — one predicate, no copies),
+`CenterAndStretchCanvasSize` (which `Tx_CenterAndStretch.CropResizeAndStretch` now calls instead of holding
+its own copy of the formula), and the forward/inverse pair `LongestDimension` / `MinimalScaleToReach`.
+
+The inverse is not solved algebraically: it takes the continuous inverse of the canvas formula — provably
+never above the answer, since floor/even/trim only ever shrink the canvas — and steps up against the forward
+function until the bar is cleared. Converges in ≤3 passes and cannot land a pixel short the way hand-derived
+algebra can.
+
+**Scope grew past "no behavior change yet"** because two of the three defects listed on [[T-4900]] sit inside
+this ticket's remit: geometry promotion had to move ahead of upscale (new `ImageTransformer.FinalizeGeometry`,
+called from `PreprocessAsync`; `TransformSeed.Resolve` moved above the preprocess call in `TransformService`;
+promotion result now recorded on `ImageRecord_LAMBDA.SubjectGeometryPromoted` so the evidence line survives
+the move), and `Tx_CenterAndStretch` had to be made to read the shared helper for the "single source of
+truth" acceptance to mean anything.
+
+**Acceptance met.** `FinalOutputSizeTests` (10 assertions across 8 facts) pins literal pixel counts, not
+re-derivations of the same expression: the 1800→1948 worked example, the bleed case (`min(W,H)`, no margin
+term), the 740/739 boundary from both sides, minimality at 741 (no scale) vs 739 (scale), and the routing
+predicate's three cases. Transform suite 83/83.
+
+Original spec follows.
 
 Extract a single deterministic function that, given the salient bbox + intersection state + margin, returns
 the **exact** final-output longest dimension the pipeline will produce — reusing each routing's own
@@ -216,9 +313,45 @@ helper is the single source of truth. No behavior change yet.
 ---
 
 ### T-4920 · Unified upscale-scale + ESRGAN/Lanczos gate + KO
-**Status:** Blocked | **Profile:** P1-feature-worker
-**Blocked-by:** [[T-4910]], [[T-4930]]
+**Status:** Review | **Profile:** P1-feature-worker
 **Found by:** [[T-4900]]
+
+**Implemented 2026-07-29 — awaiting reviewer Approve.** `UpscaleAsync` rewritten to the unified model:
+minimal scale from `FinalOutputSize.MinimalScaleToReach(MinOutputWidth, …)`, then the toggle picks resampler
+and cap only — ESRGAN (local session or the remote host) to `MaxUpScaleFactor`, local Lanczos4 to the new
+`MaxLanczosOnlyUpScaleFactor`. Past the applicable cap → `PREPROCESS_UPSCALE_EXCEEDED`, and the OFF message
+appends "Enable ESRGAN upscaling to process this image." The too-small KO is retained and now measures the
+promoted box. New config key `Output.Images.Resize.MAXIMUM_UpScale_LanczosOnly` = 1.33, `RequireDouble` +
+`AssertPositive` + a new invariant that it may not exceed `MAXIMUM_UpScale`.
+
+**Also here (T-4900 defects 1 and 2):** `ScaleGeometryToUpscaledImage` moves `BoundingBox` and
+`LegacySalientBox` into the enlarged space and the BGR `Mat` handed downstream is re-decoded from the new
+bytes; width and height are scaled first and never clamped so the longest side lands on exactly the pixel
+count the scale was derived from, with the origin absorbing the ≤1px rounding overhang. `Tx_CropSquare` now
+writes its cropped bytes and crops against the decoded image's own dimensions. Deliberately not scaled:
+`ImageRecord_Base.Width`/`Height` (the original-resolution contract Export's upscale-manifest todo depends
+on) and `lambda.Subject` (pre-upscale evidence, self-consistent with its own mask).
+
+**Two consequences worth knowing before tuning any of these numbers:**
+- **740, not 800, is the pass-through threshold** on the centre-and-stretch route. Images with a 740–800px
+  bbox used to be upscaled and now are not — that is the "reduces ESRGAN work" effect, and it is why a
+  re-run's KO/upscale counts will not match older evidence.
+- **The Lanczos-only cap is unreachable on the centre-and-stretch route at current config values.** A bbox at
+  the 570px input floor needs 740/570 = 1.30×, already inside 1.33×. The OFF-mode KO can only fire on the
+  bleed route, for images whose *shorter side* is under 602px. This falls out of the numbers; it is not a
+  designed guarantee, and changing `MinInputSizeInPixels`, `MinOutputWidth`, `WhiteSpaceMargin` or either cap
+  changes it. Documented in `PRISM-transform-generate.md` and asserted by the test comments.
+
+**Acceptance met.** `UpscaleGateTests` (8 facts, `jb/src/tests/Prism.Core.Tests/Services/`) — no-upscale when
+already clear, OFF→Lanczos locally with zero calls to the ESRGAN service, ON→ESRGAN service reached, OFF cap
+KO with the toggle named, ON processing the same image, ON past 1.42 KO'ing without the remedy sentence,
+too-small KO retained, and geometry-follows-pixels measured against the returned image rather than against
+the computed scale. Geometry is pinned by putting an exact `SubjectDetection` on the record rather than by
+crafting pixels the detector has to rediscover, so the tests are deterministic and GPU-free. `RemoteUpscale
+RoutingTests` updated to the new bar and now also asserts the final size clears it. Core 153/153 (incl. 10
+CiMini pipeline-integration), Transform 83/83, Matching 230/230, Upscale 17/17, Generate 10/10.
+
+Original spec follows.
 
 Rewrite `ImagePreProcessor.UpscaleAsync` to the unified model. Using T-4910's exact final-size calc,
 compute the **minimal** scale `s ≥ 1.0` such that the computed final output ≥ `MinOutputWidth` (as little as
@@ -241,9 +374,31 @@ family as the existing top-up. Lanczos-only default keeps a full run's upscale c
 ---
 
 ### T-4930 · ESRGAN toggle plumbing (per-job parameter, default OFF)
-**Status:** Blocked | **Profile:** P1-feature-worker
-**Blocked-by:** [[T-4905]]
+**Status:** Review | **Profile:** P1-feature-worker
 **Found by:** [[T-4900]]
+
+**Implemented 2026-07-29 — awaiting reviewer Approve.** `PrismProcessingParameters.AllowEsrganUpscale`
+(no initializer, so an omitted field is false), `PrismProcessRequest.AllowEsrganUpscale`, mapped in
+`PrismProcessIngressReader`, read once in `TransformService` and passed to `PreprocessAsync`.
+
+**Deviation from the spec, deliberate:** the flag is read off `matched.Ingest.Parameters` inside
+`TransformService` rather than threaded as a method argument like `headcut`. The parameters already ride
+inside `MatchingResult` across the matching→transform HTTP boundary — the ServiceHost route reads `Transform`
+and `Headcut` exactly this way — so one read cannot be dropped at a call site, and the alternative was
+signature churn across `ITransformService`, `Pipeline`, `PrismService`, the ServiceHost route and the HTTP
+client for a boolean already on the record.
+
+`PreprocessAsync` has only two call sites (`TransformService` and `RemoteUpscaleRoutingTests`); the parameter
+is required, not defaulted, so a new call site cannot silently inherit the wrong mode. Match-stage usage
+checked: there is none.
+
+**Acceptance met** except one item that has no home: `ProcessingParametersRoundTripTests` covers the
+service-boundary round-trip under `JsonSerializerDefaults.Web`, omitted-means-false, and explicit-true. The
+get-only-dict trap does not apply — these are `bool { get; init; }`. **Not covered:** the
+`PrismProcessRequest` → `PrismProcessingParameters` mapping itself, because there is no `Prism.Api` test
+project and the request record is `internal`. Follow-up ticket territory, not a defect in this work.
+
+Original spec follows.
 
 Add a per-job boolean (proposed `AllowEsrganUpscale`, **default false**) to `PrismProcessingParameters`,
 accept it on the `POST /PRISM/process` multipart request, and thread it through `TransformService` →
@@ -261,9 +416,21 @@ behavior is T-4920.
 ---
 
 ### T-4940 · Workbench UI toggle for ESRGAN upscaling
-**Status:** Blocked | **Profile:** P1-feature-worker
-**Blocked-by:** [[T-4930]]
+**Status:** Review | **Profile:** P1-feature-worker
 **Found by:** [[T-4900]]
+
+**Implemented 2026-07-29 — awaiting reviewer Approve.** Added as a fifth entry in
+`JobParameterPanel`'s `binaryParameterFields` ("High-quality upscaling (ESRGAN — slower)",
+`request.allowEsrganUpscale`), so it renders through the same checkbox path as the existing four rather than
+introducing a parallel control. `allowEsrganUpscale` added to the `PrismProcessingParameters` TS interface,
+to `defaultParameters` in `WorkbenchShell` as `false`, and to both request builders in `prismApiClient`
+(the match-lite builder hardcodes `false` alongside its other disabled options). `npm run typecheck` and
+`npm run build` both green.
+
+Note: Headcut is on `PrismProcessingParameters` server-side but is not on `PrismProcessRequest` and has no UI
+control — it can't be set by any caller today. Out of scope here; worth its own ticket.
+
+Original spec follows.
 
 Surface the toggle in the Next.js workbench (`jb/src/workbench/web`) as an unchecked-by-default checkbox
 (e.g. "High-quality upscaling (ESRGAN — slower)"), wired to the T-4930 request field. Match existing
@@ -446,6 +613,42 @@ analyzer to prefer the alpha subject, then close that todo per the todo lifecycl
 
 **Files:** `jb/src/core/Services/Matching/Analyzers/Analyzer_SubjectGeometry.cs`,
 `jb/src/core/Services/Matching/Analyzers/Analyzer_SubjectGeometry.md`.
+
+---
+
+### T-4970 · First-pass phenotype assignment validation
+**Status:** Blocked | **Profile:** P1-feature-worker
+**Blocked-by:** the [[T-4900]] epic (user decision, 2026-07-29)
+**Found by:** [[T-2600]] rewrite, 2026-07-29 — the near-term step T-2600 had described but never assigned
+to a ticket.
+
+Phenotype assignment produced **zero** results on real images until 2026-07-28: `ImageFeatureAnalyzer.Refine`
+threw on every image and `MatchingService`'s non-fatal catch swallowed it, so the counter read 0 and nobody
+noticed. That is fixed (refinement failures 86 → 0 on SPACINI29), but **no one has yet looked at what the
+pipeline now assigns.** Every claim about phenotype quality on this board predates a pipeline that was
+assigning phenotypes at all.
+
+This is the **light** first pass, not [[T-2600]]'s full acceptance bar. No labeled set, no confusion matrix,
+no <5% target — those stay with T-2600 and share their labeled-set dependency with [[T-4945]].
+
+**What to do:**
+1. Run `prism-evidence-report` on the standard dataset (SPACINI29 for volume; add a second dataset with a
+   non-`SOLIDCOLOR` background if one exists — SPACINI29 is entirely solid-colour).
+2. Report the actual distribution: how many images get a phenotype, how many fall through to the
+   provisional pick, how many get none, and which of the 20 phenotypes never fire.
+3. Spot-check by eye whether the assignments are plausible for the images they landed on.
+4. State a verdict in plain terms: is assignment good enough to base Transform routing on, or not.
+
+**Why it waits for T-4900:** the measurement instrument is a repeated full-dataset run, and upscale is the
+pipeline's dominant cost until the T-4900 toggle lands. Running this first means paying hours per
+iteration for a report that will need re-running anyway.
+
+**Acceptance:** a written distribution + verdict recorded on this ticket and in `jb/docs/`, enough for the
+orchestrator to make the `BypassPhenotypes` flip decision. Note [[T-4955]] must be fixed before the flip
+itself, not before this measurement.
+
+**Files:** `jb/docs/` (report destination), `jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`
+(read-only — no code change expected).
 
 ---
 

@@ -8,14 +8,54 @@
 Steps in order:
 1. **EXIF orient + flatten**: ImageSharp `AutoOrient()` + `BackgroundColor(White)` → encoded to flat JPEG (no alpha, sRGB).
 2. **Salient bounding box**: OpenCVSharp Canny + local-contrast sigmoid mask, computed at ≤512 px analysis resolution. Result written to `lambda.Features["salient-bbox"]` as `"x1,y1,x2,y2"` (normalized 0–1 floats, invariant culture). Confidence fixed at 0.99.
-3. **Upscale decision** (based on bbox pixel dimensions, not whole-image dimensions):
-   - bbox largest dimension `< MinInputSizeInPixels` (570 px) → KO `PREPROCESS_TOO_SMALL`
-   - `≥ MinOutputWidth` (800 px) → pass flat JPEG through unchanged
-   - Between 570–800 → `Upscaler.Upscale(bytes, scale)` (Real-ESRGAN ×2 + Lanczos4 top-up; DirectML when a hardware adapter is present, CPU EP otherwise — see `PRISM-model-runtime.md`)
-   - Required scale `> MaxUpScaleFactor` (1.42) → KO `PREPROCESS_UPSCALE_EXCEEDED`
-4. Returns upscaled flat-JPEG bytes or null on KO. Sets `lambda.IsKo`, `lambda.KoReasonCode`, `lambda.KoSafeMessage` on KO.
+3. **Settle the transform geometry** — `ImageTransformer.FinalizeGeometry(lambda, parameters, seed)` promotes a
+   confident `SubjectDetection` over the legacy salient bbox and applies the shadow-bottom shrink. This runs
+   *before* the upscale decision (T-4910): both steps change the box the Transformed stage crops on, so sizing
+   against the pre-promotion box would target a canvas the pipeline never builds.
+4. **Upscale decision — unified final-size bar (T-4920).** See the section below.
+5. Returns flat-JPEG bytes (enlarged or untouched) or null on KO. Sets `lambda.IsKo`, `lambda.KoReasonCode`,
+   `lambda.KoSafeMessage` on KO. When the bytes were enlarged, the record's geometry is enlarged with them and
+   the returned BGR `Mat` is re-decoded from the new bytes, so pixels and coordinates share one space.
 
-Called by `ImageTransformer` before routing; `lambda.Features["salient-bbox"]` is available to all Tx_ classes.
+Called from `TransformService` immediately before routing; `lambda.BoundingBox` is available to all Tx_ classes.
+
+### Unified upscale: same bar for both modes
+
+**The bar is the FINAL output image, not the bounding box.** Every upscale aims at the output reaching
+`MinOutputWidth` (800 px) on its longest side. That size is *computed exactly*, not predicted, by
+`FinalOutputSize` (`jb/src/core/Services/Transform/FinalOutputSize.cs`) — the single helper both the upscale
+stage and `Tx_CenterAndStretch` size against, so they cannot drift apart:
+
+| Routing | Final longest dimension | Margin term |
+|---|---|---|
+| No edge intersect → `Tx_CenterAndStretch` | `evenFloor(bboxLongest × (1 + 2·margin)) − 2` | yes (`CropTransformSettings.WhiteSpaceMargin`, 0.042 — note the cross-config read from `transform_Config.json`) |
+| Any edge intersect → `Tx_CropSquare` | `min(imageWidth, imageHeight)` | **no** — a bleeding subject gets no whitespace added |
+
+Worked example: a 1800 px bbox at margin 0.042 gives a 1948 px canvas. Inverting it, **740 px is the smallest
+bbox longest side that yields an 800 px canvas** (739 gives 798) — so images between 740 and 800 px, which the
+old rule upscaled, now pass through untouched.
+
+The `AllowEsrganUpscale` job parameter then picks only the resampler and the cap:
+
+| | Resampler | Cap | Over the cap |
+|---|---|---|---|
+| **OFF (default)** | Lanczos4, locally in `ImagePreProcessor` | `MaxLanczosOnlyUpScaleFactor` (1.33) | KO `PREPROCESS_UPSCALE_EXCEEDED`, message names the toggle |
+| **ON** | Real-ESRGAN via `Upscaler` / the remote Upscale host | `MaxUpScaleFactor` (1.42) | KO `PREPROCESS_UPSCALE_EXCEEDED` |
+
+The `< MinInputSizeInPixels` (570 px) → KO `PREPROCESS_TOO_SMALL` check is unchanged, except that it now
+measures the *promoted* box rather than the raw salient one.
+
+**Known reachability property at the current config values.** On the centre-and-stretch route the Lanczos-only
+cap can never fire: a bbox at the 570 px input floor needs 740/570 = 1.30×, already inside the 1.33× cap. The
+OFF-mode KO is therefore reachable only on the bleed route, for images whose *shorter side* is under 602 px.
+Changing `MinInputSizeInPixels`, `MinOutputWidth`, `WhiteSpaceMargin` or either cap changes this — it is a
+consequence of the numbers, not a designed guarantee.
+
+**Geometry travels with the pixels.** Upscale enlarges `lambda.BoundingBox` and `lambda.LegacySalientBox` by
+the same factor it enlarges the bytes. Deliberately *not* scaled: `ImageRecord_Base.Width`/`Height` (the
+original-resolution contract the upscale manifest reports against) and `lambda.Subject` (pre-upscale evidence
+that stays self-consistent with its own pixel mask; the box it contributed is already promoted into
+`BoundingBox` by this point).
 
 ---
 
@@ -33,7 +73,7 @@ Pre-step called inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast
 
 **Decision (T-2500, closed; reshaped by T-4110):** single `Upscaler` class (`Services/Upscale/Engine/Upscaler.cs`) — the model runs on every host; `OnnxSessionFactory` picks DirectML (hardware adapter present) or the CPU EP. No separate CPU algorithm exists (the former `ImageUpscaler` router and `Upscaler_c_p_u` Lanczos fallback are deleted).
 
-- Model: `Real-ESRGAN_x2plus.onnx` — fixed ×2 super-resolution. Located at `jb/src/core/Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus.onnx`.
+- Model: `Real-ESRGAN_x2plus_dynamic.onnx` — fixed ×2 super-resolution, dynamic input H/W. Located at `jb/src/core/Services/Upscale/Engine/ONNX/`, path from `Prism_Config.json`'s `Models.Upscale.Path`. **T-4905:** the original export declared a fixed `[1,3,64,64]` input, so an 800 px image ran as 625 serialized 64×64 tile passes (~122.9 s on the GPU). The RRDBNet is already spatially size-agnostic internally, so a metadata-only edit to the declared input shape — weights verified bit-identical, all 702 initializers hashing the same — lets the whole image run in one pass: **122.9 s → 10.19 s, ~12×**. The `_dynamic` file is gitignored (too large for git) and lives in the source tree next to the fixed-64 original.
 - Session init: `Upscaler.Initialize(modelPath, configPath)` called from `UpscaleService.Create()` on every host at startup.
 - Tensor pipeline: JPEG → BGR uint8 → NCHW float32 [0,1] → `_session.Run(["input"])` → NCHW float32 [0,1] × 2 → clamp → BGR uint8 → JPEG. Tensor names: `input` / `output`.
 - Top-up: remaining scale after ×2 SR applied via Lanczos4 resize.
@@ -42,7 +82,7 @@ Pre-step called inside `Tx_CenterAndStretch` when `lambda.Features["low-contrast
 
 ### Tile stitching — weighted blend (no seams)
 
-The committed model export has a fixed `[1, 3, 64, 64]` input, so `RunTiled` splits each image into overlapping tiles. Adjacent tiles' outputs are combined with a weighted blend across the overlap band rather than a hard crop-and-paste, so no seam is visible at internal tile boundaries:
+With the dynamic-shape model in use, `RunTiled` runs the whole image as a single tile (rounded up to even H/W — the model's `pixel_unshuffle(2)` reshape rejects odd dimensions; the existing pad plus the accumulator's bounds check clip the ×2 overshoot back to exactly `src × 2`). The tiling machinery below stays in place for a fixed-shape export and is the documented fallback if a large image ever exhausts GPU memory:
 
 - Each tile edge that faces a real neighboring tile discards a small band nearest the seam (least-accurate pixels, at the edge of the model's receptive field), then tapers from 0 to 1 across the remaining overlap with a raised-cosine ramp. An edge facing the true image border carries full weight throughout — there is no neighbor to blend against there.
 - Every output pixel accumulates a weighted sum from every tile that covers it (`AccumulateTile`) and is normalized by the accumulated weight at the end (`NormalizeAccumulator`). A pixel's "home" tile always contributes full weight, so the divide is never by zero.
@@ -143,6 +183,10 @@ When `Tx_DetailCropper` is selected but detects during pixel processing that the
 Notes:
 - `Tx_DetailCropper` may internally delegate to `Tx_CropSquare` when pixel-level border intersection blocks repositioning (see **Border Intersection Rule** above). This is not a routing decision.
 - `Tx_ProblemImageProcessor` never calls `Tx_CropSquare` — it applies a safe proportional resize only.
+- `Tx_CropSquare.Transform` **applies** its crop to `ProcessedBytes` (T-4920). Until then it recorded a
+  `CropRectangle` on the OutputRecord without touching the pixels, so the exported file was the whole frame
+  while the manifest claimed a square. It also crops against the decoded bytes' own dimensions rather than
+  `ImageRecord_Base.Width`/`Height`, which stay at their original-resolution ingress values.
 - While `BypassPhenotypes = true` (temporary PoC gate in `ImageTransformer.cs`), rule 1 skips the phenotype-null check and rule 2 always falls through to `Tx_CropSquare` (not `Tx_DetailCropper`).
 
 ## Det-Slot Exclusions for Tx_DetailCropper

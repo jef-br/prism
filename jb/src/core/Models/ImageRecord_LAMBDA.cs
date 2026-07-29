@@ -35,6 +35,13 @@ public class ImageRecord_LAMBDA : ImageRecord_Base {
     public BoundingBox? LegacySalientBox { get; set; }
 
     /// <summary>
+    /// True when <c>ImageTransformer.FinalizeGeometry</c> promoted the detector subject over the legacy
+    /// salient bbox. Set during preprocessing, read by the transform manifest — promotion has to be
+    /// settled before the upscale decision, so the flag outlives the call that produced it.
+    /// </summary>
+    public bool SubjectGeometryPromoted { get; set; }
+
+    /// <summary>
     /// All measured ImageFeatures for this image.
     /// Set by <c>ImageFeatureAnalyzer</c> and the CLIP classifier.
     /// </summary>

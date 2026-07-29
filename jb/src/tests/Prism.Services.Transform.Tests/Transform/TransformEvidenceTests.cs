@@ -28,9 +28,11 @@ public class TransformEvidenceTests {
             }
         };
 
+        ImageTransformer.FinalizeGeometry(lambda, Parameters, null);
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         string summary = lambda.OutputRecord!.SafeSummaryText;
+        Assert.Contains("promoted=True", summary);
         Assert.Contains("subject.producer=classical-cv", summary);
         Assert.Contains("subject.conf=0.90", summary);
         Assert.Contains("subject.hardShadow=True", summary);

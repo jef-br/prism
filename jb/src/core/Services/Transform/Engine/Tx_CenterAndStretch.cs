@@ -95,9 +95,8 @@ public class Tx_CenterAndStretch : IImageTransformation {
     // the resized product's longer side always equals finalBboxSize, which is always strictly
     // less than canvasSize (since margin > 0), so canvasSize - resizedSize is always positive.
     //
-    // canvasSize itself: raw = longestSide * (1 + 2*margin), floored, rounded down to the nearest
-    // even number, then reduced by 2px (antialiasing safety margin) — confirmed against a known
-    // worked example (bbox longest side 1800, margin 0.042 -> canvasSize 1948).
+    // canvasSize comes from FinalOutputSize.CenterAndStretchCanvasSize — the same helper the upscale
+    // stage sizes against, so the pixels produced here always match the size upscale targeted.
 
     private static (byte[] result, int canvasSize, double scaleFactor) CropResizeAndStretch(
         byte[] sourceJpeg, BoundingBox bbox, double margin, BgStretchConfig bgStretch) {
@@ -105,9 +104,7 @@ public class Tx_CenterAndStretch : IImageTransformation {
         using Mat cropped = decoded.SubMat(new Rect(bbox.X, bbox.Y, bbox.Width, bbox.Height));
 
         int longestSide = Math.Max(bbox.Width, bbox.Height);
-        int flooredRaw = (int)Math.Floor(longestSide * (1.0 + 2.0 * margin));
-        int evenRaw = flooredRaw - (flooredRaw % 2);
-        int canvasSize = evenRaw - 2;
+        int canvasSize = FinalOutputSize.CenterAndStretchCanvasSize(longestSide, margin);
 
         double finalBboxSize = canvasSize * (1.0 - 2.0 * margin);
         double scaleFactor = finalBboxSize / longestSide;

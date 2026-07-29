@@ -18,6 +18,7 @@ Accepts `multipart/form-data`.
   "generation": true,
   "format": "zip",
   "ReturnOriginalImages": false,
+  "allowEsrganUpscale": false,
   "Input": [
     "img1.jpg",
     "products.zip",
@@ -31,6 +32,10 @@ Accepts `multipart/form-data`.
 
 - Processing options in JSON, not query parameters.
 - `format` values: `"zip"` and `"json"`.
+- `allowEsrganUpscale` (T-4930) — **omitted means false**. False upscales undersized images with plain Lanczos
+  (capped at 1.33×); true uses Real-ESRGAN (capped at 1.42×). Both aim at the same final-output size bar, so
+  the flag trades processing time for detail recovery, not for output dimensions. See
+  `PRISM-transform-generate.md` → "Unified upscale".
 - `request.Input` contains remote input strings (HTTP links, Dropbox, WeTransfer, cloud links).
 - Clients do not classify inputs as image/Excel/zip — PRISM triages by accepted media type.
 

@@ -73,6 +73,14 @@ public sealed class PrismConfiguration {
     public int MaxOutputWidth { get; private set; }
     public int MaxOutputHeight { get; private set; }
     public double MaxUpScaleFactor { get; private set; }
+
+    /// <summary>
+    /// Upscale ceiling when the job did not opt into ESRGAN (<c>AllowEsrganUpscale</c> false, the
+    /// default): plain Lanczos may enlarge this much before the image is KO'd instead. Lower than
+    /// <see cref="MaxUpScaleFactor"/> because interpolation invents no detail — past this the result
+    /// is soft rather than merely enlarged.
+    /// </summary>
+    public double MaxLanczosOnlyUpScaleFactor { get; private set; }
     public double MaxDownScaleFactor { get; private set; }
     public int MinGeneratedImgWidth { get; private set; }
     public int MinGeneratedImgWidthHeight { get; private set; }
@@ -206,6 +214,7 @@ public sealed class PrismConfiguration {
             MaxOutputWidth = RequireInt32(root, cfgPath, "Output", "Images", "Processed", "MAXIMUM_SIZE_IN_PIXELS", "width"),
             MaxOutputHeight = RequireInt32(root, cfgPath, "Output", "Images", "Processed", "MAXIMUM_SIZE_IN_PIXELS", "height"),
             MaxUpScaleFactor = RequireDouble(root, cfgPath, "Output", "Images", "Resize", "MAXIMUM_UpScale"),
+            MaxLanczosOnlyUpScaleFactor = RequireDouble(root, cfgPath, "Output", "Images", "Resize", "MAXIMUM_UpScale_LanczosOnly"),
             MaxDownScaleFactor = RequireDouble(root, cfgPath, "Output", "Images", "Resize", "MAXIMUM_DownScale"),
 
             MinGeneratedImgWidth = RequireInt32(root, cfgPath, "Generation", "InputImages", "MINIMUM_SIZE_IN_PIXELS", "width"),
@@ -271,6 +280,8 @@ public sealed class PrismConfiguration {
         AssertPositive(this.MaxOutputWidth, cfgPath, "Output.Images.Processed.MAXIMUM_SIZE_IN_PIXELS.width");
         AssertPositive(this.MaxOutputHeight, cfgPath, "Output.Images.Processed.MAXIMUM_SIZE_IN_PIXELS.height");
         AssertPositive(this.MaxUpScaleFactor, cfgPath, "Output.Images.Resize.MAXIMUM_UpScale");
+        AssertPositive(this.MaxLanczosOnlyUpScaleFactor, cfgPath, "Output.Images.Resize.MAXIMUM_UpScale_LanczosOnly");
+        if (this.MaxLanczosOnlyUpScaleFactor > this.MaxUpScaleFactor) { throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Output.Images.Resize.MAXIMUM_UpScale_LanczosOnly ({this.MaxLanczosOnlyUpScaleFactor}) must be <= MAXIMUM_UpScale ({this.MaxUpScaleFactor}) — the cheap path may not be allowed to stretch further than the quality path."); }
         AssertPositive(this.MaxDownScaleFactor, cfgPath, "Output.Images.Resize.MAXIMUM_DownScale");
         AssertPositive(this.MinGeneratedImgWidth, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.width");
         AssertPositive(this.MinGeneratedImgWidthHeight, cfgPath, "Generation.InputImages.MINIMUM_SIZE_IN_PIXELS.height");

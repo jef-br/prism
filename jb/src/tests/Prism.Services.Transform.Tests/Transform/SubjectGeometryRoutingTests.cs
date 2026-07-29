@@ -26,6 +26,7 @@ public class SubjectGeometryRoutingTests {
             Subject = Subject(intersect: false, wholeFrameFallback: false)
         };
 
+        ImageTransformer.FinalizeGeometry(lambda, Parameters, null);
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         Assert.Equal(nameof(Tx_CenterAndStretch), lambda.OutputRecord?.TransformerType);
@@ -39,6 +40,7 @@ public class SubjectGeometryRoutingTests {
             Subject = Subject(intersect: true, wholeFrameFallback: false)
         };
 
+        ImageTransformer.FinalizeGeometry(lambda, Parameters, null);
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         Assert.Equal(nameof(Tx_CropSquare), lambda.OutputRecord?.TransformerType);
@@ -51,6 +53,7 @@ public class SubjectGeometryRoutingTests {
             Subject = Subject(intersect: false, wholeFrameFallback: true)
         };
 
+        ImageTransformer.FinalizeGeometry(lambda, Parameters, null);
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         Assert.Equal(nameof(Tx_ProblemImageProcessor), lambda.OutputRecord?.TransformerType);
@@ -64,6 +67,7 @@ public class SubjectGeometryRoutingTests {
             Subject = Subject(intersect: false, wholeFrameFallback: false, confidence: 0.20)
         };
 
+        ImageTransformer.FinalizeGeometry(lambda, Parameters, null);
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         Assert.Equal(legacyBox.Width, lambda.BoundingBox!.Value.Width);
@@ -78,6 +82,7 @@ public class SubjectGeometryRoutingTests {
             Subject = Subject(intersect: false, wholeFrameFallback: false, confidence: 0.50)
         };
 
+        ImageTransformer.FinalizeGeometry(lambda, Parameters, null);
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         Assert.Equal(800, lambda.BoundingBox!.Value.Width);

@@ -40,4 +40,11 @@ public sealed record PrismProcessingParameters {
     /// before centering. Has no effect when no face is detected.
     /// </summary>
     public bool Headcut { get; init; }
+
+    /// <summary>
+    /// When true, images below the final-output size bar are enlarged with Real-ESRGAN (slow, GPU-bound,
+    /// capped at MaxUpScaleFactor). Default false: plain Lanczos, capped at MaxLanczosOnlyUpScaleFactor.
+    /// Either way the target is the same final-output size — see ImagePreProcessor.UpscaleAsync.
+    /// </summary>
+    public bool AllowEsrganUpscale { get; init; }
 }

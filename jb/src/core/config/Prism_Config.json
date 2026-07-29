@@ -83,6 +83,7 @@
             },
             "Resize": {
                 "MAXIMUM_UpScale": 1.42,
+                "MAXIMUM_UpScale_LanczosOnly": 1.33,
                 "MAXIMUM_DownScale": 0.001
             },
             "Generated": {

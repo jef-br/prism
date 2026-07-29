@@ -13,5 +13,6 @@ internal sealed record PrismProcessRequest {
     public string Format { get; init; } = "zip";
     public bool ReturnOriginalImages { get; init; }
     public bool SkipClassification { get; init; }
+    public bool AllowEsrganUpscale { get; init; }
     public IReadOnlyList<string> Input { get; init; } = [];
 }

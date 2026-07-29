@@ -38,13 +38,23 @@ public static class ImageTransformer {
     /// behaviour toggles (T-4860) read it. Null when no family/seeding context is available.
     /// </summary>
     public static ImageRecord_LAMBDA TransformImage(ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters, TransformSeed? seed = null) {
-        bool promoted = PreferSubjectGeometry(lambda, parameters);
         TransformToggles toggles = TransformToggles.Resolve(seed, lambda.Subject);
         IImageTransformation transformer = SelectTransformer(lambda, colorMat, headcut, parameters, seed);
-        ApplyShadowAccounting(lambda, toggles, parameters, transformer);
         ImageRecord_LAMBDA result = transformer.Transform(lambda);
-        AppendTransformEvidence(result, toggles, promoted);
+        AppendTransformEvidence(result, toggles, lambda.SubjectGeometryPromoted);
         return result;
+    }
+
+    /// <summary>
+    /// Settles the geometry the Transformed stage will crop on — subject promotion first, then shadow
+    /// accounting — and records whether promotion fired. Called from
+    /// <c>ImagePreProcessor.PreprocessAsync</c> before the upscale decision (T-4910), so upscale sizes
+    /// against exactly the box the transform strategies later use rather than the pre-promotion one.
+    /// Runs once per image; <see cref="TransformImage"/> assumes it has already run.
+    /// </summary>
+    public static void FinalizeGeometry(ImageRecord_LAMBDA lambda, TransformParameters parameters, TransformSeed? seed) {
+        lambda.SubjectGeometryPromoted = PreferSubjectGeometry(lambda, parameters);
+        ApplyShadowAccounting(lambda, TransformToggles.Resolve(seed, lambda.Subject), parameters);
     }
 
     // T-4870: fold the detection + toggle evidence into OutputRecord.SafeSummaryText — the carrier the
@@ -75,11 +85,13 @@ public static class ImageTransformer {
     // shrink is not part of the crop-square or detail-crop contracts. The other two toggles
     // (product≈background, non-flat background) are computed for evidence and future upstream
     // detection-effort steering.
-    private static void ApplyShadowAccounting(ImageRecord_LAMBDA lambda, TransformToggles toggles, TransformParameters parameters, IImageTransformation transformer) {
-        if (transformer is not Tx_CenterAndStretch) return;
-        if (!toggles.ShadowAccounting || lambda.BoundingBox is null) return;
-        if (lambda.Features.GetValue("intersects-bottom") == "true") return;
-        BoundingBox box = lambda.BoundingBox.Value;
+    private static void ApplyShadowAccounting(ImageRecord_LAMBDA lambda, TransformToggles toggles, TransformParameters parameters) {
+        // Routing is decided by geometry alone here rather than by inspecting the selected strategy,
+        // because the shrink now runs before SelectTransformer. Same set of images either way: only a
+        // non-null, edge-free bbox reaches Tx_CenterAndStretch, and that also covers the old separate
+        // intersects-bottom guard.
+        if (!FinalOutputSize.RoutesToCenterAndStretch(lambda) || !toggles.ShadowAccounting) return;
+        BoundingBox box = lambda.BoundingBox!.Value;
         int shrink = (int)(box.Height * parameters.Crop.ShadowBottomShrinkFraction);
         if (shrink <= 0) return;
         box.Height = Math.Max(1, box.Height - shrink);
@@ -113,7 +125,7 @@ public static class ImageTransformer {
         if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null)) return new Tx_ProblemImageProcessor(parameters.ProblemImageProcessor, parameters.Output);
 
         // Step 2 — object touches at least one image edge.
-        if (hasEdgeIntersect(lambda.Features)) {
+        if (FinalOutputSize.HasEdgeIntersect(lambda.Features)) {
             // DetailCropper is phenotype-driven; while bypassing, fall back to the square crop.
             if (BypassPhenotypes) return new Tx_CropSquare(parameters.Output);
 
@@ -139,8 +151,5 @@ public static class ImageTransformer {
     private static bool IsDetailCropperDetSlotExcluded(ImageRecord_LAMBDA lambda) {
         bool isClothing = lambda.ProductTypeId is "topwear" or "bottomwear";
         return isClothing ? lambda.DetOrder <= 1 : lambda.DetOrder <= DefaultDetSlotExclusionMax;
-    }
-    private static bool hasEdgeIntersect(ImageFeatureSnapshot ImgFeat) {
-        return ImgFeat.GetValue("intersects-top") == "true" || ImgFeat.GetValue("intersects-bottom") == "true" || ImgFeat.GetValue("intersects-left") == "true" || ImgFeat.GetValue("intersects-right") == "true";
     }
 }

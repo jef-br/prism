@@ -17,6 +17,7 @@ export interface PrismProcessingParameters {
   transform: boolean;
   generation: boolean;
   ReturnOriginalImages: boolean;
+  allowEsrganUpscale: boolean;
   format: PrismOutputFormat;
 }
 
@@ -178,6 +179,7 @@ export class PrismApiClient {
       generation: input.parameters.generation,
       format: input.parameters.format,
       ReturnOriginalImages: input.parameters.ReturnOriginalImages,
+      allowEsrganUpscale: input.parameters.allowEsrganUpscale,
       Input: input.urls
     };
 
@@ -204,6 +206,7 @@ export class PrismApiClient {
       generation: false,
       format: "json",
       ReturnOriginalImages: false,
+      allowEsrganUpscale: false,
       Input: input.urls
     };
 

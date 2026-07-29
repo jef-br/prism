@@ -23,7 +23,29 @@ public class Tx_CropSquare : IImageTransformation {
 
     /// <inheritdoc/>
     public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage) {
-        BoundingBox crop = ComputeCenteredSquareCrop(InputImage.Width, InputImage.Height);
+        byte[]? bytes = InputImage.ProcessedBytes;
+
+        if (bytes is null) {
+            InputImage.OutputRecord = new ImageRecord_OUTPUT {
+                TransformStatus = TransformationStatus.Ko,
+                TransformerType = nameof(Tx_CropSquare),
+                InputWidth = InputImage.Width,
+                InputHeight = InputImage.Height,
+                FailureReason = "ProcessedBytes is null.",
+                SafeSummaryText = "Square crop skipped: no preprocessed bytes."
+            };
+            return InputImage;
+        }
+
+        // Crop against the bytes' own dimensions, not the record's ingress Width/Height: preprocessing
+        // may have enlarged the image, and the record keeps its original-resolution values.
+        using Image img = Image.Load(bytes);
+        BoundingBox crop = ComputeCenteredSquareCrop(img.Width, img.Height);
+        img.Mutate(x => x.Crop(new Rectangle(crop.X, crop.Y, crop.Width, crop.Height)));
+
+        using MemoryStream ms = new();
+        img.Save(ms, new JpegEncoder { Quality = this._cfg.JpegOutputQuality });
+        InputImage.ProcessedBytes = ms.ToArray();
 
         InputImage.OutputRecord = new ImageRecord_OUTPUT {
             TransformStatus = TransformationStatus.Ok,

@@ -80,6 +80,7 @@ const defaultParameters: PrismProcessingParameters = {
   transform: true,
   generation: true,
   ReturnOriginalImages: false,
+  allowEsrganUpscale: false,
   format: "zip"
 };
 

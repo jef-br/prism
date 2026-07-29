@@ -46,6 +46,11 @@ public sealed class TransformService : ITransformService {
         // to each per-image transform — no config lookup inside the parallel loop below.
         TransformParameters parameters = TransformParameters.FromConfig();
 
+        // Read off the job parameters rather than a method argument: the parameters already ride inside
+        // MatchingResult across the matching→transform HTTP boundary (the ServiceHost route reads
+        // Transform and Headcut the same way), so one read here cannot be dropped at a call site.
+        bool allowEsrganUpscale = matched.Ingest.Parameters.AllowEsrganUpscale;
+
         Dictionary<string, ImageRecord_INPUT> inputByName = matched.Ingest.NormalizedImages
             .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);
 
@@ -64,14 +69,20 @@ public sealed class TransformService : ITransformService {
             new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = cancellationToken },
             async (lambda, ct) => {
                 inputByName.TryGetValue(lambda.InitialFullName, out ImageRecord_INPUT? input);
-                (byte[]? preprocessed, Mat? colorMat) = await ImagePreProcessor.PreprocessAsync(lambda, input?.NormalizedJpgPath, prismConfig, this.remoteUpscale, ct);
+
+                // Seeding moved ahead of preprocessing (T-4910): the shadow-accounting toggle it feeds
+                // changes the bounding box, and the upscale decision inside PreprocessAsync sizes
+                // against that box. Resolving it afterwards would size against geometry the stage then
+                // discards.
+                familyById.TryGetValue(lambda.Family, out FamilyIDRecord? family);
+                TransformSeed seed = TransformSeed.Resolve(lambda, family);
+
+                (byte[]? preprocessed, Mat? colorMat) = await ImagePreProcessor.PreprocessAsync(
+                    lambda, input?.NormalizedJpgPath, prismConfig, parameters, seed, allowEsrganUpscale, this.remoteUpscale, ct);
 
                 if (lambda.IsKo) { colorMat?.Dispose(); return; }
 
                 lambda.ProcessedBytes = preprocessed;
-
-                familyById.TryGetValue(lambda.Family, out FamilyIDRecord? family);
-                TransformSeed seed = TransformSeed.Resolve(lambda, family);
 
                 using (colorMat) {
                     ImageTransformer.TransformImage(lambda, colorMat, headcut, parameters, seed);

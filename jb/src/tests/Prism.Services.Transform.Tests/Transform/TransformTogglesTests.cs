@@ -58,6 +58,7 @@ public class TransformTogglesTests {
             }
         };
 
+        ImageTransformer.FinalizeGeometry(lambda, Parameters, null);
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         // 0.06 * 800 = 48px trimmed from the bottom → height 752, bottom 852.
@@ -75,6 +76,7 @@ public class TransformTogglesTests {
             }
         };
 
+        ImageTransformer.FinalizeGeometry(lambda, Parameters, null);
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         Assert.Equal(800, lambda.BoundingBox!.Value.Height);
@@ -93,6 +95,7 @@ public class TransformTogglesTests {
             }
         };
 
+        ImageTransformer.FinalizeGeometry(lambda, Parameters, null);
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         Assert.Equal(nameof(Tx_CropSquare), lambda.OutputRecord?.TransformerType);

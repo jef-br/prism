@@ -107,7 +107,8 @@ internal static class PrismProcessIngressReader {
                 Generation = processRequest.Generation,
                 Format = processRequest.Format,
                 ReturnOriginalImages = processRequest.ReturnOriginalImages,
-                SkipClassification = processRequest.SkipClassification
+                SkipClassification = processRequest.SkipClassification,
+                AllowEsrganUpscale = processRequest.AllowEsrganUpscale
             }
         };
 
