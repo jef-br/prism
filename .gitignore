@@ -8,6 +8,7 @@
 # Test datasets — only CiMini is committed (see test/datasets/CiMini/README.md)
 test/datasets/*
 !test/datasets/CiMini
+!test/datasets/CiGolden
 
 # Knowledge graph output (generated locally by graphify)
 graphify-out/
