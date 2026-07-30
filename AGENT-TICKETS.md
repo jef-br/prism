@@ -92,14 +92,40 @@ unreachable.
 
 **What is left to do, in order:**
 1. ~~Finish the [[T-4900]] epic.~~ ✅ closed 2026-07-30, all five children reviewer-Approve.
-2. [[T-4970]] — run the first-pass phenotype validation and report the real distribution. **Ready now.**
-3. Fix [[T-4955]] (derived edge features go stale on promotion), then decide the `BypassPhenotypes` flip
-   from T-4970's data. **The flip has a checklist now** — three things are correct only because the flag is
+2. ~~[[T-4970]] — run the first-pass phenotype validation and report the real distribution.~~ ✅
+   **measured 2026-07-30**, then measured again after a second pass the same day. Full write-up:
+   `jb/docs/ImageNGP/phenotype-assignment-validation.md`.
+   **The first pass's answer — "7% coverage, remedy is two config thresholds" — was tested and is
+   wrong.** Lowering the thresholds raises coverage to 62% and the extra assignments are mostly
+   incorrect; at the shipped config the pipeline assigned 5 phenotypes to scorable images and **all 5
+   were wrong**. The real blockers were in the rules, and **both are now fixed** (T-4970, user
+   decisions): `occlusion-level` deleted as an alias of `intersection-count`, `model-detail-closeup`
+   narrowed to 3+ edges, and `back-on-model-partial` added — 21 phenotypes now. Measured effect on
+   SPACINI29 at a 0.30 bar: **correct 15 → 33, wrong 38 → 13**, with no threshold change at all.
+3. **Pick the threshold values and re-measure.** This is now genuinely next: the rule set no longer
+   distorts what a threshold change would show. The precision/coverage curve is in the doc (0.40 gives
+   100% precision at 24% coverage on SPACINI29). Expect a smaller win than the rule fix delivered —
+   all 13 remaining errors are upstream ([[T-4990]] detector under-count, CLIP orientation at 74%
+   argmax), not threshold-shaped.
+4. Fix [[T-4955]] (derived edge features go stale on promotion), then decide the `BypassPhenotypes` flip.
+   **The flip has a checklist now** — three things are correct only because the flag is
    currently `true` and break when it is flipped: [[T-4955]] itself, `FinalOutputSize.RoutesToCenterAndStretch`
    missing the `SelectedPhenotype is null` condition ([[T-4910]] review), and `Tx_ProblemImageProcessor`
    deriving output metadata from the unscaled original-resolution field ([[T-4920]] review).
-4. Only then open the full bar: labeled set, confusion matrix, <5% misassignment across the 20 phenotypes,
+   Add [[T-5010]] to that list: the treatment the user wants for ordinary catalogue crops
+   (centre + canvas resize + background stretch) is unreachable for every edge-touching image, which on
+   a real set is all of them — so flipping without it changes which wrong transform runs, not whether
+   the right one does.
+5. Only then open the full bar: labeled set, confusion matrix, <5% misassignment across the 21 phenotypes,
    no systematic error on any one. Commission **one** labeled set — [[T-4945]] needs the same asset.
+   Candidates for it are staged in `test/datasets/CiGolden/candidates/` (22 images pulled from FILA94,
+   MMERO26, HEROAUT3 and SPACINI29, described one by one in that folder's README); six cases still have
+   no source anywhere in the repo.
+
+**Ground truth now exists for SPACINI29** — `test/datasets/SPACINI29/RAW IMAGES/dataset notes.md`,
+user-authored, marked do-not-edit. It is the first hand-verified label set in the repo and it already
+corrected two claims that had been taken on faith: no image in that dataset is fully in frame, and
+`intersection-count` is only 76% accurate.
 
 Per-feature CLIP confidence calibration stays parked here (see `AGENTFEEDBACK.md`'s S109 entry): newly
 discovered confidence literals get named-const treatment, not config, until this ticket resolves.
@@ -710,6 +736,16 @@ the derived three and phenotype assignment has already run by that point. It bec
 anything downstream of Transform reads them, or if phenotype-driven routing is revived. Either recompute
 the three at promotion time or document them as pre-promotion-only.
 
+**Magnitude measured 2026-07-30 by [[T-4970]]'s second pass — this is not a corner case.** On
+SPACINI29, a run that includes the Transform stage leaves **36 of 86 images (42%)** with `intersects-*`
+flags that contradict `intersection-count`; the same dataset without Transform leaves 0/86. Concrete
+example: `23211041_03_A.jpg` reports one edge touched and a count of zero. It matters for phenotypes
+because `front-on-model-partial` gates on `intersects-top|bottom` while `front-on-model-full-product`
+gates on `intersection-count=0` — so one image can satisfy both mutually-exclusive rules, and
+first-rule-wins hands it to the full-product one. **T-4970 therefore reclassifies this ticket from
+"cleanup before the `BypassPhenotypes` flip" to "prerequisite before any phenotype rule or threshold
+tuning"**: tuning against a snapshot that contradicts itself on 42% of images is tuning against noise.
+
 **Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`,
 `jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`.
 
@@ -735,11 +771,168 @@ analyzer to prefer the alpha subject, then close that todo per the todo lifecycl
 ---
 
 ### T-4970 · First-pass phenotype assignment validation
-**Status:** Ready | **Profile:** P1-feature-worker
+**Status:** Review | **Profile:** P1-feature-worker
 **Unblocked 2026-07-30:** the [[T-4900]] epic closed (all five children Approve), so the repeated
 full-dataset run this measurement needs no longer pays the old ESRGAN cost.
 **Found by:** [[T-2600]] rewrite, 2026-07-29 — the near-term step T-2600 had described but never assigned
 to a ticket.
+
+**MEASURED 2026-07-30. Full write-up: `jb/docs/ImageNGP/phenotype-assignment-validation.md`**
+(indexed in `PRISM-index.md`). HTML report + raw dumps on the Desktop under
+`T-4970-phenotype-evidence/`. **No production code was changed** — this was a read-only measurement,
+as the ticket anticipated.
+
+**SECOND PASS, same day — the first pass's remedy was tested and is wrong.** The first pass said the
+blockage was "two config thresholds, config-only fix". Both the threshold sweep and a confirming
+real pipeline run at 0.30 say otherwise:
+- **Lowering `hero-orientation` alone changes nothing.** Coverage stays at exactly 7% at 0.45, 0.42,
+  0.40, 0.375 and 0.35, because every rule that reads orientation also reads `body-visible`, which is
+  UNKNOWN on 72/86 at its own 0.60 bar. The binding gate was never named in the first pass.
+- **Lowering all three raises coverage 7% → 62% and the extra assignments are mostly wrong.** Scored
+  against by-eye labels on the 48 images for which a correct rule exists at all: **at today's config
+  5 are assigned and 0 are correct**; at 0.45 it is 18 assigned, 0 correct; the best point on the
+  whole sweep is 0.25 (no threshold) at 25/48 = 52%. M11 asks for under 5% misassignment.
+- Method note: the rule replay reproduces the shipped pipeline **86/86 exactly**, and its 0.30
+  prediction was confirmed by a real harness run (predicted 53 assigned, actual 53, 85/86 identical
+  — the one difference is T-4955, see below). Config was reverted; working tree unchanged.
+
+**Three findings that supersede the threshold question, all new:**
+1. **`model-detail-closeup` over-fires on any edge-cropped model shot.** It keys on
+   `occlusion-level ∈ {closeup, partially-occluded}`, and `partially-occluded` is true on 55/86
+   simply because the model is cut by a frame edge. **Zero of the 86 images is honestly a detail
+   crop**, yet the rule claims 33 of them at a 0.45 bar. Feature-semantics defect, not calibration.
+   Worse, it is rule 5 and `front-on-model-partial` is rule 1 — so raising the orientation bar
+   *increases* detail-closeup's catch, which is exactly why all 6 of today's assignments are wrong.
+2. **There is no `back-on-model-partial` phenotype.** A back view cut by a frame edge is **38 of the
+   86 images (44%)** and has no correct label at any threshold. At 0.30 those images come out as
+   nothing (18), `model-detail-closeup` (16), `front-on-model-partial` (4).
+3. **Only 3 of the 20 phenotypes have a positive case anywhere in this dataset**
+   (`front-on-model-partial` 42, `front-on-model-full-product` 3, `back-on-model-full-product` 3).
+   The other 17 are absent, not failing. This bounds what SPACINI29 can ever prove.
+
+**Also measured, and it changes [[T-4955]]'s priority:** in a run that includes the Transform stage,
+**36/86 images (42%)** carry `intersects-*` flags that contradict `intersection-count`; without
+Transform, 0/86. `front-on-model-partial` gates on the flags and `front-on-model-full-product` gates
+on the count, so one image can satisfy both mutually-exclusive rules and first-rule-wins picks the
+wrong one. T-4955 moves from "cleanup before the flip" to **prerequisite for any rule tuning** —
+tuning against an inconsistent snapshot is tuning against noise.
+
+**Revised order of work** (was: pick thresholds → re-measure): fix the rule set first (the two
+product decisions in finding 1 and 2), then T-4955, then thresholds, then the purpose-built dataset,
+then the flip.
+
+**BOTH RULE DECISIONS TAKEN AND IMPLEMENTED, 2026-07-30 (user).** No thresholds touched.
+1. **`occlusion-level` removed from the taxonomy** — "it's intersection count in disguise". Its
+   producer derived it from nothing else (0→full-product, 1→mostly-visible, 2→partially-occluded,
+   3+→closeup), so all 13 rules that used it now state `intersection-count` directly and the
+   substitution is behaviour-identical. `DeriveOcclusionLevel`, `OcclusionLevelConfidence` and the
+   feature declaration are gone. To be reintroduced later as a real measurement.
+2. **`model-detail-closeup` narrowed to `intersection-count >= 3`** — a real detail crop fills the
+   frame; an ordinary catalogue crop touches 2 edges. Accepting both discarded the only discriminator.
+3. **`back-on-model-partial` added** (21 phenotypes now). Det slots per user: topwear det1 *ahead of*
+   `back-on-model-full-product`; bottomwear new det5 (lifestyle/label/material each shift one later);
+   footwear new det7 just before lifestyle; bags-accessories + default share the existing back slot
+   behind `back-packshot`, so a real back packshot always wins.
+
+**Measured on real images.** At the shipped config the 6 wrong `model-detail-closeup` assignments are
+gone (86/86 now unassigned — the honest answer at a bar CLIP never clears). At a 0.30 bar
+(measurement only, reverted), scored against the user's hand-verified labels over all 86 images:
+**correct 15 → 33, wrong 38 → 13**, from rule changes alone. All 13 survivors are upstream faults —
+9 CLIP orientation errors, 4 detector under-counts — none fixable in `ImageRoles.json`.
+Suites: Matching 229/229, Core 154/154, Transform 83/83, Generate 10/10, Upscale 17/17.
+
+**Ground truth now exists** at `test/datasets/SPACINI29/RAW IMAGES/dataset notes.md` (user-authored,
+do-not-edit). It corrected this ticket's own scoring: **no SPACINI29 image is fully in frame**, so
+the earlier "3 front-full + 3 back-full" labels were wrong and every image is a partial. It also
+yielded the first accuracy figure for `intersection-count`: **65/86 = 76%, every error an
+under-count**, and `hero-is-human` at 85/86.
+
+**Two upstream defects this exposed, each needing its own ticket:** the subject detector reports zero
+intersections on 6 images that touch an edge (gating all six packshots, all three ghosts and both
+full-product phenotypes on a wrong answer); and `Analyzer_FilenameEvidence` writes orientation at
+0.75 — above every CLIP score — from bare `top`/`bottom`/`back` tokens, which are **15/16 false
+positives** on this repo's filenames ("freya_**top**_cinzia_skirt_F" → orientation TOP).
+
+**Verdict: NO. Do not flip `BypassPhenotypes`.** On SPACINI29 (86 images, 86 OK, 45 families):
+
+| Outcome | Count |
+|---|---|
+| Phenotype rule fully satisfied | **6 (7%)** |
+| No rule satisfied, provisional pick survived | **0** |
+| No phenotype at all | **80 (93%)** |
+
+All 6 got the *same* phenotype, `model-detail-closeup`. **19 of 20 phenotypes never fired.** The split
+above was produced by re-implementing `PhenotypeRuleSet.EvaluateCandidates`/`IsContradicted` against the
+dumped snapshots (the dump records only the merged `SelectedPhenotype`); the reimplementation **agreed
+with the pipeline on all 86 images, 0 disagreements**, so the rule engine itself is sound.
+
+**Root cause — two config thresholds set above the model's achievable range.** Cause: the bar is higher
+than CLIP ever scores. Effect: the feature is never written, so it reads UNKNOWN, and UNKNOWN never
+satisfies a condition (`PhenotypeRuleSet.cs:125`). Consequence: **13 of the 20 phenotypes are unreachable
+on *any* image**, whatever it depicts — the 4 orientation-bearing on-model rules, all 6 packshots, all 3
+ghosts.
+
+| Feature | UNKNOWN on | Bar | Best score seen | Cleared |
+|---|---|---|---|---|
+| `hero-orientation` | 86/86 | 0.60 | **0.582** | **0** |
+| `head-visible` | 86/86 | 0.65 | **0.589** | **0** |
+| `multiple-products` | 86/86 | — (YOLO never writes `false`) | — | 0 |
+| `body-visible` | 72/86 | 0.60 | 0.736 | 14 |
+
+The 6 that fired are an artifact: `model-detail-closeup` is the only human-branch rule that does *not*
+require `hero-orientation`, so it is the only one that can fire. Eyeballed — `23211056_35_A.jpg` is a
+front-facing bust crop whose honest label is `front-on-model-partial`.
+
+**The remedy is config-only and needs no new surface.** `Prism_Config.json` →
+`Classification.Confidence_Thresholds` already carries `hero-orientation`/`head-visible`. Against the
+`_A`/`_B` filename convention (verified by eye), the orientation **argmax** is 74.4% correct overall and
+confidence separates cleanly — 0.40 → 21 images at **100%** precision; 0.35 → 38 at 84%; every one of the
+22 wrong calls scored ≤0.389. **The threshold value itself is a calibration decision and is deliberately
+NOT taken here.**
+
+**Ordering impact: phenotypes contribute nothing today.** 100% of OK images left Ordered with
+`IsOverflow: true`, so slots come purely from the overflow policy. Compounding it,
+`model-detail-closeup` and `lifestyle-context` **appear in no det slot for any of the 5 product types**.
+Output filenames are fine — `Exporter.Run` calls `ImageOrderer.CompactDetOrder`, so shipped names are
+`_det0`-based (checked, not assumed; this is archived [[T-2830]]'s symptom and it stays fixed).
+
+**Two structural rule findings, flagged not changed:** `ghost-side` is unreachable on SOLIDCOLOR
+(`side-packshot` is identical bar the background clause and evaluates first); `ghost-back` silently
+catches *intersecting* back packshots because `back-packshot` requires `intersection-count=0` and
+`ghost-back` carries no intersection condition.
+
+**The non-solid-background half was NOT measured.** MMERO26 is the only such dataset; a 60-image subset
+KO'd 59/60 on `MATCHES_MULTIPLE_FAMILYIDS`, and a KO'd image never reaches `Refine`
+(`MatchingService.cs:315`). Partly a subsetting artifact, so it proves nothing about the full 2024-image
+set — but `lifestyle-hero`/`lifestyle-context` remain unmeasured. Per user decision (2026-07-30), an
+image-by-image spec for a purpose-built dataset is now in the **root `jbtodo.md`** ("Phenotype validation
+needs a purpose-built dataset"); the same asset serves [[T-4945]] and [[T-4948]].
+
+**Found in passing, own ticket:** the CiMini E2E golden is red → [[T-4980]].
+
+**Open decisions this measurement deliberately did not take** (listed in full at the end of the doc).
+The first two are new on the second pass and now sit *ahead* of the threshold question:
+**should `model-detail-closeup` stop matching edge-cropped on-model shots**, and **should
+`back-on-model-partial` be added to the taxonomy**. Then: threshold values; whether
+`model-detail-closeup`/`lifestyle-context` deserve det slots; whether `ghost-back`'s intersection gap
+is a defect; whether `Analyzer_MultipleProducts` should write `false`; whether CLIP's dead
+`hero-is-human` path (bar 0.90, max 0.867 — YOLO covers it) should be re-barred.
+
+**Review gate note — updated 2026-07-30. The gate now plainly applies.** The earlier note argued the
+P1 review bar was debatable because the ticket carried no code diff. That is no longer true: the two
+rule decisions were implemented here, so the ticket now touches `ImageRoles.json`, `ImageNGP.json`,
+`DetOrderRules.json`, `ClassifyConfig.json`, `ImageFeatureAnalyzer.cs` and four test files.
+**Needs a reviewer verdict before Done.** What a reviewer should attack first: whether the
+`occlusion-level` → `intersection-count` substitution really is behaviour-identical on all 13 rules
+(the mapping is 0/1/2/3+ → full-product/mostly-visible/partially-occluded/closeup), and whether the
+bottomwear det5 insertion shifting lifestyle/label/material one slot later is safe for existing
+customers' expected filenames.
+
+**Still open on this ticket:** thresholds. The rule set no longer distorts what a threshold change
+would show, so picking `hero-orientation` / `head-visible` / `body-visible` values and re-measuring is
+the next step — see the curve in the doc. Everything past that needs the purpose-built dataset.
+
+Original spec follows.
 
 Phenotype assignment produced **zero** results on real images until 2026-07-28: `ImageFeatureAnalyzer.Refine`
 threw on every image and `MatchingService`'s non-fatal catch swallowed it, so the counter read 0 and nobody
@@ -768,6 +961,162 @@ itself, not before this measurement.
 
 **Files:** `jb/docs/` (report destination), `jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`
 (read-only — no code change expected).
+
+---
+
+### T-4980 · CiMini E2E golden is red, and `dotnet test` cannot see it
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-4970]] measurement, 2026-07-30 — incidental, unrelated to phenotypes.
+
+`pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini` **fails**, verified by running it:
+
+```
+[CI] Full FAILED with 4 issue(s):
+  - Status mismatch for CARDIGAN_MAGENTA76_DETAIL.jpg: expected 'Ok' got 'Ko'
+  - FinalFileName mismatch ...: expected '90861052_det2.jpg' got ''
+  - DetOrder mismatch ...: expected '2' got ''
+  - Result ZIP missing output image: 90861052_det2.jpg
+```
+
+All four issues are one image. Reproduced in-process via the evidence harness; the KO reason is
+`PREPROCESS_TOO_SMALL — Salient object 471px < minimum 570px`.
+
+**Cause:** [[T-4920]] deliberately changed the too-small KO to measure the **promoted** subject box
+rather than the legacy salient box. `CARDIGAN_MAGENTA76_DETAIL.jpg` is a 959×1013 detail shot whose
+promoted box is 471px — under the 570px `MinInputSizeInPixels` floor. **Effect:** an image the golden
+expects to ship as `90861052_det2.jpg` is now rejected. **Consequence:** the end-to-end gate documented
+in `CLAUDE.md` is red, and one CiMini family lost its detail image.
+
+T-4920's own review anticipated that "a re-run's KO/upscale counts will not match older evidence" — the
+golden was simply never recaptured after the [[T-4900]] epic landed.
+
+**The second half is the worse half: the xUnit suite cannot detect this.**
+`PipelineIntegrationTests.cs:127` asserts only the regex `_det\d+\.\w+$`, and **nothing in any test
+project reads `expected-manifest.json` or `expected-match.json`** — only the pwsh script does. So
+`dotnet test jb/src/PRISM.sln` stays green while the E2E gate is red. Every golden-detectable
+regression is currently invisible to the normal test command.
+
+**Decision needed before any fix — do not guess:** is the new KO correct behaviour (recapture the
+golden), or is a 471px promoted box on a legitimate detail shot a defect in the T-4920 change (the floor
+was written for whole-product shots, and a detail crop is legitimately small)? These lead to opposite
+edits. Note the same floor governs the [[T-4948]] contrast-floor work.
+
+**Next steps once that is settled:** (1) recapture or fix; (2) close the visibility gap — either have an
+xUnit test compare against the committed goldens, or make CI run `Invoke-CiPipeline.ps1` and fail the
+build on it. Today neither happens.
+
+**Files:** `test/datasets/CiMini/expected-manifest.json`, `test/ci/Invoke-CiPipeline.ps1`,
+`jb/src/tests/Prism.Core.Tests/PipelineIntegrationTests.cs`,
+`jb/src/core/Services/Matching/ImagePreProcessor.cs`, `.github/workflows/ci.yml`.
+
+---
+
+### T-4990 · Subject detector under-counts frame intersections on 1 image in 4
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-4970]] second pass, 2026-07-30 — first measurement against hand-verified ground truth.
+
+`SubjectEdgeDetector` was scored against `test/datasets/SPACINI29/RAW IMAGES/dataset notes.md`
+(user-authored, do-not-edit), which records the true intersection count for all 86 images.
+
+| Truth | Measured 0 | Measured 1 | Measured 2 |
+|---|---|---|---|
+| 1 intersection (16 images) | **6** | 10 | 0 |
+| 2 intersections (70 images) | 0 | **15** | 55 |
+
+**65/86 = 76% correct, and every one of the 21 errors under-counts.** Not one image is over-counted,
+which points at a detection threshold or an edge-strip width rather than random noise. Identical in a
+classify-only run and a with-Transform run, so this is the detector itself, not [[T-4955]].
+
+**Why it matters more than 76% sounds.** `intersection-count = 0` is the hard gate on
+`front-on-model-full-product`, `back-on-model-full-product`, all six packshots and all three ghosts —
+12 of 21 phenotypes. Cause: the detector reports zero intersections for 6 images whose subject runs off
+the top edge. Effect: those images satisfy a gate that ground truth says nothing in the dataset should
+satisfy. Consequence: they are labelled full-product shots, and after the `BypassPhenotypes` flip a
+wrong full-product label routes them to the wrong transform. Measured directly at a 0.30 bar: 4 images
+reached `front-on-model-full-product` and all 4 are wrong.
+
+**Acceptance:** re-score against the same notes file and report the confusion matrix; state whether the
+fix is a threshold, the edge-strip width, or the analysis downscale (`MaxAnalysisSize` = 1024, while the
+reference prototype ran at 2400 — see [[T-4948]], the two interact). Do not tune against the 6 failing
+images alone; the 15 that read 1 instead of 2 are the same defect.
+
+**Files:** `jb/src/core/Services/Matching/Classify/SubjectEdgeDetector.cs`,
+`jb/src/core/config/ClassifyConfig.json`, `test/datasets/SPACINI29/RAW IMAGES/dataset notes.md`.
+
+---
+
+### T-5000 · Filename orientation analyzer fires on garment words, not camera views
+**Status:** Ready | **Profile:** P1-feature-worker
+**Found by:** [[T-4970]] second pass, 2026-07-30.
+
+`Analyzer_FilenameEvidence` writes `hero-orientation` from whole-token filename matches at a fixed
+**0.75** confidence (`analyzer_Config.json` → `Filename.OrientationConfidence`). That is above every
+CLIP orientation score ever recorded on real data (max 0.582) and above the 0.60 bar, so **whenever a
+filename token matches, it wins outright.** It is the only path that can put a confident orientation on
+an image today.
+
+Scanned across all 14,427 images in `test/datasets/`: **16 filenames contain an orientation token, and
+15 of the 16 are false positives.**
+
+| Filename | Token | What it actually means |
+|---|---|---|
+| `freya_top_cinzia_skirt_F` (×4) | `top` | the garment is a *top*; `_F` says the view is front |
+| `Malibu_ivory_TOP` (×2), `Malibu_ivory_BOTTOM` (×2), `Alba_ivory_B - BOTTOM` (×2) | `top`/`bottom` | bikini top and bottoms — the pieces |
+| `F-MODE-GO-…-BACK-STRAP-SANDALS-…` (×5) | `back` | *back-strap*, part of the product name |
+| `25W_538_back` | `back` | genuinely a back view |
+
+Cause: `top`, `bottom` and `back` are common apparel nouns as well as view words, and the analyzer
+matches them bare. Effect: a front-facing model shot gets `hero-orientation = TOP` at 0.75. Consequence:
+CLIP cannot outvote it, so any threshold chosen for CLIP orientation is moot on batches whose filenames
+carry these words — and customer filenames routinely do.
+
+**Also in scope, same file:** there are **two independent keyword lists that disagree** —
+`OrientationTokens` in `Analyzer_FilenameEvidence.cs` (25 entries, hard-coded) and
+`DetOrderKeywordStems.json` (12 groups, config, and it carries `sole`, `outsole`, `close`, `zoom`,
+which the analyzer's list does not). Decide whether they should be one list.
+
+**Acceptance:** the 15 false positives above no longer write an orientation, `25W_538_back` still does,
+and the hard-coded/config list duplication is either merged or documented as deliberate. Candidate
+approaches — require a view-ish neighbour token, require a positional convention, or drop the bare
+`top`/`bottom` tokens — are a design choice, not settled here.
+
+**Files:** `jb/src/core/Services/Matching/Analyzers/Analyzer_FilenameEvidence.cs`,
+`jb/src/core/config/analyzer_Config.json`, `jb/src/core/config/DetOrderKeywordStems.json`.
+
+---
+
+### T-5010 · Centre-and-stretch is unreachable for the images that need it most
+**Status:** Ready | **Profile:** P4-critical-architecture
+**Found by:** user observation during [[T-4970]], 2026-07-30.
+
+Reviewing SPACINI29 the user stated the required treatment for the bulk of it: *"horizontally centers
+the subject, adjusts the canvas to size it correctly and then adds background by stretching it on each
+side as needed."* That is `Tx_CenterAndStretch`.
+
+`ImageTransformer.SelectTransformer` cannot reach it for those images. Step 2 catches anything where
+`FinalOutputSize.HasEdgeIntersect` is true and routes to `Tx_CropSquare` (or `Tx_DetailCropper` for a
+closeup phenotype); `Tx_CenterAndStretch` is Step 3, reached only when the subject touches **no** edge.
+
+Cause: the routing treats "touches a frame edge" as disqualifying for centre-and-stretch. Effect: on
+SPACINI29 **86 of 86 images touch at least one edge** (hand-verified: 16 touch one, 70 touch two), so
+not one of them can reach the treatment the user says they need. Consequence: for an ordinary catalogue
+crop — head cut at the top, hem at the bottom — the pipeline ships a square crop where the intended
+output is a centred, canvas-resized, background-stretched image.
+
+Note this is independent of the `BypassPhenotypes` flip: the bypass only changes which of
+`Tx_CropSquare` / `Tx_DetailCropper` Step 2 picks, never whether Step 3 is reached.
+
+**Decision needed before any code — do not guess.** Options seen so far: relax Step 2 to only divert
+on 3+ edges; make top/bottom intersections non-disqualifying while left/right stay disqualifying (a
+model cut at the head and hem still has horizontal whitespace to stretch, which is what the user
+described); or give `Tx_CenterAndStretch` a bleed-aware variant. These produce visibly different
+output. **Per the Tx_* governance rule, no new or restructured `Tx_*` class without explicit user
+approval.**
+
+**Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`,
+`jb/src/core/Services/Transform/FinalOutputSize.cs`,
+`jb/src/core/Services/Transform/Engine/Tx_CenterAndStretch.cs`,
+`jb/src/core/Services/Transform/Engine/Tx_CropSquare.cs`.
 
 ---
 

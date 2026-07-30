@@ -62,7 +62,7 @@ Confidence scale: `very-high` ≥ 0.95 | `high` 0.85–0.94 | `medium` 0.70–0.
 
 | Feature id | Description | Datatype | Possible values | Extraction difficulty | Expected confidence |
 |---|---|---|---|---|---|
-| `occlusion-level` | How much of the product is visible in frame | Enum | `full-product`, `mostly-visible`, `partially-occluded`, `closeup`, `unknown` | medium | medium |
+| ~~`occlusion-level`~~ | **Removed 2026-07-30 ([[T-4970]], user decision).** It claimed to say how much of the product was visible, but its producer derived it from nothing but `intersection-count`: 0 → `full-product`, 1 → `mostly-visible`, 2 → `partially-occluded`, 3+ → `closeup`. Nothing was ever occluding anything — it counted frame edges the subject touches, under a name that suggested a measurement it never made. Every rule that used it now states `intersection-count` directly, which is behaviour-identical and honest. To be reintroduced later as a real measurement. | — | — | — | — |
 | `crop-tightness` | How tightly the image is cropped to the subject (ratio of subject bounding box to image area) | Float [0.0–1.0] | Any float | low | high |
 | `product-coverage-ratio` | Fraction of the total image area covered by the primary product | Float [0.0–1.0] | Any float | medium | medium |
 | `image-occupancy` | Overall "busyness" of the image — how much of the frame contains non-background content | Float [0.0–1.0] | Any float | low | high |

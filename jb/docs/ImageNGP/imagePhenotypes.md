@@ -28,7 +28,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `front-packshot` |
 | **Description** | Hero product shot photographed from the front on a solid-color or transparent background; no human present. Classic e-commerce reference image. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = FRONT`, `background-type = SOLIDCOLOR OR clipping-path = true`, `occlusion-level = full-product`, `intersection-count = 0` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = FRONT`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | true |
 | **Rationale** | Solid/white background + no human + front symmetry + full product in frame is a highly distinctive and common combination. Symmetry score + background detection + intersection check are all reliable on CPU. |
@@ -41,7 +41,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `back-packshot` |
 | **Description** | Hero product shot photographed from the rear on a solid-color or transparent background; no human present. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BACK`, `background-type = SOLIDCOLOR OR clipping-path = true`, `occlusion-level = full-product`, `intersection-count = 0` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BACK`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | Distinguishing BACK from FRONT without human presence requires asymmetric product features (labels, logos, closures). Symmetry score alone is insufficient; product-type-specific texture/logo detection needed. |
@@ -54,7 +54,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `side-packshot` |
 | **Description** | Hero product on a solid/transparent background viewed from the side (left or right profile). |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = SIDEON`, `background-type = SOLIDCOLOR OR clipping-path = true`, `occlusion-level = full-product` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = SIDEON`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | Distinguishing SIDE from DIAGONAL is ambiguous for soft goods (clothing). Reliable for rigid products (bottles, shoes) where silhouette profile differs clearly. |
@@ -67,7 +67,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `diagonal-packshot` |
 | **Description** | Product on a solid/transparent background at a 3/4 diagonal angle. Common for shoes and footwear. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = DIAGONAL`, `background-type = SOLIDCOLOR OR clipping-path = true`, `occlusion-level = full-product` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = DIAGONAL`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | Diagonal orientation detection requires edge/silhouette asymmetry analysis. Reliable for shoes (distinctive sole/upper silhouette), less reliable for symmetric soft goods. |
@@ -80,7 +80,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `top-packshot` |
 | **Description** | Product photographed from directly above on a solid/transparent background. Common for accessories, bags, homeware. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = TOP`, `background-type = SOLIDCOLOR OR clipping-path = true`, `occlusion-level = full-product` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = TOP`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | true |
 | **Rationale** | Overhead camera angle (flat-lay) produces distinctive compositional patterns detectable by aspect ratio of product bounding box, high symmetry, and absence of perspective distortion. |
@@ -93,7 +93,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `bottom-packshot` |
 | **Description** | Product photographed from below (sole of shoe, base of appliance, underside of bag). |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BOTTOM`, `background-type = SOLIDCOLOR OR clipping-path = true`, `occlusion-level = full-product` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BOTTOM`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | BOTTOM orientation is rare and product-specific (shoe sole, bowl bottom). Detection relies on product-type knowledge. |
@@ -139,6 +139,22 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 
 ---
 
+### `back-on-model-partial`
+
+| Field | Value |
+|---|---|
+| **Phenotype id** | `back-on-model-partial` |
+| **Description** | A real person wearing the product, turned away from the camera, with the frame cutting the body — typically the head cropped at the top edge, the legs at the bottom, or both. The rear mirror of `front-on-model-partial`. |
+| **Required features** | `hero-is-human = TRUE`, `hero-orientation = BACK`, `body-visible = three-quarter OR half OR bust`, `intersects-bottom = true OR intersects-top = true` |
+| **Optional features** | `background-type = SOLIDCOLOR`, `head-visible = NONE` |
+| **easy_to_detect** | false |
+| **Rationale** | Inherits `front-on-model-partial`'s difficulty plus the BACK-orientation problem: CLIP's 5-way orientation softmax tops out near 0.58 and its argmax is right about 74% of the time. |
+| **Added 2026-07-30 ([[T-4970]])** | The taxonomy had front-full, front-partial, back-full, side, accessories and detail-closeup, but no back equivalent of front-partial. A back view cut by a frame edge is **41 of 86** SPACINI29 images — 48% of a real catalogue set — and could not be labelled correctly at any threshold. Before the rule existed those images came out as nothing, `model-detail-closeup`, or a mistaken `front-on-model-partial`. |
+
+**Det slots** (user decision, 2026-07-30): `topwear` **det1, listed ahead of `back-on-model-full-product`** — for a top, the back crop matters more than a full back-facing model shot. `bottomwear` **det5**, a new slot after `front-on-model-partial`, pushing lifestyle/label/material one slot later. `footwear` **det7**, a new slot immediately before lifestyle — it should not normally occur for shoes. `bags-accessories` and `default` share the existing back slot, listed **after** `back-packshot`, so a real back packshot of the bag always wins and the on-model crop only fills the slot when none exists.
+
+---
+
 ### `side-on-model`
 
 | Field | Value |
@@ -158,7 +174,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `ghost-front` |
 | **Description** | Product photographed on an invisible mannequin (ghost mannequin / hollow-man technique) from the front. Garment appears to be worn but no human is present. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = FRONT`, `background-type = SOLIDCOLOR OR clipping-path = true`, `occlusion-level = full-product`, `intersection-count = 0` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = FRONT`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | Ghost shot looks like a packshot with a 3D structured garment. No feature currently distinguishes a ghost shot from a flat packshot when `background-type = SOLIDCOLOR` (the `contains-mannequin` feature that would have disambiguated it was removed in T-4700 — its sole producer was a stub); `ghost-front` remains reachable only via its other branch (`clipping-path = true` with a non-solid background). See the architecture note below — this ambiguity is accepted by design, not a defect. |
@@ -171,7 +187,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `ghost-back` |
 | **Description** | Product on invisible mannequin from the rear. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BACK`, `background-type = SOLIDCOLOR OR clipping-path = true`, `occlusion-level = full-product` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BACK`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | Same difficulty as `back-packshot` plus ghost-vs-flat ambiguity. |
@@ -184,7 +200,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `ghost-side` |
 | **Description** | Product on invisible mannequin from the side. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = SIDEON`, `background-type = SOLIDCOLOR OR clipping-path = true`, `occlusion-level = full-product` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = SIDEON`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | Side orientation detection is ambiguous for soft goods; ghost vs. packshot ambiguity adds another uncertainty. |
@@ -197,10 +213,10 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `closeup-image` |
 | **Description** | Close-up of any product detail — fabric, texture, stitching, hardware, label, tag, or component — where the detail fills most or all of the frame and the image content intersects with at least one image border. No human present. Product-detail purpose only. Consolidates all close-up detail phenotypes (material, stitching, label, hardware). |
-| **Required features** | `hero-is-human = FALSE`, `intersection-count ≥ 1`, `occlusion-level = closeup` |
+| **Required features** | `hero-is-human = FALSE`, `intersection-count ≥ 3` |
 | **Optional features** | `crop-tightness ≥ 0.85`, `product-coverage-ratio ≥ 0.80` |
 | **easy_to_detect** | true |
-| **Rationale** | Border intersection (at least one edge touched) is a geometric invariant of all product detail close-ups and is detectable with very high confidence using salient-object bounds. Combined with `occlusion-level = closeup` and no human, this is a reliable and discriminating signal on CPU regardless of the specific detail type. |
+| **Rationale** | Border intersection (at least one edge touched) is a geometric invariant of all product detail close-ups and is detectable with very high confidence using salient-object bounds. Combined with `intersection-count ≥ 3` and no human, this is a reliable and discriminating signal on CPU regardless of the specific detail type. |
 
 ---
 
@@ -210,7 +226,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `lifestyle-hero` |
 | **Description** | Full product or model shot in a real-world or styled environment (not studio). The background tells a story or evokes a mood. Product is clearly visible and prominent. |
-| **Required features** | `lifestyle-background = true`, `occlusion-level = full-product OR mostly-visible` |
+| **Required features** | `lifestyle-background = true`, `intersection-count ≤ 1` |
 | **Optional features** | `hero-is-human = TRUE OR FALSE`, `intersection-count ≤ 1` |
 | **easy_to_detect** | true |
 | **Rationale** | Lifestyle background detection (non-solid, scene-type background) is reliable with background segmentation + color diversity analysis on CPU. |
@@ -224,7 +240,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 | **Phenotype id** | `lifestyle-context` |
 | **Description** | Catch-all for non-packshot images: any image showing the product in a real-world, marketing, or ambient context that does not qualify as a packshot phenotype. Generic marketing photographs qualify. The primary PRISM distinction is packshot-family (on-model, ghost, floating, packshot) vs. non-packshot — `lifestyle-context` is the residual class for all images with a lifestyle background that do not fit a more specific packshot phenotype. Product coverage may range from prominent to incidental. |
 | **Required features** | `lifestyle-background = true` |
-| **Optional features** | `hero-is-human = TRUE OR FALSE`, `occlusion-level` (any), `intersection-count ≥ 1` |
+| **Optional features** | `hero-is-human = TRUE OR FALSE`, `intersection-count ≥ 1` |
 | **easy_to_detect** | false |
 | **Rationale** | As a catch-all residual class, `lifestyle-context` is assigned when no other phenotype can be confidently asserted for an image with a lifestyle background. Lifestyle background detection is reliable; the assignment decision is driven by elimination rather than direct detection. |
 
@@ -249,10 +265,11 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `model-detail-closeup` |
 | **Description** | Close-up on a human model showing a specific product area — e.g., shoe on foot, collar of shirt, cuff of jacket — with body partially in frame. |
-| **Required features** | `hero-is-human = TRUE`, `occlusion-level = closeup OR partially-occluded`, `body-visible = bust OR none` |
+| **Required features** | `hero-is-human = TRUE`, `intersection-count ≥ 3`, `body-visible = bust OR none` |
 | **Optional features** | `hero-orientation = FRONT OR SIDEON`, `intersects-bottom = true` |
 | **easy_to_detect** | false |
-| **Rationale** | Partial human + product close-up is ambiguous between a detail shot and a partial on-model shot. Requires both human detection and occlusion level, both of which have medium confidence. |
+| **Rationale** | Partial human + product close-up is ambiguous between a detail shot and a partial on-model shot. The only thing separating them today is how many frame edges the subject touches: a real detail crop fills the frame (3–4 edges), an ordinary catalogue crop touches 2. |
+| **Changed 2026-07-30 ([[T-4970]])** | The bar was `intersection-count ≥ 2` (spelled `occlusion-level = closeup OR partially-occluded`). At 2 edges it matched **55 of 86** SPACINI29 images, **none** of which is a detail crop — an ordinary shot cropped at the head and the hem touches exactly 2 edges by construction. Raised to ≥ 3, which takes it to 0 matches on that set. It stays reachable the moment a genuine frame-filling detail appears. |
 
 ---
 
@@ -262,7 +279,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `on-model-with-accessories` |
 | **Description** | Person wearing the hero product styled with additional accessories (belt, bag, hat, jewelry). Hero product remains identifiable. |
-| **Required features** | `hero-is-human = TRUE`, `multiple-products = true`, `occlusion-level = full-product OR mostly-visible` |
+| **Required features** | `hero-is-human = TRUE`, `multiple-products = true`, `intersection-count ≤ 1` |
 | **Optional features** | `background-type = REALLIFE`, `body-visible = full OR three-quarter` |
 | **easy_to_detect** | false |
 | **Rationale** | Multi-product detection on a human model requires isolating the hero product from accessories — this requires object detection and product-type labeling. |
@@ -276,7 +293,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 | **Phenotype id** | `interior-shot` |
 | **Description** | Inside view of a product — interior of a bag, inside of a shoe, inside of a box or case. |
 | **Required features** | `hero-is-human = FALSE`, `interior-detected = true` |
-| **Optional features** | `background-type = SOLIDCOLOR`, `occlusion-level = full-product` |
+| **Optional features** | `background-type = SOLIDCOLOR`, `intersection-count = 0` |
 | **easy_to_detect** | false |
 | **Rationale** | Detected by `Analyzer_Interior.cs` via Sobel-edge boundary analysis (enclosed region smoother than surrounding texture, bounded by strong edges). Product-type gating (wallet/bag/suitcase) applied at the Order stage. |
 

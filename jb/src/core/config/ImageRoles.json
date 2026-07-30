@@ -47,6 +47,23 @@
     },
 
     {
+      "id": "back-on-model-partial",
+      "required": [
+        { "feature": "hero-is-human", "equals": "TRUE" },
+        { "feature": "hero-orientation", "equals": "BACK" },
+        { "anyOf": [
+            { "feature": "body-visible", "equals": "three-quarter" },
+            { "feature": "body-visible", "equals": "half" },
+            { "feature": "body-visible", "equals": "bust" }
+        ]},
+        { "anyOf": [
+            { "feature": "intersects-bottom", "equals": "true" },
+            { "feature": "intersects-top", "equals": "true" }
+        ]}
+      ]
+    },
+
+    {
       "id": "side-on-model",
       "required": [
         { "feature": "hero-is-human", "equals": "TRUE" },
@@ -63,10 +80,7 @@
       "required": [
         { "feature": "hero-is-human", "equals": "TRUE" },
         { "feature": "multiple-products", "equals": "true" },
-        { "anyOf": [
-            { "feature": "occlusion-level", "equals": "full-product" },
-            { "feature": "occlusion-level", "equals": "mostly-visible" }
-        ]}
+        { "feature": "intersection-count", "max": 1 }
       ]
     },
 
@@ -74,10 +88,7 @@
       "id": "model-detail-closeup",
       "required": [
         { "feature": "hero-is-human", "equals": "TRUE" },
-        { "anyOf": [
-            { "feature": "occlusion-level", "equals": "closeup" },
-            { "feature": "occlusion-level", "equals": "partially-occluded" }
-        ]},
+        { "feature": "intersection-count", "min": 3 },
         { "anyOf": [
             { "feature": "body-visible", "equals": "bust" },
             { "feature": "body-visible", "equals": "none" }
@@ -93,7 +104,6 @@
         { "anyOf": [
             { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
-        { "feature": "occlusion-level", "equals": "full-product" },
         { "feature": "intersection-count", "equals": "0" }
       ]
     },
@@ -106,7 +116,6 @@
         { "anyOf": [
             { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
-        { "feature": "occlusion-level", "equals": "full-product" },
         { "feature": "intersection-count", "equals": "0" }
       ]
     },
@@ -119,7 +128,7 @@
         { "anyOf": [
             { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
-        { "feature": "occlusion-level", "equals": "full-product" }
+        { "feature": "intersection-count", "equals": "0" }
       ]
     },
 
@@ -131,7 +140,7 @@
         { "anyOf": [
             { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
-        { "feature": "occlusion-level", "equals": "full-product" }
+        { "feature": "intersection-count", "equals": "0" }
       ]
     },
 
@@ -143,7 +152,7 @@
         { "anyOf": [
             { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
-        { "feature": "occlusion-level", "equals": "full-product" }
+        { "feature": "intersection-count", "equals": "0" }
       ]
     },
 
@@ -155,7 +164,7 @@
         { "anyOf": [
             { "feature": "background-type", "equals": "SOLIDCOLOR" }
         ]},
-        { "feature": "occlusion-level", "equals": "full-product" }
+        { "feature": "intersection-count", "equals": "0" }
       ]
     },
 
@@ -168,7 +177,6 @@
             { "feature": "background-type", "equals": "SOLIDCOLOR" },
             { "feature": "clipping-path", "equals": "true" }
         ]},
-        { "feature": "occlusion-level", "equals": "full-product" },
         { "feature": "intersection-count", "equals": "0" }
       ]
     },
@@ -182,7 +190,7 @@
             { "feature": "background-type", "equals": "SOLIDCOLOR" },
             { "feature": "clipping-path", "equals": "true" }
         ]},
-        { "feature": "occlusion-level", "equals": "full-product" }
+        { "feature": "intersection-count", "equals": "0" }
       ]
     },
 
@@ -195,7 +203,7 @@
             { "feature": "background-type", "equals": "SOLIDCOLOR" },
             { "feature": "clipping-path", "equals": "true" }
         ]},
-        { "feature": "occlusion-level", "equals": "full-product" }
+        { "feature": "intersection-count", "equals": "0" }
       ]
     },
 
@@ -203,8 +211,7 @@
       "id": "closeup-image",
       "required": [
         { "feature": "hero-is-human", "equals": "FALSE" },
-        { "feature": "intersection-count", "min": 1 },
-        { "feature": "occlusion-level", "equals": "closeup" }
+        { "feature": "intersection-count", "min": 3 }
       ]
     },
 
@@ -212,10 +219,7 @@
       "id": "lifestyle-hero",
       "required": [
         { "feature": "lifestyle-background", "equals": "true" },
-        { "anyOf": [
-            { "feature": "occlusion-level", "equals": "full-product" },
-            { "feature": "occlusion-level", "equals": "mostly-visible" }
-        ]}
+        { "feature": "intersection-count", "max": 1 }
       ]
     },
 

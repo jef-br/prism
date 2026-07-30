@@ -16,7 +16,6 @@
         "LifestyleBackgroundRealLifeConfidence": 0.72,
         "BackgroundTypeConfidence": 0.82,
         "EdgeIntersectionConfidence": 0.85,
-        "OcclusionLevelConfidence": 0.68,
         "SkinToneAreaConfidence": 0.75
     },
 

@@ -120,13 +120,13 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
         Assert.Equal("false", snap.GetValue("clipping-path"));
     }
 
-    //  Border intersections + occlusion level 
+    //  Border intersections
 
     // Pattern for intersection tests: solid white image with a contrasting dark
     // rectangle. The dark rectangle's position controls which borders are touched.
 
     [Fact]
-    public void Analyze_ProductFullyInFrame_ZeroIntersectionsAndOcclusionFullProduct() {
+    public void Analyze_ProductFullyInFrame_ZeroIntersections() {
         // Dark rect inset well inside the strip boundary — touches no edge strip.
         string path = CreateJpeg("inframe", W, H, img => {
             White(img);
@@ -135,7 +135,6 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
         var snap = Analyze(path);
         Assert.Equal("0", snap.GetValue("intersection-count"));
         Assert.Equal("true", snap.GetValue("fully-in-frame"));
-        Assert.Equal("full-product", snap.GetValue("occlusion-level"));
         Assert.Equal("false", snap.GetValue("intersects-top"));
         Assert.Equal("false", snap.GetValue("intersects-bottom"));
         Assert.Equal("false", snap.GetValue("intersects-left"));
@@ -143,7 +142,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
     }
 
     [Fact]
-    public void Analyze_ProductTouchingBottomEdge_OneIntersectionAndOcclusionMostlyVisible() {
+    public void Analyze_ProductTouchingBottomEdge_OneIntersection() {
         // Dark rect from (80,80) to (319,399): reaches bottom edge only.
         string path = CreateJpeg("bottom", W, H, img => {
             White(img);
@@ -152,7 +151,6 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
         var snap = Analyze(path);
         Assert.Equal("1", snap.GetValue("intersection-count"));
         Assert.Equal("false", snap.GetValue("fully-in-frame"));
-        Assert.Equal("mostly-visible", snap.GetValue("occlusion-level"));
         Assert.Equal("true", snap.GetValue("intersects-bottom"));
         Assert.Equal("false", snap.GetValue("intersects-top"));
         Assert.Equal("false", snap.GetValue("intersects-left"));
@@ -160,7 +158,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
     }
 
     [Fact]
-    public void Analyze_ProductTouchingBottomAndRight_TwoIntersectionsAndOcclusionPartial() {
+    public void Analyze_ProductTouchingBottomAndRight_TwoIntersections() {
         // Dark rect (80,80)→(399,399) but with corners restored to white so
         // SampleCorners sees a clean white background regardless of BR corner overlap.
         string path = CreateJpeg("bottom-right", W, H, img => {
@@ -170,7 +168,6 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
         });
         var snap = Analyze(path);
         Assert.Equal("2", snap.GetValue("intersection-count"));
-        Assert.Equal("partially-occluded", snap.GetValue("occlusion-level"));
         Assert.Equal("true", snap.GetValue("intersects-bottom"));
         Assert.Equal("true", snap.GetValue("intersects-right"));
         Assert.Equal("false", snap.GetValue("intersects-top"));
@@ -178,7 +175,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
     }
 
     [Fact]
-    public void Analyze_ProductTouchingThreeEdges_ThreeIntersectionsAndOcclusionCloseup() {
+    public void Analyze_ProductTouchingThreeEdges_ThreeIntersections() {
         // Dark rect (80,0)→(399,399): top, bottom, right touched; left clear.
         // TR and BR corner zones restored to white.
         string path = CreateJpeg("three-edges", W, H, img => {
@@ -188,7 +185,6 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
         });
         var snap = Analyze(path);
         Assert.Equal("3", snap.GetValue("intersection-count"));
-        Assert.Equal("closeup", snap.GetValue("occlusion-level"));
         Assert.Equal("true", snap.GetValue("intersects-top"));
         Assert.Equal("true", snap.GetValue("intersects-bottom"));
         Assert.Equal("true", snap.GetValue("intersects-right"));
@@ -196,7 +192,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
     }
 
     [Fact]
-    public void Analyze_ProductTouchingAllFourEdges_FourIntersectionsAndOcclusionCloseup() {
+    public void Analyze_ProductTouchingAllFourEdges_FourIntersections() {
         // Dark everywhere, then repaint the 4 corner areas white so background is detected as white.
         // Intersection strips are all filled with dark → 4 intersections.
         string path = CreateJpeg("all-edges", W, H, img => {
@@ -209,7 +205,6 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
         });
         var snap = Analyze(path);
         Assert.Equal("4", snap.GetValue("intersection-count"));
-        Assert.Equal("closeup", snap.GetValue("occlusion-level"));
         Assert.Equal("true", snap.GetValue("intersects-top"));
         Assert.Equal("true", snap.GetValue("intersects-bottom"));
         Assert.Equal("true", snap.GetValue("intersects-left"));

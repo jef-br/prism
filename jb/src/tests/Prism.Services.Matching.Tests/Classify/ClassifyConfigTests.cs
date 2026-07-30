@@ -50,7 +50,7 @@ public class ClassifyConfigTests : IDisposable {
                 "WhiteBackgroundConfidence": 0.92, "LifestyleBackgroundAlphaConfidence": 0.95,
                 "LifestyleBackgroundSolidConfidence": 0.85, "LifestyleBackgroundRealLifeConfidence": 0.72,
                 "BackgroundTypeConfidence": 0.82, "EdgeIntersectionConfidence": 0.85,
-                "OcclusionLevelConfidence": 0.68, "SkinToneAreaConfidence": 0.75
+                "SkinToneAreaConfidence": 0.75
             }
         }
         """);
@@ -80,7 +80,7 @@ public class ClassifyConfigTests : IDisposable {
                 "WhiteBackgroundConfidence": 0.92, "LifestyleBackgroundAlphaConfidence": 0.95,
                 "LifestyleBackgroundSolidConfidence": 0.85, "LifestyleBackgroundRealLifeConfidence": 0.72,
                 "BackgroundTypeConfidence": 0.82, "EdgeIntersectionConfidence": 0.85,
-                "OcclusionLevelConfidence": 0.68, "SkinToneAreaConfidence": 0.75
+                "SkinToneAreaConfidence": 0.75
             }
         }
         """);

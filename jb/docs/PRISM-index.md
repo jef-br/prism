@@ -25,6 +25,7 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | `ImageNGP/ImageFeatures.md` | 37 IF catalog: datatypes, values, difficulty, confidence |
 | `ImageNGP/NGP-architecture.md` | Mapping model (deliverable 6), detection architecture (7), workbench concept (8) |
 | `ImageNGP/HowToAddAPhenotype.md` | Step-by-step guide: adding a new analyzer/feature/phenotype/det-order mapping |
+| `ImageNGP/phenotype-assignment-validation.md` | T-4970 measurement: real phenotype distribution, why coverage is 7%, threshold precision/coverage curve, verdict on the BypassPhenotypes flip. **Second pass**: lowering the thresholds was tested and rejected — coverage 7%→62% but 0/5 correct at today's config; the real blockers are `model-detail-closeup` over-firing, a missing `back-on-model-partial` rule, and T-4955's 42% inconsistent snapshots |
 | `ideas-on-NGP.md` | Plain-language NGP insights (10 insights + open questions) |
 
 ## Task → Files to Load
@@ -46,3 +47,4 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | Writing or running tests | `PRISM-testing.md` |
 | General orientation | `PRISM-overview.md` + `PRISM-pipeline-core.md` |
 | INGP phenotypes / DO assignment | `ImageNGP/imagePhenotypes.md` + `ImageNGP/ImageFeatures.md` |
+| Phenotype coverage / calibration / why a phenotype never fires | `ImageNGP/phenotype-assignment-validation.md` |

@@ -92,9 +92,9 @@ public class ImageFeatureSnapshotTests {
     [Fact]
     public void TryGet_ZeroConfidence_IsPreserved() {
         var snapshot = new ImageFeatureSnapshot();
-        snapshot.Set("occlusion-level", "UNKNOWN", 0.0, "heuristic");
+        snapshot.Set("intersection-count", "UNKNOWN", 0.0, "heuristic");
 
-        snapshot.TryGet("occlusion-level", out ImageFeatureValue? value);
+        snapshot.TryGet("intersection-count", out ImageFeatureValue? value);
         Assert.Equal(0.0, value!.Confidence);
     }
 

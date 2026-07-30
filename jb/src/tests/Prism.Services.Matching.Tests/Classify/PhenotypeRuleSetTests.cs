@@ -22,14 +22,13 @@ public class PhenotypeRuleSetTests {
     }
 
     [Fact]
-    public void Load_ValidPath_JsonContains20Phenotypes() {
-        // Verify the configuration file itself carries the expected 20 phenotypes (T-4700 trimmed
-        // 6 unreachable ones — every hard-required condition on each depended solely on a
-        // stub-only feature).
+    public void Load_ValidPath_JsonContains21Phenotypes() {
+        // 20 after T-4700 trimmed 6 unreachable ones, +1 for back-on-model-partial (T-4970:
+        // a back view cut by a frame edge is 48% of a real catalogue set and had no rule).
         string json = File.ReadAllText(ImageRolesPath, System.Text.Encoding.UTF8);
         using var doc = JsonDocument.Parse(json);
         int count = doc.RootElement.GetProperty("phenotypes").GetArrayLength();
-        Assert.Equal(20, count);
+        Assert.Equal(21, count);
     }
 
     [Fact]
@@ -83,7 +82,6 @@ public class PhenotypeRuleSetTests {
         // Set all front-packshot conditions except hero-is-human (leave it UNKNOWN).
         snapshot.Set("hero-orientation", "FRONT", 1.0, "test");
         snapshot.Set("background-type", "SOLIDCOLOR", 1.0, "test");
-        snapshot.Set("occlusion-level", "full-product", 1.0, "test");
         snapshot.Set("intersection-count", "0", 1.0, "test");
 
         Assert.Null(ruleSet.Assign(snapshot));
@@ -96,7 +94,6 @@ public class PhenotypeRuleSetTests {
         var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("intersection-count", "3", 1.0, "test");
-        snapshot.Set("occlusion-level", "closeup", 1.0, "test");
         // hero-is-human left UNKNOWN.
 
         Assert.Null(ruleSet.Assign(snapshot));
@@ -121,7 +118,6 @@ public class PhenotypeRuleSetTests {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("hero-is-human", "FALSE", 1.0, "test");
         snapshot.Set("intersection-count", "3", 1.0, "test"); // >= 1 ✓
-        snapshot.Set("occlusion-level", "closeup", 1.0, "test");
 
         Assert.Equal("closeup-image", ruleSet.Assign(snapshot));
     }
@@ -133,7 +129,6 @@ public class PhenotypeRuleSetTests {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("hero-is-human", "FALSE", 1.0, "test");
         snapshot.Set("intersection-count", "0", 1.0, "test"); // < 1 ✗
-        snapshot.Set("occlusion-level", "closeup", 1.0, "test");
 
         Assert.NotEqual("closeup-image", ruleSet.Assign(snapshot));
     }
@@ -173,7 +168,7 @@ public class PhenotypeRuleSetTests {
     [Fact]
     public void Assign_LifestyleContext_ReachableFromCpuOnlyFeatures() {
         // lifestyle-background is CPU-detectable. With all other features UNKNOWN,
-        // lifestyle-hero fails (occlusion-level UNKNOWN) and lifestyle-context fires.
+        // lifestyle-hero fails (intersection-count UNKNOWN) and lifestyle-context fires.
         var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("lifestyle-background", "true", 0.72, "heuristic");
@@ -182,40 +177,29 @@ public class PhenotypeRuleSetTests {
     }
 
     [Fact]
-    public void Assign_LifestyleHero_ReachableWhenOcclusionIsDerivedByAnalyzer() {
-        // lifestyle-hero fires when lifestyle-background=true (CPU) AND
-        // occlusion-level=full-product (CPU-derived from intersection-count=0).
+    public void Assign_LifestyleHero_ReachableFromCpuOnlyFeatures() {
+        // lifestyle-hero fires when lifestyle-background=true (CPU) AND the subject touches
+        // at most one frame edge. Both are written by the CPU analyzers.
         var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("lifestyle-background", "true", 0.72, "heuristic");
-        snapshot.Set("occlusion-level", "full-product", 0.68, "heuristic");
+        snapshot.Set("intersection-count", "0", 0.85, "heuristic");
 
         Assert.Equal("lifestyle-hero", ruleSet.Assign(snapshot));
     }
 
     [Fact]
-    public void Assign_LifestyleContext_WhenOcclusionIsCloseup() {
-        // lifestyle-background=true + occlusion=closeup → lifestyle-hero fails on occlusion,
-        // falls through to lifestyle-context.
+    public void Assign_LifestyleContext_WhenSubjectTouchesTooManyEdges() {
+        // lifestyle-hero caps at intersection-count <= 1; three edges fails it and the
+        // image falls through to lifestyle-context, which carries no intersection condition.
         var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("lifestyle-background", "true", 0.72, "heuristic");
-        snapshot.Set("occlusion-level", "closeup", 0.68, "heuristic");
+        snapshot.Set("intersection-count", "3", 0.85, "heuristic");
 
         Assert.Equal("lifestyle-context", ruleSet.Assign(snapshot));
     }
 
-    [Fact]
-    public void Assign_LifestyleContext_WhenOcclusionIsUnknown() {
-        // lifestyle-background=true + occlusion=UNKNOWN → lifestyle-hero fails (UNKNOWN),
-        // lifestyle-context fires because it has no occlusion condition.
-        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
-        var snapshot = new ImageFeatureSnapshot();
-        snapshot.Set("lifestyle-background", "true", 0.72, "heuristic");
-        // occlusion-level not set → UNKNOWN
-
-        Assert.Equal("lifestyle-context", ruleSet.Assign(snapshot));
-    }
 
     //  ghost-front / front-packshot overlap (accepted, not a bug)
 
@@ -234,7 +218,6 @@ public class PhenotypeRuleSetTests {
         snapshot.Set("hero-is-human", "FALSE", 1.0, "test");
         snapshot.Set("hero-orientation", "FRONT", 1.0, "test");
         snapshot.Set("background-type", "SOLIDCOLOR", 1.0, "test");
-        snapshot.Set("occlusion-level", "full-product", 1.0, "test");
         snapshot.Set("intersection-count", "0", 1.0, "test");
 
         Assert.Equal("front-packshot", ruleSet.Assign(snapshot));
@@ -250,7 +233,6 @@ public class PhenotypeRuleSetTests {
         snapshot.Set("hero-orientation", "FRONT", 1.0, "test");
         snapshot.Set("background-type", "REALLIFE", 1.0, "test");
         snapshot.Set("clipping-path", "true", 1.0, "test");
-        snapshot.Set("occlusion-level", "full-product", 1.0, "test");
         snapshot.Set("intersection-count", "0", 1.0, "test");
 
         Assert.Equal("ghost-front", ruleSet.Assign(snapshot));
@@ -260,12 +242,12 @@ public class PhenotypeRuleSetTests {
 
     [Fact]
     public void EvaluateCandidates_ReturnsAllMatchingPhenotypesInOrder() {
-        // With lifestyle-background=true + occlusion=full-product,
+        // With lifestyle-background=true and the subject clear of every edge,
         // both lifestyle-hero AND lifestyle-context match.
         var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("lifestyle-background", "true", 0.72, "heuristic");
-        snapshot.Set("occlusion-level", "full-product", 0.68, "heuristic");
+        snapshot.Set("intersection-count", "0", 0.85, "heuristic");
 
         string[] candidates = ruleSet.EvaluateCandidates(snapshot);
 
@@ -288,7 +270,6 @@ public class PhenotypeRuleSetTests {
         var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("lifestyle-background", "true", 0.72, "heuristic");
-        snapshot.Set("occlusion-level", "full-product", 0.68, "heuristic");
 
         string[] candidates = ruleSet.EvaluateCandidates(snapshot);
         string? assigned = ruleSet.Assign(snapshot);

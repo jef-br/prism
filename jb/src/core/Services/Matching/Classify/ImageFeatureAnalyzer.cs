@@ -68,9 +68,6 @@ public static class ImageFeatureAnalyzer {
         /// <summary>Confidence written on every intersects-* / intersection-count / fully-in-frame feature.</summary>
         public required double EdgeIntersectionConfidence { get; init; }
 
-        /// <summary>Confidence written on occlusion-level.</summary>
-        public required double OcclusionLevelConfidence { get; init; }
-
         /// <summary>Confidence written on skin-tone-area.</summary>
         public required double SkinToneAreaConfidence { get; init; }
 
@@ -91,7 +88,6 @@ public static class ImageFeatureAnalyzer {
             if (this.LifestyleBackgroundRealLifeConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundRealLifeConfidence must be in [0,1]");
             if (this.BackgroundTypeConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.BackgroundTypeConfidence must be in [0,1]");
             if (this.EdgeIntersectionConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.EdgeIntersectionConfidence must be in [0,1]");
-            if (this.OcclusionLevelConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.OcclusionLevelConfidence must be in [0,1]");
             if (this.SkinToneAreaConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.SkinToneAreaConfidence must be in [0,1]");
 
             if (problems.Count > 0) throw new PrismConfigurationException(string.Join("; ", problems));
@@ -107,7 +103,6 @@ public static class ImageFeatureAnalyzer {
         AnalyzeGeometry(image, snapshot);
         AnalyzeBackground(image, snapshot, out _, out _, out _, cfg);
         WriteEdgeIntersections(SubjectEdgeDetector.Detect(image), snapshot, cfg);
-        DeriveOcclusionLevel(snapshot, cfg);
         AnalyzeSkinTone(image, snapshot, parameters.SkinTone, cfg);
         AnalyzeInterior(image, snapshot, parameters.Interior);
         AnalyzeIllustration(image, snapshot, parameters.IsIllustration);
@@ -238,26 +233,7 @@ public static class ImageFeatureAnalyzer {
         snapshot.Set("fully-in-frame", r.FullyInFrame ? "true" : "false", cfg.EdgeIntersectionConfidence, "heuristic");
     }
 
-    //  Occlusion level (derived) 
-
-    private static void DeriveOcclusionLevel(ImageFeatureSnapshot snapshot, Config cfg) {
-        string countStr = snapshot.GetValue("intersection-count");
-        if (countStr == "UNKNOWN") return;
-
-        if (!int.TryParse(countStr, out int count)) return;
-
-        string level = count switch {
-            0 => "full-product",
-            1 => "mostly-visible",
-            2 => "partially-occluded",
-            >= 3 => "closeup",
-            _ => "UNKNOWN"
-        };
-
-        snapshot.Set("occlusion-level", level, cfg.OcclusionLevelConfidence, "heuristic");
-    }
-
-    //  Skin tone 
+    //  Skin tone
 
     private static void AnalyzeSkinTone(Image<Rgba32> image, ImageFeatureSnapshot snapshot, SkinToneAnalyzerConfig skinCfg, Config cfg) {
         int total = 0;

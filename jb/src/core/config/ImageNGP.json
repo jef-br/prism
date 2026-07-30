@@ -29,7 +29,6 @@
     { "id": "interior-detected",        "datatype": "boolean", "values": ["true", "false"] },
     { "id": "is-illustration",          "datatype": "boolean", "values": ["true", "false"] },
 
-    { "id": "occlusion-level",          "datatype": "enum",    "values": ["full-product", "mostly-visible", "partially-occluded", "closeup", "unknown"] },
     { "id": "crop-tightness",           "datatype": "float" },
     { "id": "product-coverage-ratio",   "datatype": "float" },
     { "id": "image-occupancy",          "datatype": "float" },
@@ -60,6 +59,7 @@
     "front-on-model-full-product",
     "front-on-model-partial",
     "back-on-model-full-product",
+    "back-on-model-partial",
     "side-on-model",
     "ghost-front",
     "ghost-back",
