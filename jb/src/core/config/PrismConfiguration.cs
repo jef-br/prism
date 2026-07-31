@@ -115,6 +115,7 @@ public sealed class PrismConfiguration {
     public string ClipVocabFile { get; private set; } = "";
     public string ClipMergesFile { get; private set; } = "";
     public string UpscaleModelPath { get; private set; } = "";
+    public string YoloModelPath { get; private set; } = "";
 
     // --- Output det-order policy
     /// <summary>
@@ -167,9 +168,9 @@ public sealed class PrismConfiguration {
     // needs the Real-ESRGAN upscaler, and a per-image degradation would be silent (T-4110: no fallback
     // upscaler exists). Same resolution order as the CLIP model assets.
     private static void ValidateModelAssets(PrismConfiguration config) {
-        if (ModelAssetLocator.Find("Services/Matching/Analyzers/ONNX/yolo26s.onnx") is null)
+        if (ModelAssetLocator.Find(config.YoloModelPath) is null)
             throw new PrismConfigurationException(
-                "YOLO26 ONNX model not found. Deploy Services/Matching/Analyzers/ONNX/yolo26s.onnx next to " +
+                $"YOLO26 ONNX model not found at '{config.YoloModelPath}'. Deploy it next to " +
                 "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
         if (ModelAssetLocator.Find(config.UpscaleModelPath) is null)
             throw new PrismConfigurationException(
@@ -238,6 +239,7 @@ public sealed class PrismConfiguration {
             ClipVocabFile = RequireString(root, cfgPath, "Models", "Clip", "Vocab"),
             ClipMergesFile = RequireString(root, cfgPath, "Models", "Clip", "Merges"),
             UpscaleModelPath = RequireString(root, cfgPath, "Models", "Upscale", "Path"),
+            YoloModelPath = RequireString(root, cfgPath, "Models", "Yolo", "Path"),
 
             // Optional with a safe default (false = compact) so existing configs keep working.
             DetOrderGapsAllowed = OptionalBool(root, "Output", "DET-ORDER-GAPS-ALLOWED") ?? false
@@ -305,6 +307,7 @@ public sealed class PrismConfiguration {
         AssertNonEmpty(this.ClipVocabFile, cfgPath, "Models.Clip.Vocab");
         AssertNonEmpty(this.ClipMergesFile, cfgPath, "Models.Clip.Merges");
         AssertNonEmpty(this.UpscaleModelPath, cfgPath, "Models.Upscale.Path");
+        AssertNonEmpty(this.YoloModelPath, cfgPath, "Models.Yolo.Path");
 
     }
 

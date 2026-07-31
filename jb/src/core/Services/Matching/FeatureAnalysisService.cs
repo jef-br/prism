@@ -6,20 +6,20 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Prism.Services.Matching;
 
 /// <summary>
-/// In-process FeatureAnalysis implementation. Delegates to <see cref="ImageFeatureAnalyzer"/> — CPU-only,
-/// no model assets. Composes the analyzer chain's parameter bundle once at construction, so a missing
-/// or invalid analyzer_Config.json fails the host at startup instead of degrading. Internal to Matching.
+/// In-process FeatureAnalysis implementation. Delegates to <see cref="ImageFeatureAnalyzer"/>, which runs
+/// the YOLO26 detector (GPU via DirectML, shared session) and the classical-CV subject detector on top of
+/// the CPU analyzer chain. Composes the analyzer chain's parameter bundle and resolves the YOLO26 model
+/// asset once at construction, so a missing or invalid analyzer_Config.json — or a missing model — fails
+/// the host at startup instead of degrading. Internal to Matching.
 /// </summary>
 public sealed class FeatureAnalysisService : IFeatureAnalysisService {
-    private const string YoloModelRelativePath = "Services/Matching/Analyzers/ONNX/yolo26s.onnx";
-
     private readonly AnalyzerParameters analyzerParameters;
     private readonly ClassifyParameters classifyParameters;
     private readonly ProductTypeResolver productTypes;
     private readonly string? yoloModelPath;
     private readonly SubjectDetector subjectDetector;
 
-    public FeatureAnalysisService() {
+    public FeatureAnalysisService(PrismConfiguration configuration) {
         this.analyzerParameters = AnalyzerParameters.FromConfig();
         this.classifyParameters = ClassifyParameters.FromConfig();
 
@@ -31,10 +31,10 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService {
 
         // The 37 MB detector is not copied into build outputs; ModelAssetLocator resolves it from the
         // deployed location, the PRISM_ONNX_MODEL_DIR override, or the single source-tree copy.
-        this.yoloModelPath = ModelAssetLocator.Find(YoloModelRelativePath);
+        this.yoloModelPath = ModelAssetLocator.Find(configuration.YoloModelPath);
         if (this.yoloModelPath is null)
             throw new PrismConfigurationException(
-                "YOLO26 ONNX model not found. Deploy Services/Matching/Analyzers/ONNX/yolo26s.onnx next to " +
+                $"YOLO26 ONNX model not found at '{configuration.YoloModelPath}'. Deploy it next to " +
                 "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
     }
 

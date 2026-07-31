@@ -18,6 +18,8 @@ namespace PrismCoreTests.Classify;
 /// </summary>
 public class SubjectDetectionWiringTests : IDisposable {
     private readonly string tempDir;
+    private readonly PrismConfiguration configuration =
+        PrismConfiguration.LoadPrismConfig(ConfigLoader.RequireFile(PrismConfiguration.FileName));
 
     public SubjectDetectionWiringTests() {
         this.tempDir = Path.Combine(Path.GetTempPath(), $"prism-subject-wiring-{Guid.NewGuid():N}");
@@ -51,7 +53,7 @@ public class SubjectDetectionWiringTests : IDisposable {
         ImageRecord_LAMBDA lambda = new() { InitialFullName = "product.jpg", ImportStatus = ImportStatus.Ok };
         PhenotypeRuleSet ruleSet = PhenotypeRuleSet.Load(ConfigLoader.RequireFile("ImageRoles.json"));
 
-        new FeatureAnalysisService().Refine(lambda, family: null, path, ruleSet);
+        new FeatureAnalysisService(this.configuration).Refine(lambda, family: null, path, ruleSet);
 
         // The whole point: a real image, through the real conversion, leaves a real detection behind.
         Assert.NotNull(lambda.Subject);
@@ -68,7 +70,7 @@ public class SubjectDetectionWiringTests : IDisposable {
         ImageRecord_LAMBDA lambda = new() { InitialFullName = "shadow.jpg", ImportStatus = ImportStatus.Ok };
         PhenotypeRuleSet ruleSet = PhenotypeRuleSet.Load(ConfigLoader.RequireFile("ImageRoles.json"));
 
-        new FeatureAnalysisService().Refine(lambda, family: null, path, ruleSet);
+        new FeatureAnalysisService(this.configuration).Refine(lambda, family: null, path, ruleSet);
 
         Assert.NotEqual("UNKNOWN", lambda.Features.GetValue("shadow-present"));
     }
@@ -81,7 +83,7 @@ public class SubjectDetectionWiringTests : IDisposable {
         ImageRecord_LAMBDA lambda = new() { InitialFullName = "clean.jpg", ImportStatus = ImportStatus.Ok };
         PhenotypeRuleSet ruleSet = PhenotypeRuleSet.Load(ConfigLoader.RequireFile("ImageRoles.json"));
 
-        Exception? thrown = Record.Exception(() => new FeatureAnalysisService().Refine(lambda, family: null, path, ruleSet));
+        Exception? thrown = Record.Exception(() => new FeatureAnalysisService(this.configuration).Refine(lambda, family: null, path, ruleSet));
 
         Assert.Null(thrown);
     }

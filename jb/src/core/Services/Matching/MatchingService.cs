@@ -58,7 +58,7 @@ public sealed class MatchingService : IMatchingService, IDisposable {
 
         PhenotypeRuleSet ruleSet = LoadRuleSet();
         IImageNgpService ngp = new ImageNgpService(ruleSet);
-        IFeatureAnalysisService featureAnalysis = new FeatureAnalysisService();
+        IFeatureAnalysisService featureAnalysis = new FeatureAnalysisService(this.configuration);
         using IClassificationService classification =
             new ClassificationService(this._sharedClassifier, this._sharedPromptCatalog, this.configuration);
 

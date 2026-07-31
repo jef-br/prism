@@ -146,6 +146,9 @@
         },
         "Upscale": {
             "Path": "Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus_dynamic.onnx"
+        },
+        "Yolo": {
+            "Path": "Services/Matching/Analyzers/ONNX/yolo26s.onnx"
         }
     }
 }
