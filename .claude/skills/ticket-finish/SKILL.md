@@ -24,7 +24,7 @@ Steps:
 
 4. **Archive**: in `jb/ticketboard/T-XXXX.md`, change the `**Status:**` value to `Done` and append the date: `**Status:** Done (YYYY-MM-DD)`. Then append the whole file body — starting at its `### T-XXXX · Title` heading — directly under the header of `jb/ticketboard/AGENT-TICKETS-ARCHIVE.md` (newest first), followed by a `---` separator line. Then **delete `jb/ticketboard/T-XXXX.md`** (`rtk git rm`).
 
-5. **Remove the board row**: delete the ticket's row from the `## Board` table in `jb/ticketboard/AGENT-TICKETS.md`, and its `[T-XXXX]: T-XXXX.md` link definition from the list below the table. The board holds open tickets only.
+5. **Remove the board row**: delete the ticket's row from the `## Board` table in `jb/ticketboard/AGENT-TICKETS.md`. The board holds open tickets only.
 
 6. **Commit by pathspec** (other sessions may have unrelated changes in the worktree — never `git add .`):
    `rtk git add jb/ticketboard/AGENT-TICKETS.md jb/ticketboard/AGENT-TICKETS-ARCHIVE.md jb/ticketboard/T-XXXX.md && rtk git commit -m "Close ticket: T-XXXX · Title"` (use the actual ticket ID and title).

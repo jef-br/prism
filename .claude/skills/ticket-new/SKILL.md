@@ -33,13 +33,9 @@ Steps:
 
 3. **Add one row** to the `## Board` table in `jb/ticketboard/AGENT-TICKETS.md`, sorted ascending by T-number:
 
-   `| [T-XXXX] | <Status> | <short title> | <do this next> |`
+   `| [T-XXXX](T-XXXX.md) | <Status> | <short title> | <do this next> |`
 
-   Also add the matching link definition to the list below the table, in the same sorted position:
-
-   `[T-XXXX]: T-XXXX.md`
-
-   The links are reference-style on purpose — the row stays short and the target is written once.
+   Keep the link inline in the row. A reader must be able to click the ticket ID straight from the table — do not move link targets into a reference-definition list below it.
 
    The "Do this next" cell is a single verb-first sentence saying the action, not the problem — the rules and a worked example/counter-example are in that file's "How to write the Do this next line" section. Follow them.
 
