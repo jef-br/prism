@@ -42,8 +42,8 @@
         },
         {
             "folderPath": "prism\\jb\\src\\",
-            "color": "foldercolorizer.color_ff0000",
-            "isFolderOnly": true
+            "isFolderOnly": true,
+            "color": "foldercolorizer.color_ff0000"
         },
         {
             "folderPath": "prism\\jb\\src\\api",
