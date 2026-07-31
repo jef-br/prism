@@ -54,6 +54,24 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService {
         // A real alpha channel captured at ingress is exact geometry; never overwrite it with a heuristic.
         if (lambda.Subject is not null) return;
 
+        // Edge-bleed shortcut: SubjectEdgeDetector (Classified stage) already measured every edge. When
+        // the product touches all four, there is no background ring left to fit a box against — the
+        // classical-CV pass on this kind of image was the T-4980 defect (a stray high-contrast patch, not
+        // the garment, won promotion). The frame itself is the subject; skip detection and crop square.
+        if (lambda.Features.GetValue("intersection-count") == "4") {
+            lambda.BoundingBox = new BoundingBox { X = 0, Y = 0, Width = image.Width, Height = image.Height, Left = 0, Top = 0, Right = image.Width, Bottom = image.Height };
+            lambda.Subject = new SubjectDetectionResult {
+                Box = lambda.BoundingBox.Value,
+                IntersectsTop = true,
+                IntersectsBottom = true,
+                IntersectsLeft = true,
+                IntersectsRight = true,
+                IsWholeFrameFallback = true,
+                Producer = "edge-bleed"
+            };
+            return;
+        }
+
         SubjectSeedHint seed = SubjectSeedHint.Resolve(lambda.Features, family);
         using Mat bgr = ToBgrMat(image);
         lambda.Subject = this.subjectDetector.Detect(bgr, seed);
