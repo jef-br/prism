@@ -41,7 +41,7 @@ public class SubjectDetectorTests {
         using Mat img = White(200, 200);
         Cv2.Rectangle(img, new Rect(50, 50, 100, 100), new Scalar(40, 40, 200), thickness: -1);
 
-        SubjectDetection d = new SubjectDetector(Config()).Detect(img);
+        SubjectDetectionResult d = new SubjectDetector(Config()).Detect(img);
 
         Assert.Equal("classical-cv", d.Producer);
         Assert.True(d.Box.Width < 200 && d.Box.Height < 200, "should not be the whole frame");
@@ -57,7 +57,7 @@ public class SubjectDetectorTests {
     public void Detect_FlatFrame_YieldsWholeFrameNoDetection() {
         using Mat img = White(200, 200);
 
-        SubjectDetection d = new SubjectDetector(Config()).Detect(img);
+        SubjectDetectionResult d = new SubjectDetector(Config()).Detect(img);
 
         Assert.Equal(200, d.Box.Width);
         Assert.Equal(200, d.Box.Height);
@@ -69,7 +69,7 @@ public class SubjectDetectorTests {
         using Mat img = White(200, 200);
         Cv2.Rectangle(img, new Rect(50, 120, 100, 80), new Scalar(40, 180, 40), thickness: -1);
 
-        SubjectDetection d = new SubjectDetector(Config()).Detect(img);
+        SubjectDetectionResult d = new SubjectDetector(Config()).Detect(img);
 
         Assert.True(d.IntersectsBottom, "subject runs off the bottom edge");
         Assert.False(d.IntersectsTop, "subject does not reach the top edge");
@@ -103,7 +103,7 @@ public class SubjectDetectorTests {
             }
         }
 
-        SubjectDetection d = new SubjectDetector(Config()).Detect(img);
+        SubjectDetectionResult d = new SubjectDetector(Config()).Detect(img);
 
         Assert.Equal("classical-cv", d.Producer);
         Assert.False(d.IsWholeFrameFallback, "texture-only region should not fall back to whole frame");
@@ -134,7 +134,7 @@ public class SubjectDetectorTests {
             }
         }
 
-        SubjectDetection d = new SubjectDetector(Config()).Detect(img);
+        SubjectDetectionResult d = new SubjectDetector(Config()).Detect(img);
 
         Assert.Equal("classical-cv", d.Producer);
         // Pure gradient with no edges, texture, or chroma should not be detected.
@@ -157,7 +157,7 @@ public class SubjectDetectorTests {
         // This is a hard-edged shadow boundary: texture (the edge) but no chroma difference from background.
         Cv2.Rectangle(img, new Rect(50, 110, 60, 3), new Scalar(80, 80, 80), thickness: -1);
 
-        SubjectDetection d = new SubjectDetector(Config()).Detect(img);
+        SubjectDetectionResult d = new SubjectDetector(Config()).Detect(img);
 
         Assert.Equal("classical-cv", d.Producer);
         Assert.False(d.IsWholeFrameFallback, "should detect the green product");
@@ -200,7 +200,7 @@ public class SubjectDetectorTests {
         // Product: 60x60 colored blob at (70, 70) — saturated red to stand out against ramp
         Cv2.Rectangle(img, new Rect(70, 70, 60, 60), new Scalar(40, 60, 200), thickness: -1);
 
-        SubjectDetection d = new SubjectDetector(Config()).Detect(img);
+        SubjectDetectionResult d = new SubjectDetector(Config()).Detect(img);
 
         Assert.Equal("classical-cv", d.Producer);
         Assert.False(d.IsWholeFrameFallback, "should detect product despite gradient background");

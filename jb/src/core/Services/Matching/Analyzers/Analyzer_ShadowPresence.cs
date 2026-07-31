@@ -33,7 +33,7 @@ public static class Analyzer_ShadowPresence {
         }
     }
 
-    public static void Analyze(SubjectDetection? subject, ImageFeatureSnapshot snapshot, Config cfg) {
+    public static void Analyze(SubjectDetectionResult? subject, ImageFeatureSnapshot snapshot, Config cfg) {
         if (subject is null) return;
 
         // The alpha producer measures geometry from a transparency channel, which carries no shadow

@@ -56,11 +56,11 @@ public class ImageRecord_INPUT : ImageRecord_Base {
     /// Alpha-derived subject detection captured before the Imported stage flattens transparency onto
     /// white, when the source image carried a real alpha channel. Null when the source had no alpha
     /// channel, or no pixel reached the configured opacity threshold. When the opaque region covers the
-    /// whole frame, <see cref="SubjectDetection.IsWholeFrameFallback"/> is true instead of this being
+    /// whole frame, <see cref="SubjectDetectionResult.IsWholeFrameFallback"/> is true instead of this being
     /// null. Copied onto <c>ImageRecord_LAMBDA.Subject</c> at lambda creation so downstream detection can
     /// prefer this measured mask over an inferred one.
     /// </summary>
-    public SubjectDetection? Subject { get; set; }
+    public SubjectDetectionResult? Subject { get; set; }
 
     // Downstream matching tokens (populated downstream)
 

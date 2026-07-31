@@ -9,7 +9,7 @@ namespace Prism.Services.Matching;
 /// lightness change). White-on-white is caught by the texture signal; hard-shadow edges are stripped by
 /// shape; the background colour is fitted as a plane over the border ring; a Canny border flood-fill
 /// corroborates but never introduces a region on its own. No ONNX — runs upstream so the transforms stay
-/// deterministic. Emits a <see cref="Prism.Contracts.SubjectDetection"/> (box + mask + intersects +
+/// deterministic. Emits a <see cref="Prism.Contracts.SubjectDetectionResult"/> (box + mask + intersects +
 /// hard-shadow evidence).
 /// </summary>
 public sealed class SubjectDetector : ISubjectDetector {
@@ -42,9 +42,9 @@ public sealed class SubjectDetector : ISubjectDetector {
     // Unseeded entry point: exactly the behaviour that shipped before seeding existed. Kept as its own
     // overload so a caller with no Excel/CLIP context (a stateless webservice path, a unit test) gets the
     // documented default rather than having to invent a seed.
-    public SubjectDetection Detect(Mat bgrImage) => this.Detect(bgrImage, null);
+    public SubjectDetectionResult Detect(Mat bgrImage) => this.Detect(bgrImage, null);
 
-    public SubjectDetection Detect(Mat bgrImage, SubjectSeedHint? seed) {
+    public SubjectDetectionResult Detect(Mat bgrImage, SubjectSeedHint? seed) {
         int origW = bgrImage.Cols, origH = bgrImage.Rows;
         if (origW == 0 || origH == 0) return this.WholeFrameDetection(Math.Max(origW, 1), Math.Max(origH, 1), confidence: 0.0);
 
@@ -53,7 +53,7 @@ public sealed class SubjectDetector : ISubjectDetector {
         if (seed is not null && this.IsKnownRealLife(seed)) return this.HeroDetectionOnSteroids(bgrImage, seed);
 
         bool speckle = seed is not null && !seed.IsBackgroundFlat;
-        SubjectDetection detection = this.RunPass(bgrImage, this.cfg.MaxAnalysisSize, this.IsClaheWorthwhile(seed),
+        SubjectDetectionResult detection = this.RunPass(bgrImage, this.cfg.MaxAnalysisSize, this.IsClaheWorthwhile(seed),
             this.cfg.MinComponentAreaRatio, speckle ? this.cfg.StudioSweepSpeckleKernel : 0, out double ringResidual);
 
         // The extra discrimination step: an unmeasured background that does NOT fit its plane closely is a
@@ -70,12 +70,12 @@ public sealed class SubjectDetector : ISubjectDetector {
     // designated seam for the heavier evidence the design calls for — prior per-family evidence, yolo26n
     // person/product boxes, saliency — deliberately not built out yet. Extend it here rather than
     // scattering real-life special cases through the detection pipeline.
-    private SubjectDetection HeroDetectionOnSteroids(Mat bgrImage, SubjectSeedHint seed) {
+    private SubjectDetectionResult HeroDetectionOnSteroids(Mat bgrImage, SubjectSeedHint seed) {
         return this.RunPass(bgrImage, this.cfg.RealLifeAnalysisSize, this.IsClaheWorthwhile(seed),
             this.cfg.RealLifeMinComponentAreaRatio, this.cfg.StudioSweepSpeckleKernel, out _);
     }
 
-    private SubjectDetection RunPass(Mat bgrImage, int analysisSize, bool useClahe, double minComponentRatio, int speckleKernel, out double ringResidual) {
+    private SubjectDetectionResult RunPass(Mat bgrImage, int analysisSize, bool useClahe, double minComponentRatio, int speckleKernel, out double ringResidual) {
         int origW = bgrImage.Cols, origH = bgrImage.Rows;
         double scale = Math.Min(1.0, (double)analysisSize / Math.Max(origH, origW));
         using Mat small = this.ScaleForAnalysis(bgrImage, scale);
@@ -85,7 +85,7 @@ public sealed class SubjectDetector : ISubjectDetector {
         (bool top, bool bottom, bool left, bool right) = this.CanvasContacts(mask);
         byte[] maskPng = this.EncodeMaskPng(mask, origW, origH);
 
-        SubjectDetection detection = new() {
+        SubjectDetectionResult detection = new() {
             Producer = "classical-cv",
             MaskPng = maskPng,
             IntersectsTop = top,
@@ -418,7 +418,7 @@ public sealed class SubjectDetector : ISubjectDetector {
     private bool IsWholeFrame(Rect box, int w, int h) =>
         (long)box.Width * box.Height >= this.cfg.WholeFrameFraction * w * h;
 
-    private SubjectDetection WholeFrameDetection(int w, int h, double confidence) => new() {
+    private SubjectDetectionResult WholeFrameDetection(int w, int h, double confidence) => new() {
         Producer = "classical-cv",
         Box = FullBox(w, h),
         Confidence = confidence,

@@ -318,7 +318,7 @@ public sealed class Importer {
             out int normalizedWidth,
             out int normalizedHeight,
             out byte[]? normalizedBytes,
-            out SubjectDetection? subject,
+            out SubjectDetectionResult? subject,
             out ImportKoRecord? koRecord);
 
         if (!normalizedSuccessfully) {
@@ -387,7 +387,7 @@ public sealed class Importer {
         out int width,
         out int height,
         out byte[]? normalizedBytes,
-        out SubjectDetection? subject,
+        out SubjectDetectionResult? subject,
         out ImportKoRecord? koRecord) {
         width = 0;
         height = 0;
@@ -503,7 +503,7 @@ public sealed class Importer {
     /// destroys the alpha channel. Null when the source has no alpha channel, or nothing was opaque.
     /// </param>
     /// <returns>The loaded and orientation-corrected image. Caller disposes.</returns>
-    private Image LoadImageWithExifOrientation(string sourcePath, out SubjectDetection? subject) {
+    private Image LoadImageWithExifOrientation(string sourcePath, out SubjectDetectionResult? subject) {
         Image image = Image.Load(sourcePath);
 
         // Apply EXIF orientation correction so downstream stages see the correct orientation.

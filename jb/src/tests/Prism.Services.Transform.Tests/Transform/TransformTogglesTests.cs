@@ -24,7 +24,7 @@ public class TransformTogglesTests {
         lambda.Features.Set("background-color", "white", 1.0, "clip");
         lambda.Features.Set("background-type", "REALLIFE", 1.0, "clip");
         TransformSeed seed = TransformSeed.Resolve(lambda, null);
-        SubjectDetection subject = new() { HasHardShadowEvidence = true };
+        SubjectDetectionResult subject = new() { HasHardShadowEvidence = true };
 
         TransformToggles toggles = TransformToggles.Resolve(seed, subject);
 
@@ -41,7 +41,7 @@ public class TransformTogglesTests {
         lambda.Features.Set("background-type", "SOLIDCOLOR", 1.0, "clip");
         TransformSeed seed = TransformSeed.Resolve(lambda, null);
 
-        TransformToggles toggles = TransformToggles.Resolve(seed, new SubjectDetection { HasHardShadowEvidence = false });
+        TransformToggles toggles = TransformToggles.Resolve(seed, new SubjectDetectionResult { HasHardShadowEvidence = false });
 
         Assert.False(toggles.ProductNearBackground);
         Assert.False(toggles.NonFlatBackground);
@@ -52,7 +52,7 @@ public class TransformTogglesTests {
     public void ShadowAccounting_TrimsBoxBottom_WhenNotIntersectingBottom() {
         ImageRecord_LAMBDA lambda = new() {
             InitialFullName = "c.jpg", Width = 1000, Height = 1000,
-            Subject = new SubjectDetection {
+            Subject = new SubjectDetectionResult {
                 Producer = "classical-cv", IsWholeFrameFallback = false, Confidence = 0.9, HasHardShadowEvidence = true,
                 Box = new BoundingBox { X = 100, Y = 100, Width = 800, Height = 800, Left = 100, Top = 100, Right = 900, Bottom = 900 }
             }
@@ -70,7 +70,7 @@ public class TransformTogglesTests {
     public void NoShadowEvidence_LeavesBoxUnchanged() {
         ImageRecord_LAMBDA lambda = new() {
             InitialFullName = "d.jpg", Width = 1000, Height = 1000,
-            Subject = new SubjectDetection {
+            Subject = new SubjectDetectionResult {
                 Producer = "classical-cv", IsWholeFrameFallback = false, Confidence = 0.9, HasHardShadowEvidence = false,
                 Box = new BoundingBox { X = 100, Y = 100, Width = 800, Height = 800, Left = 100, Top = 100, Right = 900, Bottom = 900 }
             }
@@ -88,7 +88,7 @@ public class TransformTogglesTests {
     public void ShadowAccounting_CropSquareRoute_LeavesBoxUnshrunk() {
         ImageRecord_LAMBDA lambda = new() {
             InitialFullName = "e.jpg", Width = 1000, Height = 1000,
-            Subject = new SubjectDetection {
+            Subject = new SubjectDetectionResult {
                 Producer = "classical-cv", IsWholeFrameFallback = false, Confidence = 0.9, HasHardShadowEvidence = true,
                 IntersectsLeft = true,
                 Box = new BoundingBox { X = 0, Y = 100, Width = 800, Height = 800, Left = 0, Top = 100, Right = 800, Bottom = 900 }

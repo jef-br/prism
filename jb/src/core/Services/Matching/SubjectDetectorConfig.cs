@@ -2,8 +2,7 @@ namespace Prism.Services.Matching;
 
 /// <summary>
 /// Tuning values for the classical-CV <see cref="SubjectDetector"/>, bound from the "SubjectDetector"
-/// section of ClassifyConfig.json. No defaults — every value must be present in the JSON or load fails
-/// loud. Constants ported from the reference prototype jb/docs/reference/process_images.py.
+/// section of ClassifyConfig.json. No defaults — every value must be present in the JSON or fail loud.
 /// </summary>
 public sealed class SubjectDetectorConfig : IValidatableConfig {
     // BorderRingFraction's upper bound: at 0.5 the top/bottom (or left/right) bands would meet in the
@@ -63,22 +62,18 @@ public sealed class SubjectDetectorConfig : IValidatableConfig {
     // Fraction of the mask that must be stripped-thin-line (candidate shadow) for hard-shadow evidence.
     public required double HardShadowEvidenceFraction { get; init; }
 
-    // ---- Seeded steering (T-4860 toggle b): non-flat backgrounds split into two treatments ----
-
-    // Mean absolute residual of the border-ring background plane fit, above which a non-flat background
-    // reads as a real-life scene (B2) rather than a studio sweep (B1). A sweep fits its plane closely;
-    // a real scene does not. This is the discriminator, measured — not a second CLIP call.
+    // Config for the non-flat background splitter: case B1: studio sweep, case B2: real-life scene
+    // (Mean absolute residual of the border-ring background plane fit.) JB: HIGHLY EXPERIMENTAL
     public required double RealLifeResidualThreshold { get; init; }
 
-    // B1 (studio sweep): morphological-open size that clears dust specks and sensor noise off the sweep
-    // without eating into the product.
+    // B1 : morphological-open size (like dust & scratches)
     public required int StudioSweepSpeckleKernel { get; init; }
 
-    // B2 (real life, HeroDetectionOnSteroids): analysis resolution for the escalated pass. Higher than
-    // MaxAnalysisSize — a busy backdrop needs the detail a flat sweep does not.
+    // B2 : HeroDetectionOnSteroids, override MaxAnalysisSize and analyze image on high res
+    // A busy backdrop benefits from detail a 'flat' studio background does not.
     public required int RealLifeAnalysisSize { get; init; }
 
-    // B2: stricter minimum blob size (fraction of the largest blob). A real-life scene throws off far more
+    // B2: Stricter minimum blob size (fraction of the largest blob). A real-life scene throws off far more
     // spurious chroma outliers than a sweep, so the bar for "this blob is part of the product" goes up.
     public required double RealLifeMinComponentAreaRatio { get; init; }
 

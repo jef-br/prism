@@ -89,7 +89,7 @@ public class SubjectGeometryRoutingTests {
         Assert.Equal(legacyBox.Width, lambda.LegacySalientBox!.Value.Width);
     }
 
-    private static SubjectDetection Subject(bool intersect, bool wholeFrameFallback, double confidence = 0.9) => new() {
+    private static SubjectDetectionResult Subject(bool intersect, bool wholeFrameFallback, double confidence = 0.9) => new() {
         Producer = "classical-cv",
         IsWholeFrameFallback = wholeFrameFallback,
         Confidence = confidence,

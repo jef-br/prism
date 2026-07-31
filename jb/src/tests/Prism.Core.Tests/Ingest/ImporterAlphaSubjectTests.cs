@@ -4,7 +4,7 @@ namespace PrismCoreTests.Ingest;
 
 /// <summary>
 /// T-4830: the ingress alpha-capture path. When a source image carries a real alpha channel, the
-/// Imported stage must measure a <see cref="SubjectDetection"/> from it before flattening transparency
+/// Imported stage must measure a <see cref="SubjectDetectionResult"/> from it before flattening transparency
 /// onto white — an exact, free subject mask that beats the classical-CV heuristic. Covers the box
 /// measured from a known opaque region, the fully-opaque no-signal case, per-edge bleed intersects, and
 /// the non-alpha control (plain JPEG) staying unaffected. Canvases stay at or above
@@ -29,7 +29,7 @@ public class ImporterAlphaSubjectTests : IClassFixture<ImporterFixture> {
 
         ImageRecord_INPUT normalized = Assert.Single(result.NormalizedImages);
         Assert.NotNull(normalized.Subject);
-        SubjectDetection subject = normalized.Subject!;
+        SubjectDetectionResult subject = normalized.Subject!;
 
         Assert.Equal("alpha", subject.Producer);
         Assert.Equal(1.0, subject.Confidence);
@@ -102,7 +102,7 @@ public class ImporterAlphaSubjectTests : IClassFixture<ImporterFixture> {
 
         ImageRecord_INPUT normalized = Assert.Single(result.NormalizedImages);
         Assert.NotNull(normalized.Subject);
-        SubjectDetection subject = normalized.Subject!;
+        SubjectDetectionResult subject = normalized.Subject!;
 
         Assert.True(subject.IntersectsRight);
         Assert.False(subject.IntersectsTop);

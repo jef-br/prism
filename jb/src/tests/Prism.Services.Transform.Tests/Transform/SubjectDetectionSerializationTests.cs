@@ -11,7 +11,7 @@ namespace PrismCoreTests.Transform;
 public class SubjectDetectionSerializationTests {
     [Fact]
     public void SubjectDetection_RoundTripsThroughSystemTextJson() {
-        SubjectDetection original = new() {
+        SubjectDetectionResult original = new() {
             Box = new BoundingBox { X = 10, Y = 20, Width = 30, Height = 40, Left = 10, Top = 20, Right = 40, Bottom = 60 },
             MaskPng = [1, 2, 3, 4, 5],
             IntersectsTop = true,
@@ -22,7 +22,7 @@ public class SubjectDetectionSerializationTests {
         };
 
         string json = JsonSerializer.Serialize(original);
-        SubjectDetection? back = JsonSerializer.Deserialize<SubjectDetection>(json);
+        SubjectDetectionResult? back = JsonSerializer.Deserialize<SubjectDetectionResult>(json);
 
         Assert.NotNull(back);
         Assert.Equal(30, back!.Box.Width);
@@ -40,7 +40,7 @@ public class SubjectDetectionSerializationTests {
     public void SubjectDetection_SurvivesOnLambdaRecord() {
         ImageRecord_LAMBDA lambda = new() {
             InitialFullName = "img.jpg",
-            Subject = new SubjectDetection { Producer = "alpha", Confidence = 1.0, MaskPng = [9, 9, 9] }
+            Subject = new SubjectDetectionResult { Producer = "alpha", Confidence = 1.0, MaskPng = [9, 9, 9] }
         };
 
         string json = JsonSerializer.Serialize(lambda);

@@ -12,7 +12,7 @@ namespace PrismCoreTests.Services;
 /// reaching MinOutputWidth — and differ only in resampler and cap: ESRGAN to MaxUpScaleFactor when the
 /// job opted in, plain Lanczos to MaxLanczosOnlyUpScaleFactor by default, KO past either.
 /// <para>
-/// Geometry is pinned by putting an exact <see cref="SubjectDetection"/> on the record rather than by
+/// Geometry is pinned by putting an exact <see cref="SubjectDetectionResult"/> on the record rather than by
 /// crafting pixels the salient detector has to rediscover: promotion overwrites the detected box before
 /// the upscale decision runs, so the box under test is exact and the source image can stay blank.
 /// </para>
@@ -184,7 +184,7 @@ public class UpscaleGateTests : IDisposable {
     private static ImageRecord_LAMBDA Lambda(BoundingBox box, bool intersects) => new() {
         InitialFullName = "img.jpg",
         ImportStatus = ImportStatus.Ok,
-        Subject = new SubjectDetection {
+        Subject = new SubjectDetectionResult {
             Producer = "classical-cv",
             IsWholeFrameFallback = false,
             Confidence = 0.9,

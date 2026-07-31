@@ -23,9 +23,9 @@ public class ImageRecord_LAMBDA : ImageRecord_Base {
     /// <summary>
     /// Subject-isolation result produced upstream (preprocessing or ingress alpha) behind the
     /// <c>ISubjectDetector</c> seam. Null until a producer populates it; the Transformed stage prefers
-    /// this over <see cref="BoundingBox"/> when present. See <see cref="SubjectDetection"/>.
+    /// this over <see cref="BoundingBox"/> when present. See <see cref="SubjectDetectionResult"/>.
     /// </summary>
-    public SubjectDetection? Subject { get; set; }
+    public SubjectDetectionResult? Subject { get; set; }
 
     /// <summary>
     /// The salient bbox that stood before subject-detection promotion (T-4850), captured so the

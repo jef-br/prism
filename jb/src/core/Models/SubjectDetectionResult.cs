@@ -9,7 +9,7 @@ namespace Prism.Contracts;
 /// All members are mutable so the record round-trips across the matching→transform service boundary
 /// via System.Text.Json.
 /// </summary>
-public class SubjectDetection {
+public class SubjectDetectionResult {
     public BoundingBox Box { get; set; }
 
     // Single-channel subject mask (0/255) encoded as PNG; null for a box-only producer. PNG so a

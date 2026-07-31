@@ -12,7 +12,7 @@ public class AnalyzerShadowPresenceTests {
     private static Analyzer_ShadowPresence.Config Config() =>
         ConfigLoader.Section<Analyzer_ShadowPresence.Config>("analyzer_Config.json", "ShadowPresence");
 
-    private static SubjectDetection Detection(string producer, bool hardShadow) => new() {
+    private static SubjectDetectionResult Detection(string producer, bool hardShadow) => new() {
         Producer = producer,
         HasHardShadowEvidence = hardShadow,
         Confidence = 1.0

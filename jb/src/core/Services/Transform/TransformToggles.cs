@@ -22,7 +22,7 @@ public sealed class TransformToggles {
         this.ShadowAccounting = shadowAccounting;
     }
 
-    public static TransformToggles Resolve(TransformSeed? seed, SubjectDetection? subject) {
+    public static TransformToggles Resolve(TransformSeed? seed, SubjectDetectionResult? subject) {
         bool near = seed?.EffectiveProductColor is { } productColor && seed.BackgroundColor is { } backgroundColor
                     && string.Equals(productColor, backgroundColor, StringComparison.OrdinalIgnoreCase);
         // T-4860: only a measured SOLIDCOLOR background is flat. UNKNOWN/absent is not known to be flat,

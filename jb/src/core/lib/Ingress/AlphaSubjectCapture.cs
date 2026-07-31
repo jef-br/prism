@@ -4,7 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Prism.Lib.Ingress;
 
 /// <summary>
-/// Builds a <see cref="SubjectDetection"/> straight from a real alpha channel, before the Imported
+/// Builds a <see cref="SubjectDetectionResult"/> straight from a real alpha channel, before the Imported
 /// stage flattens transparency onto white. Alpha is an exact, free subject mask — measured, not
 /// inferred — so it always beats the classical-CV heuristic when one is available. Mirrors the
 /// box/mask/intersect conventions of the classical-CV producer (Services/Matching/SubjectDetector.cs)
@@ -24,10 +24,10 @@ public static class AlphaSubjectCapture {
     /// <summary>
     /// Scans <paramref name="image"/> for opaque pixels (alpha at or above <paramref name="opacityThreshold"/>).
     /// Returns null when no pixel is opaque; otherwise a detection whose box is the tight bound of the
-    /// opaque region, whose mask mirrors that region, and whose <see cref="SubjectDetection.IsWholeFrameFallback"/>
+    /// opaque region, whose mask mirrors that region, and whose <see cref="SubjectDetectionResult.IsWholeFrameFallback"/>
     /// is set when the opaque region covers effectively the whole frame.
     /// </summary>
-    public static SubjectDetection? Capture(Image image, int opacityThreshold, double edgeContactFraction) {
+    public static SubjectDetectionResult? Capture(Image image, int opacityThreshold, double edgeContactFraction) {
         using Image<Rgba32> rgba = image.CloneAs<Rgba32>();
         int width = rgba.Width, height = rgba.Height;
 
@@ -37,7 +37,7 @@ public static class AlphaSubjectCapture {
         (bool top, bool bottom, bool left, bool right) = CanvasContacts(maskBytes, width, height, edgeContactFraction);
         bool wholeFrame = (long)box.Width * box.Height >= WholeFrameAreaFraction * width * height;
 
-        return new SubjectDetection {
+        return new SubjectDetectionResult {
             Producer = "alpha",
             Box = box,
             MaskPng = EncodeMaskPng(maskBytes, width, height),

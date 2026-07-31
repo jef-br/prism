@@ -35,8 +35,8 @@ public class SubjectDetectorSeedingTests {
         using Mat img = ProductOnWhite();
         SubjectDetector detector = new(Config());
 
-        SubjectDetection implicitly = detector.Detect(img);
-        SubjectDetection explicitly = detector.Detect(img, null);
+        SubjectDetectionResult implicitly = detector.Detect(img);
+        SubjectDetectionResult explicitly = detector.Detect(img, null);
 
         Assert.Equal(implicitly.Box.Left, explicitly.Box.Left);
         Assert.Equal(implicitly.Box.Top, explicitly.Box.Top);
@@ -54,7 +54,7 @@ public class SubjectDetectorSeedingTests {
     public void SeededBranches_StillBoxTheProduct(string backgroundType, string productColor, string backgroundColor) {
         using Mat img = ProductOnWhite();
 
-        SubjectDetection d = new SubjectDetector(Config()).Detect(img, Seed(backgroundType, productColor, backgroundColor));
+        SubjectDetectionResult d = new SubjectDetector(Config()).Detect(img, Seed(backgroundType, productColor, backgroundColor));
 
         Assert.False(d.IsWholeFrameFallback, $"seed({backgroundType}) degraded to whole-frame instead of finding the product");
         Assert.True(d.Box.Left <= 70, $"box left {d.Box.Left} does not cover the product starting at x=60");
@@ -70,7 +70,7 @@ public class SubjectDetectorSeedingTests {
         using Mat img = new(1200, 1200, MatType.CV_8UC3, new Scalar(255, 255, 255));
         Cv2.Rectangle(img, new Rect(300, 300, 500, 500), new Scalar(40, 40, 200), thickness: -1);
 
-        SubjectDetection d = new SubjectDetector(Config()).Detect(img, Seed("REALLIFE", "red", "white"));
+        SubjectDetectionResult d = new SubjectDetector(Config()).Detect(img, Seed("REALLIFE", "red", "white"));
 
         Assert.False(d.IsWholeFrameFallback);
         Assert.True(d.Box.Left <= 320, $"box left {d.Box.Left} lost the product edge at x=300");
