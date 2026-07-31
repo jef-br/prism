@@ -18,19 +18,8 @@ namespace Prism.Services.Transform;
 ///       → <see cref="Tx_DetailCropper"/>.
 ///    b. Otherwise → <see cref="Tx_CropSquare"/> (fallback for intersecting images).
 /// 3. No edge intersects → <see cref="Tx_CenterAndStretch"/>.
-///
-/// While <see cref="BypassPhenotypes"/> is on (temporary PoC gate), phenotype drops out of the
-/// decision: the phenotype-null half of guard 1 is skipped, and intersecting images route to
-/// <see cref="Tx_CropSquare"/> instead of <see cref="Tx_DetailCropper"/> (which is phenotype-driven).
-/// Routing then depends only on <see cref="ImageRecord_LAMBDA.BoundingBox"/> and edge intersects.
 /// </remarks>
 public static class ImageTransformer {
-    // Temporary gate — see jb/src/core/Images/Classify/jbtodo.md ("HANDMADE BY ME: Temporarily
-    // GATE the phenotypes"). While true, routing ignores SelectedPhenotype so basic transforms
-    // run off geometry alone. Flip to false once phenotype assignment is validated.
-    // static readonly (not const) so the preserved phenotype path stays reachable and warning-free.
-    private static readonly bool BypassPhenotypes = true;
-
     /// <summary>
     /// Selects and applies the transform strategy for <paramref name="lambda"/>, records the
     /// outcome in <see cref="ImageRecord_LAMBDA.OutputRecord"/>, and returns the record.
@@ -62,7 +51,7 @@ public static class ImageTransformer {
     // (the pixel mask stays on lambda.Subject.MaskPng, never here).
     private static void AppendTransformEvidence(ImageRecord_LAMBDA lambda, TransformToggles toggles, bool promoted) {
         if (lambda.OutputRecord is null) return;
-        SubjectDetection? s = lambda.Subject;
+        SubjectDetectionResult? s = lambda.Subject;
         string subject = s is null
             ? "subject=none"
             : string.Format(CultureInfo.InvariantCulture,
@@ -121,14 +110,10 @@ public static class ImageTransformer {
 
     private static IImageTransformation SelectTransformer(ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters, TransformSeed? seed) {
         // Step 1 — prerequisites missing: route to conservative processor.
-        // The phenotype-null guard is suppressed while phenotypes are bypassed.
-        if (lambda.BoundingBox is null || (!BypassPhenotypes && lambda.SelectedPhenotype is null)) return new Tx_ProblemImageProcessor(parameters.ProblemImageProcessor, parameters.Output);
+        if (lambda.BoundingBox is null || lambda.SelectedPhenotype is null) return new Tx_ProblemImageProcessor(parameters.ProblemImageProcessor, parameters.Output);
 
         // Step 2 — object touches at least one image edge.
         if (FinalOutputSize.HasEdgeIntersect(lambda.Features)) {
-            // DetailCropper is phenotype-driven; while bypassing, fall back to the square crop.
-            if (BypassPhenotypes) return new Tx_CropSquare(parameters.Output);
-
             bool isCloseupPhenotype = lambda.SelectedPhenotype is "closeup-image" or "model-detail-closeup";
             if (!isCloseupPhenotype || IsDetailCropperDetSlotExcluded(lambda)) return new Tx_CropSquare(parameters.Output);
 
