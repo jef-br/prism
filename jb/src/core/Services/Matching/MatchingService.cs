@@ -264,7 +264,7 @@ public sealed class MatchingService : IMatchingService, IDisposable {
 
             // Consumed once — release the reference immediately rather than holding it for the rest of
             // the job (the post-match refinement chain re-reads NormalizedJpgPath from disk separately;
-            // out of scope for this ticket, see AGENT-TICKETS.md T-3500).
+            // out of scope for this ticket, see T-3500 in jb/ticketboard/).
             source.NormalizedJpegBytes = null;
         }
         catch (Exception ex) {

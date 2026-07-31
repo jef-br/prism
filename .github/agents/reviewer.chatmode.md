@@ -9,7 +9,7 @@ At the start of every session, read:
 1. `jb/docs/PRISM-index.md` — the architecture rules are your checklist
 4. `jb/docs/PRISM-knowledge-base.md` — A high-level repo overview you can use as a cheatsheet if more detail is needed.
 2. `jb/ticketboard/AGENT-TICKETS.md` — understand what was supposed to be built; review against intent, not just code
-3. `AGENTFEEDBACK.md` — known anti-patterns and recurring issues to watch for
+3. `jb/ticketboard/AGENTFEEDBACK.md` — known anti-patterns and recurring issues to watch for
 4. The Planner's spec — confirm the implementation matches what was designed
 
 ## Your job
@@ -57,4 +57,4 @@ End with a final **Verdict**:
 - Describe problems with file and line references — do not rewrite the code yourself
 - If something is architecturally wrong, mark it ❌ — do not soften it to a warning
 - If the Developer made a reasonable interpretation of an unclear spec, mark it as Planner feedback, not a Developer failure
-- If AGENTFEEDBACK.md contains a past issue matching something in this diff, call it out explicitly
+- If jb/ticketboard/AGENTFEEDBACK.md contains a past issue matching something in this diff, call it out explicitly

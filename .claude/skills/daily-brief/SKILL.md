@@ -15,7 +15,7 @@ Steps:
    - `jb/ticketboard/AGENT-TICKETS.md` — open tickets and status changes
    - `rtk git log --oneline <last-brief-commit>..HEAD` — everything landed since the previous "Daily brief - " commit
    - All open `jbtodo.md` blocks (the /todos skill's source data)
-   - `AGENTFEEDBACK.md` if changed since the last brief
+   - `jb/ticketboard/AGENTFEEDBACK.md` if changed since the last brief
 
 4. **Overwrite `daily-brief.md`** at the repo root:
    - Heading is always exactly `# Daily Brief` — never add a date to it.

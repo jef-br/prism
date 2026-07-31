@@ -196,7 +196,7 @@ did. The resolution, applied via targeted reverts:
 - This does **not** apply to genuinely tunable/empirical values (confidence weights, thresholds,
   calibration constants) — those either move to config (no shadow defaults, see above) or, where
   calibration itself is an open product question, stay as named consts pending [[T-2600]]. See
-  `AGENTFEEDBACK.md`'s S109 entry for that standing rule.
+  `jb/ticketboard/AGENTFEEDBACK.md`'s S109 entry for that standing rule.
 
 ---
 

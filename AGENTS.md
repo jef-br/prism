@@ -89,8 +89,10 @@ If you want to stop tracking a file without deleting it from disk, use `git rm -
 - `CLAUDE.md` — Claude Code session startup instructions
 - `AGENTS.md` — this file; placement rules, style addenda, and agent protocols
 - `jb/ticketboard/AGENT-TICKETS.md` — the board: one row per open ticket (ID, status, next action)
-- `jb/ticketboard/T-XXXX.md` — full detail for one open ticket, one file each
 - `jb/ticketboard/AGENT-TICKETS-ARCHIVE.md` — Done tickets, moved there by /ticket-finish
-- `AGENTFEEDBACK.md` — accumulated session feedback
+- `jb/ticketboard/AGENTFEEDBACK.md` — accumulated session feedback
 
 A pre-commit hook at `.git/hooks/pre-commit` enforces this by blocking staged deletions of these files.
+
+Not protected: `jb/ticketboard/T-XXXX.md` holds one open ticket's detail each, and /ticket-finish deletes
+the file when the ticket closes. That deletion is the intended lifecycle, not an accident.

@@ -1,6 +1,6 @@
 # PRISM Abbreviation Glossary
 
-Used across all `jb/docs/` files, `AGENTFEEDBACK.md`, and `PRISM-information.md`. Where a full form appears in code (class names, method names, JSON keys), it is not abbreviated.
+Used across all `jb/docs/` files, `jb/ticketboard/AGENTFEEDBACK.md`, and `PRISM-information.md`. Where a full form appears in code (class names, method names, JSON keys), it is not abbreviated.
 
 | Abbr | Full form |
 |---|---|

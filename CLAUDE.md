@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 On the first prompt of every session, read these files before doing anything else:
 1. `jb/ticketboard/AGENT-TICKETS.md` — the board: one row per open ticket (ID, status, next action). Ticket detail lives in `jb/ticketboard/T-XXXX.md` — open only the ones the current task needs, never all of them. Done tickets are in `jb/ticketboard/AGENT-TICKETS-ARCHIVE.md`; read that only when history is needed
 2. `jb/docs/PRISM-index.md` — source of truth; maps tasks to documentation files
-3. `AGENTFEEDBACK.md` — static reload memory: project constraints, config locations, behavioral gotchas. Not a ticket board.
+3. `jb/ticketboard/AGENTFEEDBACK.md` — static reload memory: project constraints, config locations, behavioral gotchas. Not a ticket board.
 
 ## Commands
 

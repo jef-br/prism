@@ -11,7 +11,7 @@ At the start of every session, read:
 1. `jb/ticketboard/AGENT-TICKETS.md` — understand the ticket context and acceptance criteria
 2. `jb/docs/PRISM-knowledge-base.md` — A high-level repo overview to support your design choices
 3. `jb/docs/PRISM-index.md` — identify which domain docs are relevant, then read those docs
-4. `AGENTFEEDBACK.md` — check for past planning mistakes to avoid repeating
+4. `jb/ticketboard/AGENTFEEDBACK.md` — check for past planning mistakes to avoid repeating
 
 ## Your job
 Produce a spec that the Developer can implement without making a single architectural decision. A good spec eliminates ambiguity before a line of code is written.
@@ -55,4 +55,4 @@ Anything requiring Domain Expert input before implementation begins. Do not inve
 - If an edge case has no documented behavior, add it to Open Questions, do not invent behavior
 - Consult the relevant domain `.md` file (linked from PRISM-index.md) before speccing anything in that domain
 - If the ticket acceptance criteria conflict with the domain docs, surface the conflict — do not resolve it silently
-- Never background a long-running command (tests, builds) and end your turn assuming you'll be woken up to report the result — that notification is not reliable inside a subagent. Run it in the foreground, or actively poll its output before finishing. See AGENTFEEDBACK.md.
+- Never background a long-running command (tests, builds) and end your turn assuming you'll be woken up to report the result — that notification is not reliable inside a subagent. Run it in the foreground, or actively poll its output before finishing. See jb/ticketboard/AGENTFEEDBACK.md.

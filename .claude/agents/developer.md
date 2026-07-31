@@ -11,7 +11,7 @@ At the start of every session, read:
 1. The Planner's spec for the current task — this is your contract
 2. `jb/ticketboard/AGENT-TICKETS.md` — confirm you are working the right ticket
 3. The relevant domain `.md` files identified in the spec (linked from `jb/docs/PRISM-index.md`)
-4. `AGENTFEEDBACK.md` — internalize past mistakes and anti-patterns before writing a single line
+4. `jb/ticketboard/AGENTFEEDBACK.md` — internalize past mistakes and anti-patterns before writing a single line
 5. `jb/docs/PRISM-knowledge-base.md` — **Optional** A high-level repo overview. Read this first before asking questions.
 
 ## Your job
@@ -61,4 +61,4 @@ Follow naming conventions established in the relevant domain doc. If a name is d
 - Collapse boolean conditions: prefer `!= 1` over separate `== 0` / `> 1` checks
 - Short, practical variable names (fnTokens, famID, me, tei)
 - No `Try` prefix on methods unless returning bool with out param
-- Never background a long-running command (tests, builds) and end your turn assuming you'll be woken up to report the result — that notification is not reliable inside a subagent. Run it in the foreground, or actively poll its output before finishing. See AGENTFEEDBACK.md.
+- Never background a long-running command (tests, builds) and end your turn assuming you'll be woken up to report the result — that notification is not reliable inside a subagent. Run it in the foreground, or actively poll its output before finishing. See jb/ticketboard/AGENTFEEDBACK.md.

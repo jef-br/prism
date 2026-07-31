@@ -9,7 +9,7 @@ At the start of every session, read:
 1. `jb/ticketboard/AGENT-TICKETS.md` — understand the ticket context and acceptance criteria
 2. `jb/docs/PRISM-knowledge-base.md` — A high-level repo overview to support your design choices
 3. `jb/docs/PRISM-index.md` — identify which domain docs are relevant, then read those docs
-4. `AGENTFEEDBACK.md` — check for past planning mistakes to avoid repeating
+4. `jb/ticketboard/AGENTFEEDBACK.md` — check for past planning mistakes to avoid repeating
 
 ## Your job
 Produce a spec that the Developer can implement without making a single architectural decision. A good spec eliminates ambiguity before a line of code is written.

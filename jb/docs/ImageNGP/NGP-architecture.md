@@ -33,7 +33,7 @@ Two distinct mappings live here, and conflating them is the main design risk:
 
 - **Layer A — Features → Phenotype.** Many-features-to-one-phenotype. Deterministic predicates ("all
   required features match"). This is the same shape as the existing **ImageRole qualification rule**
-  documented in `AGENTFEEDBACK.md` ("an image qualifies for an ImageRole only when all required
+  documented in `jb/ticketboard/AGENTFEEDBACK.md` ("an image qualifies for an ImageRole only when all required
   ImageFeature states match").
 - **Layer B — (ProductType, Phenotype) → DetSlot.** This is a *competition*: every image in a FamilyID
   competes for a fixed number of slots, and each slot has an ordered preference list of acceptable
@@ -92,7 +92,7 @@ cost(image, slot) = f( slotPreferenceRank[productType, slot, phenotype],
 
 Solve as a **minimum-cost assignment** (Hungarian algorithm, or a greedy slot-priority pass for V1).
 This guarantees each slot is filled by a *distinct* image and removes the "same image claims two slots"
-risk surfaced in the FMCG open question. Ties break by the existing rule already in `AGENTFEEDBACK.md`:
+risk surfaced in the FMCG open question. Ties break by the existing rule already in `jb/ticketboard/AGENTFEEDBACK.md`:
 role confidence → compatible `_det#` filename hints → stable import index. Leftover images go to fallback
 slots after the configured ones (never dropped), matching current policy.
 
@@ -111,7 +111,7 @@ slots after the configured ones (never dropped), matching current policy.
 
 | File | Holds | Shape |
 |---|---|---|
-| `ImageFeatures.json` | feature ids, datatypes, allowed states, threshold | flat list (already planned in `AGENTFEEDBACK.md`) |
+| `ImageFeatures.json` | feature ids, datatypes, allowed states, threshold | flat list (already planned in `jb/ticketboard/AGENTFEEDBACK.md`) |
 | `Phenotypes.json` | per-phenotype required/optional predicates + scoring weights | rule table (Layer A) |
 | `DetOrderRules.json` *(extended)* | `ProductType → DetSlot → ordered phenotype/keyword list` | sparse preference tensor (Layer B) |
 | `RoleKeywordPhenotypes.json` *(new, proposed)* | maps human slot keywords (`pack`, `label`, `material`) → allowed phenotype sets | thin lookup layer |

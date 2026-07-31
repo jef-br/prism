@@ -1,7 +1,7 @@
 # PRISM Agent Tickets
 
-This file is the table of contents. Every open ticket gets one row: its ID, its status, and the one
-thing to do next. Nothing else lives here.
+This file is the table of contents. Every open ticket gets one row: its ID, its status, its title, and
+the one thing to do next. Nothing else lives here.
 
 **Full detail is in `jb/ticketboard/T-XXXX.md`, one file per ticket.** Read the row, then open only the
 ticket file you need. Do not paste ticket bodies back into this file.
@@ -11,22 +11,37 @@ user-facing summaries.
 
 ## Board
 
-| Ticket | Status | Do this next |
-|---|---|---|
-| [T-2600](T-2600.md) · M5 Classify groundwork | Blocked | Re-measure phenotype coverage at the shipped thresholds, then close the M5 gate |
-| [T-3800](T-3800.md) · Match bracket validation | Blocked | Add a fuzzy-colour image and a Bracket-4 image to CiMini, then validate both matcher changes on real data |
-| [T-4000](T-4000.md) · Analyzer calibration backlog | Ready | Split the 11 analyzer calibration questions into their own tickets, one at a time |
-| [T-4942](T-4942.md) · Test projects fight over the GPU | Ready | Make the two GPU-heavy test projects run one at a time, and make CI fail on a short test count |
-| [T-4945](T-4945.md) · Hard-shadow threshold | Ready | Label a set for hard vs soft shadow and re-tune the threshold against it |
-| [T-4948](T-4948.md) · White-on-white contrast floor | Ready | Measure real white-on-white contrast, then set the denoise strength to match |
-| [T-4950](T-4950.md) · SubjectMask crosses the wire unread | Ready | Measure the per-image mask payload, then decide keep / `[JsonIgnore]` / config-gate |
-| [T-4955](T-4955.md) · Stale derived edge features | Ready | Recompute `intersection-count` and `fully-in-frame` when the subject box is promoted |
-| [T-4960](T-4960.md) · Alpha box vs colour fallback | Ready | Make `Analyzer_SubjectGeometry` prefer the alpha-derived box |
-| [T-4970](T-4970.md) · Phenotype assignment validation | Review | Get the reviewer verdict, then re-measure at the shipped thresholds |
-| [T-4980](T-4980.md) · CiMini E2E golden red | Review | Re-run the CiMini E2E gate green, and make `dotnet test` read the goldens |
-| [T-4990](T-4990.md) · Detector under-counts intersections | Ready | Make the detector count every edge the subject actually touches, then re-score |
-| [T-5000](T-5000.md) · Filename orientation false positives | Ready | Stop the filename analyzer reading garment nouns as camera views |
-| [T-5010](T-5010.md) · Centre-and-stretch unreachable | Review | Verify the bypass removal on SPACINI29, then get the reviewer verdict |
+| Ticket | Status | Title | Do this next |
+|---|---|---|---|
+| [T-2600] | Blocked | M5 Classify groundwork | Re-measure phenotype coverage at the shipped thresholds, then close the M5 gate |
+| [T-3800] | Blocked | Match bracket validation | Add a fuzzy-colour image and a Bracket-4 image to CiMini, then validate both matcher changes on real data |
+| [T-4000] | Ready | Analyzer calibration backlog | Split the 11 analyzer calibration questions into their own tickets, one at a time |
+| [T-4942] | Ready | Test projects fight over the GPU | Make the two GPU-heavy test projects run one at a time, and make CI fail on a short test count |
+| [T-4945] | Ready | Hard-shadow threshold | Label a set for hard vs soft shadow and re-tune the threshold against it |
+| [T-4948] | Ready | White-on-white contrast floor | Measure real white-on-white contrast, then set the denoise strength to match |
+| [T-4950] | Ready | SubjectMask crosses the wire unread | Measure the per-image mask payload, then decide keep / `[JsonIgnore]` / config-gate |
+| [T-4955] | Ready | Stale derived edge features | Recompute `intersection-count` and `fully-in-frame` when the subject box is promoted |
+| [T-4960] | Ready | Alpha box vs colour fallback | Make `Analyzer_SubjectGeometry` prefer the alpha-derived box |
+| [T-4970] | Review | Phenotype assignment validation | Get the reviewer verdict, then re-measure at the shipped thresholds |
+| [T-4980] | Review | CiMini E2E golden red | Re-run the CiMini E2E gate green, and make `dotnet test` read the goldens |
+| [T-4990] | Ready | Detector under-counts intersections | Make the detector count every edge the subject actually touches, then re-score |
+| [T-5000] | Ready | Filename orientation false positives | Stop the filename analyzer reading garment nouns as camera views |
+| [T-5010] | Review | Centre-and-stretch unreachable | Verify the bypass removal on SPACINI29, then get the reviewer verdict |
+
+[T-2600]: T-2600.md
+[T-3800]: T-3800.md
+[T-4000]: T-4000.md
+[T-4942]: T-4942.md
+[T-4945]: T-4945.md
+[T-4948]: T-4948.md
+[T-4950]: T-4950.md
+[T-4955]: T-4955.md
+[T-4960]: T-4960.md
+[T-4970]: T-4970.md
+[T-4980]: T-4980.md
+[T-4990]: T-4990.md
+[T-5000]: T-5000.md
+[T-5010]: T-5010.md
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.

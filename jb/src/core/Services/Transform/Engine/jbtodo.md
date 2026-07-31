@@ -243,7 +243,7 @@ Release with `-warnaserror:SA1402,SA1649,S109,SA1101`; the detector port introdu
 numbers (the MAD scale factor, the plane-fit sample cutoff, bilateral-filter tuning, histogram bins), so
 S109 failed the build. A plain local `dotnet build` hides this because S109 is only a warning outside CI —
 which is how it passed both the original implementation and the first review. Fixed as named `private
-const` per the `AGENTFEEDBACK.md` T-4400 policy, zero value changes.
+const` per the `jb/ticketboard/AGENTFEEDBACK.md` T-4400 policy, zero value changes.
 
 ### Real-data verification (SPACINI29, 2026-07-28)
 

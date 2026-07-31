@@ -12,7 +12,7 @@ Group and display tickets in this order:
 **Blocked** — Status is Blocked
 
 For each ticket, show one line:
-`T-XXXX · Title [Status] — <do this next, from the board's third column>`
+`T-XXXX · Title [Status] — <do this next, from the board's last column>`
 
 Done tickets live in `jb/ticketboard/AGENT-TICKETS-ARCHIVE.md` (moved there by /ticket-finish) — do not read the archive unless the user asks about done/closed tickets.
 

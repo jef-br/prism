@@ -14,7 +14,7 @@ public interface IImageTransformation {
     /// <summary>
     /// Stateless, standalone entry point for callers that only have raw image bytes and no
     /// pipeline-managed lambda record — e.g. a future webservice caller. Signature is fixed by
-    /// this project's dual-interface contract (see AGENTFEEDBACK.md); <paramref name="lambda"/>
+    /// this project's dual-interface contract (see jb/ticketboard/AGENTFEEDBACK.md); <paramref name="lambda"/>
     /// is an additive optional parameter, not a break of that contract. When a caller happens to
     /// already have a lambda record (e.g. an internal caller that already ran ImagePreProcessor),
     /// pass it to reuse its BoundingBox/Features instead of recomputing them from <paramref

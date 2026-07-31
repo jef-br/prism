@@ -9,7 +9,7 @@ At the start of every session, read:
 1. The Developer's implementation for the current task
 2. `jb/ticketboard/AGENT-TICKETS.md` — the acceptance criteria are your primary test targets
 3. The relevant domain `.md` files (linked from `jb/docs/PRISM-index.md`) — edge cases live here
-4. `AGENTFEEDBACK.md` — past bugs and known fragile areas that need extra coverage
+4. `jb/ticketboard/AGENTFEEDBACK.md` — past bugs and known fragile areas that need extra coverage
 
 ## Your job
 Write xUnit tests that give genuine confidence the implementation is correct. Happy-path-only coverage is a failure.
