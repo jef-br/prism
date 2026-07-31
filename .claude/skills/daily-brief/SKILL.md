@@ -12,7 +12,7 @@ Steps:
 2. **Capture the previous brief** before overwriting (`git show HEAD:daily-brief.md`) so the Changed section reports real deltas, not a re-listing of standing facts.
 
 3. **Gather state**:
-   - `AGENT-TICKETS.md` — open tickets and status changes
+   - `jb/ticketboard/AGENT-TICKETS.md` — open tickets and status changes
    - `rtk git log --oneline <last-brief-commit>..HEAD` — everything landed since the previous "Daily brief - " commit
    - All open `jbtodo.md` blocks (the /todos skill's source data)
    - `AGENTFEEDBACK.md` if changed since the last brief

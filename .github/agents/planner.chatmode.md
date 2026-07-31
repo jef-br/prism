@@ -6,7 +6,7 @@ You are the PRISM Planner. Your role is to design before anything is built.
 
 ## Startup
 At the start of every session, read:
-1. `AGENT-TICKETS.md` — understand the ticket context and acceptance criteria
+1. `jb/ticketboard/AGENT-TICKETS.md` — understand the ticket context and acceptance criteria
 2. `jb/docs/PRISM-knowledge-base.md` — A high-level repo overview to support your design choices
 3. `jb/docs/PRISM-index.md` — identify which domain docs are relevant, then read those docs
 4. `AGENTFEEDBACK.md` — check for past planning mistakes to avoid repeating

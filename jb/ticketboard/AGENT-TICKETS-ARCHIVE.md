@@ -1,7 +1,390 @@
 # PRISM Agent Tickets — Archive
 
-Done tickets, moved here by /ticket-finish to keep AGENT-TICKETS.md (read every session start) lean.
-Newest at the top.
+Done tickets, moved here by /ticket-finish to keep `jb/ticketboard/AGENT-TICKETS.md` (read every session
+start) lean. Newest at the top. When a ticket closes, its `jb/ticketboard/T-XXXX.md` body is appended here
+and that file is deleted.
+
+### T-4900 · ESRGAN toggle + unified final-size upscale (epic)
+**Status:** Done (2026-07-30) | **Profile:** P0-orchestrator
+**Found by:** 2026-07-28 upscale-perf investigation (see `memory/project_transform_upscale_bottleneck.md`)
+
+**All five children are Done with reviewer Approve (T-4905/T-4930/T-4940 on 2026-07-29; T-4910/T-4920 on
+2026-07-30).** Decisions in `jb/docs/PRISM-transform-generate.md` → "Unified upscale"; API field in
+`PRISM-api.md`. This unblocks [[T-4970]].
+
+**Two dormant defects the reviews surfaced, both keyed to the same future event.** Neither is reachable
+while `BypassPhenotypes = true`, and both become live the moment it is flipped — so they are a checklist
+for that flip, not open work now:
+1. `FinalOutputSize.RoutesToCenterAndStretch` omits the `SelectedPhenotype is null` half of
+   `SelectTransformer`'s Step 1 ([[T-4910]]).
+2. `Tx_ProblemImageProcessor` derives its output metadata from the unscaled original-resolution field
+   ([[T-4920]]).
+
+**Three defects the epic uncovered and fixed along the way** (user decisions, 2026-07-29 — all three were
+blocking the epic's own premise, not scope creep):
+1. **The bounding box was never rescaled after upscale.** `UpscaleAsync` enlarged the bytes while
+   `lambda.BoundingBox` stayed in original-image pixels, so `Tx_CenterAndStretch` cropped an
+   original-coordinate rect out of an enlarged image — wrong region, and the canvas was still sized off the
+   un-scaled bbox, so the output never reached 800px anyway. The ON path was paying full ESRGAN cost for an
+   output that met neither the crop nor the size it claimed. Geometry now scales with the pixels.
+2. **`Tx_CropSquare.Transform` never applied its crop.** It recorded a `CropRectangle` on the OutputRecord
+   without touching `ProcessedBytes`, and Export ships `ProcessedBytes` — so the exported file was the whole
+   frame while the manifest claimed a square. Under `BypassPhenotypes = true` that is the route every
+   intersecting image takes. It now crops the bytes.
+3. **Upscale sized against the pre-promotion box.** Subject promotion and shadow accounting ran in
+   `ImageTransformer` *after* preprocessing, so upscale measured a box Transform then replaced. Promotion +
+   shadow accounting moved into `ImageTransformer.FinalizeGeometry`, called from `PreprocessAsync` before the
+   upscale decision.
+
+Tracking ticket. **Problem:** the upscale stage (Real-ESRGAN, in `ImagePreProcessor.UpscaleAsync`) is the
+pipeline's dominant cost — measured **122.9s per 800×800 image on the GPU** with the old fixed-64 model,
+and even after the dynamic-model fix (T-4905) it's ~**10s/image** of genuine Real-ESRGAN compute. On a
+~1900-image set that is still hours, and desktop users without a capable GPU will not tolerate it.
+**Goal:** make ESRGAN opt-in. Add a user-set toggle (**default OFF**); when OFF, upscale with plain
+Lanczos, and only *as little as needed* to clear the final-image 800px bar (capped at +33%). When ON,
+ESRGAN runs (now fast via the dynamic model). Both paths target the **same** exact final-output-size bar
+(unified — user decision 2026-07-28).
+
+**Settled decisions (user, 2026-07-28):** (1) shortfall — if the applicable cap can't reach the bar,
+**KO the image** (fail-loud, like today's upscale-exceeded KO); (2) targeting — **unified**: ON and OFF
+both target final ≥ bar (ON caps at the existing ESRGAN `MaxUpScaleFactor`, OFF caps at the new
+Lanczos-only cap); (3) scope — **includes the workbench UI** toggle; (4) bleed images — target the output
+dimension **directly, no margin term** (only zero-intersection images get the `×(1+2·margin)` discount);
+(5) **exactly one upscale location** is mandatory — the final size is *exactly* computable pre-transform
+from the already-known bbox + intersection state + margin config (reuse each routing's canvas-size
+formula), so upscale stays where it is (`ImagePreProcessor.UpscaleAsync`) with an exact final-size calc —
+no post-transform move, no split, no prediction/approximation.
+
+**All values from config, never hardcoded** (no-shadow-defaults rule): reuse `MinOutputWidth` (800) as the
+FINAL-image bar; new Lanczos-only cap key (proposed `Output.Images.Resize.MAXIMUM_UpScale_LanczosOnly` =
+1.33 → `PrismConfiguration.MaxLanczosOnlyUpScaleFactor`); margin from `CropTransformSettings.WhiteSpaceMargin`
+(0.042, transform_Config — note the cross-config read). Children: T-4905 (done, review pending), T-4910,
+T-4920, T-4930, T-4940. Index ticket, not a unit of work.
+
+**Files:** `AGENT-TICKETS.md`, `memory/project_transform_upscale_bottleneck.md`.
+
+---
+
+### T-4905 · Dynamic-shape ESRGAN export + even-dimension padding
+**Status:** Done (2026-07-29) | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-29)
+**Found by:** [[T-4900]]
+
+**Reviewer verdict (2026-07-29): Approve, no defects.** The review did not take the ticket's prose on faith —
+it loaded both `.onnx` files and hashed all 702 initializers in each: identical SHA256, identical 1226-node
+graph, the sole difference being the declared input (`[batch_size,3,64,64]` → `[batch,3,height,width]`). The
+even-padding math was traced by hand for the dynamic branch: `overlap=0`/`discard=0` forces exactly one tile,
+every in-bounds pixel gets weight 1.0 so `NormalizeAccumulator` never divides by zero, and the bounds checks
+drop precisely the padded-then-doubled rows — a top-left crop to `src×2` with no off-by-one. Fixed-64 tiling
+confirmed untouched. Upscale suite run in the foreground: 17/17. One non-blocking observation: the new test is
+black-box at `Upscaler.Upscale` level, so it would also pass on the old tiling path — not a gap for the
+shipped config, but a more surgical `RunTiled`/`RoundUpToEven` unit test would be sharper.
+
+**Implemented 2026-07-28.** The committed `Real-ESRGAN_x2plus.onnx`
+had a fixed `[1,3,64,64]` input, so an 800px image was upscaled as **625 serialized 64×64 tile Runs**
+(~0.2s DirectML dispatch overhead each = 122.9s). The RRDBNet is already spatially size-agnostic
+internally (pixel_unshuffle derives shape from `Shape(input)`; both Resize use scales `[1,1,2,2]`); only
+the declared input shape pinned it to 64. A **metadata-only** edit (input dims → dynamic `height`/`width`,
+weights untouched, bit-identical output) makes it accept whole images in one Run. Proven on the GPU:
+**122.9s → 10.19s, ~12×**, correct 1600×1600 output. Changes landed: `Prism_Config.json`
+`Models.Upscale.Path` → `Real-ESRGAN_x2plus_dynamic.onnx`; `Upscaler.RunTiled` rounds the whole-image
+(dynamic) tile up to even H/W — the `pixel_unshuffle(2)` rejects odd dims and the existing pad+accumulator
+clips the ×2 overshoot back; new `UpscalerTests.Upscale_OddSizedImage_ProducesExactlyDoubledOutput` (401×399
+→ 802×798 real inference). Whole-image single-pass is the chosen mode; a configurable capped tile (e.g.
+512) is the documented fallback if a large image ever OOMs the GPU. Acceptance: reviewer confirms the
+metadata-only diff is lossless and the even-padding math; Upscale suite green (17/17). The dynamic `.onnx`
+is gitignored (too big for git) and lives in the source tree next to the fixed-64 backup.
+
+**Files:** `jb/src/core/config/Prism_Config.json`,
+`jb/src/core/Services/Upscale/Engine/Upscaler.cs`,
+`jb/src/tests/Prism.Services.Upscale.Tests/Upscale/UpscalerTests.cs`.
+
+---
+
+### T-4910 · Exact final-output-size calculator (shared helper)
+**Status:** Done (2026-07-30) | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-07-30)
+**Found by:** [[T-4900]]
+
+**Reviewer verdict (2026-07-30): Approve, no defects.** The forward/inverse pair was not taken on faith —
+the reviewer re-implemented `CenterAndStretchCanvasSize`/`RequiredBboxLongestSide` in a throwaway console
+app and brute-forced the true minimum against it across margins 0.0001–0.1999 (step 0.0001) × targets
+1–2000: **zero mismatches**, worst-case **3** iterations, matching the "≤3 passes, never a pixel short"
+claim exactly. Single-source-of-truth confirmed by grep — no surviving copy of the canvas formula or the
+routing predicate anywhere in `jb/src/core`.
+
+The ordering change was traced through its one real edge case rather than assumed safe. `PreprocessAsync`
+has a **pre-existing** early-return (`ReadNormalizedJpg` null, or `colorMat.Empty()`) that returns
+`(null, null)` *without* setting `lambda.IsKo`, so `TransformService`'s `if (lambda.IsKo)` guard misses it
+and `TransformImage` still runs with `FinalizeGeometry` never having executed. Not a regression:
+`lambda.BoundingBox` is written in exactly two places (`PreprocessAsync` and `FinalizeGeometry`'s
+promotion), so skipping both leaves it null and `SelectTransformer`'s first guard routes to
+`Tx_ProblemImageProcessor`. The reviewer's read is that the move made this edge case **safer** — under the
+old code promotion ran unconditionally inside `TransformImage`, so a populated `lambda.Subject` could
+promote a box and route to a real crop strategy against a null `colorMat`.
+
+**Three non-blocking findings, worth knowing:**
+1. **`RoutesToCenterAndStretch` encodes 2 of `SelectTransformer`'s 3 branch conditions** — bbox-null and
+   edge-intersect, but not the `SelectedPhenotype is null` half of Step 1. Harmless today because
+   `BypassPhenotypes = true` collapses Step 1 to the bbox-null check, so predicate and routing agree. **Flip
+   `BypassPhenotypes` without revisiting this and they diverge** for a bbox-present/no-intersect/
+   phenotype-null record: the predicate says centre-and-stretch, the real routing says
+   `Tx_ProblemImageProcessor`. Attach this to the flip decision in [[T-2600]]/[[T-4970]].
+2. **Two of the 15 assertions are re-derivations, not literals** (`FinalOutputSizeTests.cs:51` and `:68` call
+   `CenterAndStretchCanvasSize`/`LongestDimension` back on the scaled result). Both sit inside facts that
+   also carry a properly-pinned literal, so coverage stands — but the claim below that the suite pins
+   literals throughout was overstated. Corrected: **9 facts / 15 assertions**, not "10 assertions across 8".
+3. `ImageRecord_LAMBDA.cs` is a `Prism.Core.Contracts` file and wasn't in the original spec's file list. The
+   addition is disclosed in the note below and purely additive; flagged for the record, not as a defect.
+
+**Implemented 2026-07-29.** New `FinalOutputSize`
+(`jb/src/core/Services/Transform/FinalOutputSize.cs`, compiled into the `Prism.Services.Transform` Engine
+assembly so `Tx_CenterAndStretch` can reach it; `Prism.Core` references that assembly, so `ImagePreProcessor`
+can too). It owns four things: `HasEdgeIntersect`, `RoutesToCenterAndStretch` (the routing predicate, now
+also used by `ImageTransformer.SelectTransformer` and `ApplyShadowAccounting` — one predicate, no copies),
+`CenterAndStretchCanvasSize` (which `Tx_CenterAndStretch.CropResizeAndStretch` now calls instead of holding
+its own copy of the formula), and the forward/inverse pair `LongestDimension` / `MinimalScaleToReach`.
+
+The inverse is not solved algebraically: it takes the continuous inverse of the canvas formula — provably
+never above the answer, since floor/even/trim only ever shrink the canvas — and steps up against the forward
+function until the bar is cleared. Converges in ≤3 passes and cannot land a pixel short the way hand-derived
+algebra can.
+
+**Scope grew past "no behavior change yet"** because two of the three defects listed on [[T-4900]] sit inside
+this ticket's remit: geometry promotion had to move ahead of upscale (new `ImageTransformer.FinalizeGeometry`,
+called from `PreprocessAsync`; `TransformSeed.Resolve` moved above the preprocess call in `TransformService`;
+promotion result now recorded on `ImageRecord_LAMBDA.SubjectGeometryPromoted` so the evidence line survives
+the move), and `Tx_CenterAndStretch` had to be made to read the shared helper for the "single source of
+truth" acceptance to mean anything.
+
+**Acceptance met.** `FinalOutputSizeTests` (15 assertions across 9 facts — count corrected by the review;
+13 pin literal pixel counts, 2 re-derive, see finding 2 above): the 1800→1948 worked example, the bleed case (`min(W,H)`, no margin
+term), the 740/739 boundary from both sides, minimality at 741 (no scale) vs 739 (scale), and the routing
+predicate's three cases. Transform suite 83/83.
+
+Original spec follows.
+
+Extract a single deterministic function that, given the salient bbox + intersection state + margin, returns
+the **exact** final-output longest dimension the pipeline will produce — reusing each routing's own
+canvas-size formula so upscale and the Transform stage never disagree. Two branches (user decision 4):
+**zero-intersection** → `Tx_CenterAndStretch` canvas geometry: `canvasSize = (floor(bbox_longest·(1+2·margin))`
+`made even) − 2`; **bleed/intersection** → the bleed routing's output longest dim, **no margin term**. The
+routing split (zero-intersection vs bleed) must use the *same* predicate as `ImageTransformer.SelectTransformer`
+so the calc matches the routing that will actually run. Both the upscale-scale logic (T-4920) and, ideally,
+the Tx stage reference this one helper. Cross-stage note: the calc lives where upscale runs
+(`ImagePreProcessor`, preprocess) but encodes Transform-stage geometry — keep it a pure function of
+(bbox, intersection, margin, routing-config) with no side effects. Acceptance: unit tests pin exact sizes
+against `Tx_CenterAndStretch`'s worked example (bbox 1800, margin 0.042 → canvas 1948) and a bleed case;
+helper is the single source of truth. No behavior change yet.
+
+**Files:** `jb/src/core/Services/Matching/ImagePreProcessor.cs` (or a new shared geometry helper class),
+`jb/src/core/Services/Transform/Engine/Tx_CenterAndStretch.cs`,
+`jb/src/core/Services/Transform/ImageTransformer.cs`.
+
+---
+
+### T-4920 · Unified upscale-scale + ESRGAN/Lanczos gate + KO
+**Status:** Done (2026-07-30) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-30)
+**Found by:** [[T-4900]]
+
+**Reviewer verdict (2026-07-30): Approve.** The three numeric claims below were re-derived by hand rather
+than read and accepted, and all three hold exactly:
+- **Geometry-follows-pixels.** Because `box.Width <= origW` and rounding is monotonic,
+  `w = round(box.Width·scale) <= round(origW·scale) = scaledW` always — so `scaledW − w >= 0`, the origin
+  clamp can never go negative, and `x + w <= scaledW` holds even away from the touching-edge case. Traced
+  on a non-edge example with a non-clean scale factor.
+- **The 740/739 boundary.** `CenterAndStretchCanvasSize(740, 0.042)` = floor(802.16)=802 → even 802 → −2 =
+  **800**; at 739 = floor(801.076)=801 → even 800 → −2 = **798**.
+- **The bleed-route KO window is exact, not approximate.** `800/601 = 1.331` KOs, `800/602 = 1.329` does
+  not — "shorter side under 602px" is the precise statement.
+
+`Tx_CropSquare` confirmed to decode `ProcessedBytes`, crop against the decoded image's own dimensions, and
+record the *same* rectangle object it passed to `Mutate` — so the manifest and the bytes cannot drift. The
+OFF→zero-ESRGAN-calls assertion is real: `RecordingUpscaleService` is injected in the OFF test too and the
+toggle branch is taken before `remoteUpscale` is ever touched, so a wrong branch would flip the call count.
+Core 154/154 and Transform 83/83, both foreground. (Core is 154, not the 153 claimed below — commit
+`5e06f54` added one test after this work; not a regression, just a stale count.)
+
+**One finding, fixed 2026-07-30.** `MaxLanczosOnlyUpScaleFactor` was declared `{ get; private set; }` to
+match its ~40 legacy siblings, but CLAUDE.md's no-shadow-defaults rule binds *new or touched* config code
+regardless of the surrounding class. A missing key already failed loud via `RequireDouble`, so this was
+never a live silent-default risk — but the compiler wasn't enforcing it. Now `required … { get; init; }`.
+Note `private set` **cannot** carry `required` (CS9032: the setter would be less visible than the type), so
+this is an `init` accessor, not a one-word change; it works because `ParseAndValidate` is the class's only
+construction site and already uses an object initializer. Solution builds clean, Core 154/154.
+
+**Non-blocking, and dormant rather than live:** `Tx_ProblemImageProcessor` (untouched here) computes its
+`OutputWidth`/`OutputHeight` metadata from `InputImage.Width`/`Height` — the deliberately-unscaled
+original-resolution field — while its actual resize reads real decoded dimensions. It cannot bite today:
+that route is only selected when `BoundingBox` is null, and a null bbox short-circuits `UpscaleAsync`
+before any scaling happens. It becomes reachable if `BypassPhenotypes` is flipped, so it belongs with the
+same flip checklist as [[T-4910]]'s routing-predicate gap.
+
+**Also unclosed, pre-existing:** no test exercises the new `MaxLanczosOnly > MaxUpScale` invariant or a
+missing-key load failure, because there is no `PrismConfiguration` test file anywhere in the repo. Not a
+hole this work opened.
+
+**Implemented 2026-07-29.** `UpscaleAsync` rewritten to the unified model:
+minimal scale from `FinalOutputSize.MinimalScaleToReach(MinOutputWidth, …)`, then the toggle picks resampler
+and cap only — ESRGAN (local session or the remote host) to `MaxUpScaleFactor`, local Lanczos4 to the new
+`MaxLanczosOnlyUpScaleFactor`. Past the applicable cap → `PREPROCESS_UPSCALE_EXCEEDED`, and the OFF message
+appends "Enable ESRGAN upscaling to process this image." The too-small KO is retained and now measures the
+promoted box. New config key `Output.Images.Resize.MAXIMUM_UpScale_LanczosOnly` = 1.33, `RequireDouble` +
+`AssertPositive` + a new invariant that it may not exceed `MAXIMUM_UpScale`.
+
+**Also here (T-4900 defects 1 and 2):** `ScaleGeometryToUpscaledImage` moves `BoundingBox` and
+`LegacySalientBox` into the enlarged space and the BGR `Mat` handed downstream is re-decoded from the new
+bytes; width and height are scaled first and never clamped so the longest side lands on exactly the pixel
+count the scale was derived from, with the origin absorbing the ≤1px rounding overhang. `Tx_CropSquare` now
+writes its cropped bytes and crops against the decoded image's own dimensions. Deliberately not scaled:
+`ImageRecord_Base.Width`/`Height` (the original-resolution contract Export's upscale-manifest todo depends
+on) and `lambda.Subject` (pre-upscale evidence, self-consistent with its own mask).
+
+**Two consequences worth knowing before tuning any of these numbers:**
+- **740, not 800, is the pass-through threshold** on the centre-and-stretch route. Images with a 740–800px
+  bbox used to be upscaled and now are not — that is the "reduces ESRGAN work" effect, and it is why a
+  re-run's KO/upscale counts will not match older evidence.
+- **The Lanczos-only cap is unreachable on the centre-and-stretch route at current config values.** A bbox at
+  the 570px input floor needs 740/570 = 1.30×, already inside 1.33×. The OFF-mode KO can only fire on the
+  bleed route, for images whose *shorter side* is under 602px. This falls out of the numbers; it is not a
+  designed guarantee, and changing `MinInputSizeInPixels`, `MinOutputWidth`, `WhiteSpaceMargin` or either cap
+  changes it. Documented in `PRISM-transform-generate.md` and asserted by the test comments.
+
+**Acceptance met.** `UpscaleGateTests` (8 facts, `jb/src/tests/Prism.Core.Tests/Services/`) — no-upscale when
+already clear, OFF→Lanczos locally with zero calls to the ESRGAN service, ON→ESRGAN service reached, OFF cap
+KO with the toggle named, ON processing the same image, ON past 1.42 KO'ing without the remedy sentence,
+too-small KO retained, and geometry-follows-pixels measured against the returned image rather than against
+the computed scale. Geometry is pinned by putting an exact `SubjectDetection` on the record rather than by
+crafting pixels the detector has to rediscover, so the tests are deterministic and GPU-free. `RemoteUpscale
+RoutingTests` updated to the new bar and now also asserts the final size clears it. Core 153/153 (incl. 10
+CiMini pipeline-integration), Transform 83/83, Matching 230/230, Upscale 17/17, Generate 10/10.
+
+Original spec follows.
+
+Rewrite `ImagePreProcessor.UpscaleAsync` to the unified model. Using T-4910's exact final-size calc,
+compute the **minimal** scale `s ≥ 1.0` such that the computed final output ≥ `MinOutputWidth` (as little as
+possible to cross the bar). Then branch on the toggle: **ON** → ESRGAN (dynamic model), cap `s ≤`
+`MaxUpScaleFactor` (existing, 1.42); **OFF (default)** → Lanczos, cap `s ≤ MaxLanczosOnlyUpScaleFactor`
+(new config, 1.33). If the required `s` exceeds the applicable cap → **KO** (reuse `PREPROCESS_UPSCALE_EXCEEDED`;
+OFF message names the toggle: "enable ESRGAN upscaling to process this image"). Retain the existing
+too-small KO (`largest < MinInputSizeInPixels`). Add the new config key following no-shadow-defaults
+(`required`, no in-code default). Note the current ON path targets the *bbox* reaching `MinOutputWidth`;
+unifying moves it to the *final-image* bar (margin-aware for zero-intersection), which reduces ESRGAN work.
+Acceptance: unit tests for OFF (Lanczos, +33% cap, KO past it, margin discount on zero-intersection, direct
+on bleed), ON (ESRGAN, 1.42 cap), and the minimal-scale property; the Lanczos path uses the same resampler
+family as the existing top-up. Lanczos-only default keeps a full run's upscale cost near-zero.
+
+**Files:** `jb/src/core/Services/Matching/ImagePreProcessor.cs`,
+`jb/src/core/config/Prism_Config.json`,
+`jb/src/core/config/` (new `MaxLanczosOnlyUpScaleFactor` binding + its config class),
+`jb/src/tests/Prism.Services.Matching.Tests/` (or the suite owning ImagePreProcessor).
+
+---
+
+### T-4930 · ESRGAN toggle plumbing (per-job parameter, default OFF)
+**Status:** Done (2026-07-29) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-29)
+**Found by:** [[T-4900]]
+
+**Reviewer verdict (2026-07-29): Approve.** Default-off was traced end to end and the casing lines up
+(workbench sends camelCase, `PrismProcessIngressReader` reads with `PropertyNameCaseInsensitive = true`).
+The distributed path was verified concretely rather than assumed: `HttpTransformService` POSTs the whole
+`MatchingResult` via `ServiceHttp.Json` (`PropertyNamingPolicy = null`) and the ServiceHost's
+`ConfigureHttpJsonOptions` sets the same, so the two ends agree. The get-only-collection trap from the
+microservices split does **not** apply — `IngestResult.Parameters` is a required scalar record, not a
+collection.
+
+The reviewer went further than accepting the deviation as defensible and checked whether `transformEnabled`
+/`headcut` are ever supplied independently of `matched.Ingest.Parameters` at any call site — if they were,
+the asymmetry would be a real risk. They are not: `PrismService` and the ServiceHost route both derive those
+"explicit arguments" from the same object one frame up, so reading `AllowEsrganUpscale` a frame deeper is
+bit-identical behaviour with no signature churn.
+
+**One finding, fixed 2026-07-29.** `ProcessingParametersRoundTripTests` claimed to use "the same web defaults
+the ServiceHost routes use", but `JsonSerializerDefaults.Web` is camelCase whereas the ServiceHost overrides
+the naming policy to null. Self-consistent, so it passed either way — it just wasn't a proxy for anything
+real. Rewritten to exercise the actual configurations: serialize with the real `ServiceHttp.Json` object,
+deserialize with the ServiceHost's, pin the literal PascalCase wire text, and assert omitted-means-false
+under both that and the API ingress reader's options. 4/4 green.
+
+**Known gap, accepted:** the `PrismProcessRequest` → `PrismProcessingParameters` mapping is untested (no
+`Prism.Api` test project, internal record). The reviewer confirmed this is pre-existing — `Rename`,
+`Transform`, `Generation`, `Format`, `ReturnOriginalImages` and `SkipClassification` all share it for the
+same reason — so it is not debt this work introduced. Mapping verified by hand.
+
+**Implemented 2026-07-29.** `PrismProcessingParameters.AllowEsrganUpscale`
+(no initializer, so an omitted field is false), `PrismProcessRequest.AllowEsrganUpscale`, mapped in
+`PrismProcessIngressReader`, read once in `TransformService` and passed to `PreprocessAsync`.
+
+**Deviation from the spec, deliberate:** the flag is read off `matched.Ingest.Parameters` inside
+`TransformService` rather than threaded as a method argument like `headcut`. The parameters already ride
+inside `MatchingResult` across the matching→transform HTTP boundary — the ServiceHost route reads `Transform`
+and `Headcut` exactly this way — so one read cannot be dropped at a call site, and the alternative was
+signature churn across `ITransformService`, `Pipeline`, `PrismService`, the ServiceHost route and the HTTP
+client for a boolean already on the record.
+
+`PreprocessAsync` has only two call sites (`TransformService` and `RemoteUpscaleRoutingTests`); the parameter
+is required, not defaulted, so a new call site cannot silently inherit the wrong mode. Match-stage usage
+checked: there is none.
+
+**Acceptance met** except one item that has no home: `ProcessingParametersRoundTripTests` covers the
+service-boundary round-trip under `JsonSerializerDefaults.Web`, omitted-means-false, and explicit-true. The
+get-only-dict trap does not apply — these are `bool { get; init; }`. **Not covered:** the
+`PrismProcessRequest` → `PrismProcessingParameters` mapping itself, because there is no `Prism.Api` test
+project and the request record is `internal`. Follow-up ticket territory, not a defect in this work.
+
+Original spec follows.
+
+Add a per-job boolean (proposed `AllowEsrganUpscale`, **default false**) to `PrismProcessingParameters`,
+accept it on the `POST /PRISM/process` multipart request, and thread it through `TransformService` →
+`ImagePreProcessor.PreprocessAsync`/`UpscaleAsync` so the T-4920 gate can read it. Confirm every call site
+of `PreprocessAsync` (at least `TransformService`; verify Match-stage usage) receives it. Default-off means
+an omitted field yields Lanczos-only. Acceptance: request round-trips the flag; default-off verified when
+absent; a job with the flag on routes to ESRGAN; service-boundary round-trip test (mind the get-only-dict
+trap from the microservices split — `[JsonConstructor]` if needed). Scope: plumbing only; the OFF/ON
+behavior is T-4920.
+
+**Files:** `jb/src/core/Models/PrismProcessingParameters.cs` (or wherever job params live),
+`jb/src/api/` (process endpoint), `jb/src/core/Services/Transform/TransformService.cs`,
+`jb/src/core/Services/Matching/ImagePreProcessor.cs`.
+
+---
+
+### T-4940 · Workbench UI toggle for ESRGAN upscaling
+**Status:** Done (2026-07-29) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-29)
+**Found by:** [[T-4900]]
+
+**Reviewer verdict (2026-07-29): Approve, no defects.** Unchecked-by-default confirmed by tracing
+`defaultParameters` state into the checkbox's `checked` prop, not just by reading the literal. Renders
+through the shared `binaryParameterFields` map rather than a parallel control; the TS field is required, not
+optional, so there is no silent-undefined path; both request builders are wired (the match-lite builder's
+hardcoded `false` sits alongside its other disabled options, so it is consistent rather than an oversight).
+`npm run typecheck` and `dotnet build` clean. No web test framework exists in this repo, so there is no
+component-test gap introduced — matches the ticket's own acceptance bar and prior workbench precedent.
+
+**Implemented 2026-07-29.** Added as a fifth entry in
+`JobParameterPanel`'s `binaryParameterFields` ("High-quality upscaling (ESRGAN — slower)",
+`request.allowEsrganUpscale`), so it renders through the same checkbox path as the existing four rather than
+introducing a parallel control. `allowEsrganUpscale` added to the `PrismProcessingParameters` TS interface,
+to `defaultParameters` in `WorkbenchShell` as `false`, and to both request builders in `prismApiClient`
+(the match-lite builder hardcodes `false` alongside its other disabled options). `npm run typecheck` and
+`npm run build` both green.
+
+Note: Headcut is on `PrismProcessingParameters` server-side but is not on `PrismProcessRequest` and has no UI
+control — it can't be set by any caller today. Out of scope here; worth its own ticket.
+
+Original spec follows.
+
+Surface the toggle in the Next.js workbench (`jb/src/workbench/web`) as an unchecked-by-default checkbox
+(e.g. "High-quality upscaling (ESRGAN — slower)"), wired to the T-4930 request field. Match existing
+process-option controls (Transform/Headcut). Acceptance: unchecked by default; submitting checked sends the
+flag on; `npm run typecheck` + `npm run build` green. Scope: UI + request wiring only.
+
+**Files:** `jb/src/workbench/web/` (process-options component + API client).
+
+---
 
 ### T-4805 · Unify Transform/Process entry points (fix latent divergence)
 **Status:** Done (2026-07-28) | **Profile:** P4-critical-architecture

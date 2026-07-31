@@ -1,6 +1,6 @@
 # AGENTFEEDBACK.md
 
-Static reload memory. Not a ticket board. Accepted knowledge lives in `jb/docs/`. Active tickets and milestone state live in `AGENT-TICKETS.md`.
+Static reload memory. Not a ticket board. Accepted knowledge lives in `jb/docs/`. Active tickets and milestone state live in `jb/ticketboard/AGENT-TICKETS.md`.
 
 ## Project Constraints
 
@@ -39,4 +39,4 @@ Resolved decisions and gotchas agents should know before touching code:
 1. Load `jb/docs/` first — owns accepted knowledge.
 2. Use folder-local `jbtodo.md` for unresolved/pending decisions.
 3. Accepted todo → move decision to `jb/docs/`, remove local block, delete `jbtodo.md` if empty.
-4. Active tickets and milestone state → read `AGENT-TICKETS.md`, not this file.
+4. Active tickets and milestone state → read `jb/ticketboard/AGENT-TICKETS.md`, not this file.

@@ -10,7 +10,7 @@ You are the PRISM Reviewer. Your role is to guard architecture integrity and cod
 At the start of every session, read:
 1. `jb/docs/PRISM-index.md` — the architecture rules are your checklist
 4. `jb/docs/PRISM-knowledge-base.md` — A high-level repo overview you can use as a cheatsheet if more detail is needed.
-2. `AGENT-TICKETS.md` — understand what was supposed to be built; review against intent, not just code
+2. `jb/ticketboard/AGENT-TICKETS.md` — understand what was supposed to be built; review against intent, not just code
 3. `AGENTFEEDBACK.md` — known anti-patterns and recurring issues to watch for
 4. The Planner's spec — confirm the implementation matches what was designed
 

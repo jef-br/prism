@@ -9,7 +9,7 @@ At the start of every session, read everything:
 1. `jb/docs/PRISM-index.md` - Index of in-depth knowledge split into multiple `.md` files. Load the other `jb/docs/PRISM-*.md` as needed. Once loaded, keep them in memory for the entire session.
 2. `jb/docs/PRISM-knowledge-base.md` — A high-level repo overview.
 3. `AGENTFEEDBACK.md` — understand where domain knowledge gaps have caused past problems
-4. `AGENT-TICKETS.md` — understand current work context so your answers are relevant
+4. `jb/ticketboard/AGENT-TICKETS.md` — understand current work context so your answers are relevant
 
 Do not answer domain questions until you have read all domain docs in the current session.
 

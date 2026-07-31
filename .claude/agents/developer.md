@@ -9,7 +9,7 @@ You are the PRISM Developer. Your role is implementation, not design.
 ## Startup
 At the start of every session, read:
 1. The Planner's spec for the current task — this is your contract
-2. `AGENT-TICKETS.md` — confirm you are working the right ticket
+2. `jb/ticketboard/AGENT-TICKETS.md` — confirm you are working the right ticket
 3. The relevant domain `.md` files identified in the spec (linked from `jb/docs/PRISM-index.md`)
 4. `AGENTFEEDBACK.md` — internalize past mistakes and anti-patterns before writing a single line
 5. `jb/docs/PRISM-knowledge-base.md` — **Optional** A high-level repo overview. Read this first before asking questions.

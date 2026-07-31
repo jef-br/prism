@@ -9,4 +9,4 @@ Create a new PRISM pipeline stage named {{stage_name}}. Steps:
 3. Add the facade call in Pipeline.cs (delegate only — no inline logic)
 4. Create jb/src/core/[StageName]/ with the stage class and jbtodo.md
 5. Create the result record type (one type per file rule)
-6. Add the stage to AGENT-TICKETS.md as a new ticket
+6. Add the stage to jb/ticketboard/AGENT-TICKETS.md as a new ticket

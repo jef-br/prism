@@ -55,4 +55,4 @@ Report format (matches the accepted 2026-07-10 report):
 - Plain language — clarity over academic wording; explain terms like phenotype in one sentence where first used.
 - Use ACTUAL data: real filenames, real CLIP labels with scores, verbatim `SafeExplanation` strings, real KO reasons with example files.
 - Structure: What ran (table) → per-section findings with real samples → verdict table (PASS/warn per check) → bottom line.
-- Cross-reference known tickets (AGENT-TICKETS.md) before calling something a new defect — e.g. low phenotype coverage and overflow det-slots are known M5-M7 state, not bugs.
+- Cross-reference known tickets (jb/ticketboard/AGENT-TICKETS.md) before calling something a new defect — e.g. low phenotype coverage and overflow det-slots are known M5-M7 state, not bugs.
