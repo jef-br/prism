@@ -17,6 +17,7 @@
     <Compile Remove="Services\Transform\Enum\TransformationStatus.cs" />
     <Compile Remove="Services\Matching\Classify\**\*.cs" />
     <Compile Remove="Services\Matching\Analyzers\**\*.cs" />
+    <Compile Remove="Services\Matching\SubjectDetectionResult.cs" />
     <Compile Remove="Services\Matching\ImageClassifier.cs" />
     <Compile Remove="Services\Matching\ClipTokenizer.cs" />
     <Compile Remove="Services\Transform\Engine\**\*.cs" />
