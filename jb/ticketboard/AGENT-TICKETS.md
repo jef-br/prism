@@ -22,7 +22,6 @@ user-facing summaries.
 | [T-4950](T-4950.md) | Ready | SubjectMask crosses the wire unread | Measure the per-image mask payload, then decide keep / `[JsonIgnore]` / config-gate |
 | [T-4955](T-4955.md) | Ready | Stale derived edge features | Recompute `intersection-count` and `fully-in-frame` when the subject box is promoted |
 | [T-4960](T-4960.md) | Ready | Alpha box vs colour fallback | Make `Analyzer_SubjectGeometry` prefer the alpha-derived box |
-| [T-4970](T-4970.md) | Review | Phenotype assignment validation | Re-measure phenotype coverage at the shipped thresholds — review is approved |
 | [T-4980](T-4980.md) | Review | CiMini E2E golden red | Rework the fix to use the subject box honestly, then make `dotnet test` read the goldens |
 | [T-4990](T-4990.md) | Ready | Detector under-counts intersections | Make the detector count every edge the subject actually touches, then re-score |
 | [T-5000](T-5000.md) | Ready | Filename orientation false positives | Stop the filename analyzer reading garment nouns as camera views |

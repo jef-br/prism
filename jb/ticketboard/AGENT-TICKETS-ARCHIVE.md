@@ -4,6 +4,152 @@ Done tickets, moved here by /ticket-finish to keep `jb/ticketboard/AGENT-TICKETS
 start) lean. Newest at the top. When a ticket closes, its `jb/ticketboard/T-XXXX.md` body is appended here
 and that file is deleted.
 
+### T-4970 · Phenotype assignment validation (first + second pass)
+**Status:** Done (2026-08-03) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-07-31)
+**Found by:** [[T-2600]] rewrite, 2026-07-29
+
+**Reviewer verdict (2026-07-31): Approve, one non-blocking warning.** Both attack points this ticket
+named were checked against the code, not taken on faith.
+
+*Attack point 1 — the `occlusion-level` → `intersection-count` substitution is behaviour-identical in
+12 of the 13 rules, and the 13th was never claimed to be.* Scored against the deleted
+`DeriveOcclusionLevel` mapping (0→full-product, 1→mostly-visible, 2→partially-occluded, ≥3→closeup):
+nine rules stating a bare `full-product` became `intersection-count = 0`; `side-on-model` and one other
+stating `anyOf[full-product, mostly-visible]` became `max:1`; `closeup-image`'s old
+`intersection-count min:1` AND `occlusion-level = closeup` became `min:3`, which is the same set
+because the `min:1` clause was already dead under that AND. The 13th, `model-detail-closeup`, is a
+deliberate narrowing from ≥2 to ≥3, disclosed in both the commit message and `imagePhenotypes.md`.
+
+*Attack point 2 — the bottomwear det5 insertion is safe for families that don't contain the new
+phenotype, and intentionally changes filenames for those that do.* `ImageOrderer.CompactDetOrder`
+(`ImageOrderer.cs:41-51`) renumbers only the images actually present in a family, by relative order.
+A bottomwear family with no back-cropped-model shot never claims slot 5, so `front-on-model-partial`(4)
+< `lifestyle-hero`(6) < `label`(7) < `material`(8) compacts exactly as before — byte-identical output
+names. A family that *does* contain one gets the new image at det5 and everything after it shifts,
+which is the whole point of adding a phenotype that covers 48% of the catalogue. Real, intentional,
+user-decided — worth confirming customers were told, not a defect.
+
+Also verified: `back-on-model-partial`'s det slots match this ticket across all five product types; it
+cannot shadow or be shadowed by `back-on-model-full-product` (`body-visible` ∈ {three-quarter, half,
+bust} vs `full` are mutually exclusive); no phenotype became unreachable or duplicated;
+`OcclusionLevelConfidence` was removed from `ClassifyConfig.json` *and* its `Config` record *and* its
+validation line, so no shadow default was left behind; `DeriveOcclusionLevel` is deleted, not
+commented out; and `97326fe` shares no file with `07c886b`, so the threshold tuning does not muddy
+this diff.
+
+⚠️ **Warning, does not block Done.** `PhenotypeRuleSetTests.cs` asserts only that the phenotype count
+went 20 → 21 (`Load_ValidPath_JsonContains21Phenotypes`). No direct `ruleSet.Assign(...)` test
+exercises `back-on-model-partial` itself — neither a positive case nor a negative one — while every
+other materially-rewritten rule in this diff has at least one. The SPACINI29 measurement covers it end
+to end, so this is a coverage gap rather than a correctness risk. Close it before the rule is trusted
+unattended.
+
+**Measured 2026-07-30, twice. Full write-up: `jb/docs/ImageNGP/phenotype-assignment-validation.md`**
+(indexed in `PRISM-index.md`); HTML report + raw dumps on the Desktop under `T-4970-phenotype-evidence/`.
+The rule replay reproduces the shipped pipeline **86/86 exactly**, so the rule engine itself is sound.
+
+**First pass said "7% coverage, remedy is two config thresholds". That was tested and is wrong.**
+Lowering `hero-orientation` alone changes nothing — every rule reading orientation also reads
+`body-visible`, UNKNOWN on 72/86 at its own bar. Lowering all three raises coverage 7% → 62% and the extra
+assignments are mostly incorrect; at the then-shipped config 5 images were assigned and **all 5 wrong**.
+
+**Three findings that superseded the threshold question, and the decisions taken on them (user,
+2026-07-30, implemented in `07c886b`):**
+1. `model-detail-closeup` over-fired on any edge-cropped model shot (55/86 read `partially-occluded`
+   simply for touching a frame edge, while **zero** images are honestly detail crops) → **narrowed to
+   `intersection-count >= 3`**.
+2. `occlusion-level` was `intersection-count` in disguise (producer derived it 0/1/2/3+ →
+   full-product/mostly-visible/partially-occluded/closeup) → **deleted from the taxonomy**; all 13 rules
+   now state `intersection-count` directly. To return later as a real measurement.
+3. A back view cut by a frame edge is 38/86 (44%) and had no correct label at any threshold →
+   **`back-on-model-partial` added** (21 phenotypes now). Det slots per user: topwear det1 *ahead of*
+   `back-on-model-full-product`; bottomwear new det5 (lifestyle/label/material shift one later); footwear
+   new det7 before lifestyle; bags-accessories + default share the existing back slot behind
+   `back-packshot`, so a real back packshot always wins.
+
+**Measured effect of the rule changes alone, at a 0.30 bar, against hand-verified labels over all 86
+images: correct 15 → 33, wrong 38 → 13.** All 13 survivors are upstream — 9 CLIP orientation errors, 4
+detector under-counts — none fixable in `ImageRoles.json`. Suites green: Matching 229/229, Core 154/154,
+Transform 83/83, Generate 10/10, Upscale 17/17.
+
+**Ground truth now exists** at `test/datasets/SPACINI29/RAW IMAGES/dataset notes.md` (user-authored,
+do-not-edit). It corrected this ticket's own scoring — **no SPACINI29 image is fully in frame**, so the
+earlier "3 front-full + 3 back-full" labels were wrong — and gave the first accuracy figures:
+`intersection-count` 65/86 = 76% (every error an under-count), `hero-is-human` 85/86.
+
+**Spun off:** [[T-4990]] (detector under-counts intersections), [[T-5000]] (filename orientation analyzer),
+[[T-4980]] (CiMini golden red), [[T-5010]] (centre-and-stretch unreachable). [[T-4955]] reclassified from
+cleanup to prerequisite.
+
+**Structural rule findings, flagged not changed:** `ghost-side` is unreachable on SOLIDCOLOR
+(`side-packshot` is identical bar the background clause and evaluates first); `ghost-back` silently catches
+*intersecting* back packshots because `back-packshot` requires `intersection-count=0` and `ghost-back`
+carries no intersection condition.
+
+**Coverage limits of this measurement.** Only 3 of the then-20 phenotypes have a positive case anywhere in
+SPACINI29 (`front-on-model-partial` 42, plus 3+3 full-product) — the rest are absent, not failing. The
+non-solid-background half was **not** measured: MMERO26 is the only such dataset and a 60-image subset
+KO'd 59/60 on `MATCHES_MULTIPLE_FAMILYIDS` (a KO'd image never reaches `Refine`,
+`MatchingService.cs:315`) — partly a subsetting artifact, so it proves nothing about the full 2024-image
+set, but `lifestyle-hero`/`lifestyle-context` remain unmeasured. An image-by-image spec for a purpose-built
+dataset is in the **root `jbtodo.md`**; the same asset serves [[T-4945]] and [[T-4948]].
+
+**Ordering impact: phenotypes contributed nothing at measurement time.** 100% of OK images left Ordered
+with `IsOverflow: true`, and `model-detail-closeup`/`lifestyle-context` appear in no det slot for any of
+the 5 product types. Output filenames are fine — `Exporter.Run` calls `ImageOrderer.CompactDetOrder`
+(checked; archived T-2830's symptom stays fixed).
+
+**Open decisions this measurement deliberately did not take** (full list at the end of the doc): whether
+`model-detail-closeup`/`lifestyle-context` deserve det slots; whether `ghost-back`'s intersection gap is a
+defect; whether `Analyzer_MultipleProducts` should write `false`; whether CLIP's dead `hero-is-human` path
+(bar 0.90, max 0.867 — YOLO covers it) should be re-barred.
+
+**Both pre-Done items are now closed:**
+1. **Reviewer verdict.** ✅ `Approve (2026-07-31)`, recorded above.
+2. **Re-measure at the shipped thresholds.** ✅ Done 2026-08-03 — see below.
+
+**Re-measure at shipped thresholds (2026-08-03).** Config confirmed at HEAD to match the `97326fe` diff
+exactly (`hero-orientation` 0.33, `head-visible` 0.25, `body-visible` 0.10, `OrientationConfidence` 0.60).
+Evidence harness run twice over SPACINI29 (86) + CiMini (14); report + raw dumps at
+`Desktop/T-4970-remeasure/`.
+
+*The brief was to verify the measurement apparatus is reliable, not to chase a green number — red or green
+were equally acceptable.* It is reliable, on six independent checks: two full runs (fresh process, fresh
+ONNX load each) produced **byte-for-byte identical** JSON for both datasets; output is substantive, not
+vacuous (86/86 OK, 0 KO, 86/86 carry influential CLIP tags, confidences span a real range rather than a
+constant); every feature records value + confidence + **producing source** (`clip`/`yolo`/`heuristic`) with
+the CLIP score appearing verbatim; both a positive (`23211018_56_A.jpg` → `front-on-model-partial`) and a
+negative (`20213024_46_B.jpg` → none, fails `back-on-model-full-product` solely on `head-visible = FULL` vs
+the rule's `anyOf[NONE, PARTIAL]`) were **re-derived by hand from the dump plus `ImageRoles.json` alone**;
+the threshold gate is exact — 37 images score below the 0.33 bar and exactly 37 read UNKNOWN; and the
+worktree was left clean (harness deleted).
+
+*Numbers produced.* **Coverage 37.2% (32/86)** on SPACINI29, 28.6% (4/14) on CiMini. Assignments:
+`back-on-model-partial` 18, `front-on-model-partial` 11, `front-on-model-full-product` 3 — i.e. the
+phenotype this ticket added is the single largest assignment and fires on the case it was created for. Of
+the 54 unassigned, 11 matched no candidate rule at all; 43 matched candidates but no rule won outright.
+
+*Downstream delta.* This ticket previously recorded 100% of OK images leaving Ordered with
+`IsOverflow: true`. At the shipped thresholds that is no longer true: **27 of 86 now get a real
+phenotype-driven det slot** (slots in use: 0, 1, 5, 8, 9, 10), 59 still overflow. The threshold change had
+a real ordering effect, not just a coverage-counter effect.
+
+*Ceiling explained, not just asserted.* Highest `hero-orientation` confidence observed anywhere on this
+dataset is 0.5817, so the pre-`97326fe` bar of 0.60 sat above every score CLIP can produce here — this is
+the mechanism behind the original "7% coverage" finding.
+
+*Deliberately NOT scored:* whether those 32 assignments are **correct**. That needs the hand-labelled ground
+truth in `dataset notes.md` and is the accuracy question, separate from the reliability question this run
+answered. Non-solid-background coverage also remains unmeasured (MMERO26 still KO-heavy) — unchanged from
+the body above.
+
+**Files:** `jb/docs/ImageNGP/phenotype-assignment-validation.md`, `jb/src/core/config/ImageRoles.json`,
+`jb/src/core/config/ImageNGP.json`, `jb/src/core/config/DetOrderRules.json`,
+`jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`.
+
+---
+
 ### T-4900 · ESRGAN toggle + unified final-size upscale (epic)
 **Status:** Done (2026-07-30) | **Profile:** P0-orchestrator
 **Found by:** 2026-07-28 upscale-perf investigation (see `memory/project_transform_upscale_bottleneck.md`)
