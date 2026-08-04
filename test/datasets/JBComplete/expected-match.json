@@ -1,0 +1,402 @@
+[
+  {
+    "SourceReference": "100267_1.jpg",
+    "FamilyId": "91337133",
+    "Note": "filename-in-cell: '100267_1.jpg' appears verbatim in the marketing description"
+  },
+  {
+    "SourceReference": "100267_2.jpg",
+    "FamilyId": "91337133"
+  },
+  {
+    "SourceReference": "100267_3.jpg",
+    "FamilyId": "91337133"
+  },
+  {
+    "SourceReference": "100267_4.jpg",
+    "FamilyId": "91337133"
+  },
+  {
+    "SourceReference": "100267_5.jpg",
+    "FamilyId": "91337133"
+  },
+  {
+    "SourceReference": "100267_6  - BW001_c.jpg",
+    "FamilyId": "91337133",
+    "Note": "double space in filename; BW001 token resolves to nothing"
+  },
+  {
+    "SourceReference": "100267_7 - BW001_c.jpg",
+    "FamilyId": "91337133",
+    "Note": "description lists '100267_7' with no extension"
+  },
+  {
+    "SourceReference": "133726012.jpg",
+    "FamilyId": null,
+    "Note": "digits sit inside BOTH 80082133726012 (98008135) and 8008132133726012 (98008136)"
+  },
+  {
+    "SourceReference": "2021_3024_46_A - Copy.jpg",
+    "FamilyId": "90861025",
+    "Note": "named 'Copy' but is a detail crop, not a duplicate - dedup must not drop it"
+  },
+  {
+    "SourceReference": "2021_3024_46_A.jpg",
+    "FamilyId": "90861025"
+  },
+  {
+    "SourceReference": "2021_3024_46_B.jpg",
+    "FamilyId": "90861025"
+  },
+  {
+    "SourceReference": "2021_3041_65_A - Copy.jpg",
+    "FamilyId": "90861026",
+    "Note": "named 'Copy' but is a detail crop, not a duplicate - dedup must not drop it"
+  },
+  {
+    "SourceReference": "2021_3041_65_A.jpg",
+    "FamilyId": "90861026"
+  },
+  {
+    "SourceReference": "23211008_02_A.jpg",
+    "FamilyId": "90861083"
+  },
+  {
+    "SourceReference": "23211008_02_B.jpg",
+    "FamilyId": "90861083"
+  },
+  {
+    "SourceReference": "23231096_35_A.jpg",
+    "FamilyId": "90861071",
+    "Note": "arrives via 3 images.zip"
+  },
+  {
+    "SourceReference": "24211507_CARDIGAN_76_MAGENTA_B.jpg",
+    "FamilyId": "90861052"
+  },
+  {
+    "SourceReference": "24211511_86_A.jpg",
+    "FamilyId": "90861075",
+    "Note": "arrives via 3 images.zip"
+  },
+  {
+    "SourceReference": "24211511_96_A.jpg",
+    "FamilyId": "90861076",
+    "Note": "arrives via 3 images.zip"
+  },
+  {
+    "SourceReference": "2426834-7558_FW001_e.jpg",
+    "FamilyId": "98768768",
+    "Note": "lifestyle shot, man in a doorway"
+  },
+  {
+    "SourceReference": "2426834-7558_bottom-packshot_sole.jpg",
+    "FamilyId": "98768768"
+  },
+  {
+    "SourceReference": "2426834-7558_side-packshot_shoe.jpg",
+    "FamilyId": "98768768"
+  },
+  {
+    "SourceReference": "2426834-7558_top-packshot_overhead.jpg",
+    "FamilyId": "98768768"
+  },
+  {
+    "SourceReference": "4471-2290-B.jpg",
+    "FamilyId": null,
+    "Note": "reference lives under two FamilyIDs across two sheets"
+  },
+  {
+    "SourceReference": "4471-2290-D.jpg",
+    "FamilyId": null
+  },
+  {
+    "SourceReference": "4471-2290-F.jpg",
+    "FamilyId": null
+  },
+  {
+    "SourceReference": "4471-2340-B.jpg",
+    "FamilyId": null,
+    "Note": "reference lives under two FamilyIDs across two sheets"
+  },
+  {
+    "SourceReference": "4471-2340-D.jpg",
+    "FamilyId": null
+  },
+  {
+    "SourceReference": "4471-2340-F.jpg",
+    "FamilyId": null
+  },
+  {
+    "SourceReference": "8712345678901-2.jpg",
+    "FamilyId": "99985014"
+  },
+  {
+    "SourceReference": "8712345678901-3.jpg",
+    "FamilyId": "99985014"
+  },
+  {
+    "SourceReference": "8712345678901.jpg",
+    "FamilyId": "99985014",
+    "Note": "filename digits sit inside EAN 87186798712345678901002387"
+  },
+  {
+    "SourceReference": "87186790_1.jpg",
+    "FamilyId": null,
+    "Note": "prefix of BOTH 8718679018555 (99984905) and 8718679021272 (99985047); picture matches neither garment"
+  },
+  {
+    "SourceReference": "87186790_2.jpg",
+    "FamilyId": null
+  },
+  {
+    "SourceReference": "99218629_det0.jpg",
+    "FamilyId": "99218629"
+  },
+  {
+    "SourceReference": "99218629_det1.jpg",
+    "FamilyId": "99218629"
+  },
+  {
+    "SourceReference": "99218629_det2.jpg",
+    "FamilyId": "99218629",
+    "Note": "boxed multipack, packaging in frame"
+  },
+  {
+    "SourceReference": "99218793_det1.jpg",
+    "FamilyId": "99218793",
+    "Note": "no _det0 exists for this family"
+  },
+  {
+    "SourceReference": "99218809_det0.jpg",
+    "FamilyId": "99218809"
+  },
+  {
+    "SourceReference": "99218809_det1.jpg",
+    "FamilyId": "99218809"
+  },
+  {
+    "SourceReference": "99218810_det1.jpg",
+    "FamilyId": "99218810",
+    "Note": "Excel row is identical to 99218793 apart from the FamilyID"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_01 FW001_b.png",
+    "FamilyId": "98226706"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_02FW001_A.png",
+    "FamilyId": "98226706"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_03FW001_c.png",
+    "FamilyId": "98226706"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_04.png",
+    "FamilyId": "98226706"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_05FW001_d.png",
+    "FamilyId": "98226706"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_06FW001_f.png",
+    "FamilyId": "98226706"
+  },
+  {
+    "SourceReference": "C153KB460011_Cedric_City_Grey_BAC.png",
+    "FamilyId": "99147525",
+    "Note": "Excel says Color='Twill sand'; picture is grey. Reference wins. 'BAC' is truncated on purpose"
+  },
+  {
+    "SourceReference": "C153KB460011_Cedric_City_Grey_FRON.png",
+    "FamilyId": "99147525",
+    "Note": "'FRON' is truncated on purpose - must not fire the filename orientation analyzer"
+  },
+  {
+    "SourceReference": "C153KB460011_Cedric__City_Grey_DETAIL.png",
+    "FamilyId": "99147525",
+    "Note": "double underscore in filename"
+  },
+  {
+    "SourceReference": "C153KU420009_Kendall_Twill sand_BACK.png",
+    "FamilyId": "99147533",
+    "Note": "Excel says Color='Gray'; picture is sand. Reference wins"
+  },
+  {
+    "SourceReference": "C153KU420009_Kendall_Twill sand_DETAIL1.png",
+    "FamilyId": "99147533"
+  },
+  {
+    "SourceReference": "C153KU420009_Kendall_Twill sand_FRONT.png",
+    "FamilyId": "99147533"
+  },
+  {
+    "SourceReference": "CARDIGAN_MAGENTA76_A.jpg",
+    "FamilyId": "90861052"
+  },
+  {
+    "SourceReference": "CARDIGAN_MAGENTA76_DETAIL.jpg",
+    "FamilyId": "90861052"
+  },
+  {
+    "SourceReference": "IMG_4432.png",
+    "FamilyId": null,
+    "Note": "IMG is a configured camera prefix so the filename is meaningless; no blue-jeans family exists"
+  },
+  {
+    "SourceReference": "OMB-E129-TGV_1.jpg",
+    "FamilyId": null,
+    "Note": "Excel has OMB-E198-TGV, not E129. Colour/type/brand all agree - a wrong reference must not be rescued by attribute agreement"
+  },
+  {
+    "SourceReference": "OMB-E129-TGV_2.jpg",
+    "FamilyId": null
+  },
+  {
+    "SourceReference": "OMB-E129-TGV_3.jpg",
+    "FamilyId": null
+  },
+  {
+    "SourceReference": "OMB-E129-TGV_4.jpg",
+    "FamilyId": null,
+    "Note": "interior shot"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_1.jpg",
+    "FamilyId": "98636303"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_2.jpg",
+    "FamilyId": "98636303"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_3.jpg",
+    "FamilyId": "98636303",
+    "Note": "diagonal packshot on a plain sweep"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_4.jpg",
+    "FamilyId": "98636303",
+    "Note": "interior shot"
+  },
+  {
+    "SourceReference": "OMB-E180-BV_1.jpg",
+    "FamilyId": null,
+    "Note": "no OMB-E180-BV row exists; must not steal OMB-E166-BV's family (same colour, same type)"
+  },
+  {
+    "SourceReference": "OMB-E180-BV_2.jpg",
+    "FamilyId": null
+  },
+  {
+    "SourceReference": "OMB-E180-BV_3.jpg",
+    "FamilyId": null
+  },
+  {
+    "SourceReference": "OMB-E180-BV_4.jpg",
+    "FamilyId": null
+  },
+  {
+    "SourceReference": "OMB-E180-BV_5.jpg",
+    "FamilyId": null,
+    "Note": "interior shot"
+  },
+  {
+    "SourceReference": "OMB-E180-BV_6.jpg",
+    "FamilyId": null,
+    "Note": "lifestyle context, Italian street"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_1.jpg",
+    "FamilyId": "98636312"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_2.jpg",
+    "FamilyId": "98636312"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_3.jpg",
+    "FamilyId": "98636312"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_4.jpg",
+    "FamilyId": "98636312",
+    "Note": "diagonal packshot on a plain sweep"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_5.jpg",
+    "FamilyId": "98636312",
+    "Note": "interior shot"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_6.jpg",
+    "FamilyId": "98636312",
+    "Note": "interior shot"
+  },
+  {
+    "SourceReference": "Pareo Exotica.jpg",
+    "FamilyId": "94613033",
+    "Note": "space in filename"
+  },
+  {
+    "SourceReference": "Pareo_exotica_F1.jpg",
+    "FamilyId": "94613033"
+  },
+  {
+    "SourceReference": "Pareo_exotica_F2.jpg",
+    "FamilyId": "94613033"
+  },
+  {
+    "SourceReference": "TH12_0N3_M47CH32_70_R3D_36R37.jpg",
+    "FamilyId": "98226808",
+    "Note": "leetspeak filename tokenises to nothing; back of the red polo"
+  },
+  {
+    "SourceReference": "TH12_0N3_M47CH32_70_R3D_36R37_AS_4_FR0N7.jpg",
+    "FamilyId": "98226808",
+    "Note": "same, front view"
+  },
+  {
+    "SourceReference": "T_SHIRT_EGRET_DETAIL.jpg",
+    "FamilyId": "98226808",
+    "Note": "TRAP: filename says T_SHIRT (points at 98226972, same colour); the picture is a polo"
+  },
+  {
+    "SourceReference": "triggered-mistery.jpg",
+    "FamilyId": "91234321",
+    "Note": "filename gives nothing; cream garment separates it from the black and pink rows"
+  },
+  {
+    "SourceReference": "triggered-tshirt-main.jpg",
+    "FamilyId": "98091311",
+    "Note": "'triggered'+'tshirt' matches all three rows equally; the pink colour breaks the tie"
+  },
+  {
+    "SourceReference": "triggered_black-tshirt-back-americain.jpg",
+    "FamilyId": "97019930"
+  },
+  {
+    "SourceReference": "triggered_black-tshirt-front-americain.jpg",
+    "FamilyId": "97019930"
+  },
+  {
+    "SourceReference": "triggered_black-tshirt-front-detail.jpg",
+    "FamilyId": "97019930"
+  },
+  {
+    "SourceReference": "triggered_black-tshirt-front-silhouette.jpg",
+    "FamilyId": "97019930"
+  },
+  {
+    "SourceReference": "triggered_ghost-front.jpg",
+    "FamilyId": "97019930",
+    "Note": "ghost-front phenotype case"
+  },
+  {
+    "SourceReference": "triggered_ghost_back.jpg",
+    "FamilyId": "97019930",
+    "Note": "ghost-back phenotype case"
+  }
+]

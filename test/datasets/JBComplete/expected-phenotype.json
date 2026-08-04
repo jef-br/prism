@@ -1,0 +1,472 @@
+[
+  {
+    "SourceReference": "100267_1.jpg",
+    "Phenotype": "front-packshot"
+  },
+  {
+    "SourceReference": "100267_2.jpg",
+    "Phenotype": "lifestyle-hero",
+    "Confidence": "low",
+    "Note": "real kitchen, bin fully in frame and identifiable - 'prominent' is a judgement call here"
+  },
+  {
+    "SourceReference": "100267_3.jpg",
+    "Phenotype": "front-packshot"
+  },
+  {
+    "SourceReference": "100267_4.jpg",
+    "Phenotype": "diagonal-packshot",
+    "Confidence": "low",
+    "Note": "lid open, three-quarter angle"
+  },
+  {
+    "SourceReference": "100267_5.jpg",
+    "Phenotype": null,
+    "Note": "product exploded into two parts, tilted - no slot in the taxonomy"
+  },
+  {
+    "SourceReference": "100267_6  - BW001_c.jpg",
+    "Phenotype": null,
+    "Note": "marketing infographic: photo + dimension callouts + text. Nearest slot is illustration-technical-drawing but this is not a line drawing"
+  },
+  {
+    "SourceReference": "100267_7 - BW001_c.jpg",
+    "Phenotype": null,
+    "Note": "four-panel feature collage, same reason"
+  },
+  {
+    "SourceReference": "133726012.jpg",
+    "Phenotype": "ghost-back",
+    "Note": "printed dress, reverse, holds a worn shape, white background"
+  },
+  {
+    "SourceReference": "2021_3024_46_A - Copy.jpg",
+    "Phenotype": "model-detail-closeup",
+    "Note": "torso and belt crop, cut on every edge"
+  },
+  {
+    "SourceReference": "2021_3024_46_A.jpg",
+    "Phenotype": "front-on-model-full-product"
+  },
+  {
+    "SourceReference": "2021_3024_46_B.jpg",
+    "Phenotype": "back-on-model-full-product"
+  },
+  {
+    "SourceReference": "2021_3041_65_A - Copy.jpg",
+    "Phenotype": "model-detail-closeup",
+    "Note": "hip and hand crop, cut on every edge"
+  },
+  {
+    "SourceReference": "2021_3041_65_A.jpg",
+    "Phenotype": "front-on-model-partial",
+    "Note": "head cropped off above the chest"
+  },
+  {
+    "SourceReference": "23211008_02_A.jpg",
+    "Phenotype": "front-on-model-partial",
+    "Note": "head cut at the top edge"
+  },
+  {
+    "SourceReference": "23211008_02_B.jpg",
+    "Phenotype": "back-on-model-partial"
+  },
+  {
+    "SourceReference": "23231096_35_A.jpg",
+    "Phenotype": "on-model-with-accessories",
+    "Confidence": "low",
+    "Note": "tan snowflake scarf over a cream sweater; also fits front-on-model-partial"
+  },
+  {
+    "SourceReference": "24211507_CARDIGAN_76_MAGENTA_B.jpg",
+    "Phenotype": "back-on-model-partial",
+    "Confidence": "low",
+    "Note": "model turned roughly three-quarters away - could read as side-on-model"
+  },
+  {
+    "SourceReference": "24211511_86_A.jpg",
+    "Phenotype": "on-model-with-accessories",
+    "Confidence": "low",
+    "Note": "orange scarf over an orange sweater and black trousers"
+  },
+  {
+    "SourceReference": "24211511_96_A.jpg",
+    "Phenotype": "on-model-with-accessories",
+    "Confidence": "low",
+    "Note": "yellow scarf over a yellow sweater and grey trousers"
+  },
+  {
+    "SourceReference": "2426834-7558_FW001_e.jpg",
+    "Phenotype": "lifestyle-hero",
+    "Note": "man in an Italian doorway, centred and fully in frame, product clearly prominent"
+  },
+  {
+    "SourceReference": "2426834-7558_bottom-packshot_sole.jpg",
+    "Phenotype": "bottom-packshot"
+  },
+  {
+    "SourceReference": "2426834-7558_side-packshot_shoe.jpg",
+    "Phenotype": "side-packshot"
+  },
+  {
+    "SourceReference": "2426834-7558_top-packshot_overhead.jpg",
+    "Phenotype": "top-packshot"
+  },
+  {
+    "SourceReference": "26182-Denim-801/1.jpg",
+    "Phenotype": "front-on-model-partial",
+    "Note": "unreachable today: folder path is flattened before import"
+  },
+  {
+    "SourceReference": "26182-Denim-801/2.jpg",
+    "Phenotype": "back-on-model-partial",
+    "Note": "unreachable today"
+  },
+  {
+    "SourceReference": "26182-Denim-801/a (1).jpg",
+    "Phenotype": "ghost-front",
+    "Note": "unreachable today"
+  },
+  {
+    "SourceReference": "4471-2290-B.jpg",
+    "Phenotype": "ghost-back"
+  },
+  {
+    "SourceReference": "4471-2290-D.jpg",
+    "Phenotype": "closeup-image",
+    "Note": "knit texture and button fill the frame, running off every edge"
+  },
+  {
+    "SourceReference": "4471-2290-F.jpg",
+    "Phenotype": "ghost-front"
+  },
+  {
+    "SourceReference": "4471-2340-B.jpg",
+    "Phenotype": "ghost-back"
+  },
+  {
+    "SourceReference": "4471-2340-D.jpg",
+    "Phenotype": "closeup-image"
+  },
+  {
+    "SourceReference": "4471-2340-F.jpg",
+    "Phenotype": "ghost-front"
+  },
+  {
+    "SourceReference": "8712345678901-2.jpg",
+    "Phenotype": "side-on-model",
+    "Confidence": "low",
+    "Note": "turned roughly three-quarters, hand to ear"
+  },
+  {
+    "SourceReference": "8712345678901-3.jpg",
+    "Phenotype": "back-on-model-full-product"
+  },
+  {
+    "SourceReference": "8712345678901.jpg",
+    "Phenotype": "front-on-model-full-product"
+  },
+  {
+    "SourceReference": "87186790_1.jpg",
+    "Phenotype": "side-on-model"
+  },
+  {
+    "SourceReference": "87186790_2.jpg",
+    "Phenotype": "front-on-model-full-product"
+  },
+  {
+    "SourceReference": "99218629_det0.jpg",
+    "Phenotype": "front-packshot",
+    "Confidence": "low",
+    "Note": "five briefs fanned out - the taxonomy has no non-human multi-product slot"
+  },
+  {
+    "SourceReference": "99218629_det1.jpg",
+    "Phenotype": "front-packshot",
+    "Confidence": "low",
+    "Note": "five briefs folded in a row, same caveat"
+  },
+  {
+    "SourceReference": "99218629_det2.jpg",
+    "Phenotype": "diagonal-packshot",
+    "Confidence": "low",
+    "Note": "boxed multipack at an angle; packaging-visible was removed from the taxonomy"
+  },
+  {
+    "SourceReference": "99218793_det1.jpg",
+    "Phenotype": "side-packshot",
+    "Note": "white crew sock, side profile, near-white background"
+  },
+  {
+    "SourceReference": "99218809_det0.jpg",
+    "Phenotype": "top-packshot",
+    "Confidence": "low",
+    "Note": "three no-show socks laid flat, shot from above"
+  },
+  {
+    "SourceReference": "99218809_det1.jpg",
+    "Phenotype": "side-packshot"
+  },
+  {
+    "SourceReference": "99218810_det1.jpg",
+    "Phenotype": "side-packshot"
+  },
+  {
+    "SourceReference": "99984901/99984901_det0.jpg",
+    "Phenotype": "ghost-front",
+    "Note": "unreachable today"
+  },
+  {
+    "SourceReference": "99984901/99984901_det1.jpg",
+    "Phenotype": "ghost-back",
+    "Note": "unreachable today"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_01 FW001_b.png",
+    "Phenotype": "side-packshot"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_02FW001_A.png",
+    "Phenotype": "diagonal-packshot",
+    "Note": "pair at a three-quarter angle"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_03FW001_c.png",
+    "Phenotype": "top-packshot",
+    "Note": "pair straight from overhead"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_04.png",
+    "Phenotype": "back-packshot",
+    "Note": "pair from behind, heels to camera"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_05FW001_d.png",
+    "Phenotype": "bottom-packshot",
+    "Note": "sole to camera"
+  },
+  {
+    "SourceReference": "AY_FFK0230_83035_06FW001_f.png",
+    "Phenotype": "diagonal-packshot"
+  },
+  {
+    "SourceReference": "C153KB460011_Cedric_City_Grey_BAC.png",
+    "Phenotype": "ghost-back",
+    "Note": "'BAC' is truncated so the filename orientation analyzer must not fire"
+  },
+  {
+    "SourceReference": "C153KB460011_Cedric_City_Grey_FRON.png",
+    "Phenotype": "ghost-front",
+    "Note": "'FRON' is truncated, same reason"
+  },
+  {
+    "SourceReference": "C153KB460011_Cedric__City_Grey_DETAIL.png",
+    "Phenotype": "ghost-side",
+    "Note": "named DETAIL but it is the whole garment from the side - the only ghost-side case in the repo"
+  },
+  {
+    "SourceReference": "C153KU420009_Kendall_Twill sand_BACK.png",
+    "Phenotype": "ghost-back"
+  },
+  {
+    "SourceReference": "C153KU420009_Kendall_Twill sand_DETAIL1.png",
+    "Phenotype": "ghost-side",
+    "Note": "second ghost-side case"
+  },
+  {
+    "SourceReference": "C153KU420009_Kendall_Twill sand_FRONT.png",
+    "Phenotype": "ghost-front"
+  },
+  {
+    "SourceReference": "CARDIGAN_MAGENTA76_A.jpg",
+    "Phenotype": "front-on-model-partial"
+  },
+  {
+    "SourceReference": "CARDIGAN_MAGENTA76_DETAIL.jpg",
+    "Phenotype": "model-detail-closeup",
+    "Note": "neck and shoulder crop, chin visible"
+  },
+  {
+    "SourceReference": "IMG_4432.png",
+    "Phenotype": "ghost-front",
+    "Note": "same invisible-mannequin styling as the other Vingino images"
+  },
+  {
+    "SourceReference": "OMB-E129-TGV_1.jpg",
+    "Phenotype": "front-packshot"
+  },
+  {
+    "SourceReference": "OMB-E129-TGV_2.jpg",
+    "Phenotype": "diagonal-packshot"
+  },
+  {
+    "SourceReference": "OMB-E129-TGV_3.jpg",
+    "Phenotype": "front-packshot",
+    "Confidence": "low",
+    "Note": "strap extended flat, slight angle"
+  },
+  {
+    "SourceReference": "OMB-E129-TGV_4.jpg",
+    "Phenotype": "interior-shot",
+    "Note": "open zip, striped lining is the subject"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_1.jpg",
+    "Phenotype": "front-packshot"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_2.jpg",
+    "Phenotype": "back-packshot"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_3.jpg",
+    "Phenotype": "diagonal-packshot",
+    "Note": "clean three-quarter on a plain sweep - closes the CiGolden diagonal gap"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_4.jpg",
+    "Phenotype": "interior-shot"
+  },
+  {
+    "SourceReference": "OMB-E180-BV_1.jpg",
+    "Phenotype": "front-packshot"
+  },
+  {
+    "SourceReference": "OMB-E180-BV_2.jpg",
+    "Phenotype": "front-packshot",
+    "Note": "crossbody strap attached"
+  },
+  {
+    "SourceReference": "OMB-E180-BV_3.jpg",
+    "Phenotype": "back-packshot",
+    "Confidence": "low",
+    "Note": "reverse panel; hard to separate from the front"
+  },
+  {
+    "SourceReference": "OMB-E180-BV_4.jpg",
+    "Phenotype": "diagonal-packshot"
+  },
+  {
+    "SourceReference": "OMB-E180-BV_5.jpg",
+    "Phenotype": "interior-shot"
+  },
+  {
+    "SourceReference": "OMB-E180-BV_6.jpg",
+    "Phenotype": "lifestyle-context",
+    "Note": "woman in an Italian street, the street dominates"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_1.jpg",
+    "Phenotype": "front-packshot"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_2.jpg",
+    "Phenotype": "front-packshot",
+    "Confidence": "low",
+    "Note": "strap across, slight angle"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_3.jpg",
+    "Phenotype": "front-packshot"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_4.jpg",
+    "Phenotype": "diagonal-packshot"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_5.jpg",
+    "Phenotype": "interior-shot"
+  },
+  {
+    "SourceReference": "OMB-E181-CVW_6.jpg",
+    "Phenotype": "interior-shot"
+  },
+  {
+    "SourceReference": "Pareo Exotica.jpg",
+    "Phenotype": "front-packshot",
+    "Note": "draped on white, no person"
+  },
+  {
+    "SourceReference": "Pareo_exotica_F1.jpg",
+    "Phenotype": "front-on-model-partial",
+    "Note": "head cropped off"
+  },
+  {
+    "SourceReference": "Pareo_exotica_F2.jpg",
+    "Phenotype": "front-on-model-partial",
+    "Note": "head cropped off"
+  },
+  {
+    "SourceReference": "TH12_0N3_M47CH32_70_R3D_36R37.jpg",
+    "Phenotype": "ghost-back"
+  },
+  {
+    "SourceReference": "TH12_0N3_M47CH32_70_R3D_36R37_AS_4_FR0N7.jpg",
+    "Phenotype": "ghost-front"
+  },
+  {
+    "SourceReference": "T_SHIRT_EGRET_DETAIL.jpg",
+    "Phenotype": "closeup-image",
+    "Note": "collar and badge fill the frame, running off every edge, no person"
+  },
+  {
+    "SourceReference": "foldercontainsID99984905/1.jpg",
+    "Phenotype": "front-on-model-full-product",
+    "Note": "unreachable today"
+  },
+  {
+    "SourceReference": "foldercontainsID99984905/2.jpg",
+    "Phenotype": "back-on-model-full-product",
+    "Note": "unreachable today"
+  },
+  {
+    "SourceReference": "foldercontainsID99984905/3.jpg",
+    "Phenotype": "ghost-front",
+    "Note": "unreachable today"
+  },
+  {
+    "SourceReference": "foldercontainsID99984905/4.jpg",
+    "Phenotype": "ghost-back",
+    "Note": "unreachable today"
+  },
+  {
+    "SourceReference": "triggered-mistery.jpg",
+    "Phenotype": "ghost-front",
+    "Confidence": "low",
+    "Note": "cream tee with a LEMON print; shaping is subtle"
+  },
+  {
+    "SourceReference": "triggered-tshirt-main.jpg",
+    "Phenotype": "ghost-front",
+    "Confidence": "low",
+    "Note": "pink tee; front/back is hard to call from the neckline"
+  },
+  {
+    "SourceReference": "triggered_black-tshirt-back-americain.jpg",
+    "Phenotype": "back-on-model-partial",
+    "Note": "head fully in frame, cut at mid-thigh"
+  },
+  {
+    "SourceReference": "triggered_black-tshirt-front-americain.jpg",
+    "Phenotype": "front-on-model-partial"
+  },
+  {
+    "SourceReference": "triggered_black-tshirt-front-detail.jpg",
+    "Phenotype": "model-detail-closeup",
+    "Note": "torso and chin, cut on every edge"
+  },
+  {
+    "SourceReference": "triggered_black-tshirt-front-silhouette.jpg",
+    "Phenotype": "front-on-model-full-product",
+    "Note": "whole body including feet, margin all round"
+  },
+  {
+    "SourceReference": "triggered_ghost-front.jpg",
+    "Phenotype": "ghost-front",
+    "Note": "black tee on white - high edge contrast, unlike CiGolden's beige-on-transparent"
+  },
+  {
+    "SourceReference": "triggered_ghost_back.jpg",
+    "Phenotype": "ghost-back"
+  }
+]

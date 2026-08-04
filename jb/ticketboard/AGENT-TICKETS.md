@@ -26,6 +26,9 @@ user-facing summaries.
 | [T-4990](T-4990.md) | Ready | Detector under-counts intersections | Make the detector count every edge the subject actually touches, then re-score |
 | [T-5000](T-5000.md) | Ready | Filename orientation false positives | Stop the filename analyzer reading garment nouns as camera views |
 | [T-5010](T-5010.md) | Review | Centre-and-stretch unreachable | Fix the 6 stale Transform test fixtures, then verify the routing on SPACINI29 |
+| [T-5020](T-5020.md) | Ready | Folder names never reach the matcher | Carry the folder path through upload and zip, then split folder tokens at letter/digit boundaries |
+| [T-5030](T-5030.md) | Ready | Normalize every input to JPG on white | Composite alpha onto white at import and delete the separate transparent-image path |
+| [T-5040](T-5040.md) | Ready | Prune the phenotype set | Derive the phenotype list from what DetOrderRules actually consumes, as a constraint problem |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.

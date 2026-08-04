@@ -5,10 +5,11 @@
 # ONNX model assets — never committed (see jb/docs/PRISM-model-runtime.md / PRISM-classify.md)
 *.onnx
 
-# Test datasets — only CiMini is committed (see test/datasets/CiMini/README.md)
+# Test datasets — only the committed fixtures are tracked (see each folder's README.md)
 test/datasets/*
 !test/datasets/CiMini
 !test/datasets/CiGolden
+!test/datasets/JBComplete
 
 # Knowledge graph output (generated locally by graphify)
 graphify-out/
@@ -20,6 +21,9 @@ node_modules/
 # IDE / editor
 .vs/
 *.user
+
+# Office lock files (created while an .xlsx is open)
+~$*
 
 # /pair consensus gate — per-session state, cleared by the SessionStart hook
 .claude/.pair-consent
