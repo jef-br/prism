@@ -139,6 +139,22 @@ CiGolden's README lists six cases nothing in the repo covered. JBComplete closes
 | 5. Low-contrast **white-on-white** ([[T-4948]]) | **Closed** | `99218809_det0` (3 no-show socks flat), `99218809_det1`, `99218810_det1`, `99218793_det1` — white socks on a near-white sweep. This is the contrast-floor case. |
 | 6. Hard-shadow vs soft-shadow **pair** ([[T-4945]]) | **Still open** | No controlled twin of one product shot both ways. The alpha PNGs have a glow, not a shadow; the OMB bags are all soft. |
 
+### A phenotype never encodes the product type
+
+Accepted 04/08/26 (user). A polo and a t-shirt are **distinct product types** — that distinction is
+real and it is the matcher's job. But both resolve to the **same image phenotype**: phenotype describes
+the view and the composition (front, ghost, closeup, on-model), never what the garment is.
+
+Product type re-enters one step later, in `DetOrderRules.json`, which maps phenotype → det slot
+*per product type*. So the split is: phenotype is product-type-agnostic, the phenotype→slot mapping is
+not.
+
+Two consequences for this dataset. `TH12_0N3_M47CH32_70_R3D_36R37*.jpg` and
+`T_SHIRT_EGRET_DETAIL.jpg` carry the same phenotypes whichever of `98226808` (polo) and `98226972`
+(t-shirt) they match — so the §2.2 matching question and the phenotype labels are independent, and
+getting the family wrong does not invalidate the phenotype label. And any proposed phenotype that can
+only be satisfied by one product type is malformed by construction — a constraint for [[T-5040]].
+
 **Overall: 20 of the 21 phenotypes in `ImageRoles.json` now have at least one real positive case.**
 Only `illustration-technical-drawing` has none. Newly covered beyond CiGolden's list:
 
@@ -304,15 +320,24 @@ Most of this README verifies itself — sheet validity, folder tokenization and 
 all re-runnable, so reading them gains nothing. Only 36 rows and two paragraphs encode a judgement
 that no test can catch if it is wrong:
 
-1. **The 20 `FamilyId: null` rows in `expected-match.json`** — not the 70 matches, which follow from
-   reference numbers. Two of the rejections are contestable product calls. `OMB-E129-TGV_*` is held
-   unmatched on the reasoning that a wrong reference must not be rescued by colour/type/brand
-   agreement, or every green bag matches every green-bag family. `4471-2290-*` is held unmatched
-   because the reference sits under two FamilyIDs across two sheets.
-2. **The 16 `"Confidence": "low"` rows in `expected-phenotype.json`** — filter on that key.
-3. **Two intent inferences in §2.2**: that the leetspeak files and `T_SHIRT_EGRET_DETAIL.jpg` all
-   belong to the polo `98226808` rather than the t-shirt `98226972`, and that `triggered-mistery.jpg`
-   belongs to the Crème row via the "LEMON" print on the garment.
+**1. The 20 `FamilyId: null` rows in `expected-match.json`.** Not the 70 matches — those follow from
+reference numbers. *To bless a row:* leave it. *To overrule it:* replace `null` with the FamilyID and
+rewrite the `Note` to say why it should match; the Note is the reasoning, and it is the only place the
+reasoning survives. Two rejections are contestable product calls rather than data facts:
+`OMB-E129-TGV_*` is held unmatched on the reasoning that a wrong reference must not be rescued by
+colour/type/brand agreement, or every green bag matches every green-bag family; `4471-2290-*` is held
+unmatched because the reference sits under two FamilyIDs across two sheets.
+
+**2. The 16 `"Confidence": "low"` rows in `expected-phenotype.json`.** Filter on that key. *To bless a
+row:* **delete its `"Confidence": "low"` line.** That deletion is the blessing signal — a row with no
+Confidence key is treated as settled. *To correct one:* change `"Phenotype"` and delete the Confidence
+line. *If still unsure:* leave it, and the row stays excluded from any headline accuracy number.
+
+**3. Two intent inferences in §2.2.** These live in two files — correcting one means correcting both.
+Whether the leetspeak files and `T_SHIRT_EGRET_DETAIL.jpg` belong to the polo `98226808` or the
+t-shirt `98226972` (`expected-match.json` lines 352, 357, 362), and whether `triggered-mistery.jpg`
+belongs to the Crème row via the "LEMON" print (line 367). Note that per §3 the **phenotype labels for
+these files do not change either way** — only the family does.
 
 Worth holding that review until [[T-5020]] lands — it adds 9 rows to the match golden and may change
 how the folder images read.
