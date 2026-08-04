@@ -280,6 +280,14 @@ defect in as if it were the right answer, so they are held out. They **are** lab
 matrix can be computed instead of eyeballed.
 
 - 20 of 21 phenotypes have at least one positive case.
+- **How ghost was told apart from flat-lay**, since it decided 12 labels and it was wrong at first
+  pass. At 400 px thumbnails the six Vingino garments read as flat and were labelled `*-packshot`.
+  What forced a re-check was `ghost-side` having zero coverage while two files named "DETAIL" showed
+  *whole* garments from the side — an odd thing for a detail shot. Re-rendered at ~700 px, three cues
+  separate them: the waistband holds an open rounded form instead of collapsing to two flat edges,
+  the legs carry internal volume, and there are shadows *inside* the garment opening. None of those
+  survive a flat lay, where fabric pools into creases. That is visual judgement at adequate
+  resolution, not a method — which is why 16 rows are still marked low-confidence.
 - **16 entries are marked `"Confidence": "low"`** — those are a reading of a downscaled thumbnail, not
   domain truth, and need a human pass before any number derived from them is trusted. They concentrate
   in front-vs-back on flat garments, side-vs-back on turned models, and the underwear multipack.
@@ -289,6 +297,25 @@ matrix can be computed instead of eyeballed.
   usable the moment §4.2 is fixed.
 
 ---
+
+### 4.4 What a human review of these files should actually cover
+
+Most of this README verifies itself — sheet validity, folder tokenization and the file-level facts are
+all re-runnable, so reading them gains nothing. Only 36 rows and two paragraphs encode a judgement
+that no test can catch if it is wrong:
+
+1. **The 20 `FamilyId: null` rows in `expected-match.json`** — not the 70 matches, which follow from
+   reference numbers. Two of the rejections are contestable product calls. `OMB-E129-TGV_*` is held
+   unmatched on the reasoning that a wrong reference must not be rescued by colour/type/brand
+   agreement, or every green bag matches every green-bag family. `4471-2290-*` is held unmatched
+   because the reference sits under two FamilyIDs across two sheets.
+2. **The 16 `"Confidence": "low"` rows in `expected-phenotype.json`** — filter on that key.
+3. **Two intent inferences in §2.2**: that the leetspeak files and `T_SHIRT_EGRET_DETAIL.jpg` all
+   belong to the polo `98226808` rather than the t-shirt `98226972`, and that `triggered-mistery.jpg`
+   belongs to the Crème row via the "LEMON" print on the garment.
+
+Worth holding that review until [[T-5020]] lands — it adds 9 rows to the match golden and may change
+how the folder images read.
 
 ## 5. What still blocks a scored run
 
