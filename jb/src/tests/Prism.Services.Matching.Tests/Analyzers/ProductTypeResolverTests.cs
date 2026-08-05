@@ -8,8 +8,9 @@ namespace PrismCoreTests.Analyzers;
 /// plus Analyzer_ProductType / Analyzer_FilenameEvidence evidence wiring.
 /// </summary>
 public class ProductTypeResolverTests {
-    // Mirrors the shipped analyzer_Config.json Filename section.
-    private static readonly Analyzer_FilenameEvidence.Config FilenameCfg = new() { OrientationConfidence = 0.75f };
+    // The shipped analyzer_Config.json Filename section itself, not a hand-mirror of it — the mirror
+    // had drifted (0.75 against a shipped 0.60 since commit 97326fe) and the token map now lives there too.
+    private static readonly Analyzer_FilenameEvidence.Config FilenameCfg = AnalyzerParameters.FromConfig().Filename;
 
     private static ProductTypeResolver LoadResolver() {
         for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir is not null; dir = dir.Parent) {

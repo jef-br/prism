@@ -49,6 +49,26 @@ jobs:
           --logger trx
           --results-directory ${{ github.workspace }}/test-results
 
+      - name: Assert minimum test count
+        shell: pwsh
+        # T-4942: a crashed or short-circuited run still prints "Passed! - Failed: 0, Passed: 176",
+        # which reads as success unless someone notices the count is short. Green is not enough — the
+        # run also has to have executed roughly the suite we expect. The floor sits deliberately below
+        # the current total so adding tests never breaks CI, but losing a whole project does.
+        run: |
+          $floor = 500
+          $trx = Get-ChildItem "${{ github.workspace }}/test-results" -Filter *.trx -Recurse
+          if (-not $trx) { throw "No .trx files produced - the test step did not run." }
+          $total = 0
+          foreach ($f in $trx) {
+            $counters = ([xml](Get-Content $f.FullName)).TestRun.ResultSummary.Counters
+            $total += [int]$counters.total
+          }
+          Write-Host "Executed $total tests across $($trx.Count) project(s); floor is $floor."
+          if ($total -lt $floor) {
+            throw "Only $total tests executed, expected at least $floor. A test project likely crashed or was skipped."
+          }
+
       - name: Web typecheck + build
         shell: pwsh
         working-directory: jb/src/workbench/web

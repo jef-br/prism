@@ -4,6 +4,46 @@ Done tickets, moved here by /ticket-finish to keep `jb/ticketboard/AGENT-TICKETS
 start) lean. Newest at the top. When a ticket closes, its `jb/ticketboard/T-XXXX.md` body is appended here
 and that file is deleted.
 
+### T-4960 · Alpha-derived box should retire SubjectGeometry's colour-distance fallback
+**Status:** Obsolete (2026-08-05) | **Profile:** P1-feature-worker
+**Found by:** [[T-4800]] completion pass, 2026-07-28
+
+**Closed Obsolete 2026-08-05, no code landed and none was supposed to.** Closure reason: [[T-5030]]
+deleted `AlphaSubjectCapture` and the entire alpha path, so the alpha-derived box this ticket was
+meant to wire up does not exist anywhere in the system and `Producer = "alpha"` can never occur. The
+ticket's premise — "exact geometry sits unused on the same record" — is false at HEAD; there is no
+second producer to prefer. The linked todo in `Analyzer_SubjectGeometry.md` was retired to that
+file's new "Retired" section in the same pass, per the todo lifecycle. The reviewer gate is not
+applicable: an obsoleted ticket has no diff to review.
+
+> **Obsoleted 2026-08-04 by [[T-5030]] — do not start this work.** Its entire premise is gone. T-5030
+> deleted `AlphaSubjectCapture` and the whole alpha path: Import composites every input onto white and
+> emits JPG before any analyzer runs, so **no alpha-derived box exists anywhere in the system** and
+> `Producer = "alpha"` can never occur. There is nothing left for `Analyzer_SubjectGeometry` to prefer,
+> and its colour-distance fallback is now the only producer for these images rather than the worse of
+> two. Confirmed by the T-5030 reviewer pass.
+>
+> The underlying todo in `Analyzer_SubjectGeometry.md` ("fallback box on transparent-background images
+> should use alpha instead of color distance") is likewise unactionable — there are no
+> transparent-background images downstream of Import any more. Retire the todo per the todo lifecycle
+> rather than implementing it.
+>
+> Original ticket text kept below for history.
+
+`Analyzer_SubjectGeometry.md` carries an open todo: *"Fallback box on transparent-background images should
+use alpha instead of color distance."* T-4830's ingress alpha path now captures exactly that — an exact
+box and mask from the real transparency channel, before normalization flattens it onto white — and puts it
+on the record as `SubjectDetectionResult` with `Producer = "alpha"`. **Cause:** the two pieces were built
+for different tickets and never connected. **Effect:** the analyzer still falls back to colour distance on
+transparent-background images while exact geometry sits on the same record. **Consequence:** measurably
+worse geometry features on precisely the images where the best answer is free. Wire the analyzer to prefer
+the alpha subject, then close the todo per the todo lifecycle.
+
+**Files:** `jb/src/core/Services/Matching/Analyzers/Analyzer_SubjectGeometry.cs` + `.md`.
+
+---
+
+
 ### T-5040 · Prune the phenotype set to the ones PRISM actually needs
 **Status:** Done (2026-08-05) | **Profile:** P4-critical-architecture
 **Landed:** `69b5eba`

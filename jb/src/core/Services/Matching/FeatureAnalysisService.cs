@@ -54,16 +54,25 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService {
         // Edge-bleed shortcut: SubjectEdgeDetector (Classified stage) already measured every edge. When
         // the product touches all four, there is no background ring left to fit a box against — the
         // classical-CV pass on this kind of image was the T-4980 defect (a stray high-contrast patch, not
-        // the garment, won promotion). The frame itself is the subject; skip detection and crop square.
+        // the garment, won promotion). The frame itself is the subject; skip detection.
+        //
+        // This is a positive detection, not a fallback, and it has to travel the same promotion path as
+        // any other: ImagePreProcessor.PreprocessAsync overwrites lambda.BoundingBox unconditionally with
+        // the legacy salient box before FinalizeGeometry runs, so a box written directly onto the record
+        // here would be discarded and never reach Tx_DetailCropper, which reads lambda.BoundingBox.
+        // IsWholeFrameFallback therefore stays false — it means "no subject found, keep the legacy box",
+        // the opposite of what this branch concluded — and Confidence is 1.0 because all four edges were
+        // measured directly rather than inferred. ImageTransformer.PreferSubjectGeometry then promotes
+        // this box into lambda.BoundingBox after the overwrite, which is where the consumers read it.
         if (lambda.Features.GetValue("intersection-count") == "4") {
-            lambda.BoundingBox = new BoundingBox { X = 0, Y = 0, Width = image.Width, Height = image.Height, Left = 0, Top = 0, Right = image.Width, Bottom = image.Height };
             lambda.Subject = new SubjectDetectionResult {
-                Box = lambda.BoundingBox.Value,
+                Box = new BoundingBox { X = 0, Y = 0, Width = image.Width, Height = image.Height, Left = 0, Top = 0, Right = image.Width, Bottom = image.Height },
                 IntersectsTop = true,
                 IntersectsBottom = true,
                 IntersectsLeft = true,
                 IntersectsRight = true,
-                IsWholeFrameFallback = true,
+                IsWholeFrameFallback = false,
+                Confidence = 1.0,
                 Producer = "edge-bleed"
             };
             return;

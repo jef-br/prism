@@ -17,12 +17,14 @@
         "SkinToneAreaConfidence": 0.75
     },
 
+    "_comment_subjectedgedetector": "Calibrated 2026-08-05 (T-4990) against the 86 hand-verified intersection counts in test/datasets/SPACINI29/RAW IMAGES/dataset notes.md. Previous values (BgColorDiffThreshold 0.15, IntersectionFraction 0.20) scored 65/86 with 21 under-counts and zero over-counts; these score 84/86 with ZERO under-counts and 2 over-counts, and 70/70 on the two-edge images. IntersectionFraction is the dominant term: it is a fraction of the WHOLE strip area, and a model cut by the top edge touches it with head and shoulders — roughly 5-10% of a 384x30px band, never the 20% the old bar demanded. BgColorDiffThreshold 0.15 compounded it by reading light garments on a white sweep as background. MaxAnalysisSize was measured and does NOT matter here: 512 / 1024 / 2400 score identically at matched thresholds, so the T-4948 downscale interaction hypothesised on the ticket does not exist for this detector. StripDepthFraction is near-flat between 0.02 and 0.08 and gets worse at 0.10. MinRunLength must stay low: raising it to 8+ costs 4 points because a thin limb at an edge produces short runs.",
+
     "SubjectEdgeDetector": {
         "MaxAnalysisSize": 512,
         "MinEXIFThumbnailSize": 64,
         "StripDepthFraction": 0.08,
-        "BgColorDiffThreshold": 0.15,
-        "IntersectionFraction": 0.20,
+        "BgColorDiffThreshold": 0.12,
+        "IntersectionFraction": 0.02,
         "MinRunLength": 3
     },
 

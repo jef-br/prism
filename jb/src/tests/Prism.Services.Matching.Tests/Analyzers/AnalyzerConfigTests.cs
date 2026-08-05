@@ -37,7 +37,8 @@ public class AnalyzerConfigTests : IDisposable {
         Assert.Equal(0.04f, parameters.Interior.MinAreaFraction);
         Assert.Equal(8, parameters.IsIllustration.ColorBinsPerChannel);
         Assert.Equal(0.40f, parameters.Yolo.ConfidenceThreshold);
-        Assert.Equal(0.75f, parameters.Filename.OrientationConfidence);
+        Assert.Equal(0.60f, parameters.Filename.OrientationConfidence);
+        Assert.Equal("FRONT", parameters.Filename.OrientationTokens["front"]);
         Assert.Equal(0.15f, parameters.SubjectGeometry.ForegroundColorDistance);
         Assert.Equal(4, parameters.Colors.BucketCount);
         Assert.Equal(12, parameters.Colors.Palette.Count);

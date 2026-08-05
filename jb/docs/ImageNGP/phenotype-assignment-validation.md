@@ -1,5 +1,42 @@
 # Phenotype assignment — first-pass production validation
 
+> ## Third pass, 2026-08-05 — accuracy scored, and it now clears the M11 bar on this dataset
+>
+> Everything below is the first and second pass, kept for the reasoning. This section supersedes their
+> verdict. Measured with the same `prism-evidence-report` harness on all 86 SPACINI29 images at the
+> **shipped** config, after [[T-4955]], [[T-4990]] and [[T-5000]] landed.
+>
+> | | Assigned | Correct | Wrong | Unassigned |
+> |---|---|---|---|---|
+> | Second pass, shipped config (2026-07-30) | 5 | **0** | 5 | 81 |
+> | Second pass, 0.30 bar, after rule changes | 46 | 33 | 13 | 40 |
+> | **Third pass, shipped config (2026-08-05)** | **29** | **25** | **4** | 57 |
+>
+> **Coverage 33.7%, accuracy on assigned 86.2%, and misassignment over the whole set 4.7% — under
+> M11's <5% bar.** Ground truth is `dataset notes.md`: every image is on-model, `_A` front, `_B` back,
+> and no image is fully in frame, so every one is a *partial* on-model shot.
+>
+> **All 4 remaining errors are the same failure, and it is the only one left.** CLIP flips front↔back
+> at 0.345, 0.356, 0.374 and 0.389 — just above the 0.33 bar `97326fe` set. `23211056_35_B`,
+> `23211094_35_A`, `23211095_35_B`, `24211513_76_A`. The second pass had 13 errors: 9 orientation and
+> 4 from the detector under-count. **The 4 detector-driven errors are gone** — [[T-4990]] took
+> `intersection-count` from 65/86 to 84/86 with zero under-counts, so no image reads 0 and nothing
+> reaches a full-product rule through a detection error. Orientation errors dropped 9 → 4 as a side
+> effect of the same run being consistent ([[T-4955]]).
+>
+> **What now caps coverage is a taxonomy gap, not a threshold.** `body-visible` reads `full` on 29 of
+> 86. A `full` reading sends the image to `front-/back-on-model-full-product`, which both require
+> `intersection-count = 0` — and ground truth says **no image in this dataset has zero intersections**.
+> The partial rules only accept `three-quarter`, `half` or `bust`. So a full-length model shot cut by a
+> frame edge matches **no rule at all**, at any threshold. That is 34% of the dataset sitting in a hole
+> between two rules. The remaining ~28 unassigned images are `bust` with `hero-orientation` still
+> UNKNOWN, which *is* a threshold question and is now genuinely next.
+>
+> **The M11 caveat still stands and is not weakened by the number.** This dataset has a positive case
+> for exactly two of the 18 phenotypes. 4.7% misassignment on the on-model branch is real and
+> welcome; it says nothing about the other 16.
+
+
 Measured 2026-07-30 for [[T-4970]], the light first pass. Not [[T-2600]]'s full acceptance bar:
 no labelled set, no confusion matrix, no <5% misassignment target.
 

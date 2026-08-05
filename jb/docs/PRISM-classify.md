@@ -247,7 +247,7 @@ Runs in `Classified` stage after import normalization.
 
 ## interior-shot Detection
 
-interior-shot is now reachable via the `interior-detected` ImageFeature, set by `InteriorAnalyzer.cs`. The analyzer detects enclosed regions that are smoother than their surrounding texture and bounded by strong edges. Product-type gating (wallet/bag/suitcase only) is applied at the Order stage (T-1800).
+interior-shot is now reachable via the `interior-detected` ImageFeature, set by `Analyzer_Interior.cs`. The analyzer detects enclosed regions that are smoother than their surrounding texture and bounded by strong edges. Product-type gating (wallet/bag/suitcase only) is applied at the Order stage (T-1800).
 
 ## illustration-technical-drawing Detection
 

@@ -26,8 +26,38 @@
         "HeroPersonMinArea": 0.15
     },
 
+    "_comment_filename": "OrientationTokens maps a filename token to a hero-orientation value. It is deliberately NOT the same list as DetOrderKeywordStems.json: that one maps filename hints to det slots and carries six groups that name no orientation at all (detail, pack, label, material, lifestyle, interior). The two overlap on the orientation-bearing groups only, and a language variant added to one does not belong in the other by default — widening this vocabulary is a calibration question tracked under T-4000's Analyzer_FilenameEvidence entry, not a sync chore. T-5000 (2026-08-05) moved this map out of a hard-coded dictionary in Analyzer_FilenameEvidence.cs; the entries are unchanged from that dictionary.",
+
     "Filename": {
-        "OrientationConfidence": 0.60
+        "OrientationConfidence": 0.60,
+        "OrientationTokens": {
+            "front": "FRONT",
+            "frontal": "FRONT",
+            "face": "FRONT",
+            "avant": "FRONT",
+            "delante": "FRONT",
+            "back": "BACK",
+            "rear": "BACK",
+            "dos": "BACK",
+            "espalda": "BACK",
+            "retro": "BACK",
+            "achterkant": "BACK",
+            "side": "SIDEON",
+            "lateral": "SIDEON",
+            "profile": "SIDEON",
+            "profil": "SIDEON",
+            "perfil": "SIDEON",
+            "top": "TOP",
+            "boven": "TOP",
+            "oben": "TOP",
+            "bottom": "BOTTOM",
+            "under": "BOTTOM",
+            "dessous": "BOTTOM",
+            "onder": "BOTTOM",
+            "diagonal": "DIAGONAL",
+            "diag": "DIAGONAL",
+            "angle": "DIAGONAL"
+        }
     },
 
     "SubjectGeometry": {

@@ -99,11 +99,31 @@ public static class ImageTransformer {
         if (subject.Confidence < parameters.Crop.SubjectPromotionMinConfidence) return false;
         lambda.LegacySalientBox = lambda.BoundingBox;
         lambda.BoundingBox = subject.Box;
-        lambda.Features.Set("intersects-top", subject.IntersectsTop ? "true" : "false", 1.0, "subject-detector");
-        lambda.Features.Set("intersects-bottom", subject.IntersectsBottom ? "true" : "false", 1.0, "subject-detector");
-        lambda.Features.Set("intersects-left", subject.IntersectsLeft ? "true" : "false", 1.0, "subject-detector");
-        lambda.Features.Set("intersects-right", subject.IntersectsRight ? "true" : "false", 1.0, "subject-detector");
+        SetFlag(lambda, "intersects-top", subject.IntersectsTop);
+        SetFlag(lambda, "intersects-bottom", subject.IntersectsBottom);
+        SetFlag(lambda, "intersects-left", subject.IntersectsLeft);
+        SetFlag(lambda, "intersects-right", subject.IntersectsRight);
+        WriteDerivedEdgeFeatures(lambda, subject);
         return true;
+    }
+
+    private const string SubjectDetectorProducer = "subject-detector";
+
+    private static void SetFlag(ImageRecord_LAMBDA lambda, string featureId, bool value) {
+        lambda.Features.Set(featureId, value ? "true" : "false", 1.0, SubjectDetectorProducer);
+    }
+
+    // T-4955: intersection-count and fully-in-frame are derived from the four intersects-* booleans,
+    // so promoting the detector's booleans without recomputing them leaves the snapshot contradicting
+    // itself — measured at 36 of 86 SPACINI29 images (42%) before this ran. It matters because the
+    // phenotype rules read both halves in one evaluation: front-on-model-partial gates on
+    // intersects-top|bottom while front-on-model-full-product gates on intersection-count=0, so a
+    // stale pair lets one image satisfy two mutually-exclusive rules and first-rule-wins picks wrong.
+    private static void WriteDerivedEdgeFeatures(ImageRecord_LAMBDA lambda, SubjectDetectionResult subject) {
+        int count = (subject.IntersectsTop ? 1 : 0) + (subject.IntersectsBottom ? 1 : 0)
+                  + (subject.IntersectsLeft ? 1 : 0) + (subject.IntersectsRight ? 1 : 0);
+        lambda.Features.Set("intersection-count", count.ToString(CultureInfo.InvariantCulture), 1.0, SubjectDetectorProducer);
+        SetFlag(lambda, "fully-in-frame", count == 0);
     }
 
     //  Strategy selection

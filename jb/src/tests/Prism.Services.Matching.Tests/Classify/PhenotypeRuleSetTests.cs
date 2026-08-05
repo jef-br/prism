@@ -195,7 +195,85 @@ public class PhenotypeRuleSetTests {
         Assert.NotEqual("front-on-model-full-product", ruleSet.Assign(snapshot));
     }
 
-    //  Priority / CPU-only reachability 
+    //  back-on-model-partial (T-4970) — the rule the 20→21 count assertion never exercised
+
+    [Theory]
+    [InlineData("three-quarter")]
+    [InlineData("half")]
+    [InlineData("bust")]
+    public void Assign_BackOnModelPartial_FiresOnEachBodyVisibleValue(string bodyVisible) {
+        // The shot this rule was added for: a back view cut by a frame edge — 41 of SPACINI29's 86
+        // images. All three body-visible values in the anyOf must reach it, not just the first.
+        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
+        var snapshot = new ImageFeatureSnapshot();
+        snapshot.Set("hero-is-human", "TRUE", 1.0, "test");
+        snapshot.Set("hero-orientation", "BACK", 1.0, "test");
+        snapshot.Set("body-visible", bodyVisible, 1.0, "test");
+        snapshot.Set("intersects-top", "true", 1.0, "test");
+
+        Assert.Equal("back-on-model-partial", ruleSet.Assign(snapshot));
+    }
+
+    [Fact]
+    public void Assign_BackOnModelPartial_FiresOnBottomEdgeAlone() {
+        // The second half of the intersects anyOf. intersects-top is explicitly false here, so the
+        // rule has to be reached through intersects-bottom rather than through an unset feature.
+        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
+        var snapshot = new ImageFeatureSnapshot();
+        snapshot.Set("hero-is-human", "TRUE", 1.0, "test");
+        snapshot.Set("hero-orientation", "BACK", 1.0, "test");
+        snapshot.Set("body-visible", "half", 1.0, "test");
+        snapshot.Set("intersects-top", "false", 1.0, "test");
+        snapshot.Set("intersects-bottom", "true", 1.0, "test");
+
+        Assert.Equal("back-on-model-partial", ruleSet.Assign(snapshot));
+    }
+
+    [Fact]
+    public void Assign_FrontOrientation_TakesFrontPartial_NotBackPartial() {
+        // The sharpest negative: orientation is the *only* field separating the two partial rules,
+        // and a flipped orientation is T-4970's largest surviving error class (9 of 13 mislabels).
+        // An otherwise-identical snapshot must land on the front rule, which also precedes it.
+        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
+        var snapshot = new ImageFeatureSnapshot();
+        snapshot.Set("hero-is-human", "TRUE", 1.0, "test");
+        snapshot.Set("hero-orientation", "FRONT", 1.0, "test");
+        snapshot.Set("body-visible", "half", 1.0, "test");
+        snapshot.Set("intersects-top", "true", 1.0, "test");
+
+        Assert.Equal("front-on-model-partial", ruleSet.Assign(snapshot));
+    }
+
+    [Fact]
+    public void Assign_BackOnModelPartial_DoesNotFireOnFullBodyVisible() {
+        // body-visible=full is outside the anyOf. This is the boundary against
+        // back-on-model-full-product, which owns that value — the partial rule must not swallow it.
+        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
+        var snapshot = new ImageFeatureSnapshot();
+        snapshot.Set("hero-is-human", "TRUE", 1.0, "test");
+        snapshot.Set("hero-orientation", "BACK", 1.0, "test");
+        snapshot.Set("body-visible", "full", 1.0, "test");
+        snapshot.Set("intersects-top", "true", 1.0, "test");
+
+        Assert.NotEqual("back-on-model-partial", ruleSet.Assign(snapshot));
+    }
+
+    [Fact]
+    public void Assign_BackOnModelPartial_DoesNotFireWhenNoEdgeIsTouched() {
+        // Both intersects are KNOWN false, not merely unset — an untouched back shot is a
+        // full-product shot, and "partial" must mean a real edge crop rather than absent evidence.
+        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
+        var snapshot = new ImageFeatureSnapshot();
+        snapshot.Set("hero-is-human", "TRUE", 1.0, "test");
+        snapshot.Set("hero-orientation", "BACK", 1.0, "test");
+        snapshot.Set("body-visible", "bust", 1.0, "test");
+        snapshot.Set("intersects-top", "false", 1.0, "test");
+        snapshot.Set("intersects-bottom", "false", 1.0, "test");
+
+        Assert.NotEqual("back-on-model-partial", ruleSet.Assign(snapshot));
+    }
+
+    //  Priority / CPU-only reachability
 
     [Fact]
     public void Assign_LifestyleContext_ReachableFromCpuOnlyFeatures() {

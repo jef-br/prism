@@ -16,16 +16,18 @@ user-facing summaries.
 | [T-2600](T-2600.md) | Blocked | M5 Classify groundwork | Re-measure phenotype coverage at the shipped thresholds, then close the M5 gate |
 | [T-3800](T-3800.md) | Blocked | Match bracket validation | Add a fuzzy-colour image and a Bracket-4 image to CiMini, then validate both matcher changes on real data |
 | [T-4000](T-4000.md) | Ready | Analyzer calibration backlog | Split the 11 analyzer calibration questions into their own tickets, one at a time |
-| [T-4942](T-4942.md) | Ready | Test projects fight over the GPU | Make the two GPU-heavy test projects run one at a time, and make CI fail on a short test count |
+| [T-4942](T-4942.md) | Review | Test projects fight over the GPU | Confirm `-m:1` + the 500-test CI floor on a real CI run, then close |
 | [T-4945](T-4945.md) | Ready | Hard-shadow threshold | Label a set for hard vs soft shadow and re-tune the threshold against it |
 | [T-4948](T-4948.md) | Ready | White-on-white contrast floor | Measure real white-on-white contrast, then set the denoise strength to match |
 | [T-4950](T-4950.md) | Ready | SubjectMask crosses the wire unread | Measure the per-image mask payload, then decide keep / `[JsonIgnore]` / config-gate |
-| [T-4955](T-4955.md) | Ready | Stale derived edge features | Recompute `intersection-count` and `fully-in-frame` when the subject box is promoted |
-| [T-4960](T-4960.md) | Obsolete | Alpha box vs colour fallback | Do not start — T-5030 deleted the alpha path; archive it and retire the linked todo |
-| [T-4980](T-4980.md) | Review | CiMini E2E golden red | Rework the fix to use the subject box honestly, then make `dotnet test` read the goldens |
-| [T-4990](T-4990.md) | Ready | Detector under-counts intersections | Make the detector count every edge the subject actually touches, then re-score |
-| [T-5000](T-5000.md) | Ready | Filename orientation false positives | Stop the filename analyzer reading garment nouns as camera views |
-| [T-5010](T-5010.md) | Review | Centre-and-stretch unreachable | Fix the 6 stale Transform test fixtures, then verify the routing on SPACINI29 |
+| [T-4955](T-4955.md) | Review | Stale derived edge features | Review the recompute-at-promotion diff, then close |
+| [T-4980](T-4980.md) | Review | CiMini E2E golden red | Decide the 4-edge safety margin; the golden stays red until [[T-5060]] lands |
+| [T-4990](T-4990.md) | Review | Detector under-counts intersections | Review the two-threshold recalibration (65/86 → 84/86), then close |
+| [T-5000](T-5000.md) | Review | Filename orientation false positives | Review the trailing-token rule, then close |
+| [T-5010](T-5010.md) | Review | Centre-and-stretch unreachable | Verify the restored routing on SPACINI29 and clear the two dormant defects |
+| [T-5050](T-5050.md) | Ready | `multiple-products` never written false | Make the analyzer write a known value, handling the shoe-pair case |
+| [T-5060](T-5060.md) | Ready | Det compaction reorders a family | Keep configured-slot order ahead of overflow images through compaction |
+| [T-5070](T-5070.md) | Ready | Full-length edge-cropped shots match no rule | Decide what a `body-visible=full` image touching an edge should be |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.

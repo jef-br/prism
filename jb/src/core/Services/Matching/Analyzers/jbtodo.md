@@ -7,16 +7,16 @@ still has open work (implementation for stubs, calibration for implemented ones)
 ## Implemented — calibration/validation open
 
 - [ ] [Analyzer_ProductType](Analyzer_ProductType.md) — IEM producttype/ngp → canonical slug; vocabulary unification + term-collision audit open
-- [ ] [Analyzer_FilenameEvidence](Analyzer_FilenameEvidence.md) — filename tokens → product type + orientation; token list to config?
+- [x] [Analyzer_FilenameEvidence](Analyzer_FilenameEvidence.md) — closed by [[T-5000]] 2026-08-05: token map moved to `analyzer_Config.json`, orientation now read only from the final stem token, and the relationship to `DetOrderKeywordStems.json` documented as deliberately separate
 - [ ] [Analyzer_HasHuman](Analyzer_HasHuman.md) — YOLO person → has-human/human-count; partial-body recall to validate
 - [ ] [Analyzer_SubjectGeometry](Analyzer_SubjectGeometry.md) — YOLO subject box → geometry features; segmentation-model milestone for true coverage
 - [ ] [Analyzer_DominantColors](Analyzer_DominantColors.md) — 4 fg buckets, bg+skin excluded; white-on-white and skin-colored-product cases to calibrate
 - [ ] [Analyzer_ProductColor](Analyzer_ProductColor.md) — largest fg bucket → palette name; palette granularity + LAB distance open
 - [ ] [Analyzer_BackgroundColor](Analyzer_BackgroundColor.md) — SOLIDCOLOR border mean → palette name; gradient backgrounds open
 - [ ] [Analyzer_Exposure](Analyzer_Exposure.md) — luminance flags, bg excluded; FlaggedFraction to calibrate
-- [ ] [Analyzer_MultipleProducts](Analyzer_MultipleProducts.md) — YOLO counts; shoe-pair false positives to handle
-- [ ] [Analyzer_Interior](Analyzer_Interior.md) — cavity detection; product-type-gating doc discrepancy to reconcile
-- [ ] [Analyzer_IsIllustration](Analyzer_IsIllustration.md) — 3-signal topology; stale doc path to fix
+- [ ] [Analyzer_MultipleProducts](Analyzer_MultipleProducts.md) — YOLO counts; shoe-pair false positives to handle → split out as [[T-5050]] 2026-08-05
+- [ ] [Analyzer_Interior](Analyzer_Interior.md) — cavity detection; product-type-gating question to reconcile (the stale `InteriorAnalyzer.cs` doc name was fixed 2026-08-05)
+- [x] [Analyzer_IsIllustration](Analyzer_IsIllustration.md) — 3-signal topology; the only open item was a doc path that was already correct, checked and closed 2026-08-05
 
 ## Removed (deferred pending future re-introduction)
 

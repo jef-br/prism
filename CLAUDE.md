@@ -25,11 +25,18 @@ npm run typecheck    # tsc --noEmit
 
 ### Tests (xUnit, split per public service, per-service suites by namespace)
 ```
-dotnet test jb/src/PRISM.sln                                                         # everything, every project, incl. pipeline integration
+dotnet test jb/src/PRISM.sln -m:1                                                    # everything, every project, incl. pipeline integration
 dotnet test jb/src/tests/Prism.Services.Matching.Tests/Prism.Services.Matching.Tests.csproj   # one project in isolation
 dotnet test jb/src/PRISM.sln --filter "FullyQualifiedName~PrismCoreTests.<Suite>"    # one service suite, any project
 dotnet test jb/src/PRISM.sln --filter "FullyQualifiedName!~PipelineIntegrationTests" # unit tests only
 ```
+**`-m:1` is required, not optional (T-4942).** Run in parallel, the test projects contend for the GPU
+and the job temp folder — `Prism.Services.Matching.Tests` does ~95s of OpenCV subject detection plus a
+shared DirectML YOLO session while `Prism.Core.Tests`'s `PipelineFixture` builds and disposes a whole
+`PrismService` (146 MB CLIP + 37 MB YOLO). The result is all 7 `PipelineIntegrationTests.CiMini_*`
+failing in under 1ms each — the signature of the shared fixture failing to construct — while every
+project passes on its own. `ci.yml` already passes `-m:1`. Full suite serialized: **529 tests**.
+
 Five projects under `jb/src/tests/`, split along public-service boundaries (T-3300): `Prism.Services.Matching.Tests` (`Match`, `Order`, `Classify`, `Analyzers`), `Prism.Services.Generate.Tests` (`Generate`), `Prism.Services.Transform.Tests` (`Transform`), `Prism.Services.Upscale.Tests` (`Upscale`), and `Prism.Core.Tests` for everything not a separately-deployable service (`Ingest`, `Excel`, `Export`, `Rename`, `ImageNGP`, `Services`, `ServiceHost`, root namespace `PrismCoreTests` = `PipelineIntegrationTests`). `Prism.Tests.Shared` is a non-test classlib holding `PipelineFixture`, referenced by both `Prism.Core.Tests` and `Prism.Services.Matching.Tests` (MatchLite and SubjectEdgeDetector real-image tests need it too). Namespaces are unchanged by the split, so `--filter "FullyQualifiedName~PrismCoreTests.<Suite>"` still works regardless of which project a suite now lives in. See `jb/docs/PRISM-testing.md`. End-to-end validation additionally runs via `pwsh test/ci/Invoke-CiPipeline.ps1`.
 
 ## Architecture
