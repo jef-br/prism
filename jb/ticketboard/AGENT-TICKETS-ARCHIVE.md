@@ -4,6 +4,101 @@ Done tickets, moved here by /ticket-finish to keep `jb/ticketboard/AGENT-TICKETS
 start) lean. Newest at the top. When a ticket closes, its `jb/ticketboard/T-XXXX.md` body is appended here
 and that file is deleted.
 
+### T-5020 · Folder names never reach the matcher
+**Status:** Done (2026-08-05) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-08-04)
+**Landed:** `69b5eba`
+
+An image's folder is often the only thing that identifies it — `1.jpg` inside `26182-Denim-801/` is
+useless on its own and unambiguous with its folder. `FolderNameEnricher` exists to borrow that folder
+name. It could never do so through the normal job path, and even when reached it failed on one of the
+two folder shapes in `test/datasets/JBComplete/`.
+
+Three separate causes, all now fixed.
+
+**1. The test runner threw the folder away before upload.** — FIXED
+`test/test-scripts/PrismJobRunner.psm1`. `Get-PrismJobInputFiles` de-duplicated by *leaf filename*
+(`$seen.Add($file.Name)`), so `26182-Denim-801/1.jpg` and `foldercontainsID99984905/1.jpg` collided on
+`1.jpg` and the second was silently dropped; `Submit-PrismJob` then uploaded as
+`[Path]::GetFileName($path)` and packed ZIP entries the same way.
+
+Now: a new `Get-PrismRelativePath` helper computes each file's path relative to the submitted root
+(and, for ZIP-expanded files, relative to that ZIP's own expansion dir, so the archive's internal
+structure survives but the `zip0/` scaffolding does not). That relative path is the de-dup key, the
+ZIP entry name, and the multipart part filename. `Get-PrismJobInputFiles` now returns
+`{FullName, RelativePath}` objects; `Submit-PrismJob`'s `-Files` widened to `[object[]]`.
+`Invoke-CiPipeline.ps1` and every `Run_*.ps1` pass the value through opaquely and needed no change.
+
+**2. The core ZIP reader stripped member folders.** — FIXED
+`ZipHandler.cs` set `originalFileName = Path.GetFileName(memberPath)`. Now a new
+`BuildOriginalFileName` helper returns the full in-archive path with `\` normalised to `/`.
+`memberPath` itself is untouched everywhere it is used for KO records, safe-extraction-path building
+and the encrypted-entry lookup. No `Importer.cs` change was needed: the widened value flows unchanged
+into `InitialFullName`, and `BuildNormalizedFileName` is safe with a `/` in its input because
+`Path.GetFileNameWithoutExtension` strips the directory part before the invalid-char filter runs.
+A nested-ZIP member keeps its own innermost-archive-relative path; archive provenance stays separate
+on `ArchivePath`.
+
+**3. `MeaningfulTokens` kept a mixed letter+digit run whole and skipped the split.** — FIXED
+`FolderNameEnricher.cs`. The `continue` after adding a whole mixed run skipped the letter↔digit split
+below it. Now a `CollectRunTokens` helper emits the split pieces **in addition to** the whole run,
+through the same length/noise/bare-number filters. (Extracted to a helper because inline it pushed
+Sonar cognitive complexity to 19 against a 15 ceiling.)
+
+The optional digit-run concatenation (`26182-801` → `26182801`, ticket bullet 4) was **declined**:
+it is not needed for JBComplete (`26182` alone already carries that folder), and it manufactures a
+token present in neither the folder name nor the Excel — in exactly the shape of a real 8-digit
+FamilyID, so it could collide with an unrelated family with no textual basis.
+
+**Probe, re-run 2026-08-04** — real `FolderNameEnricher`, real `MatchingConfig.json` tuning, real
+`Brackets-Complete.xlsx` rows (34 families parsed):
+
+| Folder | Alias assigned? |
+|---|---|
+| `26182-Denim-801/` | **yes**, all 3 files |
+| `foldercontainsID99984905/` | **yes**, all 4 files — was **no** |
+| `99984901/` | no — correct, the filenames already carry the ID |
+
+One correction to the original ticket text: the alphabetic split piece is `foldercontainsid`, not
+`foldercontains`. `MeaningfulTokens` lowercases before tokenising, which destroys the `s`→`I` case
+boundary, and `AlphaDigitBoundaryPattern` splits only at letter↔digit transitions. Irrelevant to the
+outcome — `99984905` is the piece that has to reach the vocabulary, and it does.
+
+**What was done:**
+- [x] Carry the path relative to the submitted root through runner de-dup key, multipart part name,
+      ZIP entry name, and `ZipHandler`'s `originalFileName`.
+- [x] Duplicate decision now keys on the full relative path, not the leaf name.
+- [x] `MeaningfulTokens` emits the letter↔digit split in addition to the whole run.
+      `MatcherUpgradeTests.FolderNameEnricher_MeaninglessFileInMeaningfulFolder_BorrowsFolderName`
+      still passes; 3 new tests pin the split, the whole-run survival, and the digit-tail-only case.
+- [x] Digit-run concatenation considered and declined, with reasoning above.
+- [x] Probe re-run; 9 subfolder images added to `expected-match.json` (90 → 99 entries, 20 → 22
+      rejections, 77 matches across 26 families, ordinal sort order preserved).
+- [x] `ImporterZipTests.ZipMemberInSubfolder_InitialFullNamePreservesFolderPath` added.
+- [x] `test/datasets/JBComplete/README.md` §2.3, §4.1, §4.2, §4.4, §5 updated to the measured result.
+
+**Verification:** `dotnet build` 0 errors. Matching 230/231, Core 150/150, Transform 77/83,
+Generate 10/10, Upscale 17/17. The 1 Matching failure is `AnalyzerConfigTests` expecting
+`Filename.OrientationConfidence` 0.75 against a shipped 0.60 — confirmed untouched by this work via
+`git diff HEAD`, belongs to [[T-5000]]. The 6 Transform failures are [[T-5010]]'s known stale routing
+fixtures, same six as before this work.
+
+**Not verified:** whether a multipart part *filename* containing `/` survives ASP.NET Core's form
+parser end to end. Source reading says yes — `PrismProcessIngressReader.AddUploadedInputRecords` sets
+`InitialFullName = file.FileName` verbatim with no `GetFileName` stripping, and `/` needs no escaping
+in a `Content-Disposition` quoted string — but no live HTTP round-trip was run. It matters little:
+only the single seed image travels loose, every other image goes through the ZIP path, which is
+covered by cause 2's test.
+
+**Files:** `test/test-scripts/PrismJobRunner.psm1`, `jb/src/core/lib/Zip/ZipHandler.cs`,
+`jb/src/core/lib/Zip/ZipExtractedMember.cs`, `jb/src/core/lib/Zip/ZipMemberKoRecord.cs`,
+`jb/src/core/Services/Matching/Match/FolderNameEnricher.cs`,
+`jb/src/tests/Prism.Core.Tests/Ingest/ImporterZipTests.cs`,
+`jb/src/tests/Prism.Services.Matching.Tests/Match/MatcherUpgradeTests.cs`,
+`test/datasets/JBComplete/expected-match.json`, `test/datasets/JBComplete/README.md`.
+
+---
+
 ### T-4970 · Phenotype assignment validation (first + second pass)
 **Status:** Done (2026-08-03) | **Profile:** P1-feature-worker
 **Review:** Approve (2026-07-31)
