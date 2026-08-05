@@ -70,11 +70,14 @@ public class CiMiniGoldenTests : IClassFixture<PipelineFixture> {
 
         Assert.True(issues.Count == 0,
             $"{issues.Count} golden mismatch(es) against expected-manifest.json:\n  {string.Join("\n  ", issues)}\n\n" +
-            "KNOWN-RED: the DetOrder/FinalFileName rotations on families 90861052 and 94613033 are T-5060 — "
-            + "det compaction promotes a late configured slot (the detail crop at det3) ahead of overflow "
-            + "images, so the detail shot leads the family and the front shot is last. Do NOT re-bless "
-            + "expected-manifest.json to clear this: the golden's order is the correct one, and this "
-            + "assertion is the only thing making the defect visible. Fix T-5060 instead.");
+            "KNOWN-RED: family 94613033 only. T-5060 fixed family 90861052 (compaction now orders on the "
+            + "configured-slot axis, so overflow images keep their anchor position instead of being pushed "
+            + "behind every configured slot). What is left is upstream of ordering: CLIP reads all three "
+            + "Pareo images as BACK at 0.35-0.48 confidence, so the packshot claims bottomwear det1 and the "
+            + "two on-model shots the filenames call front (_F1, _F2) land at det5 and overflow. That is "
+            + "T-4970's orientation-argmax error class, tracked by T-5080 — ordering has no way to fix it. "
+            + "Do NOT re-bless expected-manifest.json to clear this: the golden's order is the correct one, "
+            + "and this assertion is the only thing making the defect visible.");
     }
 
     [Fact]

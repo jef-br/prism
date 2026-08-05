@@ -5,6 +5,7 @@ namespace Prism.Services.Matching;
 /// </summary>
 internal sealed record AssignmentRecord(
     int DetSlot,
+    double AxisPosition,
     string? WinningPhenotype,
     int PhenotypeRank,
     int NgpConfidence,

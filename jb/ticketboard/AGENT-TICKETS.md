@@ -13,8 +13,8 @@ user-facing summaries.
 
 | Ticket | Status | Title | Do this next |
 |---|---|---|---|
-| [T-2600](T-2600.md) | Blocked | M5 Classify groundwork | Re-measure phenotype coverage at the shipped thresholds, then close the M5 gate |
-| [T-3800](T-3800.md) | Blocked | Match bracket validation | Add a fuzzy-colour image and a Bracket-4 image to CiMini, then validate both matcher changes on real data |
+| [T-2600](T-2600.md) | Blocked | M5 Classify groundwork | Land T-5070 and T-5080, then re-score JBComplete's 99 labelled rows |
+| [T-3800](T-3800.md) | Blocked | Match bracket validation | Author a Bracket-4 image and a reference-free fuzzy-colour image; no dataset has either |
 | [T-4000](T-4000.md) | Ready | Analyzer calibration backlog | Split the 11 analyzer calibration questions into their own tickets, one at a time |
 | [T-4942](T-4942.md) | Review | Test projects fight over the GPU | Confirm `-m:1` + the 500-test CI floor on a real CI run, then close |
 | [T-4945](T-4945.md) | Ready | Hard-shadow threshold | Label a set for hard vs soft shadow and re-tune the threshold against it |
@@ -26,8 +26,12 @@ user-facing summaries.
 | [T-5000](T-5000.md) | Review | Filename orientation false positives | Review the trailing-token rule, then close |
 | [T-5010](T-5010.md) | Review | Centre-and-stretch unreachable | Verify the restored routing on SPACINI29 and clear the two dormant defects |
 | [T-5050](T-5050.md) | Ready | `multiple-products` never written false | Make the analyzer write a known value, handling the shoe-pair case |
-| [T-5060](T-5060.md) | Ready | Det compaction reorders a family | Keep configured-slot order ahead of overflow images through compaction |
-| [T-5070](T-5070.md) | Ready | Full-length edge-cropped shots match no rule | Decide what a `body-visible=full` image touching an edge should be |
+| [T-5060](T-5060.md) | Review | Det compaction reorders a family | Review the axis-ordered compaction diff; CiMini 90861052 now matches the golden |
+| [T-5070](T-5070.md) | Ready | Edge-touching shots match no rule | Decide what `intersection-count = 0` should mean; it blocks 7 of 18 phenotypes |
+| [T-5080](T-5080.md) | Ready | `hero-orientation` wrong or absent | Dump the per-prompt score vector for 9 known side views, then re-word or re-bar |
+| [T-5090](T-5090.md) | Ready | SubstringRescue invents evidence from shot numbers | Evaluate every rescue token and KO on contradiction instead of returning on the first |
+| [T-5100](T-5100.md) | Ready | Bracket 3 steals a neighbour's family | Refuse a match when a discriminating filename token resolves to no family |
+| [T-5110](T-5110.md) | Ready | Filename-in-cell never fires | Scan cell text for filename tokens instead of taking the basename of the whole cell |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.
@@ -103,7 +107,7 @@ lives in this file — everything else stays in the ticket file.
 | M8 Product & Packaging | **Superseded** — `product-type-label`, `multiple-products` real; `packaging-visible` removed ([[T-4700]]) | Re-defined only if `packaging-visible` returns |
 | M9 Composition & Spatial | `product-coverage-ratio`, `image-occupancy`, `salient-bbox`, `vertical-centering`, `horizontal-centering` | Composition phenotypes measured; overflow slot assignment accuracy confirmed |
 | M10 Semantic & Content | **Superseded** — `dominant-colors` real (no phenotype rule consumes it yet); `text-present`, `logo-present`, `lighting` removed ([[T-4700]]) | Re-defined only if the removed features return |
-| M11 Production Validation | All 21 phenotypes | < 5% misassignment on a labeled validation set; no systematic error on any single phenotype |
+| M11 Production Validation | All 18 phenotypes | < 5% misassignment on a labeled validation set; no systematic error on any single phenotype. **Measured 2026-08-05 on `JBComplete/expected-phenotype.json` (99 rows, the labeled set): 30.3% misassignment, 39.4% coverage, `front-packshot` recall 0/25.** SPACINI29's 4.7% is not a pass — it only exercises 2 of the 18. Blocked on [[T-5070]] + [[T-5080]] |
 
 ## Verification Rules
 
