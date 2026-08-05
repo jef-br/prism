@@ -26,7 +26,6 @@ user-facing summaries.
 | [T-4990](T-4990.md) | Ready | Detector under-counts intersections | Make the detector count every edge the subject actually touches, then re-score |
 | [T-5000](T-5000.md) | Ready | Filename orientation false positives | Stop the filename analyzer reading garment nouns as camera views |
 | [T-5010](T-5010.md) | Review | Centre-and-stretch unreachable | Fix the 6 stale Transform test fixtures, then verify the routing on SPACINI29 |
-| [T-5030](T-5030.md) | Review | Normalize every input to JPG on white | Approved — archive it, then close T-4960, which this fully obsoletes |
 | [T-5040](T-5040.md) | Review | Prune the phenotype set | Approved — run /ticket-finish to archive it |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need

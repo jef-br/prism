@@ -4,6 +4,99 @@ Done tickets, moved here by /ticket-finish to keep `jb/ticketboard/AGENT-TICKETS
 start) lean. Newest at the top. When a ticket closes, its `jb/ticketboard/T-XXXX.md` body is appended here
 and that file is deleted.
 
+### T-5030 · Normalize every input to JPG on white
+**Status:** Done (2026-08-05) | **Profile:** P1-feature-worker
+**Landed:** `69b5eba`
+**Review:** Approve (2026-08-04) — reviewer independently traced `MatchingService.Refine` →
+`FeatureAnalysisService.Refine` → `ImageFeatureAnalyzer.AnalyzeBackground` and confirmed the
+`clipping-path` unreachability claim at source, plus config/JSON parity in both directions. One
+follow-up it raised (a second stale `ghost-back` row in `test/datasets/CiGolden/README.md`) is fixed.
+
+Drop the separate handling path for images with an alpha channel. Every input becomes a JPG
+composited onto a white background at import, before any analysis runs.
+
+**Correction to the ticket's premise, found while working it.** Two of the stated facts were wrong,
+and they changed what the work actually was:
+
+1. **Compositing onto white was already happening.** `Importer.LoadImageWithExifOrientation` already
+   called `context.BackgroundColor(Color.White)` unconditionally and `TryNormalizeToJpeg` already
+   wrote JPEG, for every accepted format. Bullet 1 was already true and was not re-implemented.
+2. **`clipping-path = true` was already unreachable in production.**
+   `ImageFeatureAnalyzer.AnalyzeBackground` computed `hasAlpha` as
+   `DecodedImageFormat != JpegFormat.Instance && HasTransparentPixels(...)`, and `Refine` always loads
+   `NormalizedJpgPath`, which Import always writes as JPEG. So the first conjunct was always false and
+   the feature had **never once been `true`** on a pipeline image. It fired only in unit tests that
+   built a PNG in memory. Independently confirmed.
+3. **It was three `ghost-*` rules, not six**, and `clipping-path` was an *alternative* inside an
+   `anyOf`, not a requirement — `background-type = SOLIDCOLOR` satisfied the same clause. The "six"
+   came from `imagePhenotypes.md`, which also listed the alternative on the six `*-packshot` rules
+   that `ImageRoles.json` never had. That doc/config drift is now fixed.
+
+So the real work was removing the separate alpha *capture* path, not adding a composite.
+
+**Product decision (user, 2026-08-04): remove `clipping-path` outright.** Rationale in the user's
+words — "reduced complexity with identical end-result is more of a boon than a bane". It is literally
+identical: the feature had never been `true`. Deleted from `ImageNGP.json`, the three `ghost-*` rules
+in `ImageRoles.json`, `ImageFeatureAnalyzer`, `ClassifyConfig.json`, and every doc.
+
+Consequence, handed to [[T-5040]]: with `clipping-path` gone the three ghost rules became
+character-for-character identical to their packshot counterparts and provably unreachable. T-5040
+merged them into `*-packshot`.
+
+**What was done:**
+- [x] Confirmed alpha→white compositing already happens at import; JPG already emitted.
+- [x] Deleted `AlphaSubjectCapture.cs` and the `Subject` threading through
+      `LoadImageWithExifOrientation` / `TryNormalizeToJpeg` / `NormalizeAndRecord`.
+- [x] Removed `ImageRecord_INPUT.Subject`, `MatchingService.PrepareLambda`'s `Subject = source.Subject`,
+      the dead `if (lambda.Subject is not null) return;` guard in `FeatureAnalysisService.DetectSubject`,
+      and the `Producer == "alpha"` branch in `Analyzer_ShadowPresence`.
+- [x] Removed `hasAlpha`, `HasTransparentPixels`, and the `if (hasAlpha) bgType = SOLIDCOLOR` branch
+      from `ImageFeatureAnalyzer`. `transparent-background` is now an unconditional `false` —
+      diagnostic only, no phenotype rule consumes it.
+- [x] Config keys removed on both sides in step (no shadow defaults):
+      `AlphaCaptureOpacityThreshold` / `AlphaCaptureEdgeContactFraction` (`PrismConfiguration.cs` ↔
+      `Prism_Config.json` `Ingress.AlphaCapture`), `LifestyleBackgroundAlphaConfidence` and
+      `ClippingPathConfidence` (`ImageFeatureAnalyzer.Config` ↔ `ClassifyConfig.json`).
+- [x] `SubjectDetectionResult.Producer` **kept** — it still separates `classical-cv` from `edge-bleed`
+      and leaves room for a segmentation-model producer; that never depended on alpha.
+- [x] Tests: deleted `ImporterAlphaSubjectTests.cs`; updated `ImporterFixture`,
+      `ImageFeatureAnalyzerTests`, `AnalyzerShadowPresenceTests`, `ClassifyConfigTests`,
+      `PhenotypeRuleSetTests`.
+- [x] 13 JBComplete PNGs import and match cleanly. FILA94 verified on a 15-PNG sample via a
+      throwaway test (the full 12 GB / 1374-file set stalls the multipart runner): 15/15 imported,
+      0 KO, correct dimensions, corners composited to white.
+- [x] Docs: `PRISM-classify.md`, `ImageFeatures.md`, `imagePhenotypes.md`, `NGP-architecture.md`,
+      `PRODUCTTYPES.MD`, `HowToAddAPhenotype.md`, `ideas-on-NGP.md`, `jbtodo.md`,
+      `test/datasets/CiGolden/README.md`, `test/datasets/JBComplete/README.md`.
+
+**Dependent tickets re-checked:**
+- [[T-4960]] (alpha box vs colour fallback) — **fully obsoleted.** There is no alpha-derived box left
+  anywhere in the system, so there is nothing for `Analyzer_SubjectGeometry` to prefer. Close it.
+- [[T-4950]] (SubjectMask on the wire) — **partly obsoleted.** Its "both producers encode a mask"
+  framing is stale (only `classical-cv` does now), but the actual keep / `[JsonIgnore]` / config-gate
+  decision is untouched and still open. Alpha's removal only shrinks the unread payload.
+
+**What no longer exists, stated plainly:** once alpha is gone there is **no signal that distinguishes
+"cut out against a flat background" from "shot on a seamless white sweep."** Both present identically
+downstream — flat JPEG, uniform near-white corners, `background-type = SOLIDCOLOR`,
+`white-background = true`. Reviving `clipping-path` would require a genuinely new measurement, not a
+repurposing of anything alpha provided.
+
+**Verification:** `dotnet build` 0 errors 0 warnings. Matching 230/231, Core 150/150, Transform 77/83,
+Generate 10/10, Upscale 17/17. The 1 Matching and 6 Transform failures are pre-existing [[T-5000]] and
+[[T-5010]], confirmed untouched via `git diff HEAD`.
+
+**Files:** `jb/src/core/lib/Ingress/Importer.cs`, `jb/src/core/lib/Ingress/AlphaSubjectCapture.cs`
+(deleted), `jb/src/core/Models/ImageRecord_INPUT.cs`, `jb/src/core/Services/Matching/MatchingService.cs`,
+`jb/src/core/Services/Matching/FeatureAnalysisService.cs`,
+`jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`,
+`jb/src/core/Services/Matching/Analyzers/Analyzer_ShadowPresence.cs`,
+`jb/src/core/Services/Matching/SubjectDetectionResult.cs`, `jb/src/core/config/PrismConfiguration.cs`,
+`jb/src/core/config/Prism_Config.json`, `jb/src/core/config/ClassifyConfig.json`,
+`jb/src/core/config/ImageNGP.json`, `jb/src/core/config/ImageRoles.json`.
+
+---
+
 ### T-5020 · Folder names never reach the matcher
 **Status:** Done (2026-08-05) | **Profile:** P1-feature-worker
 **Review:** Approve (2026-08-04)
