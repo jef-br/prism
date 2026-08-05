@@ -96,6 +96,11 @@
         {
             "filePath": "*/jbtodo.md",
             "color": "foldercolorizer.color_00af00"
+        },
+        {
+            "folderPath": "prism\\jb\\ticketboard\\",
+            "color": "foldercolorizer.color_ff0000",
+            "isFolderOnly": true
         }
     ],
     "folder-color.favoriteColors": [
