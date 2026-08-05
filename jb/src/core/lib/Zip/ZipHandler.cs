@@ -187,7 +187,12 @@ public static class ZipHandler {
         List<ZipExtractedMember> extractedMembers,
         List<ZipMemberKoRecord> koRecords) {
         string memberPath = entry.FullName;
-        string originalFileName = Path.GetFileName(memberPath);
+
+        // Carries the member's folder structure (forward-slash normalized) rather than only the bare
+        // leaf name, so downstream folder-name matching (FolderNameEnricher) can see path segments.
+        // memberPath itself stays untouched below: extraction-path building, KO lookups, and the
+        // encrypted-entry check all key on the archive's own separator convention.
+        string originalFileName = BuildOriginalFileName(memberPath);
         bool hasProcessableFileName = ZipMemberTriage.HasProcessableFileName(memberPath);
 
         if (IsEncryptedEntry(memberPath, encryptedEntriesByName)) {
@@ -319,6 +324,17 @@ public static class ZipHandler {
     }
 
     /// <summary>
+    /// Builds the member's original name from its in-archive path: separators normalized to forward
+    /// slash so folder structure survives (needed by downstream folder-name matching), regardless of
+    /// whether the archive was written with '/' or '\' entry names.
+    /// </summary>
+    /// <param name="memberPath">Member path inside the archive.</param>
+    /// <returns>The member path with backslashes normalized to forward slashes.</returns>
+    private static string BuildOriginalFileName(string memberPath) {
+        return memberPath.Replace('\\', '/');
+    }
+
+    /// <summary>
     /// Processes an extracted nested zip archive.
     /// </summary>
     /// <param name="nestedZipPath">Local path to the extracted nested archive.</param>
@@ -342,7 +358,7 @@ public static class ZipHandler {
             koRecords.Add(CreateMalformedKoRecord(
                 archiveDisplayPath,
                 memberPath,
-                Path.GetFileName(memberPath),
+                BuildOriginalFileName(memberPath),
                 new FileInfo(nestedZipPath).Length,
                 "The nested zip depth exceeds the configured limit."));
             return;

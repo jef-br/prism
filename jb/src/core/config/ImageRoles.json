@@ -1,4 +1,6 @@
 {
+  "_comment": "Phenotype rules in evaluation order — FIRST MATCH WINS, so list position is precedence. Ordering principle (T-5040, 2026-08-04): the human branch first, then specific content detectors (is-illustration / interior-detected — narrow, binary, high-confidence analyzer outputs), then the orientation+background packshots, then the generic geometry catch-alls, then lifestyle. A specific rule must precede a generic one it overlaps, or the generic one silently swallows it. Validated against ImageNGP.json at startup by ImageNgpValidator.",
+
   "phenotypes": [
 
     {
@@ -97,6 +99,22 @@
     },
 
     {
+      "id": "illustration-technical-drawing",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "is-illustration", "equals": "true" }
+      ]
+    },
+
+    {
+      "id": "interior-shot",
+      "required": [
+        { "feature": "hero-is-human", "equals": "FALSE" },
+        { "feature": "interior-detected", "equals": "true" }
+      ]
+    },
+
+    {
       "id": "front-packshot",
       "required": [
         { "feature": "hero-is-human", "equals": "FALSE" },
@@ -169,45 +187,6 @@
     },
 
     {
-      "id": "ghost-front",
-      "required": [
-        { "feature": "hero-is-human", "equals": "FALSE" },
-        { "feature": "hero-orientation", "equals": "FRONT" },
-        { "anyOf": [
-            { "feature": "background-type", "equals": "SOLIDCOLOR" },
-            { "feature": "clipping-path", "equals": "true" }
-        ]},
-        { "feature": "intersection-count", "equals": "0" }
-      ]
-    },
-
-    {
-      "id": "ghost-back",
-      "required": [
-        { "feature": "hero-is-human", "equals": "FALSE" },
-        { "feature": "hero-orientation", "equals": "BACK" },
-        { "anyOf": [
-            { "feature": "background-type", "equals": "SOLIDCOLOR" },
-            { "feature": "clipping-path", "equals": "true" }
-        ]},
-        { "feature": "intersection-count", "equals": "0" }
-      ]
-    },
-
-    {
-      "id": "ghost-side",
-      "required": [
-        { "feature": "hero-is-human", "equals": "FALSE" },
-        { "feature": "hero-orientation", "equals": "SIDEON" },
-        { "anyOf": [
-            { "feature": "background-type", "equals": "SOLIDCOLOR" },
-            { "feature": "clipping-path", "equals": "true" }
-        ]},
-        { "feature": "intersection-count", "equals": "0" }
-      ]
-    },
-
-    {
       "id": "closeup-image",
       "required": [
         { "feature": "hero-is-human", "equals": "FALSE" },
@@ -220,22 +199,6 @@
       "required": [
         { "feature": "lifestyle-background", "equals": "true" },
         { "feature": "intersection-count", "max": 1 }
-      ]
-    },
-
-    {
-      "id": "interior-shot",
-      "required": [
-        { "feature": "hero-is-human", "equals": "FALSE" },
-        { "feature": "interior-detected", "equals": "true" }
-      ]
-    },
-
-    {
-      "id": "illustration-technical-drawing",
-      "required": [
-        { "feature": "hero-is-human", "equals": "FALSE" },
-        { "feature": "is-illustration", "equals": "true" }
       ]
     },
 

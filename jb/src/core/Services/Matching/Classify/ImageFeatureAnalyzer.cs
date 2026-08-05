@@ -1,6 +1,5 @@
 using System.Globalization;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -47,14 +46,8 @@ public static class ImageFeatureAnalyzer {
         /// <summary>Number of color channels averaged into the background-variance statistic.</summary>
         public required int ChannelCount { get; init; }
 
-        /// <summary>Confidence written on clipping-path.</summary>
-        public required double ClippingPathConfidence { get; init; }
-
         /// <summary>Confidence written on white-background.</summary>
         public required double WhiteBackgroundConfidence { get; init; }
-
-        /// <summary>Confidence written on lifestyle-background=false when transparency is present.</summary>
-        public required double LifestyleBackgroundAlphaConfidence { get; init; }
 
         /// <summary>Confidence written on lifestyle-background=false from low corner variance.</summary>
         public required double LifestyleBackgroundSolidConfidence { get; init; }
@@ -81,9 +74,7 @@ public static class ImageFeatureAnalyzer {
             if (this.MaxChannelValueF <= 0f) problems.Add("ImageFeatureAnalyzer.MaxChannelValueF must be > 0");
             if (this.PixelSampleStride < 1) problems.Add("ImageFeatureAnalyzer.PixelSampleStride must be >= 1");
             if (this.ChannelCount < 1) problems.Add("ImageFeatureAnalyzer.ChannelCount must be >= 1");
-            if (this.ClippingPathConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.ClippingPathConfidence must be in [0,1]");
             if (this.WhiteBackgroundConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.WhiteBackgroundConfidence must be in [0,1]");
-            if (this.LifestyleBackgroundAlphaConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundAlphaConfidence must be in [0,1]");
             if (this.LifestyleBackgroundSolidConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundSolidConfidence must be in [0,1]");
             if (this.LifestyleBackgroundRealLifeConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.LifestyleBackgroundRealLifeConfidence must be in [0,1]");
             if (this.BackgroundTypeConfidence is < 0.0 or > 1.0) problems.Add("ImageFeatureAnalyzer.BackgroundTypeConfidence must be in [0,1]");
@@ -189,12 +180,12 @@ public static class ImageFeatureAnalyzer {
     //  Background 
 
     private static void AnalyzeBackground(Image<Rgba32> image, ImageFeatureSnapshot snapshot, out float bgR, out float bgG, out float bgB, Config cfg) {
-        // JPEG carries no alpha channel, and Import normalizes every pipeline input to a flat JPEG —
-        // for JPEG-decoded images the alpha scan is skipped outright. Other sources (in-memory,
-        // PNG paths outside the pipeline) keep the scan, now row-span based with early exit.
-        bool hasAlpha = image.Metadata.DecodedImageFormat != JpegFormat.Instance && HasTransparentPixels(image, cfg);
-        snapshot.Set("transparent-background", hasAlpha ? "true" : "false", 1.0, "imagesharp");
-        snapshot.Set("clipping-path", hasAlpha ? "true" : "false", cfg.ClippingPathConfidence, "imagesharp");
+        // Import composites every accepted input format onto white before any analyzer runs (T-5030),
+        // so no image this method ever sees carries a real alpha channel — the feature is now a
+        // structural fact rather than a per-image measurement. clipping-path was removed outright in
+        // the same ticket: it only ever meant "this file had an alpha channel", which cannot be true
+        // downstream of Import, so it was deleted rather than given a new meaning.
+        snapshot.Set("transparent-background", "false", 1.0, "imagesharp");
 
         SampleCorners(image, out bgR, out bgG, out bgB, out float variance, cfg);
 
@@ -202,11 +193,7 @@ public static class ImageFeatureAnalyzer {
         snapshot.Set("white-background", nearWhite ? "true" : "false", cfg.WhiteBackgroundConfidence, "imagesharp");
 
         string bgType;
-        if (hasAlpha) {
-            bgType = "SOLIDCOLOR";
-            snapshot.Set("lifestyle-background", "false", cfg.LifestyleBackgroundAlphaConfidence, "imagesharp");
-        }
-        else if (variance < cfg.BackgroundVarianceSolidColorMax) {
+        if (variance < cfg.BackgroundVarianceSolidColorMax) {
             bgType = "SOLIDCOLOR";
             snapshot.Set("lifestyle-background", "false", cfg.LifestyleBackgroundSolidConfidence, "imagesharp");
         }
@@ -300,19 +287,7 @@ public static class ImageFeatureAnalyzer {
             snapshot.Set(featureId, "UNKNOWN", 0.0, "heuristic");
     }
 
-    //  Pixel helpers 
-
-    private static bool HasTransparentPixels(Image<Rgba32> image, Config cfg) {
-        bool found = false;
-        image.ProcessPixelRows(accessor => {
-            for (int y = 0; y < accessor.Height && !found; y++) {
-                foreach (Rgba32 px in accessor.GetRowSpan(y)) {
-                    if (px.A < cfg.AlphaOpaqueThreshold) { found = true; break; }
-                }
-            }
-        });
-        return found;
-    }
+    //  Pixel helpers
 
     private static void SampleCorners(Image<Rgba32> image, out float avgR, out float avgG, out float avgB, out float variance, Config cfg) {
         int cw = Math.Max(1, image.Width / 10);

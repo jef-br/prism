@@ -1,13 +1,12 @@
 namespace Prism.Contracts;
 
 /// <summary>
-/// Subject-isolation result produced upstream (Classify/preprocessing, or ingress from a real alpha
-/// channel) and consumed by the Transformed stage. This is the single persisted contract behind a
-/// swappable producer (classical-CV detector today, a segmentation model later) — see the
-/// ISubjectDetector seam. It carries the subject bounding box, an optional pixel mask, per-edge
-/// intersect flags derived by the detector, and hard-shadow evidence that steers transform behavior.
-/// All members are mutable so the record round-trips across the matching→transform service boundary
-/// via System.Text.Json.
+/// Subject-isolation result produced upstream (Classify/preprocessing) and consumed by the Transformed
+/// stage. This is the single persisted contract behind a swappable producer (classical-CV detector
+/// today, a segmentation model later) — see the ISubjectDetector seam. It carries the subject bounding
+/// box, an optional pixel mask, per-edge intersect flags derived by the detector, and hard-shadow
+/// evidence that steers transform behavior. All members are mutable so the record round-trips across
+/// the matching→transform service boundary via System.Text.Json.
 /// </summary>
 public class SubjectDetectionResult {
     public BoundingBox Box { get; set; }
@@ -37,7 +36,7 @@ public class SubjectDetectionResult {
     // ignores the box in this case and keeps its legacy salient bbox.
     public bool IsWholeFrameFallback { get; set; }
 
-    // Producer provenance, e.g. "alpha", "classical-cv", "yolo26s-seg".
+    // Producer provenance, e.g. "classical-cv", "edge-bleed", "yolo26s-seg".
     public string Producer { get; set; } = string.Empty;
 
     public int TouchedEdgeCount =>

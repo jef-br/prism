@@ -152,7 +152,7 @@ image
  → preprocessing            (decode, EXIF-orient, downscale-for-analysis, alpha split)
  → salient-object + segmentation   (one foreground/background mask, reused everywhere)
  → low-level geometric pass (intersections, bbox, centering, aspect, occupancy, crop-tightness)
- → background pass          (solid/studio/lifestyle, white, clipping-path, shadow)
+ → background pass          (solid/studio/lifestyle, white, shadow)
  → [gate] human pass        (skin histogram → PAF skeleton → head/face)   if skin-area gate passes
  → [gate] content pass      (OCR text, logo, packaging, color quantization) if cheap signals fire
  → [gate] classifier pass   (MobileNet/CLIP-class ONNX) for product-type-label, ambiguous orientation
@@ -171,7 +171,7 @@ Everything before "phenotype scoring" runs **per image** in the `Classified` sta
 | **Preprocessor** | raw bytes | normalized BGR Mat, alpha mask, EXIF orientation | OpenCV | n/a (deterministic) | very cheap |
 | **Salient/segmentation** | Mat | `salient-bbox`, foreground mask | OpenCV (saliency / GrabCut) or tiny U²-Net-lite ONNX | mask area stability, edge contrast | cheap–medium; **computed once, reused** |
 | **Geometric** | bbox, mask | `intersects-*`, `intersection-count`, `fully-in-frame`, `aspect-ratio`, `product-aspect-ratio`, `*-centering`, `crop-tightness`, `image-occupancy`, `symmetry-score` | mask only | edge/line strength (Hough), bbox stability | **very cheap, very-high confidence** |
-| **Background** | Mat, mask | `background-type`, `white-background`, `clipping-path`, `transparent-background`, `lifestyle-background`, `shadow-present`, `background-color` | alpha channel, color histogram, variance | color-cluster purity, alpha presence | cheap, high confidence |
+| **Background** | Mat, mask | `background-type`, `white-background`, `transparent-background`, `lifestyle-background`, `shadow-present`, `background-color` | color histogram, variance | color-cluster purity | cheap, high confidence |
 | **Skin/human** | Mat | `skin-tone-area`, `has-human`, `hero-is-human` | multi-space skin histogram | skin-area fraction vs threshold | cheap (gate for pose) |
 | **Pose (PAF)** | Mat, skin regions, intersections | `has-head` (partial), `body-visible`, `pose-type`, refined `hero-orientation` for humans | lightweight PAF ONNX | keypoint affinity strength | **medium–high cost; gated** |
 | **Head/face** | top-half Mat, skeleton scale | `has-head`, `head-visible`, `has-face`, `face-visible` | Haar/LBP or tiny face ONNX; KGWRCM kernel | detector score + skeleton corroboration | medium; gated by skeleton |

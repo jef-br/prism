@@ -378,6 +378,62 @@ public class MatcherUpgradeTests {
         Assert.Null(img.MatchingAlias);
     }
 
+    //  T-5020 cause 3: mixed letter+digit run split (foldercontainsID99984905)
+
+    [Fact]
+    public void FolderNameEnricher_MixedRunSplitsAtLetterDigitBoundary_BorrowsFolderName() {
+        // JBComplete's real failure: the folder yields exactly one whole-run token
+        // ("foldercontainsid99984905") that never appears in the Excel, while the FamilyID it should
+        // borrow ("99984905") sits right there as the digit tail. Splitting the run in addition to
+        // keeping it whole is what makes this folder meaningful.
+        FolderNameEnricher enricher = new(FolderNameEnricherCfg);
+        FamilyIDRecord fam = new("99984905");
+        FamilyIDRecord famSibling = new("99984906");
+
+        ImageRecord_LAMBDA img = MakeLambda("C:/drop/foldercontainsID99984905/1.jpg");
+        ImageRecord_LAMBDA sibling = MakeLambda("C:/drop/foldercontainsID99984906/2.jpg");
+
+        enricher.Enrich([img, sibling], [fam, famSibling]);
+
+        Assert.Equal("foldercontainsID99984905 1.jpg", img.MatchingAlias);
+    }
+
+    [Fact]
+    public void FolderNameEnricher_WholeRunSurvivesWhenDigitTailTooShortForBareNumberGate_BorrowsFolderName() {
+        // Pins that the whole-run token (SH23005-style codes) still gets emitted after the split was
+        // added, not replaced by it. A digit tail of "23005" (5 digits) would independently clear
+        // MinBareNumberLength on its own, so it cannot prove the whole run is still reachable; a
+        // shorter tail ("005", 3 digits, below the 5-digit floor) isolates it — only the whole run
+        // "sh005" carries meaning here, the split digit piece is filtered out.
+        FolderNameEnricher enricher = new(FolderNameEnricherCfg);
+        FamilyIDRecord fam = MakeFamily("98765450", ("reference", "SH005", ExcelColumnClassification.Mixed));
+        FamilyIDRecord famSibling = MakeFamily("98765451", ("reference", "SH006", ExcelColumnClassification.Mixed));
+
+        ImageRecord_LAMBDA img = MakeLambda("C:/drop/SH005/1.jpg");
+        ImageRecord_LAMBDA sibling = MakeLambda("C:/drop/SH006/2.jpg");
+
+        enricher.Enrich([img, sibling], [fam, famSibling]);
+
+        Assert.Equal("SH005 1.jpg", img.MatchingAlias);
+    }
+
+    [Fact]
+    public void FolderNameEnricher_OnlyDigitTailInExcel_StillBorrowsFolderName() {
+        // Generalizes the foldercontainsID case beyond JBComplete's exact numbers: the letter prefix
+        // ("batchinv") never appears anywhere in the Excel data, only the digit tail does. The split
+        // piece — not the whole run — is the only reason this folder qualifies as meaningful.
+        FolderNameEnricher enricher = new(FolderNameEnricherCfg);
+        FamilyIDRecord fam = new("87654321");
+        FamilyIDRecord famSibling = new("87654322");
+
+        ImageRecord_LAMBDA img = MakeLambda("C:/drop/batchINV87654321/1.jpg");
+        ImageRecord_LAMBDA sibling = MakeLambda("C:/drop/batchINV87654322/2.jpg");
+
+        enricher.Enrich([img, sibling], [fam, famSibling]);
+
+        Assert.Equal("batchINV87654321 1.jpg", img.MatchingAlias);
+    }
+
     //  Phase E: orphan row join (MEPAL4 catalog → bundle Ref)
 
     [Fact]

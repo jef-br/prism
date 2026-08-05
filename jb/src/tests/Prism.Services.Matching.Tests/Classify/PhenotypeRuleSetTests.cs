@@ -22,13 +22,45 @@ public class PhenotypeRuleSetTests {
     }
 
     [Fact]
-    public void Load_ValidPath_JsonContains21Phenotypes() {
+    public void Load_ValidPath_JsonContains18Phenotypes() {
         // 20 after T-4700 trimmed 6 unreachable ones, +1 for back-on-model-partial (T-4970:
-        // a back view cut by a frame edge is 48% of a real catalogue set and had no rule).
+        // a back view cut by a frame edge is 48% of a real catalogue set and had no rule),
+        // -3 for ghost-front/back/side (T-5040: identical to their packshot counterparts once
+        // clipping-path went, so provably unreachable; *-packshot now covers both cases).
         string json = File.ReadAllText(ImageRolesPath, System.Text.Encoding.UTF8);
         using var doc = JsonDocument.Parse(json);
         int count = doc.RootElement.GetProperty("phenotypes").GetArrayLength();
-        Assert.Equal(21, count);
+        Assert.Equal(18, count);
+    }
+
+    [Fact]
+    public void Load_EverySlotPhenotypeInDetOrderRulesExists() {
+        // T-5040 constraint: DetOrderRules may not name a phenotype the taxonomy does not define.
+        // This is what would have caught the ghost-* entries left behind after a rule deletion.
+        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
+        HashSet<string> defined = JsonDocument
+            .Parse(File.ReadAllText(ImageRolesPath, System.Text.Encoding.UTF8))
+            .RootElement.GetProperty("phenotypes")
+            .EnumerateArray()
+            .Select(p => p.GetProperty("id").GetString()!)
+            .ToHashSet(StringComparer.Ordinal);
+
+        string detOrderPath = Path.Combine(Path.GetDirectoryName(ImageRolesPath)!, "DetOrderRules.json");
+        using var det = JsonDocument.Parse(File.ReadAllText(detOrderPath, System.Text.Encoding.UTF8));
+
+        List<string> unknown = [];
+        foreach (JsonProperty productType in det.RootElement.GetProperty("productTypes").EnumerateObject()) {
+            foreach (JsonProperty slot in productType.Value.EnumerateObject()) {
+                foreach (JsonElement id in slot.Value.GetProperty("phenotypes").EnumerateArray()) {
+                    string name = id.GetString()!;
+                    if (!defined.Contains(name))
+                        unknown.Add($"{productType.Name}.{slot.Name} -> {name}");
+                }
+            }
+        }
+
+        Assert.Empty(unknown);
+        Assert.NotNull(ruleSet);
     }
 
     [Fact]
@@ -201,18 +233,18 @@ public class PhenotypeRuleSetTests {
     }
 
 
-    //  ghost-front / front-packshot overlap (accepted, not a bug)
+    //  the conditions that used to be ghost-front's now resolve to front-packshot
 
     [Fact]
-    public void Assign_GhostFrontConditions_ReturnsFrontPackshot() {
-        // ghost-front and front-packshot now have identical trigger conditions whenever
-        // background-type=SOLIDCOLOR (T-4700 removed ghost-front's contains-mannequin=false
-        // clause — its sole producer was a stub, so the clause could never be satisfied anyway).
-        // No feature currently distinguishes a ghost-mannequin shot from a flat packshot in this
-        // case; front-packshot wins because it's earlier in ImageRoles.json (first-match-wins).
-        // This is an accepted design tradeoff (see imagePhenotypes.md's architecture note), not a
-        // defect — ghost-front remains reachable via its other branch (clipping-path=true with a
-        // non-solidcolor background).
+    public void Assign_FormerGhostFrontConditions_ReturnsFrontPackshot() {
+        // History, because this case is the reason the taxonomy shrank: ghost-front's only condition
+        // front-packshot did not also carry was clipping-path, T-5030 deleted that outright, and the
+        // two required blocks became character-for-character identical — so ghost-front could never
+        // be assigned. T-5040 resolved it by merging: ghost-front/back/side are gone and *-packshot
+        // now covers both the flat lay and the ghost-mannequin shot. This test pins the outcome —
+        // an invisible-mannequin front shot on a solid background is a front-packshot. Re-separating
+        // them needs a signal for whether the garment holds a worn 3D shape, which PRISM does not
+        // measure; see imagePhenotypes.md's merged ghost entry.
         var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("hero-is-human", "FALSE", 1.0, "test");
@@ -221,21 +253,6 @@ public class PhenotypeRuleSetTests {
         snapshot.Set("intersection-count", "0", 1.0, "test");
 
         Assert.Equal("front-packshot", ruleSet.Assign(snapshot));
-    }
-
-    [Fact]
-    public void Assign_GhostFront_ReachableViaClippingPathBranch() {
-        // ghost-front's other anyOf branch (clipping-path=true, non-solidcolor background) has no
-        // overlap with front-packshot (which only accepts background-type=SOLIDCOLOR) — reachable.
-        var ruleSet = PhenotypeRuleSet.Load(ImageRolesPath);
-        var snapshot = new ImageFeatureSnapshot();
-        snapshot.Set("hero-is-human", "FALSE", 1.0, "test");
-        snapshot.Set("hero-orientation", "FRONT", 1.0, "test");
-        snapshot.Set("background-type", "REALLIFE", 1.0, "test");
-        snapshot.Set("clipping-path", "true", 1.0, "test");
-        snapshot.Set("intersection-count", "0", 1.0, "test");
-
-        Assert.Equal("ghost-front", ruleSet.Assign(snapshot));
     }
 
     //  EvaluateCandidates 

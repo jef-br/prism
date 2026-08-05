@@ -27,8 +27,8 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 | Field | Value |
 |---|---|
 | **Phenotype id** | `front-packshot` |
-| **Description** | Hero product shot photographed from the front on a solid-color or transparent background; no human present. Classic e-commerce reference image. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = FRONT`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
+| **Description** | Hero product shot photographed from the front on a solid-color background; no human present. Classic e-commerce reference image. **Covers the ghost-mannequin ("hollow man") shot as well as the flat lay** — the former `ghost-front` was merged in here by T-5040 because no measurable feature separates them. |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = FRONT`, `background-type = SOLIDCOLOR`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | true |
 | **Rationale** | Solid/white background + no human + front symmetry + full product in frame is a highly distinctive and common combination. Symmetry score + background detection + intersection check are all reliable on CPU. |
@@ -40,8 +40,8 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 | Field | Value |
 |---|---|
 | **Phenotype id** | `back-packshot` |
-| **Description** | Hero product shot photographed from the rear on a solid-color or transparent background; no human present. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BACK`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
+| **Description** | Hero product shot photographed from the rear on a solid-color background; no human present. **Covers the ghost-mannequin shot as well as the flat lay** — the former `ghost-back` was merged in here by T-5040. |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BACK`, `background-type = SOLIDCOLOR`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | Distinguishing BACK from FRONT without human presence requires asymmetric product features (labels, logos, closures). Symmetry score alone is insufficient; product-type-specific texture/logo detection needed. |
@@ -53,8 +53,8 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 | Field | Value |
 |---|---|
 | **Phenotype id** | `side-packshot` |
-| **Description** | Hero product on a solid/transparent background viewed from the side (left or right profile). |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = SIDEON`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
+| **Description** | Hero product on a solid background viewed from the side (left or right profile). **Covers the ghost-mannequin shot as well as the flat lay** — the former `ghost-side` was merged in here by T-5040. |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = SIDEON`, `background-type = SOLIDCOLOR`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | Distinguishing SIDE from DIAGONAL is ambiguous for soft goods (clothing). Reliable for rigid products (bottles, shoes) where silhouette profile differs clearly. |
@@ -67,7 +67,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `diagonal-packshot` |
 | **Description** | Product on a solid/transparent background at a 3/4 diagonal angle. Common for shoes and footwear. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = DIAGONAL`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = DIAGONAL`, `background-type = SOLIDCOLOR`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | Diagonal orientation detection requires edge/silhouette asymmetry analysis. Reliable for shoes (distinctive sole/upper silhouette), less reliable for symmetric soft goods. |
@@ -80,7 +80,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `top-packshot` |
 | **Description** | Product photographed from directly above on a solid/transparent background. Common for accessories, bags, homeware. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = TOP`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = TOP`, `background-type = SOLIDCOLOR`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | true |
 | **Rationale** | Overhead camera angle (flat-lay) produces distinctive compositional patterns detectable by aspect ratio of product bounding box, high symmetry, and absence of perspective distortion. |
@@ -93,7 +93,7 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 |---|---|
 | **Phenotype id** | `bottom-packshot` |
 | **Description** | Product photographed from below (sole of shoe, base of appliance, underside of bag). |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BOTTOM`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
+| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BOTTOM`, `background-type = SOLIDCOLOR`, `intersection-count = 0` |
 | **Optional features** | `white-background = true` |
 | **easy_to_detect** | false |
 | **Rationale** | BOTTOM orientation is rare and product-specific (shoe sole, bowl bottom). Detection relies on product-type knowledge. |
@@ -168,42 +168,33 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 
 ---
 
-### `ghost-front`
+### ~~`ghost-front`~~ / ~~`ghost-back`~~ / ~~`ghost-side`~~ — merged into `*-packshot`
 
-| Field | Value |
-|---|---|
-| **Phenotype id** | `ghost-front` |
-| **Description** | Product photographed on an invisible mannequin (ghost mannequin / hollow-man technique) from the front. Garment appears to be worn but no human is present. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = FRONT`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
-| **Optional features** | `white-background = true` |
-| **easy_to_detect** | false |
-| **Rationale** | Ghost shot looks like a packshot with a 3D structured garment. No feature currently distinguishes a ghost shot from a flat packshot when `background-type = SOLIDCOLOR` (the `contains-mannequin` feature that would have disambiguated it was removed in T-4700 — its sole producer was a stub); `ghost-front` remains reachable only via its other branch (`clipping-path = true` with a non-solid background). See the architecture note below — this ambiguity is accepted by design, not a defect. |
+**Removed 2026-08-04 ([[T-5040]], user decision).** All three are gone from `ImageRoles.json`,
+`ImageNGP.json` and `DetOrderRules.json`. `*-packshot` now covers **both** the flat-lay and the
+ghost-mannequin case.
 
----
+Why they went, in order:
 
-### `ghost-back`
+1. `contains-mannequin` would have separated ghost from packshot. Removed in T-4700 — its sole
+   producer was an empty stub.
+2. That left `clipping-path = true` as the only condition a ghost rule carried which its packshot
+   counterpart did not. Removed in [[T-5030]]: it only ever meant "this file has an alpha channel",
+   and Import composites every input onto white before any analyzer runs, so it had never once been
+   `true` in production.
+3. With both gone, each ghost rule's `required` block was **character-for-character identical** to
+   its packshot counterpart, which sat earlier in the list. First-match-wins meant the ghost rules
+   could never be assigned to any image, ever.
 
-| Field | Value |
-|---|---|
-| **Phenotype id** | `ghost-back` |
-| **Description** | Product on invisible mannequin from the rear. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = BACK`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
-| **Optional features** | `white-background = true` |
-| **easy_to_detect** | false |
-| **Rationale** | Same difficulty as `back-packshot` plus ghost-vs-flat ambiguity. |
+Deleting them cost nothing operationally: every det slot that listed a ghost phenotype also listed
+its packshot equivalent, so no slot lost its filler and no image changed slot.
 
----
-
-### `ghost-side`
-
-| Field | Value |
-|---|---|
-| **Phenotype id** | `ghost-side` |
-| **Description** | Product on invisible mannequin from the side. |
-| **Required features** | `hero-is-human = FALSE`, `hero-orientation = SIDEON`, `background-type = SOLIDCOLOR OR clipping-path = true`, `intersection-count = 0` |
-| **Optional features** | `white-background = true` |
-| **easy_to_detect** | false |
-| **Rationale** | Side orientation detection is ambiguous for soft goods; ghost vs. packshot ambiguity adds another uncertainty. |
+**To bring them back** you need a signal for *does the garment hold a worn 3D shape*. That is a real
+visual property — `test/datasets/JBComplete/README.md` §4.3 names three cues a human used to separate
+the two at ~700 px: the waistband holds an open rounded form instead of collapsing to two flat edges,
+the legs carry internal volume, and there are shadows *inside* the garment opening. No analyzer is
+specified for it, and every ghost rule also gated on `hero-orientation`, which is not reliable today
+(74% argmax; see `phenotype-assignment-validation.md`). Fix orientation first.
 
 ---
 
@@ -312,10 +303,8 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 | `front-on-model-full-product` | true |
 | `front-on-model-partial` | true |
 | `back-on-model-full-product` | false |
+| `back-on-model-partial` | false |
 | `side-on-model` | false |
-| `ghost-front` | false |
-| `ghost-back` | false |
-| `ghost-side` | false |
 | `closeup-image` | true |
 | `lifestyle-hero` | true |
 | `lifestyle-context` | false |
@@ -324,14 +313,23 @@ Detectability is evaluated for **CPU-only** execution: OpenCV, image segmentatio
 | `on-model-with-accessories` | false |
 | `interior-shot` | false |
 
-**Total phenotypes: 20**
-Easily detectable on CPU: 6 / 20 (30%)
+**Total phenotypes: 18**
+Easily detectable on CPU: 6 / 18 (33%)
+
+Evaluation order is **precedence** (first match wins). Since T-5040 it runs: the seven human-branch
+rules, then the two specific content detectors (`illustration-technical-drawing`, `interior-shot`),
+then the six packshots, then `closeup-image`, then `lifestyle-hero` and `lifestyle-context`. The
+content detectors sit ahead of the packshots and of `closeup-image` deliberately — both are narrow,
+binary analyzer outputs, and a specific rule placed behind a generic one it overlaps is silently
+swallowed by it. That is what used to happen: a technical drawing shot front-on and fully in frame
+satisfied `front-packshot`, and an interior shot filling the frame satisfied `closeup-image`.
 
 ---
 
 ## Architecture decisions
 
-- **`ghost-front` vs. `front-packshot`**: Phenotype disambiguation is determined by product type, not by a dedicated 3D-structure ImageFeature. No additional feature needed.
+- **`ghost-*` vs. `*-packshot`**: **superseded 2026-08-04 ([[T-5040]])**. The old note claimed product type disambiguated them; it does not — the rules were identical and the earlier one always won. The ghost phenotypes are deleted and `*-packshot` covers both cases. See the merged entry above.
+- **Rule ordering is a design surface, not incidental**: `PhenotypeRuleSet` is first-match-wins, so a rule's index *is* its precedence. Any new rule must be placed relative to the rules it overlaps: specific before generic. Two defects found by T-5040 were pure ordering — `interior-shot` behind `closeup-image`, and `illustration-technical-drawing` behind the packshot block.
 - **`detail-*` consolidation**: All close-up product-detail phenotypes (material, stitching, label, hardware) are consolidated into `closeup-image`. `model-detail-closeup` is retained separately because it requires `has-human` or skin-tone evidence. The distinguishing invariant for `closeup-image` is border intersection (`intersection-count ≥ 1`).
 - **Phenotype assignment**: Always a hard assignment. No soft probability vectors or confidence-weighted phenotype scoring.
 - **`lifestyle-context`**: Catch-all for non-packshot images. Generic marketing photographs qualify. Assigned by elimination when `lifestyle-background = true` and no packshot phenotype fits.

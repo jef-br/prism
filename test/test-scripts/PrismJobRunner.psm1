@@ -69,62 +69,87 @@ function Test-PrismHealthy {
     }
 }
 
+function Get-PrismRelativePath {
+    <#
+      Returns $FullName's path relative to $Root, with backslashes normalised to forward slashes so
+      the value is stable whether it travels as a ZIP entry name or a multipart part filename.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Root,
+        [Parameter(Mandatory)][string]$FullName
+    )
+
+    $relative = [System.IO.Path]::GetRelativePath($Root, $FullName)
+    return $relative -replace '\\', '/'
+}
+
 function Get-PrismJobInputFiles {
     <#
       Collects accepted upload files from $Folder. Loose files are gathered recursively; ZIPs are
       expanded into $ZipExpandDir and their contents gathered too (ZIPs themselves are never
       uploaded — see note at top of module). Files are pre-filtered to the ingress byte limits so
-      one out-of-range file cannot reject the whole job, and de-duplicated by leaf filename (loose
-      files win) so a folder holding both loose images and a redundant ZIP does not double-count.
-      Returns an array of file paths, or $null if no valid .xlsx remains (doomed job).
+      one out-of-range file cannot reject the whole job, and de-duplicated by the path *relative to
+      its own root* (loose files win) so a folder holding both loose images and a redundant ZIP does
+      not double-count — two files that share a leaf name in different folders are NOT duplicates.
+      Each ZIP's own contents are keyed relative to that ZIP's extraction dir, not $ZipExpandDir, so
+      the ZIP's internal folder structure survives but the zip0/zip1 scaffolding this function creates
+      does not leak into the relative path.
+      Returns an array of objects (FullName, RelativePath), or $null if no valid .xlsx remains
+      (doomed job).
     #>
     param(
         [Parameter(Mandatory)][string]$Folder,
         [Parameter(Mandatory)][string]$ZipExpandDir
     )
 
+    $folderRoot = (Resolve-Path -LiteralPath $Folder).Path
     $loose = @(Get-ChildItem -Path $Folder -Recurse -File | Where-Object { $_.Extension.ToLowerInvariant() -ne $script:ZipExtension })
+    $looseEntries = @($loose | ForEach-Object { [pscustomobject]@{ File = $_; Root = $folderRoot } })
 
     $zips = @(Get-ChildItem -Path $Folder -Recurse -File | Where-Object { $_.Extension.ToLowerInvariant() -eq $script:ZipExtension })
     $zipIndex = 0
+    $extracted = New-Object System.Collections.Generic.List[pscustomobject]
     foreach ($zip in $zips) {
         $dest = Join-Path $ZipExpandDir "zip$zipIndex"
         New-Item -ItemType Directory -Path $dest -Force | Out-Null
         try {
             [System.IO.Compression.ZipFile]::ExtractToDirectory($zip.FullName, $dest)
+            $destRoot = (Resolve-Path -LiteralPath $dest).Path
+            $zipMembers = @(Get-ChildItem -Path $dest -Recurse -File | Where-Object { $_.Extension.ToLowerInvariant() -ne $script:ZipExtension })
+            foreach ($member in $zipMembers) {
+                $extracted.Add([pscustomobject]@{ File = $member; Root = $destRoot })
+            }
         } catch {
             Write-Warning "Failed to extract '$($zip.Name)': $($_.Exception.Message)"
         }
         $zipIndex++
     }
-    $extracted = @()
-    if (Test-Path $ZipExpandDir) {
-        $extracted = @(Get-ChildItem -Path $ZipExpandDir -Recurse -File | Where-Object { $_.Extension.ToLowerInvariant() -ne $script:ZipExtension })
-    }
 
-    $accepted = New-Object System.Collections.Generic.List[string]
+    $accepted = New-Object System.Collections.Generic.List[pscustomobject]
     $seen = New-Object System.Collections.Generic.HashSet[string] ([System.StringComparer]::OrdinalIgnoreCase)
     $excelCount = 0
 
     # Loose files first so they win de-duplication over ZIP contents.
-    foreach ($file in ($loose + $extracted)) {
+    foreach ($entry in ($looseEntries + $extracted.ToArray())) {
+        $file = $entry.File
         $ext = $file.Extension.ToLowerInvariant()
+        $relativePath = Get-PrismRelativePath -Root $entry.Root -FullName $file.FullName
 
         if ($script:ImageExtensions -contains $ext) {
             if ($file.Length -lt $script:MinImageBytes -or $file.Length -gt $script:MaxImageBytes) {
-                Write-Warning "Skipping image out of size range ($($file.Length) bytes): $($file.Name)"
+                Write-Warning "Skipping image out of size range ($($file.Length) bytes): $relativePath"
                 continue
             }
-            if (-not $seen.Add($file.Name)) { continue }
-            $accepted.Add($file.FullName)
+            if (-not $seen.Add($relativePath)) { continue }
+            $accepted.Add([pscustomobject]@{ FullName = $file.FullName; RelativePath = $relativePath })
         }
         elseif ($ext -eq $script:ExcelExtension) {
             if ($file.Length -lt $script:MinExcelBytes -or $file.Length -gt $script:MaxExcelBytes) {
-                Write-Warning "Skipping .xlsx out of size range ($($file.Length) bytes): $($file.Name)"
+                Write-Warning "Skipping .xlsx out of size range ($($file.Length) bytes): $relativePath"
                 continue
             }
-            if (-not $seen.Add($file.Name)) { continue }
-            $accepted.Add($file.FullName)
+            if (-not $seen.Add($relativePath)) { continue }
+            $accepted.Add([pscustomobject]@{ FullName = $file.FullName; RelativePath = $relativePath })
             $excelCount++
         }
         # Everything else (.db, .jfif, .pptx, .txt, ...) is silently ignored — not an accepted type.
@@ -161,7 +186,7 @@ function Invoke-PrismFolderJob {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $workDir = Join-Path ([System.IO.Path]::GetTempPath()) "prism-test-$folderName-$([System.Guid]::NewGuid().ToString('N'))"
     try {
-        # @(...) is load-bearing: a single accepted file comes back as a scalar string, which has no
+        # @(...) is load-bearing: a single accepted file comes back as a scalar object, which has no
         # .Count under StrictMode.
         $files = @(Get-PrismJobInputFiles -Folder $Folder -ZipExpandDir $workDir)
         if ($files.Count -eq 0) {
@@ -228,11 +253,18 @@ function Submit-PrismJob {
       multipart form at 1024 values, so one part per image fails for large folders. The seed image
       is excluded from the ZIP to avoid a duplicate filename. xlsx files are sent loose. Result: a
       handful of multipart parts regardless of image count. Returns the parsed start envelope.
+
+      $Files carries objects (FullName, RelativePath) from Get-PrismJobInputFiles — RelativePath is
+      used as both the ZIP entry name and the multipart part filename, so the seed image's folder
+      survives via the multipart Content-Disposition filename (PrismProcessIngressReader stores
+      IFormFile.FileName into InitialFullName unmodified) and the rest survive via the ZIP entry name
+      once the core ZIP reader (ZipHandler.cs, a separate cause of T-5020) stops collapsing it to a
+      leaf name.
     #>
     param(
         [Parameter(Mandatory)][string]$BaseUrl,
         [Parameter(Mandatory)][string]$Token,
-        [Parameter(Mandatory)][string[]]$Files,
+        [Parameter(Mandatory)][object[]]$Files,
         [Parameter(Mandatory)][string]$WorkDir,
         [int]$TimeoutMinutes      = 30,
         [bool]$Transform          = $true,
@@ -241,8 +273,8 @@ function Submit-PrismJob {
         [string]$Format           = 'zip'
     )
 
-    $imageFiles = @($Files | Where-Object { $script:ImageExtensions -contains ([System.IO.Path]::GetExtension($_).ToLowerInvariant()) })
-    $excelFiles = @($Files | Where-Object { [System.IO.Path]::GetExtension($_).ToLowerInvariant() -eq $script:ExcelExtension })
+    $imageFiles = @($Files | Where-Object { $script:ImageExtensions -contains ([System.IO.Path]::GetExtension($_.FullName).ToLowerInvariant()) })
+    $excelFiles = @($Files | Where-Object { [System.IO.Path]::GetExtension($_.FullName).ToLowerInvariant() -eq $script:ExcelExtension })
 
     if ($imageFiles.Count -eq 0) {
         throw "No accepted image files to submit."
@@ -250,10 +282,10 @@ function Submit-PrismJob {
 
     $seed = $imageFiles[0]
     # @(...) wrapper is load-bearing: assigning `if (...) { } else { @() }` collapses the empty array
-    # to $null, and a 2-element slice returns a scalar string — both break .Count under StrictMode.
+    # to $null, and a 2-element slice returns a scalar object — both break .Count under StrictMode.
     $rest = @(if ($imageFiles.Count -gt 1) { $imageFiles[1..($imageFiles.Count - 1)] } else { @() })
 
-    # Pack the non-seed images into stored ZIPs — leaf filenames are already unique (de-duped in
+    # Pack the non-seed images into stored ZIPs — relative paths are already unique (de-duped in
     # Get-PrismJobInputFiles), so ZIP entry names do not collide. Chunked at 3.5 GB per archive:
     # a stored zip past 4 GB needs ZIP64 (which the core zip reader rejects), and Prism_Config caps
     # a single zip member at MaxZipBytes anyway.
@@ -266,7 +298,7 @@ function Submit-PrismJob {
         $zip = $null
         try {
             foreach ($img in $rest) {
-                $len = (Get-Item -LiteralPath $img).Length
+                $len = (Get-Item -LiteralPath $img.FullName).Length
                 if ($null -eq $zip -or ($chunkBytes + $len) -gt $chunkLimit) {
                     if ($zip) { $zip.Dispose() }
                     $chunkIndex++
@@ -275,7 +307,7 @@ function Submit-PrismJob {
                     $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
                     $chunkBytes = 0
                 }
-                [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $img, [System.IO.Path]::GetFileName($img), [System.IO.Compression.CompressionLevel]::NoCompression) | Out-Null
+                [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $img.FullName, $img.RelativePath, [System.IO.Compression.CompressionLevel]::NoCompression) | Out-Null
                 $chunkBytes += $len
             }
         } finally {
@@ -305,17 +337,20 @@ function Submit-PrismJob {
         $requestPart = [System.Net.Http.StringContent]::new($requestJson, [System.Text.Encoding]::UTF8, 'application/json')
         $content.Add($requestPart, 'request')
 
-        $uploadPaths = New-Object System.Collections.Generic.List[string]
-        $uploadPaths.Add($seed)              # loose seed image (satisfies ingress min-image gate)
-        foreach ($zp in $zipPaths) { $uploadPaths.Add($zp) }   # all remaining images, expanded by core
-        foreach ($x in $excelFiles) { $uploadPaths.Add($x) }
+        # Each entry pairs the on-disk path with the multipart part filename. The seed image and the
+        # xlsx files carry their RelativePath (folder-preserving); the zip archives carry their own
+        # local temp filename since they are not a submitted source file themselves.
+        $uploadEntries = New-Object System.Collections.Generic.List[pscustomobject]
+        $uploadEntries.Add([pscustomobject]@{ Path = $seed.FullName; PartName = $seed.RelativePath })   # loose seed image (satisfies ingress min-image gate)
+        foreach ($zp in $zipPaths) { $uploadEntries.Add([pscustomobject]@{ Path = $zp; PartName = [System.IO.Path]::GetFileName($zp) }) }   # all remaining images, expanded by core
+        foreach ($x in $excelFiles) { $uploadEntries.Add([pscustomobject]@{ Path = $x.FullName; PartName = $x.RelativePath }) }
 
-        foreach ($path in $uploadPaths) {
-            $stream = [System.IO.File]::OpenRead($path)
+        foreach ($entry in $uploadEntries) {
+            $stream = [System.IO.File]::OpenRead($entry.Path)
             $streams.Add($stream)
             $part = [System.Net.Http.StreamContent]::new($stream)
             $part.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::new('application/octet-stream')
-            $content.Add($part, 'input', [System.IO.Path]::GetFileName($path))
+            $content.Add($part, 'input', $entry.PartName)
         }
 
         $response = $client.PostAsync("$BaseUrl/PRISM/process", $content).GetAwaiter().GetResult()

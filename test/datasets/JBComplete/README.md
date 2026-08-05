@@ -95,10 +95,11 @@ Measured by running the real `FolderNameEnricher` against the real `JB-generated
 | Folder | Files | Alias assigned | Why |
 |---|---|---|---|
 | `26182-Denim-801/` | `1.jpg`, `2.jpg`, `a (1).jpg` | **yes** — `26182-Denim-801 1.jpg` | Folder tokens `26182` and `denim` are both in `99985047`'s vocabulary (Ref `26182-801`, Label `Denim-26182-801`). |
-| `foldercontainsID99984905/` | `1.jpg`…`4.jpg` | **no** | `MeaningfulTokens` keeps a mixed letter+digit run whole and `continue`s past the letter↔digit split, so the folder yields exactly one token: `foldercontainsid99984905`. The probe confirms `99984905` **is** in the Excel vocabulary, so the failure is entirely on the folder-token side — it should yield `foldercontains` + `99984905`. |
+| `foldercontainsID99984905/` | `1.jpg`…`4.jpg` | **yes** — `foldercontainsID99984905 1.jpg` | **Fixed 2026-08-04 ([[T-5020]]).** Previously **no**: `MeaningfulTokens` kept the mixed letter+digit run whole and `continue`d past the letter↔digit split, so the folder yielded one token, `foldercontainsid99984905`, which is not in the vocabulary. It now emits the split pieces *in addition to* the whole run, so `99984905` — the FamilyID, confirmed present in the vocabulary — reaches it. (The alphabetic piece is `foldercontainsid`, not `foldercontains`: the name is lowercased before tokenising, which destroys the `s`→`I` boundary. Inert either way.) |
 | `99984901/` | `99984901_det0/det1.jpg` | no — correct | The filenames already carry the ID, so the enricher skips them by design. `99984901` is **not in the Excel at all**; olive printed blouse, front + back. Unmatched-family case. |
 
-Both the missing split and the fact that no folder path survives upload at all are [[T-5020]].
+Re-measured 2026-08-04 after [[T-5020]] landed, same probe method: 34 families parsed, aliases on all
+three `26182-Denim-801/` files and all four `foldercontainsID99984905/` files, none on `99984901/`.
 
 ### 2.4 Import surface
 
@@ -155,18 +156,30 @@ Two consequences for this dataset. `TH12_0N3_M47CH32_70_R3D_36R37*.jpg` and
 getting the family wrong does not invalidate the phenotype label. And any proposed phenotype that can
 only be satisfied by one product type is malformed by construction — a constraint for [[T-5040]].
 
-**Overall: 20 of the 21 phenotypes in `ImageRoles.json` now have at least one real positive case.**
-Only `illustration-technical-drawing` has none. Newly covered beyond CiGolden's list:
+**Overall: 17 of the 18 phenotypes in `ImageRoles.json` now have at least one real positive case.**
+Only `illustration-technical-drawing` has none.
 
-- **`ghost-side`** — `C153KB460011_Cedric__City_Grey_DETAIL.png` and
-  `C153KU420009_Kendall_Twill sand_DETAIL1.png`. Both are named "DETAIL" but show the *whole* garment
-  from the side on an invisible mannequin. These are the only `ghost-side` images in the repo.
+> **Recount 2026-08-04 ([[T-5040]]).** This said "20 of the 21". The taxonomy is now 18: `ghost-front`,
+> `ghost-back` and `ghost-side` were deleted and merged into `front-` / `back-` / `side-packshot`,
+> because once `clipping-path` went ([[T-5030]]) their rules were identical to the packshot rules and
+> could never be assigned. The 23 `ghost-*` rows in `expected-phenotype.json` were relabelled to their
+> packshot equivalents. **No image lost coverage** — the pictures are unchanged and the invisible-mannequin
+> shots are still the best cases in the repo for whatever *holds-a-worn-3D-shape* signal eventually
+> separates them. See "How ghost was told apart from flat-lay" in §4.3, which is now the only place
+> that judgement is recorded.
+
+Newly covered beyond CiGolden's list:
+
+- **The only invisible-mannequin side views in the repo** — `C153KB460011_Cedric__City_Grey_DETAIL.png`
+  and `C153KU420009_Kendall_Twill sand_DETAIL1.png`. Both are named "DETAIL" but show the *whole*
+  garment from the side. Labelled `side-packshot` since T-5040; they were the two `ghost-side` cases.
 - **`on-model-with-accessories`** — the three scarves in `3 images.zip`. The hero product (a scarf) is
   worn over a sweater and trousers, so several products are in shot.
 - **`lifestyle-hero`** (as opposed to `lifestyle-context`) — `2426834-7558_FW001_e`, a man centred in
   an Italian doorway with the product clearly prominent.
-- `ghost-front` / `ghost-back` on a garment with real edge contrast — `triggered_ghost-front.jpg`,
-  `triggered_ghost_back.jpg` (black tee, white background). CiGolden only had beige-on-transparent.
+- Invisible-mannequin front/back on a garment with real edge contrast — `triggered_ghost-front.jpg`,
+  `triggered_ghost_back.jpg` (black tee, white background; the filenames keep the old word).
+  CiGolden only had beige-on-transparent.
 - `back-on-model-partial` — the rule gap CiGolden flagged as "NORULE" —
   `triggered_black-tshirt-back-americain.jpg`, `foldercontainsID99984905/2.jpg`.
 - `bottom-packshot` / `top-packshot` / `side-packshot` with FamilyID-bearing names —
@@ -180,24 +193,46 @@ separate them — a specified analyzer, or a feature that is measurable and not 
 acceptable on the assumption that something will turn up. Establishing which of these two is which is
 [[T-5040]]'s job, not this file's.
 
-- **`ghost-*` and `*-packshot` are not separable by the rules.** Their `required` blocks are identical
-  except that ghost accepts `clipping-path = true` *in addition to* `background-type = SOLIDCOLOR`.
-  So any garment on a solid background satisfies both, and `front-packshot` (index 7) wins over
-  `ghost-front` (index 13) purely on list order. The ground truth in `expected-phenotype.json` labels
-  by the domain meaning — ghost when the garment holds a worn 3D shape, packshot when it is flat or a
-  rigid non-garment — so those rows disagree with the engine today. Separating them needs a signal for
-  *does the garment hold a worn 3D shape*, which PRISM does not currently measure. [[T-5030]] removes
-  the alpha path entirely, which changes what `clipping-path` can even mean here.
-- **`on-model-with-accessories` sits after `front-on-model-partial`.** All three scarf images satisfy
-  both, so the earlier rule wins and `on-model-with-accessories` may be unreachable in practice. This
-  phenotype has no identified consumer in `DetOrderRules.json` — see [[T-5040]].
+**Both are now resolved — [[T-5040]], 2026-08-04.** Kept here because the measurements are what drove
+the decisions.
 
-### Alpha is a soft glow, not a clipping path
+- **`ghost-*` and `*-packshot` were not separable by the rules — RESOLVED, merged.** When this was
+  written the blocks differed by one clause: ghost also accepted `clipping-path = true` alongside
+  `background-type = SOLIDCOLOR`. [[T-5030]] deleted `clipping-path` outright (it only ever meant
+  "this file has an alpha channel", and Import flattens all alpha before any analyzer runs, so it had
+  never been `true` in production). That left the three ghost rules **character-for-character
+  identical** to their packshot counterparts, which sat earlier in the list — unreachable by
+  construction, not by accident. Judged against the collision-keeping rule above, the separating
+  property (*does the garment hold a worn 3D shape*) is real but has **no specified analyzer and no
+  current measurement**, so the collision did not qualify to survive. The three ghost rules were
+  deleted and `*-packshot` now covers both cases. Every det slot that listed a ghost phenotype also
+  listed its packshot equivalent, so nothing changed slot.
+- **`on-model-with-accessories` sits after `front-on-model-partial`.** All three scarf images satisfy
+  both, so the earlier rule wins and `on-model-with-accessories` may be unreachable in practice. That
+  part stands and is **still open** — it is an overlap, not a subsumption, and no image in this set
+  distinguishes them. **Correction 2026-08-04:** this bullet previously said the phenotype "has no
+  identified consumer in `DetOrderRules.json`". That was wrong — it is consumed at footwear `det8`
+  and bags-accessories `det6`. The two phenotypes that genuinely had no consumer were
+  `model-detail-closeup` and `lifestyle-context`; T-5040 wired both in (`detail` and `lifestyle`
+  slots respectively) rather than deleting them.
+- **A third collision this file missed, found by [[T-5040]]:** `closeup-image` (`hero-is-human=FALSE`
+  + `intersection-count >= 3`) sat *ahead* of `interior-shot`, so all five interior shots in this set —
+  the images added specifically to cover that phenotype — would have been labelled `closeup-image`,
+  because shooting down into a bag fills the frame. `illustration-technical-drawing` had the same
+  shape of problem behind the packshot block. Both were moved ahead of the generic rules.
+
+### Alpha is a soft glow, not a clipping path — and is now discarded at import
 
 All six `AY_FFK0230_83035_*` PNGs and both Vingino sets have a **feathered halo**: alpha ramps from 0 to
-255 over a wide band around the product, not a hard 0/255 edge. Anything that reads
-`clipping-path = true` from "has an alpha channel", or derives a subject box from "alpha > 0"
-([[T-4960]]), will get a box noticeably larger than the product. `IMG_4432.png` behaves the same way.
+255 over a wide band around the product, not a hard 0/255 edge. Anything that read
+`clipping-path = true` from "has an alpha channel", or derived a subject box from "alpha > 0"
+([[T-4960]]), got a box noticeably larger than the product. `IMG_4432.png` behaves the same way.
+
+**Resolved 2026-08-04 ([[T-5030]]).** Import composites every input onto white and emits JPG before
+any analyzer runs, so no downstream stage sees alpha at all. `clipping-path` was deleted from the
+taxonomy, `AlphaSubjectCapture` was removed, and [[T-4960]] is obsoleted by that — there is no
+alpha-derived box left to prefer. The soft-glow observation above stands as the *reason* the alpha
+signal was never trustworthy; it no longer describes live behaviour.
 
 ### Filename keywords will silently decide the answer for most of these images
 
@@ -207,8 +242,10 @@ directly, at **0.75 confidence**. The highest `hero-orientation` confidence CLIP
 this repo's data is **0.582**. Since the higher-confidence value wins, a filename token always beats
 the picture.
 
-**The consequence for measurement.** `hero-orientation` is a required feature on 12 of the 21
-phenotype rules — every `*-packshot`, every `ghost-*`, and the front/back on-model rules. So for any
+**The consequence for measurement.** `hero-orientation` is a required feature on 11 of the 18
+phenotype rules — all six `*-packshot`s and the five orientation-bearing on-model rules. (Was "12 of
+the 21", counting the three `ghost-*` rules [[T-5040]] has since merged into the packshots; the
+proportion barely moved, 57% then and 61% now.) So for any
 image whose filename contains one of those words, the phenotype is decided by the filename before the
 model is consulted. Running a phenotype accuracy measurement across JBComplete unchanged therefore
 produces a number that mostly describes how well the filenames were typed, and it will look good.
@@ -253,41 +290,52 @@ The practical consequence: `Invoke-CiPipeline.ps1 -Capture` would overwrite thes
 pipeline currently emits, converting a specification into a snapshot of the bugs. **Never run
 `-Capture` against this dataset.** Fix the pipeline, or change an entry deliberately with a reason.
 
-### 4.1 `expected-match.json` — 90 entries
+### 4.1 `expected-match.json` — 99 entries
 
 Same schema as CiMini's (`SourceReference` → `FamilyId`), plus an optional `Note`. `Invoke-CiPipeline.ps1`
 reads only the first two fields, so the notes are free. `FamilyId: null` means the image **must not**
-match — 20 of the 90 entries are deliberate rejections. 70 entries expect a match, across 24 families.
+match — 22 of the 99 entries are deliberate rejections. 77 entries expect a match, across 26 families.
+Entries are ordinal-sorted by `SourceReference`; keep them that way.
 
-Ten sources are deliberately **not** listed:
+One source is deliberately **not** listed:
 
 - `4471-2290-F - Copy.jpg` — expected `VISUAL_DUPLICATE`, which the CI script strips from the result
   before comparing. Listing it would fail as "MISSING source".
-- The nine subfolder images — unreachable, see §4.2.
 
-### 4.2 The folder cases are held out of the match golden — [[T-5020]]
+The nine subfolder images were held out until [[T-5020]] landed; they are now in — see §4.2.
 
-Three independent causes, any one of them sufficient on its own. All three are [[T-5020]].
+### 4.2 The folder cases — resolved by [[T-5020]], 2026-08-04
 
-1. **The runner flattens paths.** `Get-PrismJobInputFiles` de-duplicates by *leaf filename*
-   (`$seen.Add($file.Name)`), and `Submit-PrismJob` uploads with `[Path]::GetFileName($path)` and packs
-   ZIP entries with `GetFileName($img)` too. So `26182-Denim-801/1.jpg` and
-   `foldercontainsID99984905/1.jpg` collide on `1.jpg` — the second is silently dropped — and whichever
-   survives arrives with no folder at all.
-2. **The core zip reader strips member folders.** `ZipHandler.cs:190` sets
-   `originalFileName = Path.GetFileName(memberPath)`, so a ZIP member's `InitialFullName` is always a
+Three independent causes, any one of them sufficient on its own to make the folder images
+unreachable. All three are fixed and the nine images are now listed in `expected-match.json`.
+
+1. **The runner flattened paths.** `Get-PrismJobInputFiles` de-duplicated by *leaf filename*
+   (`$seen.Add($file.Name)`), and `Submit-PrismJob` uploaded with `[Path]::GetFileName($path)` and
+   packed ZIP entries with `GetFileName($img)` too. So `26182-Denim-801/1.jpg` and
+   `foldercontainsID99984905/1.jpg` collided on `1.jpg` — the second was silently dropped — and
+   whichever survived arrived with no folder at all. **Now:** both the de-dup key and the ZIP/multipart
+   entry names use the path relative to the submitted root. Verified — 101 files accepted from this
+   dataset, all nine subfolder images present, both `1.jpg` files surviving as distinct entries.
+2. **The core zip reader stripped member folders.** `ZipHandler.cs` set
+   `originalFileName = Path.GetFileName(memberPath)`, so a ZIP member's `InitialFullName` was always a
    bare filename. Since the runner routes everything except one seed image through a repacked ZIP,
-   folder structure would be lost even if cause 1 were fixed.
-3. **`MeaningfulTokens` doesn't split `foldercontainsID99984905`** — see §2.3.
+   folder structure was lost even with cause 1 fixed. **Now:** the member's full in-archive path,
+   backslashes normalised to `/`. Pinned by `ImporterZipTests.ZipMemberInSubfolder_InitialFullNamePreservesFolderPath`.
+3. **`MeaningfulTokens` didn't split `foldercontainsID99984905`** — see §2.3. **Now:** it emits the
+   letter↔digit split pieces alongside the whole run.
 
 `FolderNameEnricher` needs `InitialFullName` to contain a slash (`GetFolderPath` returns null
-otherwise), so it can never fire through this path.
+otherwise) — which is exactly what causes 1 and 2 now guarantee.
 
-**Effect:** a run over JBComplete today silently drops 2 images and reports the other 7 as unmatched.
-That looks like correct behaviour for `99984901` and like a matcher bug for the other two folders,
-when neither is true. Listing those 9 in the match golden with `FamilyId: null` would bake the harness
-defect in as if it were the right answer, so they are held out. They **are** labelled in
-`expected-phenotype.json`, and adding them to the match golden is the last step of [[T-5020]].
+**Effect before the fix:** a run over JBComplete silently dropped 2 images and reported the other 7 as
+unmatched — which looked like correct behaviour for `99984901` and like a matcher bug for the other
+two folders, when neither was true. Listing those 9 with `FamilyId: null` would have baked the harness
+defect in as if it were the right answer, which is why they were held out.
+
+**Now listed**, with the answers the fixed pipeline should give: `26182-Denim-801/*` → `99985047`
+(3 images), `foldercontainsID99984905/*` → `99984905` (4 images), and `99984901/*` → `null` (2 images,
+genuinely no such family in the Excel). Those last two are the only folder rows that are still
+deliberate rejections, and for a reason that has nothing to do with folder handling.
 
 ### 4.3 `expected-phenotype.json` — 99 entries
 
@@ -295,32 +343,39 @@ defect in as if it were the right answer, so they are held out. They **are** lab
 — there is no phenotype assertion mode in `Invoke-CiPipeline.ps1`. It exists so the M11 confusion
 matrix can be computed instead of eyeballed.
 
-- 20 of 21 phenotypes have at least one positive case.
-- **How ghost was told apart from flat-lay**, since it decided 12 labels and it was wrong at first
-  pass. At 400 px thumbnails the six Vingino garments read as flat and were labelled `*-packshot`.
-  What forced a re-check was `ghost-side` having zero coverage while two files named "DETAIL" showed
+- 17 of 18 phenotypes have at least one positive case; only `illustration-technical-drawing` has none.
+  23 rows were relabelled from `ghost-*` to `*-packshot` by [[T-5040]] — see the recount box in §3.
+- **How ghost was told apart from flat-lay.** This decided 12 labels, and it was wrong at first pass.
+  At 400 px thumbnails the six Vingino garments read as flat and were labelled `*-packshot`. What
+  forced a re-check was `ghost-side` having zero coverage while two files named "DETAIL" showed
   *whole* garments from the side — an odd thing for a detail shot. Re-rendered at ~700 px, three cues
   separate them: the waistband holds an open rounded form instead of collapsing to two flat edges,
   the legs carry internal volume, and there are shadows *inside* the garment opening. None of those
   survive a flat lay, where fabric pools into creases. That is visual judgement at adequate
   resolution, not a method — which is why 16 rows are still marked low-confidence.
+
+  **This paragraph is now the only record of that distinction.** [[T-5040]] merged `ghost-*` into
+  `*-packshot`, so the JSON no longer encodes it: PRISM has no feature that measures any of those
+  three cues, and a taxonomy entry nothing can ever assign is worse than none. Keep this text. If a
+  *holds-a-worn-3D-shape* analyzer is ever specified, these three cues are its spec and the six
+  Vingino garments plus `triggered_ghost-front.jpg` / `triggered_ghost_back.jpg` are its test set.
 - **16 entries are marked `"Confidence": "low"`** — those are a reading of a downscaled thumbnail, not
   domain truth, and need a human pass before any number derived from them is trusted. They concentrate
   in front-vs-back on flat garments, side-vs-back on turned models, and the underwear multipack.
 - 3 entries have `"Phenotype": null` — the picture genuinely fits no slot in the taxonomy
   (`100267_5`, a product exploded into two parts; `100267_6` and `100267_7`, marketing infographics).
-- The subfolder images **are** labelled here even though they cannot be scored yet, so they become
-  usable the moment §4.2 is fixed.
+- The subfolder images were labelled here before they could be scored. §4.2 is now fixed, so they are
+  reachable and their labels are live.
 
 ---
 
 ### 4.4 What a human review of these files should actually cover
 
 Most of this README verifies itself — sheet validity, folder tokenization and the file-level facts are
-all re-runnable, so reading them gains nothing. Only 36 rows and two paragraphs encode a judgement
+all re-runnable, so reading them gains nothing. Only 38 rows and two paragraphs encode a judgement
 that no test can catch if it is wrong:
 
-**1. The 20 `FamilyId: null` rows in `expected-match.json`.** Not the 70 matches — those follow from
+**1. The 22 `FamilyId: null` rows in `expected-match.json`.** Not the 77 matches — those follow from
 reference numbers. *To bless a row:* leave it. *To overrule it:* replace `null` with the FamilyID and
 rewrite the `Note` to say why it should match; the Note is the reasoning, and it is the only place the
 reasoning survives. Two rejections are contestable product calls rather than data facts:
@@ -334,17 +389,20 @@ Confidence key is treated as settled. *To correct one:* change `"Phenotype"` and
 line. *If still unsure:* leave it, and the row stays excluded from any headline accuracy number.
 
 **3. Two intent inferences in §2.2.** These live in two files — correcting one means correcting both.
-Whether the leetspeak files and `T_SHIRT_EGRET_DETAIL.jpg` belong to the polo `98226808` or the
-t-shirt `98226972` (`expected-match.json` lines 352, 357, 362), and whether `triggered-mistery.jpg`
-belongs to the Crème row via the "LEMON" print (line 367). Note that per §3 the **phenotype labels for
-these files do not change either way** — only the family does.
+Whether `TH12_0N3_M47CH32_70_R3D_36R37.jpg`, `TH12_0N3_M47CH32_70_R3D_36R37_AS_4_FR0N7.jpg` and
+`T_SHIRT_EGRET_DETAIL.jpg` belong to the polo `98226808` or the t-shirt `98226972`; and whether
+`triggered-mistery.jpg` belongs to the Crème row via the "LEMON" print. (Search by `SourceReference` —
+this used to cite line numbers, which [[T-5020]]'s 9 insertions invalidated.) Note that per §3 the
+**phenotype labels for these files do not change either way** — only the family does.
 
-Worth holding that review until [[T-5020]] lands — it adds 9 rows to the match golden and may change
-how the folder images read.
+[[T-5020]] landed 2026-08-04 and added its 9 rows, so this review is now unblocked. The scope grew by
+2: the `99984901/*` pair are new `FamilyId: null` entries. They are not contestable — `99984901` is
+simply absent from the workbook — so item 1's judgement calls are unchanged at two.
 
 ## 5. What still blocks a scored run
 
-1. **The folder cases are unreachable** — [[T-5020]], §4.2. Highest priority of the three.
+1. ~~**The folder cases are unreachable**~~ — **cleared 2026-08-04 by [[T-5020]]**, §4.2. All three
+   causes fixed, probe re-run, and the 9 images are now in the match golden.
 2. **The low-confidence phenotype labels need a human pass** (§4.3). 16 of 99.
 3. **A phenotype measurement must handle the filename-keyword problem first** (§3), or the number it
    produces describes the filenames rather than the model.

@@ -22,10 +22,12 @@
     is proven correct by a hand-built unit test but has zero empirical validation on real data,
     purely because CiMini has no image that survives to Bracket 4. The same blind spot applies to
     Bracket 2-Intersect, the T-3800 fuzzy-matching fallback, substring rescue, and more (below).
+
 - Industry standard:
   A golden/regression fixture for a multi-stage decision pipeline should have at least one case per
   distinct decision branch — otherwise coverage tools and "all green" status both overstate how much
   of the system is actually protected against regression.
+
 - Recommended solution:
   Expand CiMini (mind the README's own <30 MB budget — downscale new images to ~1024px longest
   edge like the existing ones) with real product photos and matching Excel rows. Already covered,
@@ -204,10 +206,14 @@
     person anywhere in shot. Targets `closeup-image`.
   - g: `TW001_g.jpg` — the model wearing the sweater on a city street, whole garment clearly
     visible, real background with buildings and depth. Targets `lifestyle-hero`.
-  - h: `TW001_h.png` — the sweater on an invisible mannequin, saved as a **PNG with a genuinely
-    transparent background** (not white). Must be a real alpha channel. Targets `ghost-front`,
-    which per `imagePhenotypes.md` is only reachable via `clipping-path=true` on a non-solid
-    background — on a white sweep the rules label the identical shot `front-packshot`.
+  - h: `TW001_h.png` — the sweater on an invisible mannequin. **Revised 2026-08-04 (T-5030):** the
+    original spec asked for a genuinely transparent PNG to reach `ghost-front` via
+    `clipping-path=true`. That route no longer exists — Import composites all alpha onto white
+    before any analyzer runs, and `clipping-path` was removed from the taxonomy outright. A
+    transparent PNG and a white-sweep JPG are now indistinguishable downstream, and `ghost-front`
+    is unreachable because its rule is identical to `front-packshot`'s. Shoot this on a white sweep
+    like the rest; whether `ghost-*` survives at all is [[T-5040]]'s call. If it does, this image is
+    the positive case for whatever *holds-a-worn-3D-shape* signal T-5040 specifies.
 
   **bottomwear — family BW001, black wide-leg trousers** (Excel: FamilyID `BW001`, description
   naming "trousers", colour "black")

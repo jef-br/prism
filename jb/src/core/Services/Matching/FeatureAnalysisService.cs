@@ -51,9 +51,6 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService {
     // family, so the detector can decide whether CLAHE is worth its cost and how hard to work on a
     // non-flat background before it runs, rather than being told after the fact.
     private void DetectSubject(ImageRecord_LAMBDA lambda, Image<Rgba32> image, FamilyIDRecord? family) {
-        // A real alpha channel captured at ingress is exact geometry; never overwrite it with a heuristic.
-        if (lambda.Subject is not null) return;
-
         // Edge-bleed shortcut: SubjectEdgeDetector (Classified stage) already measured every edge. When
         // the product touches all four, there is no background ring left to fit a box against — the
         // classical-CV pass on this kind of image was the T-4980 defect (a stray high-contrast patch, not

@@ -102,6 +102,21 @@
     "FamilyId": "98768768"
   },
   {
+    "SourceReference": "26182-Denim-801/1.jpg",
+    "FamilyId": "99985047",
+    "Note": "folder-borrowed name: filename '1' is meaningless, folder tokens 26182 + denim are in 99985047's vocabulary (Ref 26182-801, Label Denim-26182-801). Added by T-5020"
+  },
+  {
+    "SourceReference": "26182-Denim-801/2.jpg",
+    "FamilyId": "99985047",
+    "Note": "second image of the same folder; also proves 1.jpg/2.jpg here are distinct from the identically-named pair in foldercontainsID99984905/"
+  },
+  {
+    "SourceReference": "26182-Denim-801/a (1).jpg",
+    "FamilyId": "99985047",
+    "Note": "space + parentheses in the filename; tokens 'a' and '1' are both too short to carry meaning, so the folder name is borrowed"
+  },
+  {
     "SourceReference": "4471-2290-B.jpg",
     "FamilyId": null,
     "Note": "reference lives under two FamilyIDs across two sheets"
@@ -179,6 +194,16 @@
     "SourceReference": "99218810_det1.jpg",
     "FamilyId": "99218810",
     "Note": "Excel row is identical to 99218793 apart from the FamilyID"
+  },
+  {
+    "SourceReference": "99984901/99984901_det0.jpg",
+    "FamilyId": null,
+    "Note": "99984901 is not in the Excel at all (olive printed blouse, front). The filename already carries the ID so FolderNameEnricher correctly skips it; there is simply no family to match. Added by T-5020"
+  },
+  {
+    "SourceReference": "99984901/99984901_det1.jpg",
+    "FamilyId": null,
+    "Note": "same folder, back view; unmatched-family case, not a matcher defect"
   },
   {
     "SourceReference": "AY_FFK0230_83035_01 FW001_b.png",
@@ -362,6 +387,24 @@
     "SourceReference": "T_SHIRT_EGRET_DETAIL.jpg",
     "FamilyId": "98226808",
     "Note": "TRAP: filename says T_SHIRT (points at 98226972, same colour); the picture is a polo"
+  },
+  {
+    "SourceReference": "foldercontainsID99984905/1.jpg",
+    "FamilyId": "99984905",
+    "Note": "the folder-token letter/digit split case. MeaningfulTokens must yield 99984905 alongside the whole run, or no folder token reaches the Excel vocabulary. Added by T-5020"
+  },
+  {
+    "SourceReference": "foldercontainsID99984905/2.jpg",
+    "FamilyId": "99984905",
+    "Note": "same folder; leaf name collides with 26182-Denim-801/2.jpg and must not be de-duplicated away"
+  },
+  {
+    "SourceReference": "foldercontainsID99984905/3.jpg",
+    "FamilyId": "99984905"
+  },
+  {
+    "SourceReference": "foldercontainsID99984905/4.jpg",
+    "FamilyId": "99984905"
   },
   {
     "SourceReference": "triggered-mistery.jpg",

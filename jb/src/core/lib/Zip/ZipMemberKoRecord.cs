@@ -7,7 +7,11 @@ namespace Prism.Lib.Zip;
 /// </summary>
 /// <param name="ArchivePath">Safe path or display name of the owning archive.</param>
 /// <param name="MemberPath">Member path inside the archive when available.</param>
-/// <param name="OriginalFileName">Original member filename when available.</param>
+/// <param name="OriginalFileName">
+/// The member path relative to its owning archive root, separators normalized to forward slash, when
+/// available. For archive-level failures (the zip file itself, not one of its members) this is the
+/// archive's own bare filename instead.
+/// </param>
 /// <param name="SourceStage">Owning source stage for the KO reason.</param>
 /// <param name="ReasonCode">Stable KO reason code.</param>
 /// <param name="KoGroup">Manifest KO group name.</param>

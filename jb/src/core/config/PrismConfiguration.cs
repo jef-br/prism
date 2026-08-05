@@ -11,13 +11,7 @@ public sealed class PrismConfiguration {
     /// <summary>Config file name; resolve its path with <see cref="ConfigLoader.RequireFile"/>.</summary>
     public const string FileName = "Prism_Config.json";
 
-    // Validation bound, not tunable: AlphaCaptureOpacityThreshold is a byte-range alpha value.
-    private const int AlphaThresholdUpperBound = 255;
-
-
-
-
-    // --- Input limits 
+    // --- Input limits
 
     public long MaximumRequestBytes { get; private set; }
     public int MinimumImageCountPerJob { get; private set; }
@@ -31,10 +25,6 @@ public sealed class PrismConfiguration {
     public int MaxZipCount { get; private set; }
     public long MaxZipBytes { get; private set; }
     public int MaxNestDepthZip { get; private set; }
-
-    // --- Ingress alpha capture
-    public int AlphaCaptureOpacityThreshold { get; private set; }
-    public double AlphaCaptureEdgeContactFraction { get; private set; }
 
     // --- Classification thresholds
     public double ThresholdForInfluentialTags { get; private set; }
@@ -194,9 +184,6 @@ public sealed class PrismConfiguration {
             MaxZipBytes = RequireInt64(root, cfgPath, "Input", "ZIP", "filesize", "max"),
             MaxNestDepthZip = RequireInt32(root, cfgPath, "Input", "ZIP", "NestDepth"),
 
-            AlphaCaptureOpacityThreshold = RequireInt32(root, cfgPath, "Ingress", "AlphaCapture", "OpacityThreshold"),
-            AlphaCaptureEdgeContactFraction = RequireDouble(root, cfgPath, "Ingress", "AlphaCapture", "EdgeContactFraction"),
-
             ThresholdForInfluentialTags = RequireDouble(root, cfgPath, "Classification", "Confidence_Threshold"),
             ThresholdForDiscardingClassificationTags = RequireDouble(root, cfgPath, "Classification", "Cutoff_Threshold"),
             InfluentialThresholdsByFeature = OptionalDoubleMap(root, "Classification", "Confidence_Thresholds")
@@ -264,9 +251,6 @@ public sealed class PrismConfiguration {
         AssertPositive(this.MinXLSCount, cfgPath, "Input.EXCEL.amount.min");
         AssertPositive(this.MaxXLSCount, cfgPath, "Input.EXCEL.amount.max");
         AssertPositive(this.MaxNestDepthZip, cfgPath, "Input.ZIP.NestDepth");
-
-        AssertInRange(this.AlphaCaptureOpacityThreshold, 0, AlphaThresholdUpperBound, cfgPath, "Ingress.AlphaCapture.OpacityThreshold");
-        AssertInRange(this.AlphaCaptureEdgeContactFraction, 0.0, 1.0, cfgPath, "Ingress.AlphaCapture.EdgeContactFraction");
 
         AssertInRange(this.ThresholdForInfluentialTags, 0.0, 1.0, cfgPath, "Classification.Confidence_Threshold");
         AssertInRange(this.ThresholdForDiscardingClassificationTags, 0.0, 1.0, cfgPath, "Classification.Cutoff_Threshold");

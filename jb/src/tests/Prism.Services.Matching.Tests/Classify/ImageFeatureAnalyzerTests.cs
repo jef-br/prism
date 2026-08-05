@@ -97,8 +97,13 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
     }
 
     [Fact]
-    public void Analyze_TransparentPixels_TransparentBackgroundTrue() {
-        // PNG with fully transparent corners.
+    public void Analyze_TransparentPixels_TransparentBackgroundStaysFalse() {
+        // T-5030: Import composites every accepted input format onto white before any analyzer runs, so
+        // no image ImageFeatureAnalyzer ever sees carries a real alpha channel — transparent-background
+        // is now a structural fact, not a per-image measurement. A PNG with genuinely transparent
+        // corners fed straight to Analyze (bypassing Import, as this test does) must still read false,
+        // proving the feature no longer keys off the source format's alpha channel. clipping-path was
+        // deleted outright in the same ticket (user decision) and is asserted absent below.
         string path = CreatePng("alpha", W, H, img => {
             White(img);
             // Transparent corners — A=0.
@@ -108,8 +113,8 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
             Fill(img, W - CornerPx, H - CornerPx, CornerPx, CornerPx, new Rgba32(0, 0, 0, 0));
         });
         var snap = Analyze(path);
-        Assert.Equal("true", snap.GetValue("transparent-background"));
-        Assert.Equal("true", snap.GetValue("clipping-path"));
+        Assert.Equal("false", snap.GetValue("transparent-background"));
+        Assert.Equal("UNKNOWN", snap.GetValue("clipping-path"));
     }
 
     [Fact]
@@ -117,7 +122,7 @@ public sealed class ImageFeatureAnalyzerTests : IDisposable {
         string path = CreateJpeg("opaque", W, H, White);
         var snap = Analyze(path);
         Assert.Equal("false", snap.GetValue("transparent-background"));
-        Assert.Equal("false", snap.GetValue("clipping-path"));
+        Assert.Equal("UNKNOWN", snap.GetValue("clipping-path"));
     }
 
     //  Border intersections

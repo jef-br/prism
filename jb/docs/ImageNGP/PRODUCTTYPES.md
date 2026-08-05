@@ -23,9 +23,12 @@ DetOrder slot keywords in brackets `[keyword]` cross-reference `DetOrderRules.js
 ## Conventions
 
 **Ordering preferences (universal)**
-1. Human → artificial: on-model > ghost > flat-lay > clipping-path packshot > render
+1. Human → artificial: on-model > packshot > render
+   (This ladder used to read `on-model > ghost > flat-lay > clipping-path packshot > render`.
+   `clipping-path` went in T-5030 and the ghost rung went in T-5040 — PRISM has no measurable
+   signal separating a ghost-mannequin shot from a flat lay, so `packshot` now covers both.)
 2. Occlusion: full-product > mostly-visible > partially-occluded > closeup
-3. Background: natural/studio (neutral) > flat/white > lifestyle/ambiance > clipping-path
+3. Background: natural/studio (neutral) > flat/white > lifestyle/ambiance
 4. Within same preference tier: front > diagonal > side > back > top > bottom
 
 Each slot lists primary phenotypes in preference order, separated by ` | `.
@@ -33,7 +36,7 @@ Each slot lists primary phenotypes in preference order, separated by ` | `.
 
 **Orientation vocabulary:** `front`, `front-3-quarter`, `side`, `rear`, `top`, `bottom`, `interior`, `detail-view`
 **Occlusion vocabulary:** `full-product`, `mostly-visible`, `partially-occluded`
-**Presentation style vocabulary:** `clipping-path`, `on-ghost`, `on-model`, `flat-lay`, `packshot`, `detail`, `ambiance`, `lifestyle`, `scale-reference`, `illustration-technical-drawing`
+**Presentation style vocabulary:** `on-model`, `packshot` (covers flat-lay *and* ghost-mannequin), `detail`, `ambiance`, `lifestyle`, `scale-reference`, `illustration-technical-drawing`
 
 ---
 

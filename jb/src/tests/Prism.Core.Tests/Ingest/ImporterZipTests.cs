@@ -47,6 +47,17 @@ public class ImporterZipTests : IClassFixture<ImporterFixture> {
     }
 
     [Fact]
+    public void ZipMemberInSubfolder_InitialFullNamePreservesFolderPath() {
+        string img = fixture.WriteNoiseJpeg("1.jpg", 600, 600);
+        string zipPath = BuildZip("folders.zip", [(img, "26182-Denim-801/1.jpg")]);
+
+        ImportStageResult result = fixture.RunImport([], zipRecords: [new InputZipFileRecord { SourceReference = "folders.zip", TempFilePath = zipPath }]);
+
+        Assert.Single(result.NormalizedImages);
+        Assert.Equal("26182-Denim-801/1.jpg", result.NormalizedImages[0].InitialFullName);
+    }
+
+    [Fact]
     public void ZipMissingOnDisk_IsSkippedWithoutThrowing() {
         ImportStageResult result = fixture.RunImport([], zipRecords: [new InputZipFileRecord {
             SourceReference = "ghost.zip",

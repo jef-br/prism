@@ -14,7 +14,6 @@
 
     { "id": "background-type",          "datatype": "enum",    "values": ["SOLIDCOLOR", "REALLIFE", "UNKNOWN"] },
     { "id": "white-background",         "datatype": "boolean", "values": ["true", "false"] },
-    { "id": "clipping-path",            "datatype": "boolean", "values": ["true", "false"] },
     { "id": "transparent-background",   "datatype": "boolean", "values": ["true", "false"] },
     { "id": "lifestyle-background",     "datatype": "boolean", "values": ["true", "false"] },
     { "id": "background-color",         "datatype": "string" },
@@ -61,9 +60,6 @@
     "back-on-model-full-product",
     "back-on-model-partial",
     "side-on-model",
-    "ghost-front",
-    "ghost-back",
-    "ghost-side",
     "closeup-image",
     "lifestyle-hero",
     "lifestyle-context",

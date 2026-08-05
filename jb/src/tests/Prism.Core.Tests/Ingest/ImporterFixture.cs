@@ -75,26 +75,6 @@ public sealed class ImporterFixture : IDisposable {
         return path;
     }
 
-    /// <summary>
-    /// PNG whose alpha channel is 0 (fully transparent) everywhere <paramref name="isOpaque"/> returns
-    /// false and 255 (fully opaque) everywhere it returns true. RGB stays noise throughout — including
-    /// under transparent pixels — so the encoded PNG stays well above Input.Images.filesize.min
-    /// regardless of how small the opaque region is.
-    /// </summary>
-    public string WriteAlphaShapePng(string fileName, int width, int height, Func<int, int, bool> isOpaque) {
-        using Image<Rgba32> png = NewNoiseImage(width, height);
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                if (isOpaque(x, y)) continue;
-                Rgba32 px = png[x, y];
-                png[x, y] = new Rgba32(px.R, px.G, px.B, (byte)0);
-            }
-        }
-        string path = Path.Combine(TempRoot, fileName);
-        png.SaveAsPng(path);
-        return path;
-    }
-
     public string WriteBytes(string fileName, byte[] bytes) {
         string path = Path.Combine(TempRoot, fileName);
         File.WriteAllBytes(path, bytes);

@@ -154,30 +154,36 @@ internal sealed class FolderNameEnricher {
             if (raw.Length == 0)
                 continue;
 
-            // Keep mixed alphanumeric codes whole (SH23005) — they are strong product keys.
-            bool hasLetter = raw.Any(char.IsLetter);
-            bool hasDigit = raw.Any(char.IsDigit);
-
-            if (hasLetter && hasDigit && raw.Length >= this.minMeaningfulTokenLength && !this.noiseFolderTokens.Contains(raw)) {
-                tokens.Add(raw);
-                continue;
-            }
-
-            foreach (string piece in AlphaDigitBoundaryPattern.Split(raw)) {
-                if (piece.Length < this.minMeaningfulTokenLength)
-                    continue;
-                if (this.noiseFolderTokens.Contains(piece))
-                    continue;
-                // A short bare number (a sequence index like "800" or "3") is not folder meaning, but a
-                // long bare number is a product number / reference and is one of the strongest keys.
-                if (piece.All(char.IsDigit) && piece.Length < this.cfg.MinBareNumberLength)
-                    continue;
-
-                tokens.Add(piece);
-            }
+            this.CollectRunTokens(raw, tokens);
         }
 
         return tokens;
+    }
+
+    // Keep mixed alphanumeric codes whole (SH23005) — they are strong product keys — and also split
+    // them at the letter↔digit boundary and keep the pieces (foldercontainsID99984905): the digit run
+    // alone may be the FamilyID/reference that actually lives in the Excel data, even when the whole
+    // run does not. A pure-letter or pure-digit run has no boundary, so the split loop below simply
+    // re-evaluates the whole run once through the same filters (no whole-run branch needed for those).
+    private void CollectRunTokens(string raw, List<string> tokens) {
+        bool hasLetter = raw.Any(char.IsLetter);
+        bool hasDigit = raw.Any(char.IsDigit);
+
+        if (hasLetter && hasDigit && raw.Length >= this.minMeaningfulTokenLength && !this.noiseFolderTokens.Contains(raw))
+            tokens.Add(raw);
+
+        foreach (string piece in AlphaDigitBoundaryPattern.Split(raw)) {
+            if (piece.Length < this.minMeaningfulTokenLength)
+                continue;
+            if (this.noiseFolderTokens.Contains(piece))
+                continue;
+            // A short bare number (a sequence index like "800" or "3") is not folder meaning, but a
+            // long bare number is a product number / reference and is one of the strongest keys.
+            if (piece.All(char.IsDigit) && piece.Length < this.cfg.MinBareNumberLength)
+                continue;
+
+            tokens.Add(piece);
+        }
     }
 
     //  Excel vocabulary

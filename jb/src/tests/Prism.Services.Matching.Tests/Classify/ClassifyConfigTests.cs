@@ -46,8 +46,8 @@ public class ClassifyConfigTests : IDisposable {
             "ImageFeatureAnalyzer": {
                 "BackgroundVarianceSolidColorMax": 0.012, "BackgroundVarianceLifestyleMin": 0.040,
                 "NearWhiteChannelMin": 0.90, "AlphaOpaqueThreshold": 128,
-                "PixelSampleStride": 2, "ChannelCount": 3, "ClippingPathConfidence": 0.90,
-                "WhiteBackgroundConfidence": 0.92, "LifestyleBackgroundAlphaConfidence": 0.95,
+                "PixelSampleStride": 2, "ChannelCount": 3,
+                "WhiteBackgroundConfidence": 0.92,
                 "LifestyleBackgroundSolidConfidence": 0.85, "LifestyleBackgroundRealLifeConfidence": 0.72,
                 "BackgroundTypeConfidence": 0.82, "EdgeIntersectionConfidence": 0.85,
                 "SkinToneAreaConfidence": 0.75
@@ -76,8 +76,8 @@ public class ClassifyConfigTests : IDisposable {
             "ImageFeatureAnalyzer": {
                 "BackgroundVarianceSolidColorMax": 0.012, "BackgroundVarianceLifestyleMin": 0.040,
                 "NearWhiteChannelMin": 0.90, "AlphaOpaqueThreshold": 256, "MaxChannelValueF": 255,
-                "PixelSampleStride": 2, "ChannelCount": 3, "ClippingPathConfidence": 0.90,
-                "WhiteBackgroundConfidence": 0.92, "LifestyleBackgroundAlphaConfidence": 0.95,
+                "PixelSampleStride": 2, "ChannelCount": 3,
+                "WhiteBackgroundConfidence": 0.92,
                 "LifestyleBackgroundSolidConfidence": 0.85, "LifestyleBackgroundRealLifeConfidence": 0.72,
                 "BackgroundTypeConfidence": 0.82, "EdgeIntersectionConfidence": 0.85,
                 "SkinToneAreaConfidence": 0.75

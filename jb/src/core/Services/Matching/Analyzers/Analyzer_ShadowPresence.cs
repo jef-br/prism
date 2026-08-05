@@ -36,10 +36,6 @@ public static class Analyzer_ShadowPresence {
     public static void Analyze(SubjectDetectionResult? subject, ImageFeatureSnapshot snapshot, Config cfg) {
         if (subject is null) return;
 
-        // The alpha producer measures geometry from a transparency channel, which carries no shadow
-        // information at all. Publishing "false" off an alpha detection would be inventing evidence.
-        if (string.Equals(subject.Producer, "alpha", StringComparison.OrdinalIgnoreCase)) return;
-
         snapshot.Set("shadow-present", subject.HasHardShadowEvidence ? "true" : "false", cfg.Confidence, "subject-detector");
     }
 }

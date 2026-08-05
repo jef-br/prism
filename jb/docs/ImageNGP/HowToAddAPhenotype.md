@@ -89,7 +89,7 @@ object in `ImageRoles.json`:
     { "feature": "hero-is-human", "equals": "FALSE" },
     { "anyOf": [
         { "feature": "background-type", "equals": "SOLIDCOLOR" },
-        { "feature": "clipping-path", "equals": "true" }
+        { "feature": "white-background", "equals": "true" }
     ]}
   ]
 }

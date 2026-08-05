@@ -36,7 +36,7 @@
   },
   {
     "SourceReference": "133726012.jpg",
-    "Phenotype": "ghost-back",
+    "Phenotype": "back-packshot",
     "Note": "printed dress, reverse, holds a worn shape, white background"
   },
   {
@@ -124,12 +124,12 @@
   },
   {
     "SourceReference": "26182-Denim-801/a (1).jpg",
-    "Phenotype": "ghost-front",
+    "Phenotype": "front-packshot",
     "Note": "unreachable today"
   },
   {
     "SourceReference": "4471-2290-B.jpg",
-    "Phenotype": "ghost-back"
+    "Phenotype": "back-packshot"
   },
   {
     "SourceReference": "4471-2290-D.jpg",
@@ -138,11 +138,11 @@
   },
   {
     "SourceReference": "4471-2290-F.jpg",
-    "Phenotype": "ghost-front"
+    "Phenotype": "front-packshot"
   },
   {
     "SourceReference": "4471-2340-B.jpg",
-    "Phenotype": "ghost-back"
+    "Phenotype": "back-packshot"
   },
   {
     "SourceReference": "4471-2340-D.jpg",
@@ -150,7 +150,7 @@
   },
   {
     "SourceReference": "4471-2340-F.jpg",
-    "Phenotype": "ghost-front"
+    "Phenotype": "front-packshot"
   },
   {
     "SourceReference": "8712345678901-2.jpg",
@@ -213,12 +213,12 @@
   },
   {
     "SourceReference": "99984901/99984901_det0.jpg",
-    "Phenotype": "ghost-front",
+    "Phenotype": "front-packshot",
     "Note": "unreachable today"
   },
   {
     "SourceReference": "99984901/99984901_det1.jpg",
-    "Phenotype": "ghost-back",
+    "Phenotype": "back-packshot",
     "Note": "unreachable today"
   },
   {
@@ -251,31 +251,31 @@
   },
   {
     "SourceReference": "C153KB460011_Cedric_City_Grey_BAC.png",
-    "Phenotype": "ghost-back",
+    "Phenotype": "back-packshot",
     "Note": "'BAC' is truncated so the filename orientation analyzer must not fire"
   },
   {
     "SourceReference": "C153KB460011_Cedric_City_Grey_FRON.png",
-    "Phenotype": "ghost-front",
+    "Phenotype": "front-packshot",
     "Note": "'FRON' is truncated, same reason"
   },
   {
     "SourceReference": "C153KB460011_Cedric__City_Grey_DETAIL.png",
-    "Phenotype": "ghost-side",
-    "Note": "named DETAIL but it is the whole garment from the side - the only ghost-side case in the repo"
+    "Phenotype": "side-packshot",
+    "Note": "named DETAIL but it is the whole garment from the side, on an invisible mannequin. Was labelled ghost-side; relabelled side-packshot by T-5040, which merged ghost-* into *-packshot because no measurable feature separates them. The garment-holds-a-worn-3D-shape judgement this row encoded is recorded in README section 4.3, not here"
   },
   {
     "SourceReference": "C153KU420009_Kendall_Twill sand_BACK.png",
-    "Phenotype": "ghost-back"
+    "Phenotype": "back-packshot"
   },
   {
     "SourceReference": "C153KU420009_Kendall_Twill sand_DETAIL1.png",
-    "Phenotype": "ghost-side",
-    "Note": "second ghost-side case"
+    "Phenotype": "side-packshot",
+    "Note": "second invisible-mannequin side view; was ghost-side, relabelled side-packshot by T-5040"
   },
   {
     "SourceReference": "C153KU420009_Kendall_Twill sand_FRONT.png",
-    "Phenotype": "ghost-front"
+    "Phenotype": "front-packshot"
   },
   {
     "SourceReference": "CARDIGAN_MAGENTA76_A.jpg",
@@ -288,7 +288,7 @@
   },
   {
     "SourceReference": "IMG_4432.png",
-    "Phenotype": "ghost-front",
+    "Phenotype": "front-packshot",
     "Note": "same invisible-mannequin styling as the other Vingino images"
   },
   {
@@ -398,11 +398,11 @@
   },
   {
     "SourceReference": "TH12_0N3_M47CH32_70_R3D_36R37.jpg",
-    "Phenotype": "ghost-back"
+    "Phenotype": "back-packshot"
   },
   {
     "SourceReference": "TH12_0N3_M47CH32_70_R3D_36R37_AS_4_FR0N7.jpg",
-    "Phenotype": "ghost-front"
+    "Phenotype": "front-packshot"
   },
   {
     "SourceReference": "T_SHIRT_EGRET_DETAIL.jpg",
@@ -421,23 +421,23 @@
   },
   {
     "SourceReference": "foldercontainsID99984905/3.jpg",
-    "Phenotype": "ghost-front",
+    "Phenotype": "front-packshot",
     "Note": "unreachable today"
   },
   {
     "SourceReference": "foldercontainsID99984905/4.jpg",
-    "Phenotype": "ghost-back",
+    "Phenotype": "back-packshot",
     "Note": "unreachable today"
   },
   {
     "SourceReference": "triggered-mistery.jpg",
-    "Phenotype": "ghost-front",
+    "Phenotype": "front-packshot",
     "Confidence": "low",
     "Note": "cream tee with a LEMON print; shaping is subtle"
   },
   {
     "SourceReference": "triggered-tshirt-main.jpg",
-    "Phenotype": "ghost-front",
+    "Phenotype": "front-packshot",
     "Confidence": "low",
     "Note": "pink tee; front/back is hard to call from the neckline"
   },
@@ -462,11 +462,11 @@
   },
   {
     "SourceReference": "triggered_ghost-front.jpg",
-    "Phenotype": "ghost-front",
+    "Phenotype": "front-packshot",
     "Note": "black tee on white - high edge contrast, unlike CiGolden's beige-on-transparent"
   },
   {
     "SourceReference": "triggered_ghost_back.jpg",
-    "Phenotype": "ghost-back"
+    "Phenotype": "back-packshot"
   }
 ]

@@ -168,10 +168,15 @@ boxes, saliency). Extend it there rather than scattering real-life special cases
 
 ### Producers behind one contract
 
-`ISubjectDetector` is a swappable seam. Two producers exist: `"alpha"` (exact geometry recovered from a
-real transparency channel at ingress, before the white composite destroys it — always preferred when
-present) and `"classical-cv"` (the heuristic above). A segmentation model is a future third producer, and
-Transform needs no change to accept one — it consumes `SubjectDetection` generically.
+`ISubjectDetector` is a swappable seam. `"classical-cv"` (the heuristic above) is the only producer today;
+`FeatureAnalysisService.DetectSubject` also emits an `"edge-bleed"` shortcut when the subject already
+touches all four edges (no background ring left to fit a box against). A segmentation model is a future
+producer, and Transform needs no change to accept one — it consumes `SubjectDetection` generically.
+
+T-5030 (2026-08-04) removed the `"alpha"` producer and the separate ingress alpha-capture path it rode
+on: every accepted input format is now composited onto white and re-encoded as JPEG before any analyzer
+runs, so no image downstream of Import ever carries a real alpha channel. `AlphaSubjectCapture.cs` is
+deleted; `ImageRecord_INPUT.Subject` (the alpha→lambda seed) is gone.
 
 ### Hard-shadow evidence
 
@@ -185,8 +190,6 @@ Keep the raw fraction and the verdict separate. The threshold shipped at 0.01 an
 SPACINI29 images — a signal that is always true carries no information, and it was trimming every centred
 image for nothing. Calibrated to 0.05 on 2026-07-28 (23/86). Because the measurement is persisted, the
 threshold can be re-tuned against labelled data without re-instrumenting the detector — see [[T-4945]].
-An alpha-derived detection never publishes `shadow-present`: a transparency channel carries no shadow
-information, and emitting `false` there would be inventing evidence.
 
 Config: `ClassifyConfig.json` → `SubjectDetector`. All values `required`, no in-code defaults.
 

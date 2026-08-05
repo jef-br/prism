@@ -37,8 +37,8 @@ Source is the dataset it was copied from. All are downscaled to 1024px longest e
 
 | File | Source | What the picture shows | Targets |
 |---|---|---|---|
-| `01_ghost-or-front-packshot_alpha.png` | FILA94 | Beige tracksuit trousers, front, laid flat, no person. **Transparent PNG — real alpha channel, not white.** | `ghost-front` (alpha ⇒ `clipping-path=true`) |
-| `02_ghost-or-back-packshot_alpha.png` | FILA94 | Same trousers photographed from the reverse. Transparent PNG. | `ghost-back` |
+| `01_ghost-or-front-packshot_alpha.png` | FILA94 | Beige tracksuit trousers, front, laid flat, no person. **Transparent PNG — real alpha channel, not white.** | `front-packshot`. **Changed 2026-08-04 (T-5030):** was `ghost-front` via `alpha ⇒ clipping-path=true`. Import now flattens alpha onto white before any analyzer runs and `clipping-path` is deleted, so this file is indistinguishable from a white-sweep shot and `ghost-front` is unreachable — see [[T-5040]] |
+| `02_ghost-or-back-packshot_alpha.png` | FILA94 | Same trousers photographed from the reverse. Transparent PNG. | `back-packshot`. **Changed 2026-08-04 (T-5030/T-5040):** was `ghost-back`, for the same reason as row 1 — alpha is flattened at import, `clipping-path` is deleted, and `ghost-*` was merged into `*-packshot` |
 | `03_closeup-image_alpha.png` | FILA94 | The waistband and pocket filling the whole frame, garment running off the edges, no person. Transparent PNG. | `closeup-image` |
 | `04_front-on-model-full.jpg` | FILA94 | Male model standing square to camera, whole body including shoes, beige studio background, nothing touching an edge. | `front-on-model-full-product` |
 | `05_front-on-model-partial.jpg` | FILA94 | Same model, same trousers, framed from chest to shoes. Head is cut off by the top edge. | `front-on-model-partial` |

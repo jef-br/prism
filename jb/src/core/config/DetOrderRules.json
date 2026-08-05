@@ -4,35 +4,37 @@
     "unhintedAnchor": 2.5,
     "onModelFirst": true
   },
+  "_comment_ghost": "T-5040 (2026-08-04): ghost-front/back/side were deleted from the taxonomy and removed from every slot below. Their rules had become character-identical to front/back/side-packshot once clipping-path went (T-5030), so they could never be assigned and the entries here were dead weight. Every slot that listed a ghost phenotype also listed its packshot equivalent, so no slot lost its filler and no image changes slot. *-packshot now covers both the flat-lay and the ghost-mannequin case - see imagePhenotypes.md.",
+  "_comment_pack": "default.det6 ('pack') deliberately carries an empty phenotypes list: its packaging-visible feature was removed in T-4700. It is NOT dead - ImageOrderer.ResolveHintSlot still uses the keyword as an overflow anchor, so a *_packaging.jpg still sorts to this position. Do not delete the slot; do not invent a phenotype for it.",
   "productTypes": {
     "default": {
       "det0": { "keyword": "front",   "phenotypes": ["front-packshot", "front-on-model-full-product", "diagonal-packshot"] },
       "det1": { "keyword": "back",    "phenotypes": ["back-packshot", "back-on-model-full-product", "back-on-model-partial"] },
       "det2": { "keyword": "side",    "phenotypes": ["side-packshot", "side-on-model"] },
-      "det3": { "keyword": "detail",  "phenotypes": ["closeup-image"] },
+      "det3": { "keyword": "detail",  "phenotypes": ["closeup-image", "model-detail-closeup"] },
       "det4": { "keyword": "top",     "phenotypes": ["top-packshot"] },
       "det5": { "keyword": "bottom",  "phenotypes": ["bottom-packshot"] },
       "det6": { "keyword": "pack",    "phenotypes": [] },
       "det7": { "keyword": "label",   "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
     },
     "topwear": {
-      "det0": { "keyword": "front",     "phenotypes": ["front-on-model-full-product", "ghost-front", "front-packshot"] },
-      "det1": { "keyword": "back",      "phenotypes": ["back-on-model-partial", "back-on-model-full-product", "ghost-back", "back-packshot"] },
-      "det2": { "keyword": "side",      "phenotypes": ["side-on-model", "ghost-side", "side-packshot"] },
-      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
-      "det4": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero"] },
+      "det0": { "keyword": "front",     "phenotypes": ["front-on-model-full-product", "front-packshot"] },
+      "det1": { "keyword": "back",      "phenotypes": ["back-on-model-partial", "back-on-model-full-product", "back-packshot"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-on-model", "side-packshot"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image", "model-detail-closeup"] },
+      "det4": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "lifestyle-context"] },
       "det5": { "keyword": "front",     "phenotypes": ["front-on-model-partial"] },
       "det6": { "keyword": "label",     "phenotypes": ["closeup-image"] },
       "det7": { "keyword": "material",  "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
     },
     "bottomwear": {
-      "det0": { "keyword": "front",     "phenotypes": ["front-on-model-full-product", "ghost-front", "front-packshot"] },
-      "det1": { "keyword": "back",      "phenotypes": ["back-on-model-full-product", "ghost-back", "back-packshot"] },
-      "det2": { "keyword": "side",      "phenotypes": ["side-on-model", "ghost-side", "side-packshot"] },
-      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det0": { "keyword": "front",     "phenotypes": ["front-on-model-full-product", "front-packshot"] },
+      "det1": { "keyword": "back",      "phenotypes": ["back-on-model-full-product", "back-packshot"] },
+      "det2": { "keyword": "side",      "phenotypes": ["side-on-model", "side-packshot"] },
+      "det3": { "keyword": "detail",    "phenotypes": ["closeup-image", "model-detail-closeup"] },
       "det4": { "keyword": "front",     "phenotypes": ["front-on-model-partial"] },
       "det5": { "keyword": "back",      "phenotypes": ["back-on-model-partial"] },
-      "det6": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero"] },
+      "det6": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "lifestyle-context"] },
       "det7": { "keyword": "label",     "phenotypes": ["closeup-image"] },
       "det8": { "keyword": "material",  "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
     },
@@ -43,18 +45,18 @@
       "det3": { "keyword": "back",      "phenotypes": ["back-packshot"] },
       "det4": { "keyword": "bottom",    "phenotypes": ["bottom-packshot"] },
       "det5": { "keyword": "top",       "phenotypes": ["top-packshot"] },
-      "det6": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
+      "det6": { "keyword": "detail",    "phenotypes": ["closeup-image", "model-detail-closeup"] },
       "det7": { "keyword": "back",      "phenotypes": ["back-on-model-partial"] },
-      "det8": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "on-model-with-accessories", "illustration-technical-drawing"] }
+      "det8": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "on-model-with-accessories", "lifestyle-context", "illustration-technical-drawing"] }
     },
     "bags-accessories": {
-      "det0": { "keyword": "front",     "phenotypes": ["front-packshot", "ghost-front"] },
+      "det0": { "keyword": "front",     "phenotypes": ["front-packshot"] },
       "det1": { "keyword": "side",      "phenotypes": ["side-packshot"] },
       "det2": { "keyword": "back",      "phenotypes": ["back-packshot", "back-on-model-partial"] },
       "det3": { "keyword": "top",       "phenotypes": ["top-packshot"] },
       "det4": { "keyword": "interior",  "phenotypes": ["interior-shot"] },
-      "det5": { "keyword": "detail",    "phenotypes": ["closeup-image"] },
-      "det6": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "on-model-with-accessories"] },
+      "det5": { "keyword": "detail",    "phenotypes": ["closeup-image", "model-detail-closeup"] },
+      "det6": { "keyword": "lifestyle", "phenotypes": ["lifestyle-hero", "on-model-with-accessories", "lifestyle-context"] },
       "det7": { "keyword": "label",     "phenotypes": ["closeup-image", "illustration-technical-drawing"] }
     }
   }

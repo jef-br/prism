@@ -24,7 +24,7 @@ On a clothing website, the first photo is almost always a real person wearing th
 PRISM orders images the same way: real person (on-model) → mannequin (ghost) → flat-lay → plain packshot → render. This mirrors what shoppers actually want to see first.
 
 **Developer note:**
-The ordering preference `human → artificial` is encoded in `DetOrderRules.json` and the `HERO_IS_HUMAN` + `TypeOfShot` enum values. `ONMODEL=85` scores higher than `GHOST=70`, which scores higher than `FLAT=55`, which scores higher than a clipping-path packshot. These numeric weights feed the ordering algorithm.
+The ordering preference `human → artificial` is encoded in `DetOrderRules.json` and the `HERO_IS_HUMAN` + `TypeOfShot` enum values. `ONMODEL=85` scores higher than `GHOST=70`, which scores higher than `FLAT=55`. These numeric weights feed the ordering algorithm. (The ladder used to end "…higher than a clipping-path packshot"; `clipping-path` was removed from the taxonomy in T-5030.)
 
 ---
 
