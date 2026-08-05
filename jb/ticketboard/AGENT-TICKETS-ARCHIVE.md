@@ -4,6 +4,138 @@ Done tickets, moved here by /ticket-finish to keep `jb/ticketboard/AGENT-TICKETS
 start) lean. Newest at the top. When a ticket closes, its `jb/ticketboard/T-XXXX.md` body is appended here
 and that file is deleted.
 
+### T-5040 · Prune the phenotype set to the ones PRISM actually needs
+**Status:** Done (2026-08-05) | **Profile:** P4-critical-architecture
+**Landed:** `69b5eba`
+**Review:** Approve (2026-08-04) — reviewer verified the 18-phenotype count by parsing both config
+files, confirmed ghost/packshot slot-filler parity against `git show HEAD:...DetOrderRules.json`,
+read `BuildCandidates`/`ResolveHintSlot` to confirm the `default.det6` "not dead" claim, and checked
+that moving `illustration-technical-drawing`/`interior-shot` ahead of the packshots introduces no new
+subsumption (the binary flags they gate on are disjoint from the packshot conditions). It noted the
+reorder shifts the failure mode from "silent swallow" to "a false-positive binary detector steals a
+packshot label" — accepted, and symmetric with the existing `interior-shot`/`closeup-image` tradeoff.
+
+The 21 phenotypes in `ImageRoles.json` were authored by an agent, not derived from what PRISM has to
+decide. The set is now **18**, derived from the constraints below rather than trimmed by taste.
+
+**Correction to this ticket's own headline example.** It opened with "at least one of them —
+`on-model-with-accessories` — has no identified consumer." That is wrong: it is consumed at footwear
+`det8` and bags-accessories `det6`. The two phenotypes that genuinely had no consumer were
+`model-detail-closeup` and `lifestyle-context` — independently corroborated by
+`phenotype-assignment-validation.md`, which names exactly those two. The underlying point stood; it
+named the wrong phenotype.
+
+**Hard constraint, accepted by the user 04/08/26:** a phenotype never encodes the product type. A polo
+and a t-shirt are distinct product types — that distinction belongs to the matcher — but both resolve
+to the same phenotype. Phenotype describes view and composition only. Product type re-enters one step
+later, in `DetOrderRules.json`, which maps phenotype → det slot *per product type*. Any candidate
+phenotype that only one product type could satisfy is malformed and must be rejected by the model.
+
+*Checked against the final 18: none names or implies a product type.* The `ghost-*` merge below
+actively improves compliance — "ghost mannequin" is a garment-only concept, whereas "packshot"
+applies to any product. `interior-shot` was checked specifically and passes: `interior-detected`
+measures an enclosed cavity (a bag compartment, a shoe, a box), not a product category, even though
+bags-accessories is currently its only det-slot consumer.
+
+## The constraint audit, as measured
+
+**1. Every phenotype must be reachable.** 18 of 21 were. `ghost-front` / `ghost-back` / `ghost-side`
+were **provably dead**: once [[T-5030]] removed `clipping-path` — the only condition they carried that
+their packshot counterparts did not — their `required` blocks became character-for-character identical
+to `front-` / `back-` / `side-packshot`, which sit at indices 7/8/9 against 13/14/15. First-match-wins
+meant they could never be assigned to any image.
+
+**2. Every phenotype must be distinguishable.** Three ordering defects, only one of which this ticket
+listed:
+- `ghost-*` vs `*-packshot` — identical, above.
+- `interior-shot` (index 18) sat behind `closeup-image` (index 16, `hero-is-human=FALSE` +
+  `intersection-count >= 3`). Shooting down into a bag compartment fills the frame, so every interior
+  shot satisfied both and lost. All five of JBComplete's interior images — added specifically to cover
+  that phenotype — would have been mislabelled.
+- `illustration-technical-drawing` (index 19) sat behind the whole packshot block. A technical drawing
+  shot front-on, on white, fully in frame satisfies `front-packshot` (index 7) and loses. Not a strict
+  subsumption, but unreachable for the common case, which is the same failure.
+
+`lifestyle-hero` ⊂ `lifestyle-context` is **not** a defect: the more permissive rule sits second and
+correctly catches the remainder (`intersection-count >= 2`). Both reachable.
+
+**3. Every phenotype must be consumed.** 19 of 21 were; `model-detail-closeup` and `lifestyle-context`
+were not.
+
+**4. Every det slot must be reachable from a phenotype.** All but `default.det6` (`"pack"`), whose
+`phenotypes` list is empty because `packaging-visible` was removed in T-4700. **It is not dead code**:
+`ImageOrderer.BuildCandidates` can never win it by phenotype, but `ImageOrderer.ResolveHintSlot` still
+uses its keyword as an overflow anchor, so a `*_packaging.jpg` still sorts to that position.
+
+## Decisions taken (user, 2026-08-04)
+
+**`ghost-*` → merged into `*-packshot`.** Judged against this ticket's own collision-keeping rule: a
+collision survives only when a **named** signal that would separate the two is specified, or
+measurable-but-unmeasured. The separating property here is *does the garment hold a worn 3D shape* —
+real, and `test/datasets/JBComplete/README.md` §4.3 names three concrete cues (waistband holds an open
+rounded form rather than collapsing to two flat edges; legs carry internal volume; shadows *inside*
+the garment opening). But **no analyzer is specified and nothing measures any of the three**, so the
+collision did not qualify to survive. Deleting cost nothing operationally: every det slot listing a
+ghost phenotype also listed its packshot equivalent, so no slot lost its filler and no image changed
+slot. `*-packshot` now explicitly covers both the flat lay and the ghost-mannequin shot.
+
+On the ticket's question "whether such a signal is realistically obtainable — establish, do not
+assume": partially answered. The cues are real and were used successfully by a human at ~700 px, so
+the signal is not fictional. But every ghost rule also gated on `hero-orientation`, which is not
+reliable today (74% argmax, thresholds above anything CLIP reaches on real data). Stacking a harder
+3D-shape signal on an unreliable orientation gate buys nothing measurable until [[T-2600]] resolves.
+Fix orientation first, then revisit.
+
+**Both orphans wired in rather than deleted.** `model-detail-closeup` is the human-branch twin of
+`closeup-image`, and every `detail` slot listed only `closeup-image` — so an on-model detail crop
+could never win a detail slot and always overflowed. `lifestyle-context` is the natural remainder of
+`lifestyle-hero` and the `lifestyle` slots listed only the hero. Each appended behind its existing
+sibling, so preference order is unchanged and no existing win is displaced.
+
+**All three structural fixes taken:** `interior-shot` moved ahead of `closeup-image`; `default.det6`
+left as a documented keyword-only slot; `interior-detected` and `is-illustration` added to
+`ImageFeatures.md` (both already had real producers — `Analyzer_Interior`, `Analyzer_IsIllustration` —
+and were declared in `ImageNGP.json`; only the catalog rows were missing).
+
+**Extended beyond the question asked, and flagged:** `illustration-technical-drawing` was moved ahead
+of the packshot block too. Same defect as `interior-shot`, same fix; leaving it would have shipped
+half the fix.
+
+## The resulting order
+
+Evaluation order **is** precedence. It now runs: the seven human-branch rules → the two specific
+content detectors (`illustration-technical-drawing`, `interior-shot`) → the six packshots →
+`closeup-image` → `lifestyle-hero` → `lifestyle-context`. Governing principle, now written into
+`ImageRoles.json`'s header comment and `imagePhenotypes.md`: **a specific rule must precede a generic
+rule it overlaps, or the generic one silently swallows it.**
+
+## Also changed
+
+- `expected-phenotype.json`: 23 rows relabelled from `ghost-*` to their packshot equivalents
+  (12 front, 9 back, 2 side). No image lost coverage; 17 of 18 phenotypes still have a positive case,
+  only `illustration-technical-drawing` has none. The ghost-vs-flat-lay judgement those rows encoded
+  is preserved in `test/datasets/JBComplete/README.md` §4.3, which is now its only record.
+- New test `PhenotypeRuleSetTests.Load_EverySlotPhenotypeInDetOrderRulesExists` — asserts
+  `DetOrderRules.json` never names a phenotype the taxonomy does not define. This is the check that
+  would have caught stale ghost entries left behind after a rule deletion.
+- `Load_ValidPath_JsonContains21Phenotypes` → `...Contains18Phenotypes`.
+
+**Verification:** `dotnet build` 0 errors 0 warnings. Matching 230/231, Core 150/150, Transform 77/83,
+Generate 10/10, Upscale 17/17. The 1 Matching and 6 Transform failures are pre-existing [[T-5000]] and
+[[T-5010]], confirmed untouched via `git diff HEAD` and identical in count and name to before this work.
+
+**Still open, deliberately:** `on-model-with-accessories` overlapping `front-on-model-partial` (all
+three JBComplete scarf images satisfy both, earlier wins). It is an overlap, not a subsumption, and no
+image in the repo distinguishes them — so it needs data, not a rule edit. Not folded into this ticket.
+
+**Files:** `jb/src/core/config/ImageRoles.json`, `jb/src/core/config/DetOrderRules.json`,
+`jb/src/core/config/ImageNGP.json`, `jb/docs/ImageNGP/imagePhenotypes.md`,
+`jb/docs/ImageNGP/ImageFeatures.md`, `jb/docs/ImageNGP/PRODUCTTYPES.MD`,
+`jb/src/tests/Prism.Services.Matching.Tests/Classify/PhenotypeRuleSetTests.cs`,
+`test/datasets/JBComplete/expected-phenotype.json`, `test/datasets/JBComplete/README.md`.
+
+---
+
 ### T-5030 · Normalize every input to JPG on white
 **Status:** Done (2026-08-05) | **Profile:** P1-feature-worker
 **Landed:** `69b5eba`
