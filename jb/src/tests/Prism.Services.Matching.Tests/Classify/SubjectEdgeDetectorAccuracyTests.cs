@@ -67,11 +67,20 @@ public class SubjectEdgeDetectorAccuracyTests {
         return SubjectEdgeDetector.Detect(image).IntersectionCount;
     }
 
+    // SPACINI29 is 487 MB and gitignored, so a CI checkout never contains it. Same resolution shape as
+    // ModelAssetLocator: source tree first, then a machine-local store named by PRISM_DATASET_DIR.
     private static string DatasetDirectory() {
-        string dir = Path.Combine(RepoRoot(), "test", "datasets", "SPACINI29", "RAW IMAGES");
+        string inRepo = Path.Combine(RepoRoot(), "test", "datasets", "SPACINI29", "RAW IMAGES");
+        if (Directory.Exists(inRepo)) return inRepo;
+
+        string? datasetRoot = Environment.GetEnvironmentVariable("PRISM_DATASET_DIR");
+        if (!string.IsNullOrWhiteSpace(datasetRoot)) {
+            string overridden = Path.Combine(datasetRoot, "SPACINI29", "RAW IMAGES");
+            if (Directory.Exists(overridden)) return overridden;
+        }
+
         // Fail loud rather than skip: a silently-absent dataset would turn this into a vacuous pass.
-        if (!Directory.Exists(dir)) throw new DirectoryNotFoundException($"SPACINI29 not found at {dir}");
-        return dir;
+        throw new DirectoryNotFoundException($"SPACINI29 not found at {inRepo}, and PRISM_DATASET_DIR names no copy either.");
     }
 
     // The notes file is UTF-16 and marked do-not-edit; it is parsed rather than transcribed so the

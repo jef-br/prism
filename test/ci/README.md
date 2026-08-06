@@ -28,8 +28,13 @@ Both run on `runs-on: [self-hosted, windows]`.
      Services/Matching/Classify/ONNX/clip-vit-b32-uint8/vocab.json
      Services/Matching/Classify/ONNX/clip-vit-b32-uint8/merges.txt
      Services/Matching/Analyzers/ONNX/yolo26s.onnx                          # 37 MB
-     Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus.onnx                   # 67 MB
+     Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus_dynamic.onnx           # 64 MB
    ```
+
+   > T-4900 replaced the fixed-64 `Real-ESRGAN_x2plus.onnx` with the dynamic-shape model above. A
+   > runner still holding only the old file fails **every** model-dependent test at fixture
+   > construction with `PrismConfigurationException: Real-ESRGAN ONNX model not found` — dozens of
+   > 1 ms failures that read like a crash, not a missing asset.
 
    > These paths changed when `jb/src/core/` was restructured into `Services/` + `lib/`. They were
    > previously `Images/Classify/ONNX/…` and `Images/Upscale/ONNX/…`. A runner still holding the old
@@ -42,7 +47,7 @@ Both run on `runs-on: [self-hosted, windows]`.
    |---|---|
    | CLIP dir + filenames | `jb/src/core/config/Prism_Config.json` → `Models.Clip.Dir` / `.Model` / `.Vocab` / `.Merges` |
    | Real-ESRGAN | `jb/src/core/config/Prism_Config.json` → `Models.Upscale.Path` |
-   | YOLO26 | **Not config-driven** — the `YoloModelRelativePath` const in `jb/src/core/Services/Matching/FeatureAnalysisService.cs` |
+   | YOLO26 | `jb/src/core/config/Prism_Config.json` → `Models.Yolo.Path` |
 
 3. **Machine-level environment variables** (System, so the runner service inherits them):
 
@@ -55,7 +60,21 @@ Both run on `runs-on: [self-hosted, windows]`.
    `jb/src/core/` (a dev convenience — the models are gitignored, so this last hop never resolves on a
    fresh CI checkout).
 
-4. **Toolchain**: install **.NET 9 SDK** (tests target `net9.0`), **.NET 10 SDK** (API/ServiceHost),
+4. **Gitignored test datasets.** `SubjectEdgeDetectorAccuracyTests` scores the detector against the
+   hand-verified counts in `SPACINI29` (487 MB, gitignored, so never in a checkout). It resolves the
+   source tree first, then `PRISM_DATASET_DIR`, and **throws rather than skips** when neither has it —
+   a silently-absent dataset would turn the accuracy guard into a vacuous pass. Mirror the layout:
+
+   ```
+   <PRISM_DATASET_DIR>/
+     SPACINI29/RAW IMAGES/*.jpg          # 86 images
+     SPACINI29/RAW IMAGES/dataset notes.md   # UTF-16 ground truth, do not edit
+   ```
+
+   `ci.yml` defaults `PRISM_DATASET_DIR` to `%USERPROFILE%\prism-ci-assets\datasets` when it is unset,
+   so an interactively-launched runner needs no restart to pick it up.
+
+5. **Toolchain**: install **.NET 9 SDK** (tests target `net9.0`), **.NET 10 SDK** (API/ServiceHost),
    and **Node 24+**. Verify: `dotnet --list-sdks`, `node -v`.
 
 > **Availability**: CI only runs while the machine + runner service are up. The 10:30 slot assumes the

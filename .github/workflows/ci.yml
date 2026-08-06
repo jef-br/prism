@@ -19,6 +19,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Locate the CI asset store
+        shell: pwsh
+        # SPACINI29 (487 MB) is gitignored, so a checkout never contains it — it lives in the runner
+        # user's asset store beside the ONNX models. Defaulted here rather than read from a machine
+        # variable so an interactively-launched runner picks it up without being restarted; an
+        # explicitly-set PRISM_DATASET_DIR still wins. See test/ci/README.md.
+        run: |
+          if (-not $env:PRISM_DATASET_DIR) {
+            "PRISM_DATASET_DIR=$env:USERPROFILE\prism-ci-assets\datasets" |
+              Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          }
+          Write-Host "PRISM_DATASET_DIR = $env:PRISM_DATASET_DIR"
+
       - name: Build solution (Release)
         shell: pwsh
 
