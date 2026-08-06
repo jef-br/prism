@@ -67,8 +67,9 @@ public class TransformTogglesTests {
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
         // 0.06 * 800 = 48px trimmed from the bottom → height 752, bottom 852.
-        Assert.Equal(752, lambda.BoundingBox!.Value.Height);
-        Assert.Equal(852, lambda.BoundingBox!.Value.Bottom);
+        BoundingBox box = lambda.BoundingBox!.Value;
+        Assert.Equal(752, box.Height);
+        Assert.Equal(852, box.Bottom);
     }
 
     [Fact]
