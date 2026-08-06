@@ -50,10 +50,10 @@ public sealed class SubjectDetector : ISubjectDetector {
 
         // Toggle (b) — a non-flat background is not one condition but two, so a known real-life scene goes
         // straight to the escalated pass rather than paying for a cheap pass it is going to fail anyway.
-        if (seed is not null && this.IsKnownRealLife(seed)) return this.HeroDetectionOnSteroids(bgrImage, seed);
+        if (seed is not null && IsKnownRealLife(seed)) return this.HeroDetectionOnSteroids(bgrImage, seed);
 
         bool speckle = seed is not null && !seed.IsBackgroundFlat;
-        SubjectDetectionResult detection = this.RunPass(bgrImage, this.cfg.MaxAnalysisSize, this.IsClaheWorthwhile(seed),
+        SubjectDetectionResult detection = this.RunPass(bgrImage, this.cfg.MaxAnalysisSize, IsClaheWorthwhile(seed),
             this.cfg.MinComponentAreaRatio, speckle ? this.cfg.StudioSweepSpeckleKernel : 0, out double ringResidual);
 
         // The extra discrimination step: an unmeasured background that does NOT fit its plane closely is a
@@ -71,19 +71,19 @@ public sealed class SubjectDetector : ISubjectDetector {
     // person/product boxes, saliency — deliberately not built out yet. Extend it here rather than
     // scattering real-life special cases through the detection pipeline.
     private SubjectDetectionResult HeroDetectionOnSteroids(Mat bgrImage, SubjectSeedHint seed) {
-        return this.RunPass(bgrImage, this.cfg.RealLifeAnalysisSize, this.IsClaheWorthwhile(seed),
+        return this.RunPass(bgrImage, this.cfg.RealLifeAnalysisSize, IsClaheWorthwhile(seed),
             this.cfg.RealLifeMinComponentAreaRatio, this.cfg.StudioSweepSpeckleKernel, out _);
     }
 
     private SubjectDetectionResult RunPass(Mat bgrImage, int analysisSize, bool useClahe, double minComponentRatio, int speckleKernel, out double ringResidual) {
         int origW = bgrImage.Cols, origH = bgrImage.Rows;
         double scale = Math.Min(1.0, (double)analysisSize / Math.Max(origH, origW));
-        using Mat small = this.ScaleForAnalysis(bgrImage, scale);
+        using Mat small = ScaleForAnalysis(bgrImage, scale);
 
         using Mat mask = this.BuildForegroundMask(small, useClahe, speckleKernel, out bool hasHardShadow, out double strippedFraction, out ringResidual);
         Rect? box = this.SignificantComponentsBox(mask, minComponentRatio);
         (bool top, bool bottom, bool left, bool right) = this.CanvasContacts(mask);
-        byte[] maskPng = this.EncodeMaskPng(mask, origW, origH);
+        byte[] maskPng = EncodeMaskPng(mask, origW, origH);
 
         SubjectDetectionResult detection = new() {
             Producer = "classical-cv",
@@ -104,7 +104,7 @@ public sealed class SubjectDetector : ISubjectDetector {
         }
 
         detection.Box = RescaleBox(box.Value, scale, origW, origH);
-        detection.Confidence = this.BoxCoverageConfidence(mask, box.Value);
+        detection.Confidence = BoxCoverageConfidence(mask, box.Value);
         detection.IsWholeFrameFallback = false;
         return detection;
     }
@@ -113,8 +113,7 @@ public sealed class SubjectDetector : ISubjectDetector {
     // colour is measured as clearly different from the background, chroma already separates them and CLAHE
     // is superfluous, so it is skipped along with its cost. Unknown colours keep it on: an unmeasured
     // signal is not evidence of contrast, and silently weakening detection is the worse failure.
-    private static bool IsClaheWorthwhile(SubjectSeedHint? seed)
-    {
+    private static bool IsClaheWorthwhile(SubjectSeedHint? seed) {
         if (seed is null) return true;
         if (seed.EffectiveProductColor is null || seed.BackgroundColor is null) return true;
         return seed.ProductNearBackground;
@@ -125,8 +124,7 @@ public sealed class SubjectDetector : ISubjectDetector {
 
     // ---- Detection pipeline ----
 
-    private static Mat ScaleForAnalysis(Mat bgr, double scale)
-    {
+    private static Mat ScaleForAnalysis(Mat bgr, double scale) {
         if (scale >= 1.0) return bgr.Clone();
         int w = Math.Max(8, (int)(bgr.Cols * scale));
         int h = Math.Max(8, (int)(bgr.Rows * scale));
@@ -142,8 +140,8 @@ public sealed class SubjectDetector : ISubjectDetector {
         (Mat chromaA, Mat chromaB, Mat texture) = this.BuildAnalysisLayers(bgr, useClahe);
         List<Point> ring = this.RingCoords(w, h);
 
-        using Mat backgroundA = this.EvaluatePlane(this.FitBackgroundPlane(chromaA, ring, w, h), w, h);
-        using Mat backgroundB = this.EvaluatePlane(this.FitBackgroundPlane(chromaB, ring, w, h), w, h);
+        using Mat backgroundA = EvaluatePlane(FitBackgroundPlane(chromaA, ring, w, h), w, h);
+        using Mat backgroundB = EvaluatePlane(FitBackgroundPlane(chromaB, ring, w, h), w, h);
 
         using Mat deltaA = new(); using Mat deltaB = new();
         Cv2.Subtract(chromaA, backgroundA, deltaA);
@@ -174,7 +172,7 @@ public sealed class SubjectDetector : ISubjectDetector {
         using Mat textureOnly = new();
         Cv2.BitwiseAnd(textureMask, notChroma, textureOnly);
         using Mat textureOnlyOpened = MorphOpen(textureOnly, this.cfg.ShadowEdgeKernel);
-        strippedFraction = this.StrippedFraction(textureOnly, textureOnlyOpened, w * h);
+        strippedFraction = StrippedFraction(textureOnly, textureOnlyOpened, w * h);
         hasHardShadow = strippedFraction >= this.cfg.HardShadowEvidenceFraction;
 
         Mat mask = new();
@@ -348,8 +346,7 @@ public sealed class SubjectDetector : ISubjectDetector {
 
     // ---- Background-plane fit ----
 
-    private static (double c0, double c1, double c2) FitBackgroundPlane(Mat channel, List<Point> ring, int w, int h)
-    {
+    private static (double c0, double c1, double c2) FitBackgroundPlane(Mat channel, List<Point> ring, int w, int h) {
         if (ring.Count < MinRingSamplesForPlaneFit) {
             float[] values = CollectRingValues(channel, ring);
             return (Median(values), 0.0, 0.0);
@@ -367,8 +364,7 @@ public sealed class SubjectDetector : ISubjectDetector {
         return Solve3x3(n, sx, sy, sxx, sxy, syy, sv, sxv, syv);
     }
 
-    private static Mat EvaluatePlane((double c0, double c1, double c2) plane, int w, int h)
-    {
+    private static Mat EvaluatePlane((double c0, double c1, double c2) plane, int w, int h) {
         using Mat xRow = new(1, w, MatType.CV_32F);
         using Mat yCol = new(h, 1, MatType.CV_32F);
         double halfW = w / 2.0, halfH = h / 2.0;
@@ -398,8 +394,7 @@ public sealed class SubjectDetector : ISubjectDetector {
         return coords;
     }
 
-    private static double StrippedFraction(Mat before, Mat after, int area)
-    {
+    private static double StrippedFraction(Mat before, Mat after, int area) {
         using Mat notAfter = new();
         Cv2.BitwiseNot(after, notAfter);
         using Mat stripped = new();
@@ -407,15 +402,13 @@ public sealed class SubjectDetector : ISubjectDetector {
         return area <= 0 ? 0.0 : (double)Cv2.CountNonZero(stripped) / area;
     }
 
-    private static double BoxCoverageConfidence(Mat mask, Rect box)
-    {
+    private static double BoxCoverageConfidence(Mat mask, Rect box) {
         using Mat region = new(mask, box);
         double coverage = (double)Cv2.CountNonZero(region) / Math.Max(1, box.Width * box.Height);
         return Math.Clamp(coverage, MinBoxCoverageConfidence, 1.0);
     }
 
-    private static byte[] EncodeMaskPng(Mat mask, int origW, int origH)
-    {
+    private static byte[] EncodeMaskPng(Mat mask, int origW, int origH) {
         using Mat full = new();
         Cv2.Resize(mask, full, new Size(origW, origH), interpolation: InterpolationFlags.Nearest);
         Cv2.ImEncode(".png", full, out byte[] png);
