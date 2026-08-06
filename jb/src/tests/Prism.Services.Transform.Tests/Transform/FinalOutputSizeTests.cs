@@ -84,7 +84,14 @@ public class FinalOutputSizeTests {
     }
 
     private static BoundingBox BoxOf(int width, int height) => new() {
-        X = 10, Y = 10, Width = width, Height = height, Left = 10, Top = 10, Right = 10 + width, Bottom = 10 + height
+        X = 10,
+        Y = 10,
+        Width = width,
+        Height = height,
+        Left = 10,
+        Top = 10,
+        Right = 10 + width,
+        Bottom = 10 + height
     };
 
     private static ImageRecord_LAMBDA Lambda(BoundingBox box, bool intersects) {

@@ -20,10 +20,15 @@ public class TransformEvidenceTests {
     [Fact]
     public void Evidence_RecordsSubjectAndToggles_InSafeSummary() {
         ImageRecord_LAMBDA lambda = new() {
-            InitialFullName = "img.jpg", Width = 1000, Height = 1000,
+            InitialFullName = "img.jpg",
+            Width = 1000,
+            Height = 1000,
             SelectedPhenotype = "front-packshot",
             Subject = new SubjectDetectionResult {
-                Producer = "classical-cv", IsWholeFrameFallback = false, Confidence = 0.9, HasHardShadowEvidence = true,
+                Producer = "classical-cv",
+                IsWholeFrameFallback = false,
+                Confidence = 0.9,
+                HasHardShadowEvidence = true,
                 MaskPng = [1, 2, 3],
                 Box = new BoundingBox { X = 100, Y = 100, Width = 800, Height = 800, Left = 100, Top = 100, Right = 900, Bottom = 900 }
             }

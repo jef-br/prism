@@ -26,7 +26,10 @@ public class SubjectGeometryRoutingTests {
     [Fact]
     public void ConfidentSubject_PromotesBox_EvenWhenBoundingBoxNull() {
         ImageRecord_LAMBDA lambda = new() {
-            InitialFullName = "img.jpg", Width = 1000, Height = 1000, BoundingBox = null,
+            InitialFullName = "img.jpg",
+            Width = 1000,
+            Height = 1000,
+            BoundingBox = null,
             SelectedPhenotype = Phenotype,
             Subject = Subject(intersect: false, wholeFrameFallback: false)
         };
@@ -41,7 +44,10 @@ public class SubjectGeometryRoutingTests {
     [Fact]
     public void ConfidentSubject_WithIntersect_RoutesToCropSquare() {
         ImageRecord_LAMBDA lambda = new() {
-            InitialFullName = "img.jpg", Width = 1000, Height = 1000, BoundingBox = null,
+            InitialFullName = "img.jpg",
+            Width = 1000,
+            Height = 1000,
+            BoundingBox = null,
             SelectedPhenotype = Phenotype,
             Subject = Subject(intersect: true, wholeFrameFallback: false)
         };
@@ -57,7 +63,10 @@ public class SubjectGeometryRoutingTests {
         // The phenotype is set deliberately: without it Step 1 would fire on the null phenotype and
         // the test would pass whether or not the whole-frame fallback was actually suppressed.
         ImageRecord_LAMBDA lambda = new() {
-            InitialFullName = "img.jpg", Width = 1000, Height = 1000, BoundingBox = null,
+            InitialFullName = "img.jpg",
+            Width = 1000,
+            Height = 1000,
+            BoundingBox = null,
             SelectedPhenotype = Phenotype,
             Subject = Subject(intersect: false, wholeFrameFallback: true)
         };
@@ -72,7 +81,10 @@ public class SubjectGeometryRoutingTests {
     public void BelowFloorConfidence_SubjectNotPromoted_LegacyBoxStands() {
         BoundingBox legacyBox = new() { X = 50, Y = 50, Width = 400, Height = 400, Left = 50, Top = 50, Right = 450, Bottom = 450 };
         ImageRecord_LAMBDA lambda = new() {
-            InitialFullName = "img.jpg", Width = 1000, Height = 1000, BoundingBox = legacyBox,
+            InitialFullName = "img.jpg",
+            Width = 1000,
+            Height = 1000,
+            BoundingBox = legacyBox,
             SelectedPhenotype = Phenotype,
             Subject = Subject(intersect: false, wholeFrameFallback: false, confidence: 0.20)
         };
@@ -88,7 +100,10 @@ public class SubjectGeometryRoutingTests {
     public void AboveFloorConfidence_SubjectIsPromoted() {
         BoundingBox legacyBox = new() { X = 50, Y = 50, Width = 400, Height = 400, Left = 50, Top = 50, Right = 450, Bottom = 450 };
         ImageRecord_LAMBDA lambda = new() {
-            InitialFullName = "img.jpg", Width = 1000, Height = 1000, BoundingBox = legacyBox,
+            InitialFullName = "img.jpg",
+            Width = 1000,
+            Height = 1000,
+            BoundingBox = legacyBox,
             SelectedPhenotype = Phenotype,
             Subject = Subject(intersect: false, wholeFrameFallback: false, confidence: 0.50)
         };

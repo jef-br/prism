@@ -67,11 +67,18 @@ public class SubjectPromotionConsistencyTests {
 
     private static ImageRecord_LAMBDA StaleSnapshot(bool top, bool bottom, bool left, bool right, double confidence = 0.9) {
         ImageRecord_LAMBDA lambda = new() {
-            InitialFullName = "img.jpg", Width = 1000, Height = 1000,
+            InitialFullName = "img.jpg",
+            Width = 1000,
+            Height = 1000,
             SelectedPhenotype = "front-packshot",
             Subject = new SubjectDetectionResult {
-                Producer = "classical-cv", IsWholeFrameFallback = false, Confidence = confidence,
-                IntersectsTop = top, IntersectsBottom = bottom, IntersectsLeft = left, IntersectsRight = right,
+                Producer = "classical-cv",
+                IsWholeFrameFallback = false,
+                Confidence = confidence,
+                IntersectsTop = top,
+                IntersectsBottom = bottom,
+                IntersectsLeft = left,
+                IntersectsRight = right,
                 Box = new BoundingBox { X = 100, Y = 100, Width = 800, Height = 800, Left = 100, Top = 100, Right = 900, Bottom = 900 }
             }
         };

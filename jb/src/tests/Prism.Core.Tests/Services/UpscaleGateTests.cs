@@ -178,7 +178,14 @@ public class UpscaleGateTests : IDisposable {
     }
 
     private static BoundingBox BoxOf(int x, int y, int width, int height) => new() {
-        X = x, Y = y, Width = width, Height = height, Left = x, Top = y, Right = x + width, Bottom = y + height
+        X = x,
+        Y = y,
+        Width = width,
+        Height = height,
+        Left = x,
+        Top = y,
+        Right = x + width,
+        Bottom = y + height
     };
 
     private static ImageRecord_LAMBDA Lambda(BoundingBox box, bool intersects) => new() {

@@ -51,9 +51,14 @@ public class TransformTogglesTests {
     [Fact]
     public void ShadowAccounting_TrimsBoxBottom_WhenNotIntersectingBottom() {
         ImageRecord_LAMBDA lambda = new() {
-            InitialFullName = "c.jpg", Width = 1000, Height = 1000,
+            InitialFullName = "c.jpg",
+            Width = 1000,
+            Height = 1000,
             Subject = new SubjectDetectionResult {
-                Producer = "classical-cv", IsWholeFrameFallback = false, Confidence = 0.9, HasHardShadowEvidence = true,
+                Producer = "classical-cv",
+                IsWholeFrameFallback = false,
+                Confidence = 0.9,
+                HasHardShadowEvidence = true,
                 Box = new BoundingBox { X = 100, Y = 100, Width = 800, Height = 800, Left = 100, Top = 100, Right = 900, Bottom = 900 }
             }
         };
@@ -69,9 +74,14 @@ public class TransformTogglesTests {
     [Fact]
     public void NoShadowEvidence_LeavesBoxUnchanged() {
         ImageRecord_LAMBDA lambda = new() {
-            InitialFullName = "d.jpg", Width = 1000, Height = 1000,
+            InitialFullName = "d.jpg",
+            Width = 1000,
+            Height = 1000,
             Subject = new SubjectDetectionResult {
-                Producer = "classical-cv", IsWholeFrameFallback = false, Confidence = 0.9, HasHardShadowEvidence = false,
+                Producer = "classical-cv",
+                IsWholeFrameFallback = false,
+                Confidence = 0.9,
+                HasHardShadowEvidence = false,
                 Box = new BoundingBox { X = 100, Y = 100, Width = 800, Height = 800, Left = 100, Top = 100, Right = 900, Bottom = 900 }
             }
         };
@@ -87,10 +97,15 @@ public class TransformTogglesTests {
     [Fact]
     public void ShadowAccounting_CropSquareRoute_LeavesBoxUnshrunk() {
         ImageRecord_LAMBDA lambda = new() {
-            InitialFullName = "e.jpg", Width = 1000, Height = 1000,
+            InitialFullName = "e.jpg",
+            Width = 1000,
+            Height = 1000,
             SelectedPhenotype = "front-packshot",
             Subject = new SubjectDetectionResult {
-                Producer = "classical-cv", IsWholeFrameFallback = false, Confidence = 0.9, HasHardShadowEvidence = true,
+                Producer = "classical-cv",
+                IsWholeFrameFallback = false,
+                Confidence = 0.9,
+                HasHardShadowEvidence = true,
                 IntersectsLeft = true,
                 Box = new BoundingBox { X = 0, Y = 100, Width = 800, Height = 800, Left = 0, Top = 100, Right = 800, Bottom = 900 }
             }

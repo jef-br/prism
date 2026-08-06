@@ -113,18 +113,20 @@ public sealed class SubjectDetector : ISubjectDetector {
     // colour is measured as clearly different from the background, chroma already separates them and CLAHE
     // is superfluous, so it is skipped along with its cost. Unknown colours keep it on: an unmeasured
     // signal is not evidence of contrast, and silently weakening detection is the worse failure.
-    private bool IsClaheWorthwhile(SubjectSeedHint? seed) {
+    private static bool IsClaheWorthwhile(SubjectSeedHint? seed)
+    {
         if (seed is null) return true;
         if (seed.EffectiveProductColor is null || seed.BackgroundColor is null) return true;
         return seed.ProductNearBackground;
     }
 
-    private bool IsKnownRealLife(SubjectSeedHint seed) =>
+    private static bool IsKnownRealLife(SubjectSeedHint seed) =>
         string.Equals(seed.BackgroundType, "REALLIFE", StringComparison.OrdinalIgnoreCase);
 
     // ---- Detection pipeline ----
 
-    private Mat ScaleForAnalysis(Mat bgr, double scale) {
+    private static Mat ScaleForAnalysis(Mat bgr, double scale)
+    {
         if (scale >= 1.0) return bgr.Clone();
         int w = Math.Max(8, (int)(bgr.Cols * scale));
         int h = Math.Max(8, (int)(bgr.Rows * scale));
@@ -346,7 +348,8 @@ public sealed class SubjectDetector : ISubjectDetector {
 
     // ---- Background-plane fit ----
 
-    private (double c0, double c1, double c2) FitBackgroundPlane(Mat channel, List<Point> ring, int w, int h) {
+    private static (double c0, double c1, double c2) FitBackgroundPlane(Mat channel, List<Point> ring, int w, int h)
+    {
         if (ring.Count < MinRingSamplesForPlaneFit) {
             float[] values = CollectRingValues(channel, ring);
             return (Median(values), 0.0, 0.0);
@@ -364,7 +367,8 @@ public sealed class SubjectDetector : ISubjectDetector {
         return Solve3x3(n, sx, sy, sxx, sxy, syy, sv, sxv, syv);
     }
 
-    private Mat EvaluatePlane((double c0, double c1, double c2) plane, int w, int h) {
+    private static Mat EvaluatePlane((double c0, double c1, double c2) plane, int w, int h)
+    {
         using Mat xRow = new(1, w, MatType.CV_32F);
         using Mat yCol = new(h, 1, MatType.CV_32F);
         double halfW = w / 2.0, halfH = h / 2.0;
@@ -394,7 +398,8 @@ public sealed class SubjectDetector : ISubjectDetector {
         return coords;
     }
 
-    private double StrippedFraction(Mat before, Mat after, int area) {
+    private static double StrippedFraction(Mat before, Mat after, int area)
+    {
         using Mat notAfter = new();
         Cv2.BitwiseNot(after, notAfter);
         using Mat stripped = new();
@@ -402,13 +407,15 @@ public sealed class SubjectDetector : ISubjectDetector {
         return area <= 0 ? 0.0 : (double)Cv2.CountNonZero(stripped) / area;
     }
 
-    private double BoxCoverageConfidence(Mat mask, Rect box) {
+    private static double BoxCoverageConfidence(Mat mask, Rect box)
+    {
         using Mat region = new(mask, box);
         double coverage = (double)Cv2.CountNonZero(region) / Math.Max(1, box.Width * box.Height);
         return Math.Clamp(coverage, MinBoxCoverageConfidence, 1.0);
     }
 
-    private byte[] EncodeMaskPng(Mat mask, int origW, int origH) {
+    private static byte[] EncodeMaskPng(Mat mask, int origW, int origH)
+    {
         using Mat full = new();
         Cv2.Resize(mask, full, new Size(origW, origH), interpolation: InterpolationFlags.Nearest);
         Cv2.ImEncode(".png", full, out byte[] png);
@@ -422,7 +429,10 @@ public sealed class SubjectDetector : ISubjectDetector {
         Producer = "classical-cv",
         Box = FullBox(w, h),
         Confidence = confidence,
-        IntersectsTop = true, IntersectsBottom = true, IntersectsLeft = true, IntersectsRight = true
+        IntersectsTop = true,
+        IntersectsBottom = true,
+        IntersectsLeft = true,
+        IntersectsRight = true
     };
 
     private static double EdgeCoverage(Mat edge) => (double)Cv2.CountNonZero(edge) / Math.Max(1, edge.Rows * edge.Cols);
@@ -530,7 +540,14 @@ public sealed class SubjectDetector : ISubjectDetector {
     }
 
     private static BoundingBox FullBox(int w, int h) => new() {
-        X = 0, Y = 0, Width = w, Height = h, Left = 0, Top = 0, Right = w, Bottom = h
+        X = 0,
+        Y = 0,
+        Width = w,
+        Height = h,
+        Left = 0,
+        Top = 0,
+        Right = w,
+        Bottom = h
     };
 
     private static BoundingBox RescaleBox(Rect box, double scale, int origW, int origH) {
