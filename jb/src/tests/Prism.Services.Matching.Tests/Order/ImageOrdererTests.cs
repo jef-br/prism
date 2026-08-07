@@ -172,9 +172,9 @@ public class ImageOrdererTests {
 
     [Fact]
     public void Run_TieBreakerBySourceIndex_IdenticalFilenamesFallBackToImportOrder() {
-        // Two images can genuinely share a filename — a ZIP holding folderA/img.jpg and folderB/img.jpg keeps
-        // only the leaf name — and that is the one case where the sort exhausts every signal and lands on
-        // import order.
+        // Two images can genuinely arrive under the same path — the same leaf name submitted loose twice —
+        // and that is the one case where the sort exhausts every signal and lands on import order. Distinct
+        // folders no longer reach here: the path is part of the compared string.
         ImageRecord_LAMBDA first = MakeLambda("img.jpg", "front-packshot", "FAM001");
         SetFeatureCount(first, 2);
 
@@ -419,6 +419,44 @@ public class ImageOrdererTests {
         Assert.Equal(8, records.Min(r => r.DetOrder));
         Assert.Equal(19, records.Max(r => r.DetOrder));
         Assert.All(records, r => Assert.True(r.OrderEvidence!.IsOverflow));
+    }
+
+    //  Folder tokens count as filename hints
+
+    [Fact]
+    public void FilenameMatchesSlotKeyword_FolderSegment_CountsAsAToken() {
+        // ZIP and folder ingress keep the relative path in InitialFullName, so a "detail" folder carries
+        // the same intent a "_detail" filename token does.
+        DetOrderConfig config = DetOrderConfig.Load(RulesPath, StemsPath);
+
+        Assert.True(config.FilenameMatchesSlotKeyword("images/detail/98765432/1.jpg", "detail"));
+        Assert.True(config.FilenameMatchesSlotKeyword("images/front/98765432/1.jpg", "front"));
+        Assert.False(config.FilenameMatchesSlotKeyword("images/detail/98765432/1.jpg", "front"));
+    }
+
+    [Fact]
+    public void FilenameMatchesSlotKeyword_OnlyTheTrailingExtensionIsStripped() {
+        // A dotted folder name must not lose a segment: "v1.2/front/a.jpg" still hints front.
+        DetOrderConfig config = DetOrderConfig.Load(RulesPath, StemsPath);
+
+        Assert.True(config.FilenameMatchesSlotKeyword("batch.v1.2/front/a.jpg", "front"));
+    }
+
+    [Fact]
+    public void Run_FolderHint_BreaksATieBetweenTwoImagesContestingOneSlot() {
+        // Two identical front-packshot candidates for det0; only the folder path separates them.
+        ImageRecord_LAMBDA hinted = MakeLambda("shots/front/b.jpg", "front-packshot", "FAM001");
+        SetFeatureCount(hinted, 2);
+
+        ImageRecord_LAMBDA plain = MakeLambda("shots/misc/a.jpg", "front-packshot", "FAM001");
+        SetFeatureCount(plain, 2);
+
+        List<ImageRecord_LAMBDA> records = [plain, hinted];
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
+
+        Assert.Equal(0, hinted.DetOrder);
+        Assert.Equal("filename-hint", hinted.OrderEvidence!.TieBreakerWon);
+        Assert.True(plain.OrderEvidence!.IsOverflow);
     }
 
     [Fact]

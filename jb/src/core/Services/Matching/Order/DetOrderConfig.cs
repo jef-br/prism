@@ -62,18 +62,22 @@ public sealed class DetOrderConfig {
         => this.slotsByProductType.ContainsKey(key);
 
     /// <summary>
-    /// Returns true when any token in the filename stem matches a known stem for the keyword.
-    /// Splits on <c>_</c>, <c>-</c>, space, and <c>.</c>; compares case-insensitively.
-    /// Returns false when the keyword is not present in the stems dictionary.
+    /// Returns true when any token in the path matches a known stem for the keyword.
+    /// Tokenizes the whole of <c>InitialFullName</c>, folder segments included — ZIP and folder ingress
+    /// preserve the relative path, and a <c>details/</c> or <c>front/</c> folder carries the same intent
+    /// a filename token does. Splits on <c>/</c>, <c>\</c>, <c>_</c>, <c>-</c>, space, and <c>.</c>;
+    /// compares case-insensitively. Returns false when the keyword is not in the stems dictionary.
     /// </summary>
-    /// <param name="filename">Original filename (may include extension).</param>
+    /// <param name="filename">Original relative path or filename (may include extension).</param>
     /// <param name="keyword">Keyword from a slot rule (e.g. "front", "back").</param>
     public bool FilenameMatchesSlotKeyword(string filename, string keyword) {
         if (!this.stemsByKeyword.TryGetValue(keyword, out List<string>? stems))
             return false;
 
-        string stemName = Path.GetFileNameWithoutExtension(filename);
-        string[] tokens = stemName.Split(['_', '-', ' ', '.'], StringSplitOptions.RemoveEmptyEntries);
+        // Strip only the trailing extension — folder segments may contain dots of their own.
+        string extension = Path.GetExtension(filename);
+        string pathStem = extension.Length > 0 ? filename[..^extension.Length] : filename;
+        string[] tokens = pathStem.Split(['/', '\\', '_', '-', ' ', '.'], StringSplitOptions.RemoveEmptyEntries);
 
         foreach (string token in tokens) {
             if (stems.Contains(token.ToLowerInvariant()))

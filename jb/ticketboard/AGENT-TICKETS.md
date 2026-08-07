@@ -33,6 +33,7 @@ user-facing summaries.
 | [T-5090](T-5090.md) | Ready | SubstringRescue invents evidence from shot numbers | Evaluate every rescue token and KO on contradiction instead of returning on the first |
 | [T-5100](T-5100.md) | Ready | Bracket 3 steals a neighbour's family | Refuse a match when a discriminating filename token resolves to no family |
 | [T-5110](T-5110.md) | Ready | Filename-in-cell never fires | Scan cell text for filename tokens instead of taking the basename of the whole cell |
+| [T-5120](T-5120.md) | Blocked | Filename and folder tokens should feed phenotyping | Resolve the `pack`/`packshot` keyword collision first; start only on a clean, green, roomy session |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.
