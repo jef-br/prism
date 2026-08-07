@@ -13,7 +13,8 @@ user-facing summaries.
 
 | Ticket | Status | Title | Do this next |
 |---|---|---|---|
-| [T-2600](T-2600.md) | Blocked | M5 Classify groundwork | Land T-5070 and T-5080, then re-score JBComplete's 99 labelled rows |
+| [T-2600](T-2600.md) | Blocked | M5 Classify groundwork | Land T-5070 and T-5080, then re-score CiMini's 99 labelled rows |
+| [T-2840](T-2840.md) | Ready | CLIP result differs by submission transport (T-2820 recurrence) | Run the isolated-batch experiment; confirm or rule out CLIP batch-composition sensitivity |
 | [T-3800](T-3800.md) | Blocked | Match bracket validation | Author a Bracket-4 image and a reference-free fuzzy-colour image; no dataset has either |
 | [T-4000](T-4000.md) | Ready | Analyzer calibration backlog | Split the 11 analyzer calibration questions into their own tickets, one at a time |
 | [T-4942](T-4942.md) | Review | Test projects fight over the GPU | Confirm `-m:1` + the 500-test CI floor on a real CI run, then close |
@@ -107,7 +108,7 @@ lives in this file — everything else stays in the ticket file.
 | M8 Product & Packaging | **Superseded** — `product-type-label`, `multiple-products` real; `packaging-visible` removed ([[T-4700]]) | Re-defined only if `packaging-visible` returns |
 | M9 Composition & Spatial | `product-coverage-ratio`, `image-occupancy`, `salient-bbox`, `vertical-centering`, `horizontal-centering` | Composition phenotypes measured; overflow slot assignment accuracy confirmed |
 | M10 Semantic & Content | **Superseded** — `dominant-colors` real (no phenotype rule consumes it yet); `text-present`, `logo-present`, `lighting` removed ([[T-4700]]) | Re-defined only if the removed features return |
-| M11 Production Validation | All 18 phenotypes | < 5% misassignment on a labeled validation set; no systematic error on any single phenotype. **Measured 2026-08-05 on `JBComplete/expected-phenotype.json` (99 rows, the labeled set): 30.3% misassignment, 39.4% coverage, `front-packshot` recall 0/25.** SPACINI29's 4.7% is not a pass — it only exercises 2 of the 18. Blocked on [[T-5070]] + [[T-5080]] |
+| M11 Production Validation | All 18 phenotypes | < 5% misassignment on a labeled validation set; no systematic error on any single phenotype. **Measured 2026-08-05 on `test/datasets/CiMini/expected-phenotype.json` (99 rows, the labeled set; measured as JBComplete before the 2026-08-06 CiGolden/JBComplete → CiMini merge): 30.3% misassignment, 39.4% coverage, `front-packshot` recall 0/25.** SPACINI29's 4.7% is not a pass — it only exercises 2 of the 18. Blocked on [[T-5070]] + [[T-5080]] |
 
 ## Verification Rules
 
