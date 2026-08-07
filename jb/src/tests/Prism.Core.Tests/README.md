@@ -68,8 +68,9 @@ Model-dependent tests need the ONNX assets. On a machine without the source-tree
 ## Fixture Data
 
 Tests use `test/datasets/CiMini/` — the **only committed dataset** (the rest of `test/datasets/` is
-gitignored). It holds 11 JPGs plus `ci-mini.xlsx`, and is paired with committed golden expectations
-(`expected-match.json`, `expected-manifest.json`).
+gitignored). It holds 97 loose images (jpg/png, some in subfolders) plus a 3-member zip and
+`Brackets-Complete.xlsx`, and is paired with committed golden expectations (`expected-match.json`,
+`expected-manifest.json`, `expected-phenotype.json`).
 
 `PipelineFixture.ResolveTestFixturePath()` finds it by walking up from the test assembly looking for a
 `test/datasets` folder containing `CiMini` — no hardcoded absolute path, so it resolves on any checkout

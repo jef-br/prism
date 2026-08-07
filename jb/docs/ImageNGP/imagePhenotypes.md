@@ -190,7 +190,7 @@ Deleting them cost nothing operationally: every det slot that listed a ghost phe
 its packshot equivalent, so no slot lost its filler and no image changed slot.
 
 **To bring them back** you need a signal for *does the garment hold a worn 3D shape*. That is a real
-visual property — `test/datasets/JBComplete/README.md` §4.3 names three cues a human used to separate
+visual property — `test/datasets/CiMini/README.md` §4.3 names three cues a human used to separate
 the two at ~700 px: the waistband holds an open rounded form instead of collapsing to two flat edges,
 the legs carry internal volume, and there are shadows *inside* the garment opening. No analyzer is
 specified for it, and every ghost rule also gated on `hero-orientation`, which is not reliable today

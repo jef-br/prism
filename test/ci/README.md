@@ -84,7 +84,8 @@ Both run on `runs-on: [self-hosted, windows]`.
 ## The CiMini golden fixture
 
 `test/datasets/CiMini/` is the only committed dataset (the rest of `test/datasets/` is gitignored). It
-is small (<30 MB), deterministic, and paired with committed **golden** expectations:
+is ~64 MB (100 sources: 97 loose images + a 3-member zip), deterministic, and paired with committed
+**golden** expectations:
 
 - `expected-match.json` — `SourceReference -> FamilyId`, asserted by `-Mode Match`.
 - `expected-manifest.json` — `Status / FamilyId / FinalFileName / DetOrder` per source, asserted by

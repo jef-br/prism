@@ -17,7 +17,7 @@ public static class ImportSmokeTest {
     /// </param>
     /// <param name="excelFilePath">
     /// Absolute path to an Excel workbook.
-    /// Example: <c>test/datasets/CiMini/ci-mini.xlsx</c>
+    /// Example: <c>test/datasets/CiMini/Brackets-Complete.xlsx</c>
     /// </param>
     /// <param name="configPath">
     /// Absolute path to <c>Prism_Config.json</c>. Pass null to use auto-detection.

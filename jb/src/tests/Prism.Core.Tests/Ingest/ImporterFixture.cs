@@ -34,7 +34,7 @@ public sealed class ImporterFixture : IDisposable {
         modelBuilder = ModelBuilder.FromConfigFile(ConfigLoader.RequireFile("ExcelConfig.json"));
         TempRoot = Path.Combine(Path.GetTempPath(), $"PRISM-INGEST-TESTS-{Guid.NewGuid():N}");
         Directory.CreateDirectory(TempRoot);
-        CiMiniExcelPath = Path.Combine(PipelineFixture.ResolveTestFixturePath(), "CiMini", "ci-mini.xlsx");
+        CiMiniExcelPath = Path.Combine(PipelineFixture.ResolveTestFixturePath(), "CiMini", "Brackets-Complete.xlsx");
     }
 
     public Importer NewImporter() => new(Configuration, modelBuilder);

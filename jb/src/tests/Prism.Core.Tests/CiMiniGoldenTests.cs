@@ -15,24 +15,18 @@ namespace PrismCoreTests;
 /// "every expected file is present in the archive" half of the script's Full mode stays with the
 /// script; that is a packaging assertion, not a pipeline-behaviour one.
 ///
-/// <para><b>Scope difference from the pwsh script, and why it is not silent.</b> The goldens were
-/// captured from a 14-image run: CiMini holds 11 loose JPGs plus <c>3 images.zip</c>, and the script's
-/// <c>Get-PrismJobInputFiles</c> expands that archive while <see cref="PipelineFixture"/> submits only
-/// the loose files. So three golden rows have no counterpart here. They are named explicitly below and
-/// asserted to be exactly the set that is missing — a bare "ignore what is absent" would let a genuine
-/// dropped image hide in the same gap.</para>
+/// <para><b>Full coverage as of 2026-08-06.</b> CiMini's content was replaced wholesale (CiGolden +
+/// JBComplete merged in — see the dataset README's history note); <see cref="PipelineFixture"/> was
+/// widened the same day to submit every loose .jpg/.png (including subfolders) plus the zip archive,
+/// so every golden row now has a counterpart here. Before the merge, the goldens were captured from a
+/// 14-image run (11 loose + <c>3 images.zip</c>) and the fixture submitted loose files only, so three
+/// zip-only rows had no counterpart. That gap is closed now, not just widened — see git history for
+/// the old <c>ZipOnlySources</c> exclusion list if it ever needs resurrecting.</para>
 /// </summary>
 public class CiMiniGoldenTests : IClassFixture<PipelineFixture> {
     // Data-driven KO reasons the CI script also tolerates — a visual duplicate is a property of the
     // fixture, not a defect, and must not fail the build. Kept in sync with Invoke-CiPipeline.ps1.
     private static readonly string[] ToleratedKo = ["VISUAL_DUPLICATE"];
-
-    // The three golden rows that live inside CiMini/"3 images.zip". PipelineFixture submits loose
-    // files only, so these cannot appear in its manifest. Listed by name so that if the fixture ever
-    // starts expanding the archive — or a different image goes missing — the coverage test says so.
-    private static readonly string[] ZipOnlySources = [
-        "23231096_35_A.jpg", "24211511_86_A.jpg", "24211511_96_A.jpg"
-    ];
 
     private readonly PipelineFixture fixture;
 
@@ -50,7 +44,6 @@ public class CiMiniGoldenTests : IClassFixture<PipelineFixture> {
         List<string> issues = [];
 
         foreach ((string source, GoldenRow expected) in golden) {
-            if (ZipOnlySources.Contains(source)) continue;   // covered by CiMini_ZipOnlyRows_AreTheOnlyGoldenRowsNotRun
             if (!actual.TryGetValue(source, out ManifestImageRow? row)) {
                 issues.Add($"{source}: expected in manifest, absent from the run");
                 continue;
@@ -70,27 +63,34 @@ public class CiMiniGoldenTests : IClassFixture<PipelineFixture> {
 
         Assert.True(issues.Count == 0,
             $"{issues.Count} golden mismatch(es) against expected-manifest.json:\n  {string.Join("\n  ", issues)}\n\n" +
-            "KNOWN-RED: family 94613033 only. T-5060 fixed family 90861052 (compaction now orders on the "
-            + "configured-slot axis, so overflow images keep their anchor position instead of being pushed "
-            + "behind every configured slot). What is left is upstream of ordering: CLIP reads all three "
-            + "Pareo images as BACK at 0.35-0.48 confidence, so the packshot claims bottomwear det1 and the "
-            + "two on-model shots the filenames call front (_F1, _F2) land at det5 and overflow. That is "
-            + "T-4970's orientation-argmax error class, tracked by T-5080 — ordering has no way to fix it. "
-            + "Do NOT re-bless expected-manifest.json to clear this: the golden's order is the correct one, "
-            + "and this assertion is the only thing making the defect visible.");
+            "KNOWN-RED (pre-2026-08-06 merge): family 94613033 only. T-5060 fixed family 90861052 "
+            + "(compaction now orders on the configured-slot axis, so overflow images keep their anchor "
+            + "position instead of being pushed behind every configured slot). What is left is upstream of "
+            + "ordering: CLIP reads all three Pareo images as BACK at 0.35-0.48 confidence, so the packshot "
+            + "claims bottomwear det1 and the two on-model shots the filenames call front (_F1, _F2) land at "
+            + "det5 and overflow. That is T-4970's orientation-argmax error class, tracked by T-5080 — "
+            + "ordering has no way to fix it.\n\n"
+            + "KNOWN-RED (2026-08-06 merge, PipelineFixture widening): 4 more families — 99985047 "
+            + "(26182-Denim-801/a (1).jpg vs 87186790_2.jpg), 99147525 (3 C153KB460011_*.png files), and "
+            + "98636303 (OMB-E180-BV_1/2/3.jpg). CLIP produces different classification output for the same "
+            + "images depending on submission transport (PipelineFixture's direct in-process call vs "
+            + "Invoke-CiPipeline.ps1's HTTP multipart+zip-repack), close enough to the 0.33 orientation "
+            + "threshold to flip which image wins a tied slot. Root cause under investigation: [[T-2840]] "
+            + "(a T-2820 recurrence, now confirmed cross-transport rather than same-transport-flaky).\n\n"
+            + "Do NOT re-bless expected-manifest.json to clear either category: the golden's order is the "
+            + "correct one, and this assertion is the only thing making these defects visible.");
     }
 
     [Fact]
-    public void CiMini_ZipOnlyRows_AreTheOnlyGoldenRowsNotRun() {
-        // Guards the direction the per-row loop cannot: a run that silently drops images would
-        // otherwise pass every comparison it did make. Pinning the absent set by name rather than
-        // just its size means swapping one dropped image for another still fails.
+    public void CiMini_NoGoldenRowsAreMissingFromTheRun() {
+        // Guards the direction the per-row loop in CiMini_Manifest_MatchesCommittedGolden cannot: a
+        // run that silently drops images would otherwise pass every comparison it did make. Every
+        // golden row has a counterpart here since PipelineFixture submits the whole dataset (loose
+        // .jpg/.png, subfolders, and the zip archive) — nothing should ever be absent.
         Dictionary<string, GoldenRow> golden = LoadGolden("expected-manifest.json");
         Dictionary<string, ManifestImageRow> actual = ActualRows();
 
-        List<string> absent = [.. golden.Keys.Where(k => !actual.ContainsKey(k)).OrderBy(k => k, StringComparer.Ordinal)];
-        List<string> expectedAbsent = [.. ZipOnlySources.OrderBy(k => k, StringComparer.Ordinal)];
-        Assert.Equal(expectedAbsent, absent);
+        Assert.Empty(golden.Keys.Where(k => !actual.ContainsKey(k)));
 
         // Nothing may appear in the run that the golden does not describe.
         Assert.Empty(actual.Keys.Where(k => !golden.ContainsKey(k)));
@@ -106,7 +106,6 @@ public class CiMiniGoldenTests : IClassFixture<PipelineFixture> {
 
         List<string> issues = [];
         foreach ((string source, GoldenRow expected) in golden) {
-            if (ZipOnlySources.Contains(source)) continue;
             if (!actual.TryGetValue(source, out ManifestImageRow? row)) continue;
             if (row.Status == "Ko" && row.KoReasonCode is { } code && ToleratedKo.Contains(code)) continue;
             if (!NullableEquals(expected.FamilyId, row.FamilyId))

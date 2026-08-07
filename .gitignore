@@ -8,8 +8,6 @@
 # Test datasets — only the committed fixtures are tracked (see each folder's README.md)
 test/datasets/*
 !test/datasets/CiMini
-!test/datasets/CiGolden
-!test/datasets/JBComplete
 
 # Knowledge graph output (generated locally by graphify)
 graphify-out/

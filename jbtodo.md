@@ -35,10 +35,15 @@
   in the filename joined together, and two photos of the same cardigan where the second one's name
   alone means nothing but it inherits the product from the first because they clearly go together.
 
-  **Six more cases closed by `test/datasets/JBComplete/` (checked against a real run, 2026-08-05).**
-  That dataset is committed to git (102 files) — the note further down this file that
-  `test/datasets/*` is gitignored except CiMini is stale. The bullets below were removed from this
-  list because a real image now exercises each one:
+  **Done, 2026-08-06 — this is no longer "six more cases closed by a separate dataset," it's the
+  recommended solution itself.** The six cases below were originally proven out in a standalone
+  `JBComplete` dataset (checked against a real run, 2026-08-05); on 2026-08-06 CiGolden and
+  JBComplete were both merged into `test/datasets/CiMini/`, replacing CiMini's old 14-image content
+  wholesale (100 sources now: 97 loose images + a 3-member zip). That *is* "expand CiMini with real
+  product photos" — the six cases are simply part of CiMini now, no separate folder to merge later.
+  The remaining gap bullets further down (Bracket 4, the reference-free fuzzy-colour case) are still
+  genuinely missing — the merge didn't manufacture new cases beyond what JBComplete already had.
+  The bullets below were removed from this list because a real image now exercises each one:
   - *Two photos of the same product competing for one det slot* — `OMB-E181-CVW_5` / `_6` (both
     interior shots of one bag) and `AY_FFK0230_83035_02FW001_A` / `_06FW001_f` (both diagonal).
   - *Filename written verbatim in a product-sheet cell* — `100267_1..7`, whose only link to
@@ -72,10 +77,10 @@
     together can.
   - Counter-example: "4471.jpg" alone, with only one number in the name, can't exercise this case —
     it needs two separately-ambiguous numbers that only resolve when combined.
-  - **Not covered by JBComplete's `4471-2290-*`, despite the name.** There the *whole* reference
+  - **Not covered by CiMini's `4471-2290-*`, despite the name.** There the *whole* reference
     exists under two FamilyIDs across two sheets, so all four files KO as ambiguous. The decoy
     structure that makes each half separately ambiguous does not exist. `Bracket2-Intersect` has 0
-    accepts on JBComplete, so this branch still has no real-data case.
+    accepts on CiMini, so this branch still has no real-data case.
 
   **A filename word that's a typo/spelling variant of a color, material, or product-type word**
   - a: a photo named "grey-scarf.jpg". The product's color column says "gray" (American spelling).
@@ -83,7 +88,7 @@
   - Counter-example: "graphite-scarf.jpg" vs. "gray" — too many letters different, should NOT
     match this way. Also: the same one-letter-off word appearing only in a long free-text
     description column (not a color/material/type column) should NOT match this way either.
-  - **JBComplete has the data but does not exercise it.** `C153KB460011_Cedric_City_Grey_*.png` say
+  - **CiMini has the data but does not exercise it.** `C153KB460011_Cedric_City_Grey_*.png` say
     `Grey`, family `99147533` carries Color `Gray` (distance 1), and the files belong to `99147525`
     by reference — the sharper version of this case. But all three match at **Bracket 1** on the
     numeric token `460011`, so Bracket 3 never runs and `CollectFuzzyCategoricalEvidence` is never
@@ -118,9 +123,9 @@
     already matched to product X. A third photo, "sweater-detail.jpg", only shares the word
     "sweater" with them (not "green") — related, but not worded identically. Should still inherit
     product X.
-  - The counter-example is **already covered** by JBComplete's `triggered-mistery.jpg`, which shares
+  - The counter-example is **already covered** by CiMini's `triggered-mistery.jpg`, which shares
     tokens with all three Triggered rows and is correctly refused. Only the positive case above is
-    still missing — every `SiblingPropagator` accept in JBComplete today (3 of them) is propagating a
+    still missing — every `SiblingPropagator` accept in CiMini today (3 of them) is propagating a
     match that should not have been made in the first place ([[T-5100]]), so nothing there proves the
     accept path works when the seed match is right.
 
@@ -129,7 +134,7 @@
     the same product — two independent kinds of evidence pointing the same way. This photo's
     final confidence score should end up a little higher than a similar photo that only had one
     kind of evidence.
-  - **The bonus does fire on JBComplete, but only on two wrong matches** (`OMB-E129-TGV_1/_2`,
+  - **The bonus does fire on CiMini, but only on two wrong matches** (`OMB-E129-TGV_1/_2`,
     `score=0,667` + `[convergence bonus +0,25]`). No correctly-matched image in the set earns one,
     so today the only evidence the bonus works is evidence of it inflating a match the golden says
     should not exist. A positive case is still needed.
@@ -145,12 +150,15 @@
 
 # Phenotype validation needs a purpose-built dataset (raised 2026-07-30, from T-4970)
 
-- [ ] **Mostly closed by `test/datasets/JBComplete/` — 2026-08-05.** The original question was: what
-  images and Excel rows are needed so each phenotype and each of the 5 product types has at least
-  one real case? (Written when the taxonomy was 21; it is **18** since [[T-5040]].) JBComplete
-  answers it for **17 of the 18** — only `illustration-technical-drawing` has no positive case, and
-  its `expected-phenotype.json` (99 rows, per-image ground truth) is the labelled file the last
-  paragraph of this block used to ask for. Both the dataset and the labels are committed to git.
+- [ ] **Mostly closed by `test/datasets/CiMini/` — 2026-08-05, folded into CiMini proper 2026-08-06.**
+  The original question was: what images and Excel rows are needed so each phenotype and each of the
+  5 product types has at least one real case? (Written when the taxonomy was 21; it is **18** since
+  [[T-5040]].) The answer was proven out in a standalone `JBComplete` dataset, which on 2026-08-06 was
+  merged into `test/datasets/CiMini/` along with CiGolden (replacing CiMini's old 14-image content
+  wholesale). It answers this question for **17 of the 18** — only `illustration-technical-drawing`
+  has no positive case, and its `expected-phenotype.json` (99 rows, per-image ground truth) is the
+  labelled file the last paragraph of this block used to ask for. Both the dataset and the labels are
+  committed to git.
 
   The original framing — "no dataset here exercises more than a sliver of the taxonomy" — was true
   of SPACINI29 (86 images of one model, front and back, on one white sweep: `hero-is-human=TRUE` on
@@ -164,24 +172,24 @@
   of 100 images satisfy it) and [[T-5080]] (`hero-orientation` is UNKNOWN on 37% and never once
   produces `SIDEON`). Full numbers in [[T-2600]] step 4.
 
-  **So this todo is now down to the images JBComplete does not supply**, listed below. Everything
+  **So this todo is now down to the images CiMini does not supply**, listed below. Everything
   else that used to be here — the topwear/bottomwear/footwear/bags/default families and their
-  per-phenotype bullets — is covered; see `test/datasets/JBComplete/README.md` §3, which does the
-  per-case accounting against CiGolden's list.
+  per-phenotype bullets — is covered; see `test/datasets/CiMini/README.md` §3, which does the
+  per-case accounting against the retired CiGolden dataset's gap list.
 - Impact:
   - Was High, now Low-Medium. The M11 acceptance bar (<5% misassignment across 18 phenotypes) was
-    gated on a measurement nobody could take. JBComplete's `expected-phenotype.json` makes it
+    gated on a measurement nobody could take. CiMini's `expected-phenotype.json` makes it
     takeable, and it has been taken — see [[T-2600]] step 4. What is left here is a short list of
     images that dataset does not supply; none of them blocks the M11 measurement, they only stop it
     being complete.
-  - Effect on other TODOs: [[T-4948]] (low-contrast white-on-white) is **closed** by JBComplete's
+  - Effect on other TODOs: [[T-4948]] (low-contrast white-on-white) is **closed** by CiMini's
     sock images. [[T-4945]] still needs its hard-vs-soft shadow pair, which is one of the gaps below.
 - Industry standard:
   A classifier with N output classes needs a validation set with positive cases for all N, plus
-  near-miss negatives for the pairs that are easy to confuse. JBComplete supplies 17 of 18 positives.
+  near-miss negatives for the pairs that are easy to confuse. CiMini supplies 17 of 18 positives.
   The remaining bullets are the missing positive and the near-miss negatives.
 - Recommended solution:
-  Add the images below to `test/datasets/JBComplete/` (it is committed to git and already carries the
+  Add the images below to `test/datasets/CiMini/` (it is committed to git and already carries the
   label file, so a second dataset would only split the ground truth in two). Keep the CiMini budget
   discipline — downscale to ~1024px longest edge, and add a row to `expected-phenotype.json` for each.
 
@@ -193,7 +201,7 @@
 
   **The one phenotype with no positive case anywhere — `illustration-technical-drawing`**
   - a: a flat line drawing / technical sketch of a garment with measurement call-outs, black lines on
-    white, no photographic content (needs `is-illustration=true`). JBComplete's `100267_6` and
+    white, no photographic content (needs `is-illustration=true`). CiMini's `100267_6` and
     `100267_7` are the closest and are not close enough — both are marketing composites built on
     photographs. Their `expected-phenotype.json` rows are correctly `null`.
 
@@ -206,14 +214,14 @@
 
   **A hard-shadow / soft-shadow twin pair ([[T-4945]])**
   - c and d: one product, shot twice — once with a hard-edged cast shadow, once with a soft diffuse
-    one, everything else held constant. JBComplete has no controlled twin: its alpha PNGs carry a
+    one, everything else held constant. CiMini has no controlled twin: its alpha PNGs carry a
     glow rather than a shadow, and the OMB bags are all soft. Without the pair the `shadow-present`
     threshold can only be tuned against uncontrolled variation.
 
   **Filename-path twins — the only bullets that deliberately carry keywords**
   - e and f: two duplicate shots of one keyword-free image's setup, one named `..._front_...`, one
     named `..._back_...`. Together with their keyword-free originals these isolate how much of any
-    orientation result comes from the filename rather than the picture. JBComplete's
+    orientation result comes from the filename rather than the picture. CiMini's
     `C153KU420009_..._FRONT` / `_BACK` and `C153KB460011_..._FRON` / `_BAC` carry keywords but have no
     keyword-free counterpart of the same shot, so they cannot separate the two paths.
 
@@ -224,15 +232,15 @@
   the T-4970 MMERO26 attempt: 59 of 60 images KO'd on `MATCHES_MULTIPLE_FAMILYIDS` and produced no
   phenotype data whatsoever.
 
-  **Removed from this list on 2026-08-05, all covered by JBComplete** (per-case accounting in
-  `test/datasets/JBComplete/README.md` §3): the five per-product-type families `TW001` topwear,
+  **Removed from this list on 2026-08-05, all covered by CiMini** (per-case accounting in
+  `test/datasets/CiMini/README.md` §3): the five per-product-type families `TW001` topwear,
   `BW001` bottomwear, `FW001` footwear, `BA001` bags-accessories and `DF001` default, with their
   ~25 per-phenotype bullets; the low-contrast white-on-white case ([[T-4948]]); and the
   `TW001_m/n/o` real-catalogue crop cases, whose `back-on-model-partial` gap is closed by
   `triggered_black-tshirt-back-americain.jpg` and `foldercontainsID99984905/2.jpg`. The three
   `ghost-front` / `ghost-back` bullets were not covered but **retired** — [[T-5040]] deleted those
   phenotypes, so they no longer name anything. The per-image ground-truth label file this block
-  used to ask for is `test/datasets/JBComplete/expected-phenotype.json`, 99 rows. Note 16 of those
+  used to ask for is `test/datasets/CiMini/expected-phenotype.json`, 99 rows. Note 16 of those
   rows are marked `"Confidence": "low"` and want a human pass (README §4.3); excluding them moves
   the headline misassignment number by 1.4 points, so they are worth doing but are not load-bearing.
 - Answer:

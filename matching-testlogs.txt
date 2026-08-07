@@ -105,3 +105,4 @@ JB
 2026-07-28 16:08:50 | HEROAUT3 | JobID=cebe7f6e-f84a-433d-967b-cab2fcecd4a0 | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:58:49 (3529.4s) | NO_IMAGE_ROWS
 2026-07-28 17:32:49 | MMERO26 | JobID=0e5fe5bf-aaa5-47b9-9752-4ac048ca36e2 | images=378 ok=23 dedup-excluded=0 | Job OK rate: 6.1% | duration: 01:23:59 (5039.4s)
 2026-07-28 20:34:36 | SPACINI29 | JobID=07bf3f39-37f2-497e-ba05-b21b7c91700b | images=86 ok=86 dedup-excluded=0 | Job OK rate: 100% | duration: 00:02:54 (174.8s)
+2026-08-07 13:08:57 | TinyTest | JobID=3c5fe69a-24a2-4175-b13c-f6fbb305bbfb | images=11 ok=11 dedup-excluded=0 | Job OK rate: 100% | duration: 00:00:38 (38.8s)

@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using Xunit;
 
 namespace PrismCoreTests;
@@ -25,14 +26,19 @@ public sealed class PipelineFixture : IAsyncLifetime {
     /// <summary>Absolute path to test/datasets, resolved by walking up from the test assembly.</summary>
     public string FixturePath { get; } = ResolveTestFixturePath();
 
-    /// <summary>Directory holding the committed CiMini images and ci-mini.xlsx.</summary>
+    private static readonly string[] ImageExtensions = [".jpg", ".png"];
+
+    /// <summary>Directory holding the committed CiMini images and Brackets-Complete.xlsx.</summary>
     public string ImagesPath => Path.Combine(FixturePath, "CiMini");
 
     /// <summary>The committed CiMini Excel fixture, in its original (uncopied) location.</summary>
-    public string ExcelPath => Path.Combine(ImagesPath, "ci-mini.xlsx");
+    public string ExcelPath => Path.Combine(ImagesPath, "Brackets-Complete.xlsx");
 
-    /// <summary>Count of loose input .jpg files fed to the Default and Zip runs.</summary>
-    public int InputImageCount => Directory.GetFiles(ImagesPath, "*.jpg", SearchOption.TopDirectoryOnly).Length;
+    /// <summary>The committed "3 images.zip" archive, submitted alongside the loose images by the Default and Zip runs.</summary>
+    public string ZipPath => Path.Combine(ImagesPath, "3 images.zip");
+
+    /// <summary>Count of images fed to the Default and Zip runs: every loose .jpg/.png (including subfolders) plus the zip archive's members. Minimal submits one loose image only and is not covered by this count.</summary>
+    public int InputImageCount => AllImageFilePaths().Count + CountZipMembers();
 
     /// <summary>All CiMini images, JSON format, transform on. Shared by most CiMini_* tests.</summary>
     public PrismJobResult Default { get; private set; } = null!;
@@ -74,9 +80,9 @@ public sealed class PipelineFixture : IAsyncLifetime {
         return Task.CompletedTask;
     }
 
-    /// <summary>All loose CiMini images + the Excel, JSON output, transform enabled.</summary>
+    /// <summary>All loose CiMini images + the zip archive + the Excel, JSON output, transform enabled.</summary>
     private PrismJobRequest BuildDefaultJobRequest() {
-        return BuildJobRequest(AllImageRecords(), new PrismProcessingParameters {
+        return BuildJobRequest(AllImageRecords(), AllZipRecords(), new PrismProcessingParameters {
             Format = "json",
             Transform = true,
             Generation = false,
@@ -86,7 +92,7 @@ public sealed class PipelineFixture : IAsyncLifetime {
 
     /// <summary>Identical inputs to the default run, but ZIP output so result.ZipBytes is produced.</summary>
     private PrismJobRequest BuildZipJobRequest() {
-        return BuildJobRequest(AllImageRecords(), new PrismProcessingParameters {
+        return BuildJobRequest(AllImageRecords(), AllZipRecords(), new PrismProcessingParameters {
             Format = "zip",
             Transform = true,
             Generation = false,
@@ -96,27 +102,48 @@ public sealed class PipelineFixture : IAsyncLifetime {
 
     /// <summary>One image + the Excel — exercises the minimal-input acceptance path.</summary>
     private PrismJobRequest BuildMinimalJobRequest() {
-        return BuildJobRequest(AllImageRecords().Take(1).ToList(), new PrismProcessingParameters { Format = "json" });
+        return BuildJobRequest(AllImageRecords().Take(1).ToList(), [], new PrismProcessingParameters { Format = "json" });
     }
 
     /// <summary>
-    /// TempFilePath carries the full disk path so the Importer can read each file; InitialFullName keeps the
-    /// bare filename so token matching works on real names.
+    /// TempFilePath carries the full disk path so the Importer can read each file; InitialFullName carries
+    /// the path relative to <see cref="ImagesPath"/> (forward slashes, matching the multipart/ZIP-entry
+    /// convention) so subfolder images still expose a folder path to FolderNameEnricher.
     /// </summary>
     private List<ImageRecord_INPUT> AllImageRecords() {
-        return Directory.GetFiles(ImagesPath, "*.jpg", SearchOption.TopDirectoryOnly)
-            .Select(f => new ImageRecord_INPUT { InitialFullName = Path.GetFileName(f), TempFilePath = f })
+        return AllImageFilePaths()
+            .Select(f => new ImageRecord_INPUT {
+                InitialFullName = Path.GetRelativePath(ImagesPath, f).Replace('\\', '/'),
+                TempFilePath = f
+            })
             .ToList();
     }
 
-    private PrismJobRequest BuildJobRequest(List<ImageRecord_INPUT> imageRecords, PrismProcessingParameters parameters) {
+    // One unfiltered recursive scan, then filter — matches Get-PrismJobInputFiles' traversal (a single
+    // Get-ChildItem -Recurse then a Where-Object) so the two paths submit images in the same order.
+    // Per-extension Directory.GetFiles calls would enumerate every .jpg before any .png instead.
+    private List<string> AllImageFilePaths() =>
+        Directory.GetFiles(ImagesPath, "*", SearchOption.AllDirectories)
+            .Where(f => ImageExtensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+    /// <summary>The "3 images.zip" archive as a single zip input record.</summary>
+    private List<InputZipFileRecord> AllZipRecords() =>
+        [new InputZipFileRecord { SourceReference = Path.GetFileName(ZipPath), TempFilePath = ZipPath }];
+
+    private int CountZipMembers() {
+        using ZipArchive archive = ZipFile.OpenRead(ZipPath);
+        return archive.Entries.Count;
+    }
+
+    private PrismJobRequest BuildJobRequest(List<ImageRecord_INPUT> imageRecords, List<InputZipFileRecord> zipRecords, PrismProcessingParameters parameters) {
         string excelPath = CopyExcelToTemp();
 
         return new PrismJobRequest {
             JobID = Guid.NewGuid(),
             ImageRecords = imageRecords,
             ExcelRecords = [new InputExcelFileRecord { SourceReference = excelPath, ByteLength = new FileInfo(excelPath).Length }],
-            ZipFileRecords = [],
+            ZipFileRecords = zipRecords,
             PrismProcessingParameters = parameters
         };
     }

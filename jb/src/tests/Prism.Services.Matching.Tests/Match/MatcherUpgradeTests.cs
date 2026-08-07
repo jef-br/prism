@@ -382,7 +382,7 @@ public class MatcherUpgradeTests {
 
     [Fact]
     public void FolderNameEnricher_MixedRunSplitsAtLetterDigitBoundary_BorrowsFolderName() {
-        // JBComplete's real failure: the folder yields exactly one whole-run token
+        // CiMini's real failure: the folder yields exactly one whole-run token
         // ("foldercontainsid99984905") that never appears in the Excel, while the FamilyID it should
         // borrow ("99984905") sits right there as the digit tail. Splitting the run in addition to
         // keeping it whole is what makes this folder meaningful.
@@ -419,7 +419,7 @@ public class MatcherUpgradeTests {
 
     [Fact]
     public void FolderNameEnricher_OnlyDigitTailInExcel_StillBorrowsFolderName() {
-        // Generalizes the foldercontainsID case beyond JBComplete's exact numbers: the letter prefix
+        // Generalizes the foldercontainsID case beyond CiMini's exact numbers: the letter prefix
         // ("batchinv") never appears anywhere in the Excel data, only the digit tail does. The split
         // piece — not the whole run — is the only reason this folder qualifies as meaningful.
         FolderNameEnricher enricher = new(FolderNameEnricherCfg);
