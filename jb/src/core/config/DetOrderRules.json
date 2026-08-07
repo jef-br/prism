@@ -1,11 +1,7 @@
 {
-  "overflowPolicy": {
-    "_comment": "Ordering of overflow images (no qualifying phenotype). Filename-hinted images anchor at their hinted slot index; unhinted images anchor at unhintedAnchor - between the main-view slots (front/back/side, det0-2) and the detail/label/material slots (det3+), so a detail-hinted file can never jump ahead of the family's main shots. onModelFirst ranks hero-is-human=TRUE images before packshots within the same anchor.",
-    "unhintedAnchor": 2.5,
-    "onModelFirst": true
-  },
+  "_comment_overflow": "Overflow images (no qualifying phenotype) are numbered after the last configured slot in numeric-aware filename order, and overflow past det9 is expected and fine. There is no overflow policy to configure: the old overflowPolicy block (unhintedAnchor 2.5 / onModelFirst) interleaved unclassified images *between* configured slots and was removed - an image with no evidence for a slot must never sit ahead of one that earned it. Filename and folder tokens still break ties between two images competing for the same slot (see DetOrderKeywordStems.json).",
   "_comment_ghost": "T-5040 (2026-08-04): ghost-front/back/side were deleted from the taxonomy and removed from every slot below. Their rules had become character-identical to front/back/side-packshot once clipping-path went (T-5030), so they could never be assigned and the entries here were dead weight. Every slot that listed a ghost phenotype also listed its packshot equivalent, so no slot lost its filler and no image changes slot. *-packshot now covers both the flat-lay and the ghost-mannequin case - see imagePhenotypes.md.",
-  "_comment_pack": "default.det6 ('pack') deliberately carries an empty phenotypes list: its packaging-visible feature was removed in T-4700. It is NOT dead - ImageOrderer.ResolveHintSlot still uses the keyword as an overflow anchor, so a *_packaging.jpg still sorts to this position. Do not delete the slot; do not invent a phenotype for it.",
+  "_comment_pack": "default.det6 ('pack') deliberately carries an empty phenotypes list: its packaging-visible feature was removed in T-4700. With the overflow anchor gone (2026-08-07) no image can currently reach this slot - an empty phenotype list means no candidate qualifies, and the keyword now only breaks ties between images already contesting a slot. Kept as the anchor point for T-5120, which will let a *_packaging.jpg token qualify here. Note for T-5120: 'pack' means PACKAGING (box), not 'packshot' - do not conflate them. Do not delete the slot; do not invent a phenotype for it.",
   "productTypes": {
     "default": {
       "det0": { "keyword": "front",   "phenotypes": ["front-packshot", "front-on-model-full-product", "diagonal-packshot"] },

@@ -358,55 +358,67 @@ public class ImageOrdererTests {
     //  Overflow ordering policy
 
     [Fact]
-    public void Run_Overflow_DetailHintedImage_ClosesTheRanks() {
-        // CiMini regression: a DETAIL-named image with no qualifying phenotype must never jump
-        // ahead of the family's main shots — its "detail" hint anchors it after the unhinted ones.
+    public void Run_Overflow_SlotWinnersLeadEveryUnclassifiedImage() {
+        // The rule: an image that earned a configured slot comes first, in slot order; images with no
+        // qualifying phenotype follow, never interleaved. Here only the detail crop classifies (det3 in
+        // default rules) — it still leads, because the other two have no evidence for any slot at all.
+        ImageRecord_LAMBDA detail = MakeLambda("CARDIGAN_DETAIL.jpg", "model-detail-closeup", "FAM001");
         ImageRecord_LAMBDA main1 = MakeLambda("24211507_CARDIGAN_76_MAGENTA_B.jpg", null, "FAM001");
         ImageRecord_LAMBDA main2 = MakeLambda("CARDIGAN_MAGENTA76_A.jpg", null, "FAM001");
-        ImageRecord_LAMBDA detail = MakeLambda("CARDIGAN_MAGENTA76_DETAIL.jpg", null, "FAM001");
 
-        List<ImageRecord_LAMBDA> records = [detail, main1, main2];
+        List<ImageRecord_LAMBDA> records = [main2, detail, main1];
         ImageOrderer.Run(records, [MakeFamily("FAM001")]);
         ImageOrderer.CompactDetOrder(records);
 
-        Assert.True(detail.DetOrder > main1.DetOrder);
-        Assert.True(detail.DetOrder > main2.DetOrder);
-        Assert.Equal(2, detail.DetOrder);
+        Assert.Equal(0, detail.DetOrder);
+        Assert.Equal(1, main1.DetOrder);
+        Assert.Equal(2, main2.DetOrder);
     }
 
     [Fact]
-    public void Run_Overflow_OnModelImagesRankBeforePackshot() {
-        // A packshot (hero-is-human FALSE) is less valuable than the product on a human model.
-        ImageRecord_LAMBDA packshot = MakeLambda("Pareo Exotica.jpg", null, "FAM001");
-        packshot.Features.Set("hero-is-human", "FALSE", 0.6, "yolo");
+    public void Run_Overflow_UnclassifiedImagesKeepNumericAwareFilenameOrder() {
+        // The overflow tail is ordered by filename with digit runs compared as numbers, independent of
+        // the order the records happen to sit in the list.
+        ImageRecord_LAMBDA img10 = MakeLambda("shot_10.jpg", null, "FAM001");
+        ImageRecord_LAMBDA img2 = MakeLambda("shot_2.jpg", null, "FAM001");
+        ImageRecord_LAMBDA img1 = MakeLambda("shot_1.jpg", null, "FAM001");
 
-        ImageRecord_LAMBDA onModel1 = MakeLambda("Pareo_exotica_F1.jpg", null, "FAM001");
-        onModel1.Features.Set("hero-is-human", "TRUE", 0.9, "yolo");
-
-        ImageRecord_LAMBDA onModel2 = MakeLambda("Pareo_exotica_F2.jpg", null, "FAM001");
-        onModel2.Features.Set("hero-is-human", "TRUE", 0.9, "yolo");
-
-        List<ImageRecord_LAMBDA> records = [packshot, onModel1, onModel2];
+        List<ImageRecord_LAMBDA> records = [img10, img2, img1];
         ImageOrderer.Run(records, [MakeFamily("FAM001")]);
         ImageOrderer.CompactDetOrder(records);
 
-        Assert.Equal(0, onModel1.DetOrder);
-        Assert.Equal(1, onModel2.DetOrder);
-        Assert.Equal(2, packshot.DetOrder);
+        Assert.Equal(0, img1.DetOrder);
+        Assert.Equal(1, img2.DetOrder);
+        Assert.Equal(2, img10.DetOrder);
     }
 
     [Fact]
-    public void Run_Overflow_FrontHintedImage_StaysFirst() {
-        // A front-hinted overflow image must still lead unhinted siblings.
+    public void Run_Overflow_FilenameHintNoLongerPullsAnImageForward() {
+        // A "front" token in the name is not evidence of a phenotype, so it no longer reorders the tail —
+        // plain filename order decides. Retiring the old anchor policy is the point of this test.
         ImageRecord_LAMBDA front = MakeLambda("product_front.jpg", null, "FAM001");
         ImageRecord_LAMBDA other = MakeLambda("product_extra.jpg", null, "FAM001");
 
-        List<ImageRecord_LAMBDA> records = [other, front];
+        List<ImageRecord_LAMBDA> records = [front, other];
         ImageOrderer.Run(records, [MakeFamily("FAM001")]);
         ImageOrderer.CompactDetOrder(records);
 
-        Assert.Equal(0, front.DetOrder);
-        Assert.Equal(1, other.DetOrder);
+        Assert.Equal(0, other.DetOrder);
+        Assert.Equal(1, front.DetOrder);
+    }
+
+    [Fact]
+    public void Run_Overflow_RunsPastDet9WithoutACap() {
+        // Default rules end at det7, so a 12-image family with nothing classified numbers 8..19 before
+        // compaction. Overflow above det9 is expected, not an error.
+        List<ImageRecord_LAMBDA> records = [.. Enumerable.Range(0, 12)
+            .Select(i => MakeLambda($"shot_{i:D2}.jpg", null, "FAM001"))];
+
+        ImageOrderer.Run(records, [MakeFamily("FAM001")]);
+
+        Assert.Equal(8, records.Min(r => r.DetOrder));
+        Assert.Equal(19, records.Max(r => r.DetOrder));
+        Assert.All(records, r => Assert.True(r.OrderEvidence!.IsOverflow));
     }
 
     [Fact]

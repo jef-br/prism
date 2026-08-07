@@ -37,10 +37,9 @@ internal static class ImageOrderer {
     /// Compacts each family's det indices to a contiguous 0..n-1 range: gaps are closed and the relative
     /// order the Order stage assigned is preserved exactly (renumber only, never reorder). Applied when
     /// Output.DET-ORDER-GAPS-ALLOWED is false. Operates on non-KO matched records grouped by Family.
-    /// Ordering is by <see cref="ImageRecord_Base.DetOrderAxis"/>, not DetOrder: an overflow image carries a
-    /// fractional axis position between configured slots, so it stays ahead of the later configured slots it
-    /// anchors before. DetOrder only breaks ties within one axis position, which keeps the Order stage's own
-    /// overflow sequence intact and makes a second compaction pass a no-op.
+    /// Ordering is by DetOrder alone: slot winners hold their configured slot index and overflow images are
+    /// numbered upward from lastConfiguredSlot+1, so DetOrder already expresses the final sequence and a
+    /// second compaction pass is a no-op (it runs from both PrismService and Exporter).
     /// </summary>
     internal static void CompactDetOrder(IReadOnlyList<ImageRecord_LAMBDA> records) {
         IEnumerable<IGrouping<string, ImageRecord_LAMBDA>> familyGroups = records
@@ -49,7 +48,7 @@ internal static class ImageOrderer {
 
         foreach (IGrouping<string, ImageRecord_LAMBDA> group in familyGroups) {
             int det = 0;
-            foreach (ImageRecord_LAMBDA lambda in group.OrderBy(r => r.DetOrderAxis).ThenBy(r => r.DetOrder))
+            foreach (ImageRecord_LAMBDA lambda in group.OrderBy(r => r.DetOrder))
                 lambda.DetOrder = det++;
         }
     }
@@ -88,34 +87,27 @@ internal static class ImageOrderer {
             imageAssigned[c.ImageIndex] = true;
             slotClaimed.Add(c.DetSlot);
             assignments[c.ImageIndex] = new AssignmentRecord(
-                c.DetSlot, c.DetSlot, c.Phenotype, c.PhenotypeRank,
+                c.DetSlot, c.Phenotype, c.PhenotypeRank,
                 c.NgpConfidence, tieBreakerWon, IsOverflow: false);
         }
 
-        // Images with no qualifying phenotype become overflow after the last configured slot.
-        // Overflow order uses real signal instead of raw list position: filename-hinted images
-        // anchor at their hinted slot position, unhinted images anchor at the configured position
-        // between the main-view slots and the detail/label/material slots — so a 'detail'-hinted
-        // file can never jump ahead of the family's main shots. Within the same anchor, on-model
-        // images (hero-is-human TRUE) outrank packshots, then numeric-aware natural filename
-        // order — so 'Pareo_F1' precedes 'Pareo_F2' and 'img_2' precedes 'img_10'.
-        // The anchor is also the image's axis position, which is what decides the exported order once
-        // compaction runs. DetSlot stays lastConfiguredSlot+1.. because an overflow image has no
-        // configured slot to claim — that number is only what gaps-allowed mode exports.
+        // An image with no qualifying phenotype has no evidence for any configured slot, so it goes
+        // behind every image that earned one — never between them. Overflow numbering continues from
+        // lastConfiguredSlot+1 with no cap: a large family legitimately runs past det9.
+        // Order within the tail is numeric-aware filename order — 'img_2' before 'img_10',
+        // 'Pareo_F1' before 'Pareo_F2'. Importer.SortDeterministically already normalized the record
+        // list to InitialFullName order, so this is also the order the images arrived in, minus the
+        // ordinal comparer's digit-run quirk. Source index only settles genuinely identical paths.
         int overflowSlot = lastConfiguredSlot + 1;
-        foreach ((ImageRecord_LAMBDA img, int idx, int hintSlot, double anchor) in images
-            .Select((img, idx) => AnchorOverflow(img, idx, slots, config))
+        foreach ((ImageRecord_LAMBDA img, int idx) in images
+            .Select((img, idx) => (Image: img, Index: idx))
             .Where(x => !imageAssigned[x.Index])
-            .OrderBy(x => x.Anchor)
-            .ThenBy(x => OnModelRank(x.Image, config))
-            .ThenBy(x => x.Image.InitialFullName, NaturalFilenameComparer)
+            .OrderBy(x => x.Image.InitialFullName, NaturalFilenameComparer)
             .ThenBy(x => x.Index)) {
             int ngpConfidence = img.Features.All.Count(kv => !kv.Value.IsUnknown);
             assignments[idx] = new AssignmentRecord(
-                overflowSlot++, anchor, WinningPhenotype: null, PhenotypeRank: -1,
-                ngpConfidence,
-                TieBreakerWon: hintSlot != int.MaxValue ? "overflow-filename-hint" : "overflow-natural-order",
-                IsOverflow: true);
+                overflowSlot++, WinningPhenotype: null, PhenotypeRank: -1,
+                ngpConfidence, TieBreakerWon: "overflow-filename-order", IsOverflow: true);
         }
 
         // Write results back to records.
@@ -123,7 +115,6 @@ internal static class ImageOrderer {
             ImageRecord_LAMBDA lambda = images[imageIndex];
             lambda.Family = familyId;
             lambda.DetOrder = record.DetSlot;
-            lambda.DetOrderAxis = record.AxisPosition;
             lambda.ProductTypeId = productTypeId;
             lambda.OrderEvidence = new OrderEvidence {
                 AssignedDetSlot = record.DetSlot,
@@ -137,40 +128,6 @@ internal static class ImageOrderer {
     }
 
     //  Overflow ordering signal
-
-    /// <summary>
-    /// Pairs an overflow candidate with its position on the configured-slot axis: the slot its filename
-    /// keyword points at, or the configured unhinted anchor when no keyword matches.
-    /// </summary>
-    private static (ImageRecord_LAMBDA Image, int Index, int HintSlot, double Anchor) AnchorOverflow(
-        ImageRecord_LAMBDA img, int index, IReadOnlyList<DetSlotRule> slots, DetOrderConfig config) {
-        int hintSlot = ResolveHintSlot(img.InitialFullName, slots, config);
-        return (img, index, hintSlot, hintSlot == int.MaxValue ? config.OverflowUnhintedAnchor : hintSlot);
-    }
-
-    /// <summary>
-    /// The earliest configured slot whose keyword stems match the filename, or int.MaxValue when no
-    /// keyword matches — used to order overflow images by intent (front before back before side).
-    /// </summary>
-    private static int ResolveHintSlot(string filename, IReadOnlyList<DetSlotRule> slots, DetOrderConfig config) {
-        foreach (DetSlotRule slot in slots) {
-            if (config.FilenameMatchesSlotKeyword(filename, slot.Keyword))
-                return slot.SlotIndex;
-        }
-
-        return int.MaxValue;
-    }
-
-    /// <summary>
-    /// Overflow rank for the on-model-before-packshot rule: a product shown on a human model
-    /// (hero-is-human TRUE) is more valuable than the same product as a packshot, so it sorts
-    /// first (0). Everything else — FALSE or UNKNOWN — ranks equal (1); UNKNOWN must not outrank
-    /// a known packshot. Disabled via DetOrderRules.json overflowPolicy.onModelFirst.
-    /// </summary>
-    private static int OnModelRank(ImageRecord_LAMBDA img, DetOrderConfig config) {
-        if (!config.OverflowOnModelFirst) return 0;
-        return string.Equals(img.Features.GetValue("hero-is-human"), "TRUE", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
-    }
 
     /// <summary>Numeric-aware ordinal filename comparer: digit runs compare as numbers, text ordinally.</summary>
     private static readonly Comparer<string> NaturalFilenameComparer = Comparer<string>.Create(CompareNatural);

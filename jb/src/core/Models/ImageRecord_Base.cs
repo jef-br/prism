@@ -11,13 +11,6 @@ public class ImageRecord_Base {
     public string Family { get; set; } = string.Empty;
     /// <summary>Zero-based det-slot index assigned by the Ordered stage.</summary>
     public int DetOrder { get; set; }
-    /// <summary>
-    /// Position on the configured-slot axis the Ordered stage placed this image at: the slot index for a
-    /// phenotype winner, the filename-hint or unhinted anchor for an overflow image. Fractional by design —
-    /// an overflow image sits *between* configured slots. Det compaction orders on this, not on DetOrder,
-    /// so an overflow image is not pushed behind a late configured slot it should precede.
-    /// </summary>
-    public double DetOrderAxis { get; set; }
     /// <summary>Computed output filename in the form <c>{Family}_det{DetOrder}.jpg</c>. Consumed by the Exported stage.</summary>
     public string NewName => $"{this.Family}_det{this.DetOrder}.jpg";
     public string? Checksum { get; set; }
