@@ -1,5 +1,22 @@
 # Daily Brief
 
+> ## **Important note from the user (Jef)**
+> This note must persist daily-brief.md until Jef removes it manually.
+> 
+> "Jef, do nothing before you have fixed T-5010 + T-2840"
+> - **T-5010**: the current behavior of `Tx_DetailCropper.cs` is wrong and needs to be fixed.
+>   - Apply the margin if one edge is intersected
+>   - use bounding box for resizing
+>   - use bgstretch utils class for stretching
+> - **T-2840**: Claude reworked how CLIP is used per image.
+>           Now **300% slower** due to serialization or something (not quiet sure, 3 hypotheses in ticket)
+>           Claude suggested re-exporting the ONNX. We should investigate check Huggingface to see if there are other options.
+>           and export something new if it's useful. Need Claude for that.
+
+-----
+
+
+
 ##### Changed
 - **M11 phenotype accuracy measured for the first time.** JBComplete's `expected-phenotype.json` (99 labelled rows) is the first dataset that exercises more than a sliver of the taxonomy, so the M11 bar could finally be scored against real ground truth. Result at shipped config: **30.3% misassignment** (the gate is <5%), **39.4% coverage**, `front-packshot` recall **0/25**, `closeup-image` precision **0/8**. SPACINI29's old 4.7% was never a pass — it only touched 2 of the 18 phenotypes. Two upstream causes account for nearly all the error and **neither is a dataset problem**: [[T-5070]] (`intersection-count = 0` is required by 7 of 18 phenotypes but only 27/100 images satisfy it) and [[T-5080]] (`hero-orientation` is UNKNOWN on 37% and never once outputs `SIDEON`). M11 is now Blocked on those two, not on a missing fixture.
 - **JBComplete moved into `test/datasets/` with committed ground truth** — `expected-match.json` + `expected-phenotype.json` (99 rows) + README §3's per-case accounting. Scoring the set is what surfaced the M11 numbers above and opened five defect tickets: [[T-5070]], [[T-5080]], [[T-5090]] (SubstringRescue invents evidence from shot numbers), [[T-5100]] (Bracket 3 steals a neighbour's family), [[T-5110]] (filename-in-cell never fires), plus [[T-5050]] split out of the analyzers todo.
