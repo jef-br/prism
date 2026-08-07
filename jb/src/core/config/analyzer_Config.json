@@ -19,10 +19,10 @@
     },
 
     "Yolo": {
-        "ConfidenceThreshold": 0.40,
+        "ConfidenceThreshold": 0.33,
         "MaxDetections": 32,
-        "HumanMinConfidence": 0.50,
-        "AbsenceConfidence": 0.60,
+        "HumanMinConfidence": 0.30,
+        "AbsenceConfidence": 0.40,
         "HeroPersonMinArea": 0.15
     },
 

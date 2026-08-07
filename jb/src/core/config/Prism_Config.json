@@ -93,7 +93,7 @@
         }
     },
     "Classification": {
-        "Confidence_Threshold": 0.9,
+        "Confidence_Threshold": 0.5,
         "Confidence_Thresholds": {
             "hero-orientation": 0.33,
             "head-visible": 0.25,

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Prism.Config;
 using Xunit;
 
@@ -32,19 +33,38 @@ public class AnalyzerConfigTests : IDisposable {
     [Fact]
     public void FromConfig_ShippedConfig_ComposesEverySection() {
         // The startup gate: PrismApiConfiguration.Load() and FeatureAnalysisService both go through this.
+        // Every expected value is read from the same JSON the loader reads. Mirroring them as literals
+        // here breaks the suite whenever a threshold is retuned, for a reason unrelated to the behaviour
+        // under test — it has bitten twice (T-5000's 0.75/0.60, and Yolo.ConfidenceThreshold 0.40/0.33).
+        // Reading from the file is not tautological: this pins the mapping, so a section wired to the
+        // wrong JSON key still fails.
         AnalyzerParameters parameters = AnalyzerParameters.FromConfig();
+        using JsonDocument shipped = JsonDocument.Parse(File.ReadAllText(ConfigLoader.RequireFile(ConfigFile)));
+        JsonElement root = shipped.RootElement;
 
-        Assert.Equal(0.04f, parameters.Interior.MinAreaFraction);
-        Assert.Equal(8, parameters.IsIllustration.ColorBinsPerChannel);
-        Assert.Equal(0.40f, parameters.Yolo.ConfidenceThreshold);
-        Assert.Equal(0.60f, parameters.Filename.OrientationConfidence);
-        Assert.Equal("FRONT", parameters.Filename.OrientationTokens["front"]);
-        Assert.Equal(0.15f, parameters.SubjectGeometry.ForegroundColorDistance);
-        Assert.Equal(4, parameters.Colors.BucketCount);
-        Assert.Equal(12, parameters.Colors.Palette.Count);
-        Assert.Equal("#cc0000", parameters.Colors.Palette["red"]);
-        Assert.Equal(0.98f, parameters.Exposure.HighLuminance);
-        Assert.Equal(0.10f, parameters.MultipleProducts.OverlapIou);
+        Assert.Equal(Num(root, "Interior", "MinAreaFraction"), parameters.Interior.MinAreaFraction);
+        Assert.Equal(Int(root, "IsIllustration", "ColorBinsPerChannel"), parameters.IsIllustration.ColorBinsPerChannel);
+        Assert.Equal(Num(root, "Yolo", "ConfidenceThreshold"), parameters.Yolo.ConfidenceThreshold);
+        Assert.Equal(Num(root, "Filename", "OrientationConfidence"), parameters.Filename.OrientationConfidence);
+        Assert.Equal(Str(root, "Filename", "OrientationTokens", "front"), parameters.Filename.OrientationTokens["front"]);
+        Assert.Equal(Num(root, "SubjectGeometry", "ForegroundColorDistance"), parameters.SubjectGeometry.ForegroundColorDistance);
+        Assert.Equal(Int(root, "Colors", "BucketCount"), parameters.Colors.BucketCount);
+        Assert.Equal(root.GetProperty("Colors").GetProperty("Palette").EnumerateObject().Count(), parameters.Colors.Palette.Count);
+        Assert.Equal(Str(root, "Colors", "Palette", "red"), parameters.Colors.Palette["red"]);
+        Assert.Equal(Num(root, "Exposure", "HighLuminance"), parameters.Exposure.HighLuminance);
+        Assert.Equal(Num(root, "MultipleProducts", "OverlapIou"), parameters.MultipleProducts.OverlapIou);
+    }
+
+    private static float Num(JsonElement root, string section, string key) {
+        return root.GetProperty(section).GetProperty(key).GetSingle();
+    }
+
+    private static int Int(JsonElement root, string section, string key) {
+        return root.GetProperty(section).GetProperty(key).GetInt32();
+    }
+
+    private static string Str(JsonElement root, string section, string map, string key) {
+        return root.GetProperty(section).GetProperty(map).GetProperty(key).GetString()!;
     }
 
     [Fact]
