@@ -22,12 +22,11 @@ user-facing summaries.
 | [T-4948](T-4948.md) | Ready | White-on-white contrast floor | Measure real white-on-white contrast, then set the denoise strength to match |
 | [T-4950](T-4950.md) | Ready | SubjectMask crosses the wire unread | Measure the per-image mask payload, then decide keep / `[JsonIgnore]` / config-gate |
 | [T-4955](T-4955.md) | Review | Stale derived edge features | Review the recompute-at-promotion diff, then close |
-| [T-4980](T-4980.md) | Review | CiMini E2E golden red | Decide the 4-edge safety margin; the golden stays red until [[T-5060]] lands |
+| [T-4980](T-4980.md) | Review | CiMini E2E golden red | [[T-5060]] was reverted, not landed — golden now red on 84 fields; fix belongs to [[T-5120]] |
 | [T-4990](T-4990.md) | Review | Detector under-counts intersections | Review the two-threshold recalibration (65/86 → 84/86), then close |
 | [T-5000](T-5000.md) | Review | Filename orientation false positives | Review the trailing-token rule, then close |
-| [T-5010](T-5010.md) | Review | Centre-and-stretch unreachable | Verify the restored routing on SPACINI29 and clear the two dormant defects |
+| [T-5010](T-5010.md) | Blocked | Centre-and-stretch unreachable | Get every SPACINI29 row in `spacini29-image-routing-list.md` a user-blessed intended route |
 | [T-5050](T-5050.md) | Ready | `multiple-products` never written false | Make the analyzer write a known value, handling the shoe-pair case |
-| [T-5060](T-5060.md) | Review | Det compaction reorders a family | Close as superseded: the axis fix was reverted for the overflow-to-the-end rule; follow-on is [[T-5120]] |
 | [T-5070](T-5070.md) | Ready | Edge-touching shots match no rule | Decide what `intersection-count = 0` should mean; it blocks 7 of 18 phenotypes |
 | [T-5080](T-5080.md) | Ready | `hero-orientation` wrong or absent | Dump the per-prompt score vector for 9 known side views, then re-word or re-bar |
 | [T-5090](T-5090.md) | Ready | SubstringRescue invents evidence from shot numbers | Evaluate every rescue token and KO on contradiction instead of returning on the first |

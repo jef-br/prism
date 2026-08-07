@@ -4,6 +4,155 @@ Done tickets, moved here by /ticket-finish to keep `jb/ticketboard/AGENT-TICKETS
 start) lean. Newest at the top. When a ticket closes, its `jb/ticketboard/T-XXXX.md` body is appended here
 and that file is deleted.
 
+### T-5060 · Det compaction reorders a family when only some of its images win a slot
+**Status:** Superseded (2026-08-07) | **Profile:** P4-critical-architecture
+**Found by:** [[T-4980]] item 2, 2026-08-05 — surfaced the moment `dotnet test` started reading the
+CiMini goldens, and confirmed by dumping `WinningPhenotype` per row.
+
+**Closed Superseded 2026-08-07 — user verdict: a bad ticket, not an Approve.** The fix (an axis-ordered
+compaction pass) treated a symptom and named the wrong culprit: compaction only renumbers what it's
+handed, and the real error was one step earlier in the Order stage, which gave a zero-phenotype image
+an anchor ahead of a real slot winner. The actual defect — `CARDIGAN_MAGENTA76_A.jpg` and
+`24211507_CARDIGAN_76_MAGENTA_B.jpg` producing no phenotype at all despite carrying a usable `_A`/`_B`
+sequence-marker signal — was never touched; the ticket just reordered the output so the failure was
+less visible. Reverted and replaced 2026-08-07 with: slot winners lead in slot order, unclassified
+images go to the end in filename order, no cap past det9. `DetOrderAxis`, `AssignmentRecord.AxisPosition`,
+`AnchorOverflow`, `ResolveHintSlot`, `OnModelRank`, and the `overflowPolicy` config block are deleted.
+`CiMini_Manifest_MatchesCommittedGolden` went from 20 mismatched fields to 84 as a result — the golden
+has **not** been re-blessed, and closing that gap is [[T-4980]]'s open item, not this ticket's. Follow-on
+work (missing phenotypes from filename/folder tokens) is [[T-5120]].
+
+**The catalogue order comes out backwards.** On CiMini family `90861052` the committed golden is
+front, back, detail — and the pipeline now produces detail, back, front:
+
+| Image | Winning phenotype | Slot won | After compaction | Golden |
+|---|---|---|---|---|
+| `CARDIGAN_MAGENTA76_DETAIL.jpg` | `model-detail-closeup` | det3 (configured) | **det0** | det2 |
+| `24211507_CARDIGAN_76_MAGENTA_B.jpg` | *none* | overflow (8+) | det1 | det0 |
+| `CARDIGAN_MAGENTA76_A.jpg` | *none* | overflow (8+) | det2 | det1 |
+
+**Cause.** Overflow slots start at `lastConfiguredSlot + 1` = 8, and `ImageOrderer.CompactDetOrder`
+closes the gaps before export. That is correct and deliberate when a family's images all overflow, or
+all win slots. It is wrong in the mixed case: an image holding a *late* configured slot (det3, the
+detail slot) still sorts ahead of every overflow image (8, 9), so compaction renumbers it to det0.
+**Effect:** the relative order is decided by *which* images happened to get a phenotype, not by what
+the configured slots mean. **Consequence:** the detail crop becomes the family's lead image and the
+front shot is buried last — the single most visible output the pipeline produces.
+
+**Why it is live now and was not before.** [[T-4970]] measured 7% phenotype coverage, so essentially
+every image overflowed and filename order held — which is why the goldens looked right. Three changes
+since raised coverage: [[T-5010]] removed `BypassPhenotypes`, [[T-4955]] made the edge-feature
+snapshot self-consistent, and [[T-4990]] recalibrated the edge detector (65/86 → 84/86). The defect
+did not appear; it became reachable.
+
+**Second family, same run, shows the other half of the problem.** On `94613033`, `Pareo Exotica.jpg`
+won `back-packshot` and `Pareo_exotica_F1.jpg` won `back-on-model-partial` — two *back* phenotypes on
+what the filenames call front shots (`_F1`, `_F2`). That is [[T-4970]]'s known CLIP orientation error
+class, not this defect, but it is what decided the slots here. Fixing compaction will not make this
+family right; it will make it wrong for a legible reason instead of an illegible one.
+
+**Do not re-bless the CiMini golden to make this pass.** The golden's order is the correct catalogue
+order. `CiMiniGoldenTests.CiMini_Manifest_MatchesCommittedGolden` is red on exactly these 12 fields
+and should stay red until this is fixed — that test is the reason the defect is visible at all.
+
+**Acceptance:** a family mixing slot-winners and overflow images comes out in configured-slot order
+with overflow images after them, not before; CiMini family `90861052` reads front, back, detail; the
+golden test goes green without editing `expected-manifest.json`.
+
+---
+
+## Fixed 2026-08-05 — awaiting review verdict
+
+**The anchor already existed; compaction just wasn't reading it.** `DetOrderRules.json`'s
+`overflowPolicy.unhintedAnchor` is `2.5`, and its own comment states the intent: an unhinted overflow
+image sits *between* the main-view slots (det0-2) and the detail/label/material slots (det3+), "so a
+detail-hinted file can never jump ahead of the family's main shots". That anchor was only ever used to
+sort overflow images **against each other**. They were then all stamped `lastConfiguredSlot + 1, +2, …`
+— i.e. behind every configured slot — and `CompactDetOrder` sorted on that stamp. So the config's
+stated rule was honoured among overflow images and silently inverted against slot winners.
+
+**Change:** every image now carries a position on the configured-slot axis, and compaction orders on
+that instead of on `DetOrder`.
+- `ImageRecord_Base.DetOrderAxis` (new `double`) — a slot winner's axis is its configured slot index;
+  an overflow image's axis is its filename-hint slot, or `unhintedAnchor` when unhinted.
+- `AssignmentRecord.AxisPosition` carries it out of `ProcessFamily`; `AnchorOverflow` replaces the
+  inline hint-slot tuple so the anchor is computed once and used for both the overflow sort and the axis.
+- `CompactDetOrder` orders by `(DetOrderAxis, DetOrder)`. `DetOrder` as the secondary key preserves the
+  Order stage's own overflow sequence within one anchor, keeps a phenotype winner ahead of an overflow
+  image that hints at the same slot, and makes a second compaction pass a no-op (it runs from both
+  `PrismService` and `Exporter`).
+- `DetOrder` itself is unchanged, so gaps-allowed mode (`DET-ORDER-GAPS-ALLOWED: true`) exports exactly
+  what it did before. An overflow image has no configured slot to claim, so `lastConfiguredSlot + 1…`
+  remains the only sensible answer there.
+
+**Result on CiMini family `90861052`:** axis positions are B `2.5`, A `2.5`, DETAIL `3.0` → det0 B,
+det1 A, det2 DETAIL. Matches the committed golden. `expected-manifest.json` was **not** touched.
+
+**The golden test is still red — on 4 fields, not 12, and for a different reason.** Family `94613033`
+remains wrong and ordering cannot fix it, exactly as predicted above. Evidence from the in-process
+harness:
+
+| Image | `hero-orientation` | `hero-is-human` | phenotype | slot |
+|---|---|---|---|---|
+| `Pareo Exotica.jpg` | BACK 0.346 | FALSE 0.60 | `back-packshot` | bottomwear det1 |
+| `Pareo_exotica_F1.jpg` | BACK 0.400 | TRUE 0.97 | `back-on-model-partial` | bottomwear det5 |
+| `Pareo_exotica_F2.jpg` | BACK 0.476 | TRUE 0.96 | `back-on-model-partial` | overflow (det5 taken) |
+
+All three are read `BACK` just over the 0.33 bar, on files the filenames call front (`_F1`, `_F2`).
+Tracked as [[T-5080]]. Note that even with orientation corrected this family would still not match the
+golden: `bottomwear` det0 lists `front-packshot` ahead of the on-model shots, so the packshot would
+lead. That is a `DetOrderRules` product question, not a code defect — flagged, not changed.
+
+**Verification:** full suite `dotnet test jb/src/PRISM.sln -m:1` → **532 tests, 531 pass, 1 fail**
+(`CiMiniGoldenTests.CiMini_Manifest_MatchesCommittedGolden`, down from 12 mismatched fields to 4).
+`ImageOrdererTests` 23/23 green — including the three `CompactDetOrder` tests, which construct records
+with no `OrderEvidence` and axis 0 and therefore still exercise the pure renumber-by-`DetOrder` path.
+The test's KNOWN-RED message was rewritten to name the remaining cause instead of this one.
+
+**Files:** `jb/src/core/Models/ImageRecord_Base.cs`,
+`jb/src/core/Services/Matching/ImageOrderer.cs`,
+`jb/src/core/Services/Matching/Order/AssignmentRecord.cs`,
+`jb/src/tests/Prism.Core.Tests/CiMiniGoldenTests.cs` (message only),
+`test/datasets/CiMini/expected-manifest.json` (read-only, untouched).
+
+## Reverted 2026-08-07 — this ticket was misdiagnosed and should not have been implemented
+
+**User verdict (2026-08-07): a bad ticket. Close as superseded, not as Approved.**
+
+**It treated a symptom and named the wrong culprit.** The ticket blamed det compaction. Compaction was
+never the problem — it only renumbers, and it renumbered exactly what it was handed. The problem was
+one step earlier, in the Order stage: the fix gave an image with *no phenotype at all* an anchor of
+2.5, which placed it **ahead of a real det3 winner in the slot order**. That is the actual error.
+An image with zero evidence was promoted past an image that had earned its slot.
+
+**And the real defect was never touched.** On CiMini family `90861052`, `CARDIGAN_MAGENTA76_A.jpg` and
+`24211507_CARDIGAN_76_MAGENTA_B.jpg` produce **no phenotype**. That is the thing to investigate and
+fix. Both filenames carry a usable signal — the trailing `_A` / `_B` is a sequence marker — and PRISM
+reads neither. Instead of asking why two ordinary product shots classify to nothing, this ticket
+reordered the output so the failure was less visible. The golden then looked right for the wrong
+reason.
+
+**What replaced it (2026-08-07):** slot winners come first in slot order; images with no qualifying
+phenotype go to the end of the family in filename order. `DetOrderAxis`,
+`AssignmentRecord.AxisPosition`, `AnchorOverflow`, `ResolveHintSlot`, `OnModelRank` and the whole
+`overflowPolicy` config block are deleted.
+
+**Consequence, stated plainly:** family `90861052` now reads DETAIL, B, A — the detail crop leads.
+That is not the desired output. It is the *honest* output: it is what a family looks like when two of
+its three images carry no evidence, and it stays wrong until the missing phenotypes are fixed in
+[[T-5120]]. The old behaviour hid the same failure behind a lucky ordering.
+
+**Golden impact measured 2026-08-07:** `CiMini_Manifest_MatchesCommittedGolden` goes from 20 mismatched
+fields to 84 (baseline measured by shelving only the ordering files and re-running). The golden has
+**not** been re-blessed — that decision is still open and belongs with [[T-4980]].
+
+**Update 2026-08-06:** CiMini's content was replaced wholesale (CiGolden + JBComplete merged in,
+`expected-manifest.json` recaptured fresh — see [[T-4980]]'s update note). "Read-only, untouched" above
+describes this ticket's own change, not the file's whole history: the CARDIGAN family `90861052` rows
+this ticket fixed were verified to still match byte-for-byte in the new capture, and the Pareo family
+`94613033` rows below were hand-restored to these exact pre-merge values rather than left at whatever
+the still-buggy live pipeline produced, so this ticket's "must stay red" intent survives the merge.
+
 ### T-4960 · Alpha-derived box should retire SubjectGeometry's colour-distance fallback
 **Status:** Obsolete (2026-08-05) | **Profile:** P1-feature-worker
 **Found by:** [[T-4800]] completion pass, 2026-07-28
