@@ -27,8 +27,8 @@ npm run typecheck    # tsc --noEmit
 ```
 dotnet test jb/src/PRISM.sln -m:1                                                    # everything, every project, incl. pipeline integration
 dotnet test jb/src/tests/Prism.Services.Matching.Tests/Prism.Services.Matching.Tests.csproj   # one project in isolation
-dotnet test jb/src/PRISM.sln --filter "FullyQualifiedName~PrismCoreTests.<Suite>"    # one service suite, any project
-dotnet test jb/src/PRISM.sln --filter "FullyQualifiedName!~PipelineIntegrationTests" # unit tests only
+dotnet test jb/src/PRISM.sln -m:1 --filter "FullyQualifiedName~PrismCoreTests.<Suite>"    # one service suite, any project
+dotnet test jb/src/PRISM.sln -m:1 --filter "FullyQualifiedName!~PipelineIntegrationTests" # unit tests only
 ```
 **`-m:1` is required, not optional (T-4942).** Run in parallel, the test projects contend for the GPU
 and the job temp folder — `Prism.Services.Matching.Tests` does ~95s of OpenCV subject detection plus a
