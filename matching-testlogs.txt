@@ -64,25 +64,14 @@
 
 --------------------------
 2026-07-07 13:46:08
-JB  
-    START TEST SUITE: INGRESS → ORDERING.
+JB  TEST: INGRESS → ORDERING.
 
-    Ran on:
-        - 14 datasets | ±30GB
-        CiMini, FILA94, HEROAUT3, INPUTMA23, INPUTMA24
-        INPUTMA27, KNEIPP56, MMERO26, OHMYBAG1, SPACINI29
-        SPACINI32, TinyTest, VINGINO79, WOODWIC12
-
-    Excludes:
-        - upload/download of local files
+Exc.:   - upload/download of local files
         - transform, generate, upscale, export
         - phenotypes (gated), DET order collapse
-    Includes:
-        - All XLSX building
+Inc.:   - All XLSX building
         - Remote media import
         - classification, matching, ordering
-
---------------------------
 
 2026-07-07 13:46:08 | CiMini | match-only | images=14 ok=14 ko=0 | OK rate: 100,0% | duration: 18,8s
 2026-07-07 14:25:25 | FILA94 | match-only | images=2938 ok=1440 ko=1498 | OK rate: 49,0% | duration: 2333,7s
@@ -98,6 +87,9 @@ JB
 2026-07-07 16:18:43 | TinyTest | match-only | images=8 ok=8 ko=0 | OK rate: 100,0% | duration: 10,7s
 2026-07-07 16:43:02 | VINGINO79 | match-only | images=2847 ok=1362 ko=1485 | OK rate: 47,8% | duration: 1442,6s
 2026-07-07 16:43:15 | WOODWIC12 | match-only | images=9 ok=9 ko=0 | OK rate: 100,0% | duration: 9,8s
+
+--------------------------
+
 2026-07-28 10:17:22 | SPACINI29 | JobID=a6303625-b45c-47fd-8f94-d34559eca8ea | images=86 ok=86 dedup-excluded=0 | Job OK rate: 100% | duration: 00:03:30 (211s)
 2026-07-28 12:17:45 | INPUTMA24 | JobID=eff055b3-3f8e-4d1a-af37-1dcae1cefdc4 | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 02:00:23 (7223s) | TIMEOUT_OR_NO_RESULT (120m) (JB note: KO'd due to 64x64 upscaling tiles. Switched to ESRGAN dynamic tiling for 12x gain.)
 2026-07-28 13:09:22 | INPUTMA27 | JobID=1e7f9edd-1fa3-4a8b-8c2e-807d4a231fc2 | images=569 ok=566 dedup-excluded=0 | Job OK rate: 99.5% | duration: 00:51:34 (3094.3s)
@@ -106,3 +98,43 @@ JB
 2026-07-28 17:32:49 | MMERO26 | JobID=0e5fe5bf-aaa5-47b9-9752-4ac048ca36e2 | images=378 ok=23 dedup-excluded=0 | Job OK rate: 6.1% | duration: 01:23:59 (5039.4s)
 2026-07-28 20:34:36 | SPACINI29 | JobID=07bf3f39-37f2-497e-ba05-b21b7c91700b | images=86 ok=86 dedup-excluded=0 | Job OK rate: 100% | duration: 00:02:54 (174.8s)
 2026-08-07 13:08:57 | TinyTest | JobID=3c5fe69a-24a2-4175-b13c-f6fbb305bbfb | images=11 ok=11 dedup-excluded=0 | Job OK rate: 100% | duration: 00:00:38 (38.8s)
+
+
+--------------------------
+2026-07-07 13:46:08
+JB  MATCH ONLY RUN - phenotype calibration + onnx refinement + BE dataset testing for OKR
+
+Exc.:   - zip/unzip, image processing
+Inc.:   - All XLSX building
+        - classification, matching, ordering
+        - Remote media import
+        - phenotypes (no gates, upgrade & callibration run) DET order collapse
+
+--- ROUND 1 ---
+2026-08-10 14:27:33 | X FILA94 | JobID=6c7b0931-0ad7-4fed-b6ad-4f7e2c47d514 | images=1469 ok=1440 dedup-excluded=0 | Job OK rate: 98% | duration: 00:18:05 (1085.7s)
+2026-08-10 14:34:11 | X FITFLOP113 | JobID=d0c7bde7-f4f3-4561-854a-aae7f4ab9ac0 | images=175 ok=40 dedup-excluded=0 | Job OK rate: 22.9% | duration: 00:06:38 (398.4s)
+2026-08-10 14:37:34 | X FNRE46 | JobID=8513904e-0f80-420a-a2bd-f6495cb1915a | images=74 ok=54 dedup-excluded=0 | Job OK rate: 73% | duration: 00:03:23 (203.1s)
+2026-08-10 14:37:34 | X HURLEY39 | JobID=- | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:00:00 (0s) | SUBMIT_ERROR: No accepted image files to submit.
+2026-08-10 14:37:35 | X JLINE5 | JobID=- | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:00:00 (0.5s) | SUBMIT_ERROR: Cannot bind argument to parameter 'Files' because it is null.
+2026-08-10 14:41:48 | X KAID244 | JobID=a37de3e5-9543-4c1c-aa56-fbc39328edbe | images=84 ok=70 dedup-excluded=0 | Job OK rate: 83.3% | duration: 00:04:13 (253.5s)
+2026-08-10 14:41:48 | X KNEIPP56 | JobID=- | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:00:00 (0.1s) | SUBMIT_ERROR: No accepted image files to submit.
+2026-08-10 15:12:11 | X SMASHEDLEMON45 | JobID=4aaf330b-44a5-4068-81a0-6ee8f619ec5f | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:30:22 (1822.4s) | TIMEOUT_OR_NO_RESULT (30m)
+2026-08-10 15:12:53 | X SPACINI32 | JobID=503b6bac-1acb-4ab1-858f-8b1980374bac | images=31 ok=4 dedup-excluded=9 | Job OK rate: 12.9% | duration: 00:00:41 (41.8s)
+2026-08-10 15:30:12 | X VINGINO79 | JobID=add29cfb-7592-4cfb-8282-6140163783f4 | images=2847 ok=1362 dedup-excluded=0 | Job OK rate: 47.8% | duration: 00:17:19 (1039.7s)
+
+--- ROUND 2 ---
+2026-08-10 15:47:42 | X KNEIPP56 | JobID=b77a2b55-439d-415d-ac7b-ff8035afb48e | images=44 ok=24 dedup-excluded=0 | Job OK rate: 54.5% | duration: 00:00:46 (46.6s)
+2026-08-10 15:49:56 | X HURLEY39 | JobID=7f8eb93d-2f3c-4be4-8ef3-5a1f229a048b | images=1496 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:02:14 (134.7s)
+2026-08-10 16:35:24 | X SMASHEDLEMON45 | JobID=3ddf1ad1-56d8-44b2-a36e-aaeddc9ab7d3 | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:45:27 (2727.3s) | TIMEOUT_OR_NO_RESULT (45m)
+2026-08-10 16:35:25 | X JLINE5 | JobID=- | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:00:00 (0.7s) | SUBMIT_ERROR: Cannot bind argument to parameter 'Files' because it is null.
+2026-08-10 16:35:56 | X MEPAL5 | JobID=4938ff3b-6aa6-4f57-98d2-6db689f22fff | images=413 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:00:30 (30.4s)
+2026-08-10 16:38:02 | X HURLEY39 | JobID=d55fbfad-5927-4d0d-8a16-909a273de8f4 | images=1496 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:02:06 (126.5s)
+2026-08-10 16:38:16 | X FITFLOP 109 | JobID=d822092c-40e1-4bd9-8c85-800fcf4a1ea6 | images=305 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:00:12 (12.9s)
+2026-08-10 16:38:44 | X DEMEYER31 | JobID=de6af592-e3f6-4863-ae59-56b6bf40c9f5 | images=20 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:00:27 (27.9s)
+
+--- ROUND 3 - after the timeout on SMASHEDLEMON45 ---
+
+2026-08-10 17:53:27 | X HURLEY39 | JobID=5784e4c0-042c-4161-88c5-d45edf55e2c1 | images=601 ok=37 dedup-excluded=0 | Job OK rate: 6.2% | duration: 00:06:44 (404s)
+2026-08-10 17:55:19 | X FITFLOP 109 | JobID=af39afc7-dfce-41fc-aa12-ce56e2be68df | images=305 ok=210 dedup-excluded=0 | Job OK rate: 68.9% | duration: 00:01:51 (111.6s)
+2026-08-10 17:55:39 | X DEMEYER31 | JobID=- | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:00:19 (19.5s) | SUBMIT_ERROR: There is not enough space on the disk.
+2026-08-10 17:57:31 | X MEPAL5 | JobID=e18e514e-c377-4623-ae60-70c091b0f3fb | images=36 ok=10 dedup-excluded=5 | Job OK rate: 27.8% | duration: 00:01:51 (111.1s)
