@@ -8,7 +8,7 @@
 >   - Apply the margin if one edge is intersected
 >   - use bounding box for resizing
 >   - use bgstretch utils class for stretching
-> - **T-2840**: Claude reworked how CLIP is used per image.
+> - **T-2840**: Claude reworked how CLIP is used per image to test how CLIP classification differs by submission transport
 >           Now **300% slower** due to serialization or something (not quiet sure, 3 hypotheses in ticket)
 >           Claude suggested re-exporting the ONNX. We should investigate check Huggingface to see if there are other options.
 >           and export something new if it's useful. Need Claude for that.
