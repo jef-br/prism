@@ -10,7 +10,8 @@ namespace Prism.Lib.Excel;
 /// <summary>
 /// Builds the Internal Excel Model from one or more workbook files.
 /// </summary>
-public sealed class ModelBuilder {
+public sealed class ModelBuilder
+{
     private static readonly Regex NonAlphaNumericPattern = new("[^a-z0-9]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex HeaderTokenPattern = new("[a-z0-9]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
@@ -38,7 +39,8 @@ public sealed class ModelBuilder {
     /// <param name="config">Validated Excel configuration.</param>
     /// <param name="translationConfig">Multilingual header/value dictionary.</param>
     /// <param name="excelFileHandler">Workbook loader.</param>
-    public ModelBuilder(ExcelConfig config, TranslationConfig translationConfig, ExcelFileHandler? excelFileHandler = null) {
+    public ModelBuilder(ExcelConfig config, TranslationConfig translationConfig, ExcelFileHandler? excelFileHandler = null)
+    {
         this.config = config ?? throw new ArgumentNullException(nameof(config));
         this.config.Validate();
         this.translationConfig = translationConfig ?? throw new ArgumentNullException(nameof(translationConfig));
@@ -62,7 +64,8 @@ public sealed class ModelBuilder {
     /// </summary>
     /// <param name="configPath">Path to ExcelConfig.json.</param>
     /// <returns>A configured model builder.</returns>
-    public static ModelBuilder FromConfigFile(string configPath) {
+    public static ModelBuilder FromConfigFile(string configPath)
+    {
         ExcelConfig excelConfig = ExcelConfig.Load(configPath);
 
         string configDirectory = System.IO.Path.GetDirectoryName(configPath)
@@ -83,8 +86,10 @@ public sealed class ModelBuilder {
     /// </summary>
     /// <param name="excelFilePaths">Excel-like file paths to process.</param>
     /// <returns>The model and worksheet/row diagnostics produced during parsing.</returns>
-    public ExcelModelBuildResult BuildFromExcelFiles(IEnumerable<string> excelFilePaths) {
-        if (excelFilePaths is null) {
+    public ExcelModelBuildResult BuildFromExcelFiles(IEnumerable<string> excelFilePaths)
+    {
+        if (excelFilePaths is null)
+        {
             throw new ArgumentNullException(nameof(excelFilePaths));
         }
 
@@ -100,8 +105,10 @@ public sealed class ModelBuilder {
     /// </summary>
     /// <param name="workbooks">Workbook data to process.</param>
     /// <returns>The model and worksheet/row diagnostics produced during parsing.</returns>
-    public ExcelModelBuildResult BuildFromWorkbooks(IEnumerable<ExcelWorkbook> workbooks) {
-        if (workbooks is null) {
+    public ExcelModelBuildResult BuildFromWorkbooks(IEnumerable<ExcelWorkbook> workbooks)
+    {
+        if (workbooks is null)
+        {
             throw new ArgumentNullException(nameof(workbooks));
         }
 
@@ -109,7 +116,8 @@ public sealed class ModelBuilder {
         List<ExcelProcessingDiagnostic> diagnostics = [];
         List<OrphanRow> orphanRows = [];
 
-        foreach (ExcelWorkbook workbook in workbooks) {
+        foreach (ExcelWorkbook workbook in workbooks)
+        {
             this.ProcessWorkbook(workbook, model, diagnostics, orphanRows);
         }
 
@@ -119,7 +127,8 @@ public sealed class ModelBuilder {
 
         // Model-scope prune: a canonical property can survive the per-worksheet fill-ratio gate yet be
         // blank across every merged family record. Drop those to shrink the matcher search space.
-        foreach (string droppedProperty in model.PruneEmptyProperties(this.config.RecordPrimaryKey)) {
+        foreach (string droppedProperty in model.PruneEmptyProperties(this.config.RecordPrimaryKey))
+        {
             diagnostics.Add(ExcelProcessingDiagnostic.ModelWarning(
                 "excel.column_dropped_empty_model_wide",
                 $"Column '{droppedProperty}' was dropped because it was empty across all family records.",
@@ -133,8 +142,10 @@ public sealed class ModelBuilder {
         ExcelWorkbook workbook,
         InternalExcelModel model,
         List<ExcelProcessingDiagnostic> diagnostics,
-        List<OrphanRow> orphanRows) {
-        foreach (ExcelWorksheet worksheet in workbook.Worksheets) {
+        List<OrphanRow> orphanRows)
+    {
+        foreach (ExcelWorksheet worksheet in workbook.Worksheets)
+        {
             this.ProcessWorksheet(worksheet, model, diagnostics, orphanRows);
         }
     }
@@ -143,10 +154,12 @@ public sealed class ModelBuilder {
         ExcelWorksheet worksheet,
         InternalExcelModel model,
         List<ExcelProcessingDiagnostic> diagnostics,
-        List<OrphanRow> orphanRows) {
+        List<OrphanRow> orphanRows)
+    {
         HeaderDetectionResult? headerDetectionResult = this.DetectHeaderRow(worksheet);
 
-        if (headerDetectionResult is null) {
+        if (headerDetectionResult is null)
+        {
             diagnostics.Add(ExcelProcessingDiagnostic.WorksheetKo(
                 "excel.header_not_found",
                 "No worksheet header row matched the configured Excel header indicators.",
@@ -159,7 +172,8 @@ public sealed class ModelBuilder {
         // FamilyID column resolved by header-name signal OR by the 8-digit-unique cell pattern.
         int familyIdColumnIndex = this.FindFamilyIDColumnIndex(headerDetectionResult.Headers, dataRows);
 
-        if (familyIdColumnIndex < 0) {
+        if (familyIdColumnIndex < 0)
+        {
             diagnostics.Add(ExcelProcessingDiagnostic.WorksheetKo(
                 "excel.primary_key_column_not_found",
                 $"Worksheet header row does not contain configured primary key '{this.config.RecordPrimaryKey}'.",
@@ -172,7 +186,8 @@ public sealed class ModelBuilder {
             return;
         }
 
-        if (dataRows.Count == 0) {
+        if (dataRows.Count == 0)
+        {
             diagnostics.Add(ExcelProcessingDiagnostic.WorksheetKo(
                 "excel.no_data_rows",
                 "Worksheet contains a detected header row but no data rows.",
@@ -195,7 +210,8 @@ public sealed class ModelBuilder {
                 group => group.First().Classification,
                 StringComparer.OrdinalIgnoreCase);
 
-        foreach (WorksheetDataRow dataRow in dataRows) {
+        foreach (WorksheetDataRow dataRow in dataRows)
+        {
             this.AddDataRowToModel(worksheet, dataRow, acceptedColumns, familyIdColumnIndex, columnClassifications, model, diagnostics, orphanRows);
         }
     }
@@ -209,7 +225,8 @@ public sealed class ModelBuilder {
         HeaderDetectionResult headerDetectionResult,
         IReadOnlyList<WorksheetDataRow> dataRows,
         List<OrphanRow> orphanRows,
-        List<ExcelProcessingDiagnostic> diagnostics) {
+        List<ExcelProcessingDiagnostic> diagnostics)
+    {
         IReadOnlyList<ColumnPlan> acceptedColumns = this.BuildAcceptedColumnPlan(
             worksheet,
             headerDetectionResult.Headers,
@@ -228,7 +245,8 @@ public sealed class ModelBuilder {
                 group => group.First().Classification,
                 StringComparer.OrdinalIgnoreCase);
 
-        foreach (WorksheetDataRow dataRow in dataRows) {
+        foreach (WorksheetDataRow dataRow in dataRows)
+        {
             List<ExcelPropertyValue> propertyValues = acceptedColumns
                 .Select(column => this.BuildPropertyValue(worksheet, dataRow, column))
                 .Where(propertyValue => propertyValue.SourceValues.Any(value => !string.IsNullOrWhiteSpace(value)))
@@ -241,16 +259,19 @@ public sealed class ModelBuilder {
 
     //  Header row detection (token-based, multilingual)
 
-    private HeaderDetectionResult? DetectHeaderRow(ExcelWorksheet worksheet) {
+    private HeaderDetectionResult? DetectHeaderRow(ExcelWorksheet worksheet)
+    {
         HeaderDetectionResult? bestResult = null;
         int firstRow = Math.Max(this.config.HeaderRowSearchSpace.FirstRow, 0);
         int lastRow = Math.Min(this.config.HeaderRowSearchSpace.LastRow, worksheet.Rows.Count - 1);
 
-        for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++) {
+        for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++)
+        {
             ExcelWorksheetRow row = worksheet.Rows[rowIndex];
             HeaderDetectionResult? result = this.EvaluateHeaderCandidateRow(row, rowIndex);
 
-            if (result is null) {
+            if (result is null)
+            {
                 continue;
             }
 
@@ -258,7 +279,8 @@ public sealed class ModelBuilder {
             // This rejects sparse single-cell title rows that would otherwise score a perfect ratio.
             if (bestResult is null
                 || result.MatchedColumnCount > bestResult.MatchedColumnCount
-                || (result.MatchedColumnCount == bestResult.MatchedColumnCount && result.Confidence > bestResult.Confidence)) {
+                || (result.MatchedColumnCount == bestResult.MatchedColumnCount && result.Confidence > bestResult.Confidence))
+            {
                 bestResult = result;
             }
         }
@@ -266,7 +288,8 @@ public sealed class ModelBuilder {
         return bestResult;
     }
 
-    private HeaderDetectionResult? EvaluateHeaderCandidateRow(ExcelWorksheetRow row, int rowIndex) {
+    private HeaderDetectionResult? EvaluateHeaderCandidateRow(ExcelWorksheetRow row, int rowIndex)
+    {
         int firstColumn = Math.Max(this.config.HeaderRowSearchSpace.FirstColumn, 0);
         int lastColumn = Math.Min(this.config.HeaderRowSearchSpace.LastColumn, row.Cells.Count - 1);
         Dictionary<int, HeaderCell> headers = [];
@@ -274,27 +297,32 @@ public sealed class ModelBuilder {
         int candidateCellCount = 0;
         bool hasFamilyIdHeader = false;
 
-        for (int columnIndex = firstColumn; columnIndex <= lastColumn; columnIndex++) {
+        for (int columnIndex = firstColumn; columnIndex <= lastColumn; columnIndex++)
+        {
             string rawHeader = row.Cells[columnIndex].Trim();
 
-            if (string.IsNullOrWhiteSpace(rawHeader)) {
+            if (string.IsNullOrWhiteSpace(rawHeader))
+            {
                 continue;
             }
 
             candidateCellCount++;
 
-            if (this.TryMatchHeaderCell(rawHeader, out double cellConfidence)) {
+            if (this.TryMatchHeaderCell(rawHeader, out double cellConfidence))
+            {
                 matchedConfidences.Add(cellConfidence);
             }
 
-            if (!hasFamilyIdHeader && this.HeaderResolvesToFamilyId(rawHeader)) {
+            if (!hasFamilyIdHeader && this.HeaderResolvesToFamilyId(rawHeader))
+            {
                 hasFamilyIdHeader = true;
             }
 
             headers[columnIndex] = new HeaderCell(columnIndex, rawHeader, this.ResolveColumnCanonicalName(rawHeader, columnIndex));
         }
 
-        if (candidateCellCount == 0) {
+        if (candidateCellCount == 0)
+        {
             return null;
         }
 
@@ -307,7 +335,8 @@ public sealed class ModelBuilder {
         bool qualifiesByRatio = matchedColumnRatio >= this.config.HeaderDetection.MinimumMatchedColumnRatio;
         bool qualifiesByFamilyId = hasFamilyIdHeader && matchedConfidences.Count >= 2;
 
-        if (!qualifiesByRatio && !qualifiesByFamilyId) {
+        if (!qualifiesByRatio && !qualifiesByFamilyId)
+        {
             return null;
         }
 
@@ -320,28 +349,34 @@ public sealed class ModelBuilder {
     /// A header cell matches when any of its significant tokens resolves to an active header
     /// indicator (exact), or is within edit distance 1 of a configured header term (typo tolerance).
     /// </summary>
-    private bool TryMatchHeaderCell(string rawHeader, out double confidence) {
+    private bool TryMatchHeaderCell(string rawHeader, out double confidence)
+    {
         confidence = 0;
         bool matched = false;
 
         // Whole-phrase indicators ("Product Type", "Tipo di prodotto") match before tokenization.
         if (this.translationConfig.TryResolveHeaderPhrase(rawHeader, out string phraseCanonical)
-            && this.activeIndicatorIds.Contains(NormalizeHeader(phraseCanonical))) {
+            && this.activeIndicatorIds.Contains(NormalizeHeader(phraseCanonical)))
+        {
             confidence = 1.0;
             return true;
         }
 
-        foreach (string token in TokenizeFolded(rawHeader)) {
-            if (this.translationConfig.IsGeneralStopWord(token)) {
+        foreach (string token in TokenizeFolded(rawHeader))
+        {
+            if (this.translationConfig.IsGeneralStopWord(token))
+            {
                 continue;
             }
 
-            if (this.TokenMatchesIndicator(token)) {
+            if (this.TokenMatchesIndicator(token))
+            {
                 confidence = 1.0;
                 return true;
             }
 
-            if (token.Length >= 4 && this.fuzzyHeaderTerms.Any(term => ComputeLevenshteinDistance(token, term) <= 1)) {
+            if (token.Length >= 4 && this.fuzzyHeaderTerms.Any(term => ComputeLevenshteinDistance(token, term) <= 1))
+            {
                 matched = true;
                 confidence = Math.Max(confidence, this.config.HeaderDetection.EditDistanceOneConfidence);
             }
@@ -354,8 +389,10 @@ public sealed class ModelBuilder {
     /// True when a single header token is an active indicator — either by resolving to a configured
     /// canonical header group id, or by being a literal indicator term in ExcelConfig.
     /// </summary>
-    private bool TokenMatchesIndicator(string normalizedToken) {
-        if (this.activeIndicatorIds.Contains(normalizedToken)) {
+    private bool TokenMatchesIndicator(string normalizedToken)
+    {
+        if (this.activeIndicatorIds.Contains(normalizedToken))
+        {
             return true;
         }
 
@@ -371,23 +408,27 @@ public sealed class ModelBuilder {
     /// number). Header-name carries sheets that repeat a FamilyID across rows; cell-pattern carries
     /// sheets whose header text is in an unrecognized language.
     /// </summary>
-    private int FindFamilyIDColumnIndex(IReadOnlyDictionary<int, HeaderCell> headers, IReadOnlyList<WorksheetDataRow> dataRows) {
+    private int FindFamilyIDColumnIndex(IReadOnlyDictionary<int, HeaderCell> headers, IReadOnlyList<WorksheetDataRow> dataRows)
+    {
         List<int> nameCandidates = headers.Values
             .Where(header => this.HeaderResolvesToFamilyId(header.RawHeader))
             .Select(header => header.ColumnIndex)
             .OrderBy(columnIndex => columnIndex)
             .ToList();
 
-        if (nameCandidates.Count == 1) {
+        if (nameCandidates.Count == 1)
+        {
             return nameCandidates[0];
         }
 
-        if (nameCandidates.Count > 1) {
+        if (nameCandidates.Count > 1)
+        {
             List<int> patternConfirmed = nameCandidates
                 .Where(columnIndex => this.ColumnIsFamilyIdByCellPattern(dataRows, columnIndex))
                 .ToList();
 
-            if (patternConfirmed.Count > 0) {
+            if (patternConfirmed.Count > 0)
+            {
                 return patternConfirmed[0];
             }
 
@@ -405,10 +446,13 @@ public sealed class ModelBuilder {
         return patternColumns.Count == 1 ? patternColumns[0] : -1;
     }
 
-    private bool HeaderResolvesToFamilyId(string rawHeader) {
-        foreach (string token in TokenizeFolded(rawHeader)) {
+    private bool HeaderResolvesToFamilyId(string rawHeader)
+    {
+        foreach (string token in TokenizeFolded(rawHeader))
+        {
             if (this.translationConfig.TryResolveHeaderCanonical(token, out string canonicalId)
-                && string.Equals(NormalizeHeader(canonicalId), FamilyIdCanonical, StringComparison.OrdinalIgnoreCase)) {
+                && string.Equals(NormalizeHeader(canonicalId), FamilyIdCanonical, StringComparison.OrdinalIgnoreCase))
+            {
                 return true;
             }
         }
@@ -420,17 +464,20 @@ public sealed class ModelBuilder {
     /// True when every non-empty cell in the column is a valid FamilyID (per FamilyIDProperties) and
     /// all those values are unique within the column.
     /// </summary>
-    private bool ColumnIsFamilyIdByCellPattern(IReadOnlyList<WorksheetDataRow> dataRows, int columnIndex) {
+    private bool ColumnIsFamilyIdByCellPattern(IReadOnlyList<WorksheetDataRow> dataRows, int columnIndex)
+    {
         List<string> nonEmptyValues = dataRows
             .Select(row => GetCellValue(row.Cells, columnIndex).Trim())
             .Where(value => value.Length > 0)
             .ToList();
 
-        if (nonEmptyValues.Count == 0) {
+        if (nonEmptyValues.Count == 0)
+        {
             return false;
         }
 
-        if (!nonEmptyValues.All(this.IsValidFamilyID)) {
+        if (!nonEmptyValues.All(this.IsValidFamilyID))
+        {
             return false;
         }
 
@@ -438,7 +485,8 @@ public sealed class ModelBuilder {
         return uniqueCount == nonEmptyValues.Count;
     }
 
-    private IReadOnlyList<WorksheetDataRow> ReadDataRows(ExcelWorksheet worksheet, int headerRowIndex) {
+    private IReadOnlyList<WorksheetDataRow> ReadDataRows(ExcelWorksheet worksheet, int headerRowIndex)
+    {
         return worksheet.Rows
             .Where(row => row.RowIndex > headerRowIndex)
             .Select(row => new WorksheetDataRow(row.RowIndex, row.Cells))
@@ -451,13 +499,16 @@ public sealed class ModelBuilder {
         IReadOnlyDictionary<int, HeaderCell> headers,
         IReadOnlyList<WorksheetDataRow> dataRows,
         int familyIdColumnIndex,
-        List<ExcelProcessingDiagnostic> diagnostics) {
+        List<ExcelProcessingDiagnostic> diagnostics)
+    {
         List<ColumnPlan> validColumns = [];
 
-        foreach (HeaderCell header in headers.Values.OrderBy(header => header.ColumnIndex)) {
+        foreach (HeaderCell header in headers.Values.OrderBy(header => header.ColumnIndex))
+        {
             IReadOnlyList<string> columnValues = this.ReadColumnValues(dataRows, header.ColumnIndex);
 
-            if (header.ColumnIndex != familyIdColumnIndex && !this.ColumnHasEnoughUsefulValues(columnValues, dataRows.Count)) {
+            if (header.ColumnIndex != familyIdColumnIndex && !this.ColumnHasEnoughUsefulValues(columnValues, dataRows.Count))
+            {
                 diagnostics.Add(ExcelProcessingDiagnostic.WorksheetWarning(
                     "excel.column_dropped_low_value_ratio",
                     $"Column '{header.RawHeader}' was dropped because it did not contain enough useful values.",
@@ -481,14 +532,17 @@ public sealed class ModelBuilder {
         return this.MergeDuplicateColumns(worksheet, validColumns, dataRows, diagnostics);
     }
 
-    private IReadOnlyList<string> ReadColumnValues(IReadOnlyList<WorksheetDataRow> dataRows, int columnIndex) {
+    private IReadOnlyList<string> ReadColumnValues(IReadOnlyList<WorksheetDataRow> dataRows, int columnIndex)
+    {
         return dataRows
             .Select(row => GetCellValue(row.Cells, columnIndex))
             .ToArray();
     }
 
-    private bool ColumnHasEnoughUsefulValues(IReadOnlyList<string> columnValues, int rowCount) {
-        if (rowCount <= 0) {
+    private bool ColumnHasEnoughUsefulValues(IReadOnlyList<string> columnValues, int rowCount)
+    {
+        if (rowCount <= 0)
+        {
             return false;
         }
 
@@ -498,21 +552,25 @@ public sealed class ModelBuilder {
         return usefulValueRatio >= this.config.ColumnValidity.MinimumUsefulValueRatio;
     }
 
-    private ExcelColumnClassification ClassifyColumn(IReadOnlyList<string> columnValues) {
+    private ExcelColumnClassification ClassifyColumn(IReadOnlyList<string> columnValues)
+    {
         string[] nonEmptyValues = columnValues
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => value.Trim())
             .ToArray();
 
-        if (nonEmptyValues.Length == 0) {
+        if (nonEmptyValues.Length == 0)
+        {
             return ExcelColumnClassification.Descriptive;
         }
 
-        if (nonEmptyValues.All(IsNumericValue)) {
+        if (nonEmptyValues.All(IsNumericValue))
+        {
             return ExcelColumnClassification.Numerical;
         }
 
-        if (nonEmptyValues.Any(ContainsLetterAndDigit)) {
+        if (nonEmptyValues.Any(ContainsLetterAndDigit))
+        {
             return ExcelColumnClassification.Mixed;
         }
 
@@ -520,7 +578,8 @@ public sealed class ModelBuilder {
         int maximumValueLength = nonEmptyValues.Max(value => value.Length);
 
         if (uniqueValueCount <= this.config.ColumnClassification.CategoricalMaximumUniqueValues
-            && maximumValueLength <= this.config.ColumnClassification.CategoricalMaximumValueLength) {
+            && maximumValueLength <= this.config.ColumnClassification.CategoricalMaximumValueLength)
+        {
             return ExcelColumnClassification.Categorical;
         }
 
@@ -531,23 +590,29 @@ public sealed class ModelBuilder {
         ExcelWorksheet worksheet,
         IReadOnlyList<ColumnPlan> validColumns,
         IReadOnlyList<WorksheetDataRow> dataRows,
-        List<ExcelProcessingDiagnostic> diagnostics) {
+        List<ExcelProcessingDiagnostic> diagnostics)
+    {
         List<ColumnPlan> mergedColumns = [];
         HashSet<int> consumedColumnIndexes = [];
 
-        foreach (ColumnPlan column in validColumns) {
-            if (consumedColumnIndexes.Contains(column.ColumnIndex)) {
+        foreach (ColumnPlan column in validColumns)
+        {
+            if (consumedColumnIndexes.Contains(column.ColumnIndex))
+            {
                 continue;
             }
 
             List<ColumnPlan> duplicateGroup = [column];
 
-            foreach (ColumnPlan candidate in validColumns) {
-                if (candidate.ColumnIndex == column.ColumnIndex || consumedColumnIndexes.Contains(candidate.ColumnIndex)) {
+            foreach (ColumnPlan candidate in validColumns)
+            {
+                if (candidate.ColumnIndex == column.ColumnIndex || consumedColumnIndexes.Contains(candidate.ColumnIndex))
+                {
                     continue;
                 }
 
-                if (this.ColumnsShouldMerge(column, candidate, dataRows)) {
+                if (this.ColumnsShouldMerge(column, candidate, dataRows))
+                {
                     duplicateGroup.Add(candidate);
                     consumedColumnIndexes.Add(candidate.ColumnIndex);
                 }
@@ -557,7 +622,8 @@ public sealed class ModelBuilder {
             ColumnPlan mergedColumn = BuildMergedColumnPlan(duplicateGroup);
             mergedColumns.Add(mergedColumn);
 
-            if (duplicateGroup.Count > 1) {
+            if (duplicateGroup.Count > 1)
+            {
                 diagnostics.Add(ExcelProcessingDiagnostic.WorksheetWarning(
                     "excel.duplicate_columns_merged",
                     $"Merged duplicate-like columns into '{mergedColumn.CanonicalName}'.",
@@ -569,8 +635,10 @@ public sealed class ModelBuilder {
         return mergedColumns;
     }
 
-    private bool ColumnsShouldMerge(ColumnPlan leftColumn, ColumnPlan rightColumn, IReadOnlyList<WorksheetDataRow> dataRows) {
-        if (leftColumn.Classification == ExcelColumnClassification.FamilyID || rightColumn.Classification == ExcelColumnClassification.FamilyID) {
+    private bool ColumnsShouldMerge(ColumnPlan leftColumn, ColumnPlan rightColumn, IReadOnlyList<WorksheetDataRow> dataRows)
+    {
+        if (leftColumn.Classification == ExcelColumnClassification.FamilyID || rightColumn.Classification == ExcelColumnClassification.FamilyID)
+        {
             return leftColumn.Classification == ExcelColumnClassification.FamilyID
                 && rightColumn.Classification == ExcelColumnClassification.FamilyID
                 && string.Equals(leftColumn.CanonicalName, rightColumn.CanonicalName, StringComparison.OrdinalIgnoreCase);
@@ -578,7 +646,8 @@ public sealed class ModelBuilder {
 
         bool headersAreIdentical = string.Equals(leftColumn.CanonicalName, rightColumn.CanonicalName, StringComparison.OrdinalIgnoreCase);
 
-        if (headersAreIdentical) {
+        if (headersAreIdentical)
+        {
             return true;
         }
 
@@ -586,7 +655,8 @@ public sealed class ModelBuilder {
             > this.config.DuplicateColumnHandling.OverlapRatioForMerge;
     }
 
-    private double CalculateColumnOverlapRatio(int leftColumnIndex, int rightColumnIndex, IReadOnlyList<WorksheetDataRow> dataRows) {
+    private double CalculateColumnOverlapRatio(int leftColumnIndex, int rightColumnIndex, IReadOnlyList<WorksheetDataRow> dataRows)
+    {
         string[] leftValues = dataRows
             .Select(row => NormalizeCellValue(GetCellValue(row.Cells, leftColumnIndex)))
             .Where(value => value.Length > 0)
@@ -599,7 +669,8 @@ public sealed class ModelBuilder {
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        if (leftValues.Length == 0 || rightValues.Length == 0) {
+        if (leftValues.Length == 0 || rightValues.Length == 0)
+        {
             return 0;
         }
 
@@ -609,7 +680,8 @@ public sealed class ModelBuilder {
         return sharedValueCount / (double)comparisonBase;
     }
 
-    private static ColumnPlan BuildMergedColumnPlan(IReadOnlyList<ColumnPlan> duplicateGroup) {
+    private static ColumnPlan BuildMergedColumnPlan(IReadOnlyList<ColumnPlan> duplicateGroup)
+    {
         ColumnPlan firstColumn = duplicateGroup[0];
         int[] sourceColumnIndexes = duplicateGroup
             .SelectMany(column => column.SourceColumnIndexes)
@@ -628,10 +700,12 @@ public sealed class ModelBuilder {
         IReadOnlyDictionary<string, ExcelColumnClassification> columnClassifications,
         InternalExcelModel model,
         List<ExcelProcessingDiagnostic> diagnostics,
-        List<OrphanRow> orphanRows) {
+        List<OrphanRow> orphanRows)
+    {
         string familyID = GetCellValue(dataRow.Cells, familyIdColumnIndex).Trim();
 
-        if (!this.IsValidFamilyID(familyID)) {
+        if (!this.IsValidFamilyID(familyID))
+        {
             diagnostics.Add(ExcelProcessingDiagnostic.RowKo(
                 "excel.invalid_primary_key",
                 "Row was skipped because its primary key is missing, malformed, or not compliant with ExcelConfig.FamilyIDProperties.",
@@ -655,8 +729,10 @@ public sealed class ModelBuilder {
 
         List<ExcelPropertyValue> propertyValues = [];
 
-        foreach (ColumnPlan column in acceptedColumns) {
-            if (column.SourceColumnIndexes.Contains(familyIdColumnIndex)) {
+        foreach (ColumnPlan column in acceptedColumns)
+        {
+            if (column.SourceColumnIndexes.Contains(familyIdColumnIndex))
+            {
                 continue;
             }
 
@@ -667,18 +743,21 @@ public sealed class ModelBuilder {
         propertyValues.Add(new ExcelPropertyValue(this.config.RecordPrimaryKey, [familyID], []));
 
         var extendedClassifications = new Dictionary<string, ExcelColumnClassification>(
-            columnClassifications, StringComparer.OrdinalIgnoreCase) {
+            columnClassifications, StringComparer.OrdinalIgnoreCase)
+        {
             [this.config.RecordPrimaryKey] = ExcelColumnClassification.FamilyID
         };
 
         model.AddOrMergeFamilyRow(familyID, propertyValues, extendedClassifications);
     }
 
-    private ExcelPropertyValue BuildPropertyValue(ExcelWorksheet worksheet, WorksheetDataRow dataRow, ColumnPlan column) {
+    private ExcelPropertyValue BuildPropertyValue(ExcelWorksheet worksheet, WorksheetDataRow dataRow, ColumnPlan column)
+    {
         List<string> sourceValues = [];
         List<ExcelCellAddress> sourceLocations = [];
 
-        foreach (int sourceColumnIndex in column.SourceColumnIndexes) {
+        foreach (int sourceColumnIndex in column.SourceColumnIndexes)
+        {
             string sourceValue = GetCellValue(dataRow.Cells, sourceColumnIndex);
             string filledValue = sourceValue ?? string.Empty;
             sourceValues.Add(filledValue);
@@ -698,29 +777,25 @@ public sealed class ModelBuilder {
         return new ExcelPropertyValue(column.CanonicalName, uniqueSourceValues, sourceLocations);
     }
 
-    private bool IsValidFamilyID(string familyId) {
-        if (string.IsNullOrWhiteSpace(familyId)) {
-            return false;
-        }
+    private bool IsValidFamilyID(string familyId)
+    {
+        if (string.IsNullOrWhiteSpace(familyId)) return false;
 
-        string trimmedFamilyId = familyId.Trim();
+        string fID = familyId.Trim();
+        if (fID.Length < this.config.FamilyIDProperties.Length) return false;
+        if (this.config.FamilyIDProperties.IsNumeric == true && !fID.All(char.IsDigit)) return false;
 
-        if (trimmedFamilyId.Length != this.config.FamilyIDProperties.Length) {
-            return false;
-        }
-
-        if (this.config.FamilyIDProperties.IsNumeric == true && !trimmedFamilyId.All(char.IsDigit)) {
-            return false;
-        }
 
         return true;
     }
 
-    private static bool IsNumericValue(string value) {
+    private static bool IsNumericValue(string value)
+    {
         return decimal.TryParse(value.Trim(), out _);
     }
 
-    private static bool ContainsLetterAndDigit(string value) {
+    private static bool ContainsLetterAndDigit(string value)
+    {
         return value.Any(char.IsLetter) && value.Any(char.IsDigit);
     }
 
@@ -732,13 +807,16 @@ public sealed class ModelBuilder {
     /// duplicates merge (e.g. "Descripción"/"DESCRIPCION" -> "description"). Otherwise the cleaned
     /// raw header is kept so distinct columns are never accidentally merged.
     /// </summary>
-    private string ResolveColumnCanonicalName(string rawHeader, int columnIndex) {
+    private string ResolveColumnCanonicalName(string rawHeader, int columnIndex)
+    {
         // Whole-phrase lookup first: multi-word terms ("Product Type", "Tipo di prodotto") can
         // never resolve token by token because their words are stop words or non-terms alone.
-        if (this.translationConfig.TryResolveHeaderPhrase(rawHeader, out string phraseCanonical)) {
+        if (this.translationConfig.TryResolveHeaderPhrase(rawHeader, out string phraseCanonical))
+        {
             string normalizedPhraseCanonical = NormalizeHeader(phraseCanonical);
 
-            if (SafeMergeCanonicals.Contains(normalizedPhraseCanonical)) {
+            if (SafeMergeCanonicals.Contains(normalizedPhraseCanonical))
+            {
                 return normalizedPhraseCanonical;
             }
         }
@@ -746,62 +824,75 @@ public sealed class ModelBuilder {
         string? singleCanonical = null;
         bool sawSignificantToken = false;
 
-        foreach (string token in TokenizeFolded(rawHeader)) {
-            if (this.translationConfig.IsGeneralStopWord(token)) {
+        foreach (string token in TokenizeFolded(rawHeader))
+        {
+            if (this.translationConfig.IsGeneralStopWord(token))
+            {
                 continue;
             }
 
             sawSignificantToken = true;
 
-            if (!this.translationConfig.TryResolveHeaderCanonical(token, out string canonicalId)) {
+            if (!this.translationConfig.TryResolveHeaderCanonical(token, out string canonicalId))
+            {
                 return BuildCanonicalHeaderName(rawHeader, columnIndex);
             }
 
             string normalizedCanonical = NormalizeHeader(canonicalId);
 
-            if (singleCanonical is null) {
+            if (singleCanonical is null)
+            {
                 singleCanonical = normalizedCanonical;
             }
-            else if (!string.Equals(singleCanonical, normalizedCanonical, StringComparison.OrdinalIgnoreCase)) {
+            else if (!string.Equals(singleCanonical, normalizedCanonical, StringComparison.OrdinalIgnoreCase))
+            {
                 return BuildCanonicalHeaderName(rawHeader, columnIndex);
             }
         }
 
-        if (sawSignificantToken && singleCanonical is not null && SafeMergeCanonicals.Contains(singleCanonical)) {
+        if (sawSignificantToken && singleCanonical is not null && SafeMergeCanonicals.Contains(singleCanonical))
+        {
             return singleCanonical;
         }
 
         return BuildCanonicalHeaderName(rawHeader, columnIndex);
     }
 
-    private static string BuildCanonicalHeaderName(string rawHeader, int columnIndex) {
+    private static string BuildCanonicalHeaderName(string rawHeader, int columnIndex)
+    {
         string collapsedHeader = Regex.Replace(rawHeader.Trim(), "\\s+", " ");
 
-        if (string.IsNullOrWhiteSpace(collapsedHeader)) {
+        if (string.IsNullOrWhiteSpace(collapsedHeader))
+        {
             return $"Column{columnIndex + 1}";
         }
 
         return collapsedHeader;
     }
 
-    private static string NormalizeHeader(string header) {
+    private static string NormalizeHeader(string header)
+    {
         return NonAlphaNumericPattern.Replace(FoldDiacritics(header).Trim().ToLowerInvariant(), string.Empty);
     }
 
     /// <summary>Splits a header cell into lowercase, diacritics-folded alphanumeric tokens.</summary>
-    private static IEnumerable<string> TokenizeFolded(string header) {
+    private static IEnumerable<string> TokenizeFolded(string header)
+    {
         return HeaderTokenPattern
             .Matches(FoldDiacritics(header).ToLowerInvariant())
             .Select(match => match.Value);
     }
 
     /// <summary>Folds accented characters to their ASCII base so "código" tokenizes as "codigo".</summary>
-    private static string FoldDiacritics(string input) {
+    private static string FoldDiacritics(string input)
+    {
         string decomposed = input.Normalize(NormalizationForm.FormD);
         StringBuilder builder = new(decomposed.Length);
 
-        foreach (char ch in decomposed) {
-            if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark) {
+        foreach (char ch in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+            {
                 builder.Append(ch);
             }
         }
@@ -809,12 +900,15 @@ public sealed class ModelBuilder {
         return builder.ToString().Normalize(NormalizationForm.FormC);
     }
 
-    private static string NormalizeCellValue(string value) {
+    private static string NormalizeCellValue(string value)
+    {
         return value.Trim().ToLowerInvariant();
     }
 
-    private static string GetCellValue(IReadOnlyList<string> cells, int columnIndex) {
-        if (columnIndex < 0 || columnIndex >= cells.Count) {
+    private static string GetCellValue(IReadOnlyList<string> cells, int columnIndex)
+    {
+        if (columnIndex < 0 || columnIndex >= cells.Count)
+        {
             return string.Empty;
         }
 
@@ -823,27 +917,34 @@ public sealed class ModelBuilder {
 
     // Internal (not private): reused by StringMatcher.cs for Bracket 3/4 categorical-column edit-distance
     // tolerance, so the bounded edit-distance calculation exists in exactly one place.
-    internal static int ComputeLevenshteinDistance(string left, string right) {
-        if (left.Length == 0) {
+    internal static int ComputeLevenshteinDistance(string left, string right)
+    {
+        if (left.Length == 0)
+        {
             return right.Length;
         }
 
-        if (right.Length == 0) {
+        if (right.Length == 0)
+        {
             return left.Length;
         }
 
         int[,] distances = new int[left.Length + 1, right.Length + 1];
 
-        for (int leftIndex = 0; leftIndex <= left.Length; leftIndex++) {
+        for (int leftIndex = 0; leftIndex <= left.Length; leftIndex++)
+        {
             distances[leftIndex, 0] = leftIndex;
         }
 
-        for (int rightIndex = 0; rightIndex <= right.Length; rightIndex++) {
+        for (int rightIndex = 0; rightIndex <= right.Length; rightIndex++)
+        {
             distances[0, rightIndex] = rightIndex;
         }
 
-        for (int leftIndex = 1; leftIndex <= left.Length; leftIndex++) {
-            for (int rightIndex = 1; rightIndex <= right.Length; rightIndex++) {
+        for (int leftIndex = 1; leftIndex <= left.Length; leftIndex++)
+        {
+            for (int rightIndex = 1; rightIndex <= right.Length; rightIndex++)
+            {
                 int substitutionCost = left[leftIndex - 1] == right[rightIndex - 1] ? 0 : 1;
 
                 distances[leftIndex, rightIndex] = Math.Min(
