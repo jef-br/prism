@@ -48,7 +48,7 @@
 
     "SubjectDetector": {
         "MaxAnalysisSize": 1024,
-        "TextureWindow": 7,
+        "TextureWindow": 14,
         "TextureDetailSigma": 4.0,
         "OutlierSpreadMultiplier": 4.0,
         "MinComponentAreaFraction": 0.0005,
@@ -62,7 +62,7 @@
         "ChromaFloor": 2.0,
         "TextureFloor": 2.0,
         "ClaheClipLimit": 2.0,
-        "ClaheTileSize": 8,
+        "ClaheTileSize": 16,
         "BleedContact": 0.2,
 
         "_comment_hardshadow": "Fraction of the frame that must be stripped as thin texture-only line for hard-shadow evidence. Calibrated 2026-07-28 against SPACINI29 (n=86): the measured fraction runs min 0.0113 / median 0.0371 / p90 0.0702 / max 0.1243, so the previous 0.01 fired on 86/86 images and discriminated nothing — while driving a bottom-trim on every centred image. 0.05 flags 23/86 (27%). This is a calibration choice on an unlabelled studio set, not ground truth; SubjectDetection.HardShadowStrippedFraction carries the raw measurement per image so it can be re-tuned against labelled data later.",

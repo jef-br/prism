@@ -36,6 +36,9 @@ public class Tx_DetailCropper : IImageTransformation {
     public ImageRecord_LAMBDA Transform(ImageRecord_LAMBDA InputImage) {
         if (this._headcut && this._colorMat is not null) Tx_util_HeadCutter.Analyze(InputImage, this._colorMat, this._headCutter);
 
+
+
+
         byte[]? bytes = InputImage.ProcessedBytes;
         if (bytes is null) {
             InputImage.OutputRecord = new ImageRecord_OUTPUT {

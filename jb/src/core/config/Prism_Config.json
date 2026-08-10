@@ -96,9 +96,9 @@
         "Confidence_Threshold": 0.5,
         "Confidence_Thresholds": {
             "hero-orientation": 0.33,
-            "head-visible": 0.25,
-            "body-visible": 0.1,
-            "product-color": 0.45,
+            "head-visible": 0.42,
+            "body-visible": 0.25,
+            "product-color": 0.65,
             "product-type-label": 0.45
         },
         "Cutoff_Threshold": 0.25,
