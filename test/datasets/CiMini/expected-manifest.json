@@ -253,17 +253,17 @@
   },
   {
     "SourceReference": "87186790_1.jpg",
-    "Status": "Ok",
-    "FamilyId": "99984905",
-    "FinalFileName": "99984905_det0.jpg",
-    "DetOrder": 0
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "87186790_2.jpg",
-    "Status": "Ok",
-    "FamilyId": "99985047",
-    "FinalFileName": "99985047_det2.jpg",
-    "DetOrder": 2
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "99218629_det0.jpg",
