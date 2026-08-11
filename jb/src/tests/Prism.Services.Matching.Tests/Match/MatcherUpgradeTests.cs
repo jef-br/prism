@@ -64,6 +64,11 @@ public class MatcherUpgradeTests {
         NonExactTokenMatchConfidence = 0.85
     };
 
+    // No prior-bracket near-miss candidates recorded — these tests exercise SiblingPropagator in
+    // isolation, so the crossBracketCandidates pre-filter always falls through to the token-index pool.
+    private static readonly Dictionary<string, HashSet<string>> NoCrossBracketCandidates =
+        new(StringComparer.OrdinalIgnoreCase);
+
     // Production-equivalent SiblingPropagator tuning (MatchingConfig.json's match.siblingPropagator).
     private static readonly SiblingPropagator.Config SiblingPropagatorCfg = new() {
         CommonTokenRatio = 0.5,
@@ -313,7 +318,7 @@ public class MatcherUpgradeTests {
         ImageRecord_LAMBDA keyless = MakeLambda("CARDIGAN_MAGENTA76_A.jpg");
         List<ImageRecord_LAMBDA> allRecords = [matched, keyless, MakeLambda("Pareo Exotica.jpg")];
 
-        List<ImageRecord_LAMBDA> stillUnmatched = propagator.Run([keyless], allRecords);
+        List<ImageRecord_LAMBDA> stillUnmatched = propagator.Run([keyless], allRecords, NoCrossBracketCandidates);
 
         Assert.DoesNotContain(keyless, stillUnmatched);
         Assert.Equal("90861052", keyless.MatchEvidence?.FinalFamilyId);
@@ -337,7 +342,7 @@ public class MatcherUpgradeTests {
         ImageRecord_LAMBDA unresolvable = MakeLambda("OMB-E180-BV_1.jpg");
         List<ImageRecord_LAMBDA> allRecords = [matched, unresolvable];
 
-        List<ImageRecord_LAMBDA> stillUnmatched = propagator.Run([unresolvable], allRecords);
+        List<ImageRecord_LAMBDA> stillUnmatched = propagator.Run([unresolvable], allRecords, NoCrossBracketCandidates);
 
         Assert.Contains(unresolvable, stillUnmatched);
         Assert.Null(unresolvable.MatchEvidence);
@@ -358,7 +363,7 @@ public class MatcherUpgradeTests {
         ImageRecord_LAMBDA keyless = MakeLambda("CARDIGAN_MAGENTA_C.jpg");
         List<ImageRecord_LAMBDA> allRecords = [matchedA, matchedB, keyless];
 
-        List<ImageRecord_LAMBDA> stillUnmatched = propagator.Run([keyless], allRecords);
+        List<ImageRecord_LAMBDA> stillUnmatched = propagator.Run([keyless], allRecords, NoCrossBracketCandidates);
 
         Assert.Contains(keyless, stillUnmatched);
         Assert.Null(keyless.MatchEvidence);
@@ -382,7 +387,7 @@ public class MatcherUpgradeTests {
         ImageRecord_LAMBDA shotC = MakeLambda("CARDIGAN_MAGENTA76_C.jpg");
         List<ImageRecord_LAMBDA> allRecords = [shotA, shotB, otherCardigan, shotC];
 
-        List<ImageRecord_LAMBDA> stillUnmatched = propagator.Run([shotC], allRecords);
+        List<ImageRecord_LAMBDA> stillUnmatched = propagator.Run([shotC], allRecords, NoCrossBracketCandidates);
 
         Assert.DoesNotContain(shotC, stillUnmatched);
         Assert.Equal("90861052", shotC.MatchEvidence?.FinalFamilyId);

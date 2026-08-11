@@ -109,7 +109,7 @@ internal sealed class ImageMatcher {
         // Bracket 4 continued — sibling propagation: inherit the FamilyID of the unique matched
         // sibling image.
         if (this.matchingConfig.Match.Shared.EnableSiblingPropagation)
-            unmatched = this.siblingPropagator.Run(unmatched, allRecords);
+            unmatched = this.siblingPropagator.Run(unmatched, allRecords, crossBracketCandidates);
 
         // Add CLIP label evidence to already-matched records (no new assignments)
         this.AddClipLabelEvidence(allRecords, families, labelRules);

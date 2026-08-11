@@ -67,15 +67,20 @@ internal sealed class SiblingPropagator {
     /// </summary>
     /// <param name="unmatched">Records without a FamilyID after all earlier brackets.</param>
     /// <param name="allRecords">All LAMBDA records; matched ones provide the propagation sources.</param>
-    internal List<ImageRecord_LAMBDA> Run(List<ImageRecord_LAMBDA> unmatched, List<ImageRecord_LAMBDA> allRecords) {
-        Dictionary<string, int> batchTokenCounts = CountBatchTokens(allRecords);
+    internal List<ImageRecord_LAMBDA> Run(
+        List<ImageRecord_LAMBDA> unmatched,
+        List<ImageRecord_LAMBDA> allRecords,
+        IReadOnlyDictionary<string, HashSet<string>> crossBracketCandidates) {
+        Dictionary<ImageRecord_LAMBDA, HashSet<string>> rawProfiles = allRecords.ToDictionary(
+            record => record, record => BuildProfile(record.MatchingName));
+        Dictionary<string, int> batchTokenCounts = CountBatchTokens(rawProfiles.Values);
 
         List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> matchedProfiles = [];
         foreach (ImageRecord_LAMBDA record in allRecords) {
             if (record.IsKo || record.MatchEvidence?.FinalFamilyId is null)
                 continue;
 
-            HashSet<string> profile = BuildProfile(record.MatchingName);
+            HashSet<string> profile = rawProfiles[record];
             this.RemoveBatchCommonTokens(profile, batchTokenCounts, allRecords.Count);
 
             if (profile.Count > 0)
@@ -84,6 +89,20 @@ internal sealed class SiblingPropagator {
 
         if (matchedProfiles.Count == 0)
             return unmatched;
+
+        // Inverted index: rare token -> matched profiles carrying it. Narrows FindLooseRelation's
+        // scan from every matched profile to only those sharing at least one token with the
+        // unmatched profile — subset/superset relation always implies a shared token, so this never
+        // drops a true match, only the ones with zero overlap that IsSubsetOf would reject anyway.
+        Dictionary<string, List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)>> tokenIndex =
+            new(StringComparer.Ordinal);
+        foreach ((ImageRecord_LAMBDA record, HashSet<string> profile) in matchedProfiles) {
+            foreach (string token in profile) {
+                if (!tokenIndex.TryGetValue(token, out List<(ImageRecord_LAMBDA, HashSet<string>)>? bucket))
+                    tokenIndex[token] = bucket = [];
+                bucket.Add((record, profile));
+            }
+        }
 
         // Index matched images by their exact rare-token profile. When several photos of one product
         // share an identical profile (24211507_CARDIGAN_76_MAGENTA_A/_B and CARDIGAN_MAGENTA76_C all
@@ -96,7 +115,7 @@ internal sealed class SiblingPropagator {
         List<ImageRecord_LAMBDA> stillUnmatched = [];
 
         foreach (ImageRecord_LAMBDA record in unmatched) {
-            HashSet<string> profile = BuildProfile(record.MatchingName);
+            HashSet<string> profile = rawProfiles[record];
             this.RemoveBatchCommonTokens(profile, batchTokenCounts, allRecords.Count);
 
             if (profile.Count == 0) {
@@ -112,7 +131,9 @@ internal sealed class SiblingPropagator {
             }
 
             // Tier 2: loose relation — subset/superset overlap, refused when related siblings disagree.
-            (string? familyId, string? siblingName) = this.FindLooseRelation(profile, matchedProfiles);
+            IEnumerable<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> candidatePool =
+                BuildCandidatePool(record, profile, tokenIndex, crossBracketCandidates);
+            (string? familyId, string? siblingName) = this.FindLooseRelation(profile, candidatePool);
             if (familyId is null) {
                 stillUnmatched.Add(record);
                 continue;
@@ -153,11 +174,11 @@ internal sealed class SiblingPropagator {
     /// </summary>
     private (string? FamilyId, string? SiblingName) FindLooseRelation(
         HashSet<string> profile,
-        List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> matchedProfiles) {
+        IEnumerable<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> candidatePool) {
         string? familyId = null;
         string? siblingName = null;
 
-        foreach ((ImageRecord_LAMBDA sibling, HashSet<string> siblingProfile) in matchedProfiles) {
+        foreach ((ImageRecord_LAMBDA sibling, HashSet<string> siblingProfile) in candidatePool) {
             if (!this.ProfilesAreRelated(profile, siblingProfile))
                 continue;
 
@@ -173,6 +194,39 @@ internal sealed class SiblingPropagator {
         }
 
         return (familyId, siblingName);
+    }
+
+    /// <summary>
+    /// Narrows FindLooseRelation's scan to matched profiles that could plausibly relate to
+    /// <paramref name="profile"/>: first by token overlap (the inverted index — subset/superset always
+    /// implies at least one shared token, so this never drops a true match), then further by
+    /// crossBracketCandidates family membership when earlier brackets recorded near-miss candidates for
+    /// this image. No crossBracketCandidates entry means no earlier bracket ever saw this image as even
+    /// a near-miss for any family — that says nothing about whether it still has a real sibling here, so
+    /// the token-index pool passes through unfiltered rather than being narrowed to nothing.
+    /// </summary>
+    private static IEnumerable<(ImageRecord_LAMBDA Record, HashSet<string> Profile)> BuildCandidatePool(
+        ImageRecord_LAMBDA record,
+        HashSet<string> profile,
+        Dictionary<string, List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)>> tokenIndex,
+        IReadOnlyDictionary<string, HashSet<string>> crossBracketCandidates) {
+        Dictionary<ImageRecord_LAMBDA, HashSet<string>> pool = new();
+        foreach (string token in profile) {
+            if (!tokenIndex.TryGetValue(token, out List<(ImageRecord_LAMBDA Record, HashSet<string> Profile)>? bucket))
+                continue;
+
+            foreach ((ImageRecord_LAMBDA candidate, HashSet<string> candidateProfile) in bucket)
+                pool[candidate] = candidateProfile;
+        }
+
+        string key = record.InitialFullName ?? string.Empty;
+        if (crossBracketCandidates.TryGetValue(key, out HashSet<string>? priorFamilies)) {
+            return pool.Where(kv =>
+                priorFamilies.Contains(kv.Key.MatchEvidence!.FinalFamilyId!))
+                .Select(kv => (kv.Key, kv.Value));
+        }
+
+        return pool.Select(kv => (kv.Key, kv.Value));
     }
 
     /// <summary>Writes the sibling-propagation match evidence onto a record.</summary>
@@ -232,11 +286,11 @@ internal sealed class SiblingPropagator {
     }
 
     /// <summary>Counts how many batch images carry each profile token, for common-token removal.</summary>
-    private static Dictionary<string, int> CountBatchTokens(List<ImageRecord_LAMBDA> allRecords) {
+    private static Dictionary<string, int> CountBatchTokens(IEnumerable<HashSet<string>> profiles) {
         Dictionary<string, int> counts = new(StringComparer.Ordinal);
 
-        foreach (ImageRecord_LAMBDA record in allRecords) {
-            foreach (string token in BuildProfile(record.MatchingName)) {
+        foreach (HashSet<string> profile in profiles) {
+            foreach (string token in profile) {
                 counts[token] = counts.TryGetValue(token, out int count) ? count + 1 : 1;
             }
         }
