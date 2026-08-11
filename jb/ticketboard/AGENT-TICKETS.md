@@ -35,7 +35,8 @@ user-facing summaries.
 | [T-5120](T-5120.md) | Blocked | Filename and folder tokens should feed phenotyping | Resolve the `pack`/`packshot` keyword collision first; start only on a clean, green, roomy session |
 | [T-5200](T-5200.md) | Review | SiblingPropagator loose-relation scan is unindexed O(n²) | Review the index/crossBracketCandidates fix (tested, no regression); does not close the hang — see [[T-6900]] |
 | [T-5210](T-5210.md) | Ready | SiblingPropagator may reinvent token evidence Brackets 1-3 built | Read both token shapes and decide whether BuildProfile can reuse existing MatchEvidence |
-| [T-6900](T-6900.md) | Ready | SMASHEDLEMON45 hang is upstream of the matching waterfall | Instrument MatchingService.cs's pre-match pipeline (feature-analysis loop, Deduplicate) to localize |
+| [T-6900](T-6900.md) | Review | SMASHEDLEMON45 "hang" is feature-analysis cost, not a defect | Review the measurement; decide the 26316 colour-contradiction policy question |
+| [T-6910](T-6910.md) | Review | Full-resolution pixel analysis runs twice, second pass single-threaded | Review the parallel-Refine fix; decide whether scaled decode (direction 2) is worth re-blessing the golden |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.

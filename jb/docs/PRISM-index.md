@@ -27,6 +27,7 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | [ImageNGP/HowToAddAPhenotype.md](ImageNGP/HowToAddAPhenotype.md) | Step-by-step guide: adding a new analyzer/feature/phenotype/det-order mapping |
 | [ImageNGP/phenotype-assignment-validation.md](ImageNGP/phenotype-assignment-validation.md) | T-4970 measurement: real phenotype distribution, why coverage is 7%, threshold precision/coverage curve, verdict on the BypassPhenotypes flip. **Second pass**: lowering the thresholds was tested and rejected — coverage 7%→62% but 0/5 correct at today's config; the real blockers are `model-detail-closeup` over-firing, a missing `back-on-model-partial` rule, and T-4955's 42% inconsistent snapshots |
 | [ideas-on-NGP.md](ideas-on-NGP.md) | Plain-language NGP insights (10 insights + open questions) |
+| [PRISM-postmortem-T6900-reasoning.md](PRISM-postmortem-T6900-reasoning.md) | Reasoning post-mortem: how three sessions chased a hang that did not exist. Five compounding errors (timeout read as evidence, busy CPU read as symptom, elimination over an assumed-complete list, plausible mechanism promoted to diagnosis, controls too small to falsify) + a checklist for the next "it hangs" report |
 
 ## Task → Files to Load
 
@@ -46,5 +47,6 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | Defining/updating any C# model/record | [PRISM-models.md](PRISM-models.md) |
 | Writing or running tests | [PRISM-testing.md](PRISM-testing.md) |
 | General orientation | [PRISM-overview.md](PRISM-overview.md) + [PRISM-pipeline-core.md](PRISM-pipeline-core.md) |
+| Investigating a hang, a slow job, or "the pipeline is stuck" | [PRISM-postmortem-T6900-reasoning.md](PRISM-postmortem-T6900-reasoning.md) — read the checklist before forming a theory |
 | INGP phenotypes / DO assignment | [ImageNGP/imagePhenotypes.md](ImageNGP/imagePhenotypes.md) [ImageNGP/ImageFeatures.md](ImageNGP/ImageFeatures.md) |
 | Phenotype coverage / calibration / why a phenotype never fires | [ImageNGP/phenotype-assignment-validation.md](ImageNGP/phenotype-assignment-validation.md) |
