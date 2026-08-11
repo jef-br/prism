@@ -33,7 +33,8 @@ user-facing summaries.
 | [T-5100](T-5100.md) | Ready | Bracket 3 steals a neighbour's family | Refuse a match when a discriminating filename token resolves to no family |
 | [T-5110](T-5110.md) | Ready | Filename-in-cell never fires | Scan cell text for filename tokens instead of taking the basename of the whole cell |
 | [T-5120](T-5120.md) | Blocked | Filename and folder tokens should feed phenotyping | Resolve the `pack`/`packshot` keyword collision first; start only on a clean, green, roomy session |
-| [T-5200](T-5200.md) | Ready | SiblingPropagator loose-relation scan is unindexed O(n²) | Confirm the hot stage on SMASHEDLEMON45 via the evidence harness before indexing profiles by token |
+| [T-5200](T-5200.md) | Ready | SiblingPropagator loose-relation scan is unindexed O(n²) | Confirmed live on SMASHEDLEMON45; pair on an index/candidate-filter fix after T-2840 and T-5210 land |
+| [T-5210](T-5210.md) | Ready | SiblingPropagator may reinvent token evidence Brackets 1-3 built | Read both token shapes and decide whether BuildProfile can reuse existing MatchEvidence |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.
