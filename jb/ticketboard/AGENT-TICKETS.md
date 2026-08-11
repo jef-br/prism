@@ -33,8 +33,9 @@ user-facing summaries.
 | [T-5100](T-5100.md) | Review | Bracket 3 steals a neighbour's family | Review the StringMatcher + SiblingPropagator fix pair, then close |
 | [T-5110](T-5110.md) | Review | Filename-in-cell never fires | Review the matcher fix; separately, ticket the Excel column-fill-rate gate blocking CiMini's own case |
 | [T-5120](T-5120.md) | Blocked | Filename and folder tokens should feed phenotyping | Resolve the `pack`/`packshot` keyword collision first; start only on a clean, green, roomy session |
-| [T-5200](T-5200.md) | Ready | SiblingPropagator loose-relation scan is unindexed O(n²) | Confirmed live on SMASHEDLEMON45; pair on an index/candidate-filter fix after T-2840 and T-5210 land |
+| [T-5200](T-5200.md) | Review | SiblingPropagator loose-relation scan is unindexed O(n²) | Review the index/crossBracketCandidates fix (tested, no regression); does not close the hang — see [[T-6900]] |
 | [T-5210](T-5210.md) | Ready | SiblingPropagator may reinvent token evidence Brackets 1-3 built | Read both token shapes and decide whether BuildProfile can reuse existing MatchEvidence |
+| [T-6900](T-6900.md) | Ready | SMASHEDLEMON45 hang is upstream of the matching waterfall | Instrument MatchingService.cs's pre-match pipeline (feature-analysis loop, Deduplicate) to localize |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.
