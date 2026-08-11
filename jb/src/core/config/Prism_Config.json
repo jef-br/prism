@@ -95,7 +95,7 @@
     "Classification": {
         "Confidence_Threshold": 0.5,
         "Confidence_Thresholds": {
-            "hero-orientation": 0.33,
+            "hero-orientation": 0.42,
             "head-visible": 0.42,
             "body-visible": 0.25,
             "product-color": 0.65,
