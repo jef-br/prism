@@ -15,7 +15,6 @@ public sealed class TransformParameters {
     public required CropTransformSettings Crop { get; init; }
     public required ProblemImageProcessorConfig ProblemImageProcessor { get; init; }
     public required BgStretchConfig BgStretch { get; init; }
-    public required DetailCropperConfig DetailCropper { get; init; }
     public required LowContrastEnhancementConfig LowContrastEnhancement { get; init; }
     public required HeadCutterConfig HeadCutter { get; init; }
     public required OutputConfig Output { get; init; }
@@ -29,7 +28,6 @@ public sealed class TransformParameters {
         Crop = ConfigLoader.Section<CropTransformSettings>(ConfigFile, "Crop"),
         ProblemImageProcessor = ConfigLoader.Section<ProblemImageProcessorConfig>(ConfigFile, "ProblemImageProcessor"),
         BgStretch = ConfigLoader.Section<BgStretchConfig>(ConfigFile, "BgStretch"),
-        DetailCropper = ConfigLoader.Section<DetailCropperConfig>(ConfigFile, "DetailCropper"),
         LowContrastEnhancement = ConfigLoader.Section<LowContrastEnhancementConfig>(ConfigFile, "LowContrastEnhancement"),
         HeadCutter = ConfigLoader.Section<HeadCutterConfig>(ConfigFile, "HeadCutter"),
         Output = ConfigLoader.Section<OutputConfig>(ConfigFile, "Output")

@@ -8,10 +8,9 @@ namespace PrismCoreTests.Transform;
 /// </summary>
 public class TransformTogglesTests {
     private static readonly TransformParameters Parameters = new() {
-        Crop = new() { WhiteSpaceMargin = 0.042, CropCoverage = 0.8, CropExtensionOneSided = 0.14, CropExtensionBiDirectional = 0.25, ShadowBottomShrinkFraction = 0.06, SubjectPromotionMinConfidence = 0.35 },
+        Crop = new() { WhiteSpaceMargin = 0.042, ShadowBottomShrinkFraction = 0.06, SubjectPromotionMinConfidence = 0.35 },
         ProblemImageProcessor = new() { MinInputPx = 570, MinOutputPx = 800, MaxUpscale = 1.42 },
         BgStretch = new() { Tier1MaxRatio = 1.25f, Tier2MaxRatio = 1.42f, Tier4MinRatio = 2.50f, FeatherPx = 16 },
-        DetailCropper = new() { AdjacentCropCap = 0.14 },
         LowContrastEnhancement = new() { ClipLimit = 2.0, TileSize = 8 },
         HeadCutter = new() { FaceHeightCutFactor = 0.75 },
         Output = new() { JpegOutputQuality = 100 }
@@ -94,9 +93,9 @@ public class TransformTogglesTests {
     }
 
     // T-4860: the shrink is scoped to the Tx_CenterAndStretch route only. An intersecting image (routed
-    // to Tx_CropSquare) must keep its box unshrunk even with hard-shadow evidence present.
+    // to Tx_DetailCropper) must keep its box unshrunk even with hard-shadow evidence present.
     [Fact]
-    public void ShadowAccounting_CropSquareRoute_LeavesBoxUnshrunk() {
+    public void ShadowAccounting_IntersectingRoute_LeavesBoxUnshrunk() {
         ImageRecord_LAMBDA lambda = new() {
             InitialFullName = "e.jpg",
             Width = 1000,
@@ -115,7 +114,7 @@ public class TransformTogglesTests {
         ImageTransformer.FinalizeGeometry(lambda, Parameters, null);
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
-        Assert.Equal(nameof(Tx_CropSquare), lambda.OutputRecord?.TransformerType);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord?.TransformerType);
         Assert.Equal(800, lambda.BoundingBox!.Value.Height);
     }
 

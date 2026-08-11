@@ -125,9 +125,13 @@ Imported → Classified → Matched → Ordered → Renamed → Generated → Tr
 
 **Transform keys are not here.** T-4530 (2026-07-12) moved the crop/positioning budgets out of
 `Prism_Config.json` — the whole `Transformation.*` block is gone. They now live in the `Crop` section
-of `jb/src/core/config/transform_Config.json` (`WhiteSpaceMargin`, `CropCoverage`,
-`CropExtensionOneSided`, `CropExtensionBiDirectional`), alongside one section per Tx_ class. Every
-transform section loads through `ConfigLoader.Section<T>` and is composed into `TransformParameters`;
+of `jb/src/core/config/transform_Config.json` (`WhiteSpaceMargin`, `ShadowBottomShrinkFraction`,
+`SubjectPromotionMinConfidence`), alongside one section per Tx_ class. The DetailCropper rework
+(2026-08-11) removed `CropCoverage`, `CropExtensionOneSided`, `CropExtensionBiDirectional`, and the
+`DetailCropper` section's `AdjacentCropCap` as dead config — `Tx_DetailCropper`'s rework replaced
+Coverage-floor sizing and percentage-capped extension budgets with pure bbox-preservation (crop if the
+bbox fits, else extend).
+Every transform section loads through `ConfigLoader.Section<T>` and is composed into `TransformParameters`;
 `analyzer_Config.json` works the same way via `AnalyzerParameters` (T-4540).
 
 ---

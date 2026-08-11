@@ -9,15 +9,13 @@ namespace Prism.Services.Transform;
 /// work to that strategy.
 /// </summary>
 /// <remarks>
-/// Routing order (evaluated top-to-bottom, first match wins):
-/// 1. <see cref="ImageRecord_LAMBDA.BoundingBox"/> null or <see cref="ImageRecord_LAMBDA.SelectedPhenotype"/> null
-///    → <see cref="Tx_ProblemImageProcessor"/> (conservative resize, no crop or fill).
-/// 2. Any edge intersects (<c>intersects-top/bottom/left/right</c> = "true"):
-///    a. Phenotype is <c>"closeup-image"</c> or <c>"model-detail-closeup"</c>
-///       AND det-slot is not in the exclusion range for this product type
-///       → <see cref="Tx_DetailCropper"/>.
-///    b. Otherwise → <see cref="Tx_CropSquare"/> (fallback for intersecting images).
-/// 3. No edge intersects → <see cref="Tx_CenterAndStretch"/>.
+/// Routing order (evaluated top-to-bottom, first match wins). <see cref="Tx_ProblemImageProcessor"/>
+/// is a last-resort fallback, not a precondition gate — every image carries a bbox (a real detection
+/// or the full frame), so it is reached only when no rule below claims the image.
+/// 1. Any edge intersects (<c>intersects-top/bottom/left/right</c> = "true") → <see cref="Tx_DetailCropper"/>,
+///    which dispatches internally on the exact intersection pattern (1/2-opposite/2-adjacent/3/4).
+/// 2. No edge intersects → <see cref="Tx_CenterAndStretch"/>.
+/// 3. Neither rule claims the image → <see cref="Tx_ProblemImageProcessor"/>.
 /// </remarks>
 public static class ImageTransformer {
     /// <summary>
@@ -129,32 +127,20 @@ public static class ImageTransformer {
     //  Strategy selection
 
     private static IImageTransformation SelectTransformer(ImageRecord_LAMBDA lambda, Mat? colorMat, bool headcut, TransformParameters parameters, TransformSeed? seed) {
-        // Step 1 — prerequisites missing: route to conservative processor.
-        if (lambda.BoundingBox is null || lambda.SelectedPhenotype is null) return new Tx_ProblemImageProcessor(parameters.ProblemImageProcessor, parameters.Output);
+        // JB: to reinstate a phenotype/det-slot gate in front of Tx_DetailCropper (T-5010 item 1's
+        // "widen, don't remove" direction), reintroduce it here as an extra condition on this branch,
+        // e.g.:
+        //   if (lambda.SelectedPhenotype is "closeup-image" or "model-detail-closeup" && !IsDetailCropperDetSlotExcluded(lambda))
+        //       return new Tx_DetailCropper(...);
+        //   else if (FinalOutputSize.HasEdgeIntersect(lambda.Features)) return new Tx_CropSquare(parameters.Output);
+        // — see git history on this file (pre-DetailCropper-rework, 2026-08-11) for the removed
+        // IsDetailCropperDetSlotExcluded helper and its det-slot exclusion ranges (clothing: slot<=1, default: slot<=2).
+        if (lambda.BoundingBox is not null && FinalOutputSize.HasEdgeIntersect(lambda.Features))
+            return new Tx_DetailCropper(headcut, colorMat, parameters.Crop, parameters.BgStretch, parameters.HeadCutter);
 
-        // Step 2 — object touches at least one image edge.
-        if (FinalOutputSize.HasEdgeIntersect(lambda.Features)) {
-            bool isCloseupPhenotype = lambda.SelectedPhenotype is "closeup-image" or "model-detail-closeup";
-            if (!isCloseupPhenotype || IsDetailCropperDetSlotExcluded(lambda)) return new Tx_CropSquare(parameters.Output);
+        if (FinalOutputSize.RoutesToCenterAndStretch(lambda))
+            return new Tx_CenterAndStretch(parameters.Crop.WhiteSpaceMargin, headcut, colorMat, parameters.BgStretch, parameters.HeadCutter);
 
-            CropTransformSettings crop = parameters.Crop;
-            return new Tx_DetailCropper(crop.CropCoverage, crop.CropExtensionOneSided, crop.CropExtensionBiDirectional, headcut, colorMat, parameters.DetailCropper, parameters.BgStretch, parameters.HeadCutter);
-        }
-
-        // Step 3 — object fully in frame: center on canvas and fill.
-        return new Tx_CenterAndStretch(parameters.Crop.WhiteSpaceMargin, headcut, colorMat, parameters.BgStretch, parameters.HeadCutter);
-    }
-
-    /// <summary>
-    /// Returns true when the image's det-slot falls in the exclusion range for its product type,
-    /// disqualifying it from <see cref="Tx_DetailCropper"/> routing.
-    /// Default products exclude slots 0–2; clothing products (<c>topwear</c>, <c>bottomwear</c>)
-    /// exclude slots 0–1.
-    /// </summary>
-    private const int DefaultDetSlotExclusionMax = 2;
-
-    private static bool IsDetailCropperDetSlotExcluded(ImageRecord_LAMBDA lambda) {
-        bool isClothing = lambda.ProductTypeId is "topwear" or "bottomwear";
-        return isClothing ? lambda.DetOrder <= 1 : lambda.DetOrder <= DefaultDetSlotExclusionMax;
+        return new Tx_ProblemImageProcessor(parameters.ProblemImageProcessor, parameters.Output);
     }
 }

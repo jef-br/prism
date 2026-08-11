@@ -28,7 +28,6 @@
     <Compile Include="..\Admin\CropTransformSettings.cs" Link="Admin\CropTransformSettings.cs" />
     <Compile Include="..\Admin\ProblemImageProcessorConfig.cs" Link="Admin\ProblemImageProcessorConfig.cs" />
     <Compile Include="..\Admin\BgStretchConfig.cs" Link="Admin\BgStretchConfig.cs" />
-    <Compile Include="..\Admin\DetailCropperConfig.cs" Link="Admin\DetailCropperConfig.cs" />
     <Compile Include="..\Admin\LowContrastEnhancementConfig.cs" Link="Admin\LowContrastEnhancementConfig.cs" />
     <Compile Include="..\Admin\HeadCutterConfig.cs" Link="Admin\HeadCutterConfig.cs" />
     <Compile Include="..\Admin\OutputConfig.cs" Link="Admin\OutputConfig.cs" />

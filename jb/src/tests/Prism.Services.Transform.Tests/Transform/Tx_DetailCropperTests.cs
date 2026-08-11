@@ -4,281 +4,267 @@ using Xunit;
 namespace PrismCoreTests.Transform;
 
 /// <summary>
-/// Unit tests for <see cref="Tx_DetailCropper"/>'s pixel-level decision tree. Each test builds a
-/// small synthetic in-memory JPEG (solid background + a drawn rectangle standing in for the
-/// salient object) sized and bbox-tagged so exactly one branch of the 0/1/2/3/4-edge decision
-/// tree fires deterministically. Config values match the shipped <c>Prism_Config.json</c>
-/// (Coverage 0.8, OneSided 0.14, BiDirectional 0.25).
+/// Unit tests for <see cref="Tx_DetailCropper"/>'s gravitational-anchor decision tree. Each test
+/// builds a small synthetic in-memory JPEG (solid background + a drawn rectangle standing in for
+/// the salient object) sized and bbox-tagged so exactly one branch of the 1/2/3/4-intersection
+/// decision tree fires deterministically. Numbers are hand-verified against the anchor/margin/
+/// containment formulas (margin 0.042, matching shipped <c>transform_Config.json</c>).
 /// </summary>
 public class Tx_DetailCropperTests {
-    private const double Coverage = 0.8;
-    private const double OneSided = 0.14;
-    private const double BiDirectional = 0.25;
+    private const double WhiteSpaceMargin = 0.042;
 
-    // Mirrors the shipped transform_Config.json DetailCropper/BgStretch/HeadCutter sections.
-    private static readonly DetailCropperConfig DetailCropperCfg = new() { AdjacentCropCap = 0.14 };
+    private static readonly CropTransformSettings CropCfg = new() { WhiteSpaceMargin = WhiteSpaceMargin, ShadowBottomShrinkFraction = 0.06, SubjectPromotionMinConfidence = 0.35 };
     private static readonly BgStretchConfig BgStretchCfg = new() { Tier1MaxRatio = 1.25f, Tier2MaxRatio = 1.42f, Tier4MinRatio = 2.50f, FeatherPx = 16 };
     private static readonly HeadCutterConfig HeadCutterCfg = new() { FaceHeightCutFactor = 0.75 };
 
-    //  0 edges — greedy crop, Coverage floor
+    private static Tx_DetailCropper NewCropper(bool headcut = false, Mat? colorMat = null) =>
+        new(headcut, colorMat, CropCfg, BgStretchCfg, HeadCutterCfg);
+
+    //  1 intersection — touched edge anchors with margin; free axis shrinks (fits in frame)
 
     [Fact]
-    public void Transform_ZeroEdges_ProducesCoverageFloorCrop() {
+    public void Transform_OneEdge_Bottom_FreeAxisShrinks() {
+        // img 1000x1000, bbox L300 T400 R700 B1000 (touches bottom only, H=600).
+        // Touched axis: targetExtent=round(600*1.042)=625, start=1000-625=375 -> side=625.
+        // Free axis centered on bbox X-center=500: start=500-625/2=188, fits within [0,1000].
         byte[] jpeg = MakeJpeg(1000, 1000);
-        BoundingBox bbox = MakeBox(350, 350, 300, 300);   // centered, no edge touched
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox);
+        BoundingBox bbox = MakeBox(300, 400, 400, 600);
+        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper();
         cropper.Transform(lambda);
 
-        // side = ceil(sqrt(1,000,000 * 0.8)) = 895 (tight bbox square of 300 removes more than
-        // the 20% Coverage floor allows, so the crop falls back to the Coverage-derived side).
         Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
         Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(895, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(895, lambda.OutputRecord.OutputHeight);
+        Assert.Equal(625, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(625, lambda.OutputRecord.OutputHeight);
         Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 895);
+        AssertSquareJpeg(lambda.ProcessedBytes!, 625);
     }
 
-    //  1 edge — pinned axis crops toward bbox, free axis extends via Tx_util_BgStretch
+    //  1 intersection — free axis must extend (bbox does not fit centered within the frame)
 
     [Fact]
-    public void Transform_OneEdge_Top_ExtendsFreeAxis() {
-        // Narrow frame (700x1000) with the bbox pinned to the top: the vertical axis cannot move,
-        // and the ideal square side (749) exceeds the original width (700), forcing a horizontal
-        // extension through Tx_util_BgStretch.
-        byte[] jpeg = MakeJpeg(700, 1000);
-        BoundingBox bbox = MakeBox(250, 0, 200, 300);     // Y=0 touches top only
+    public void Transform_OneEdge_Top_FreeAxisExtends() {
+        // img 700x1000, bbox L250 T0 R450 B300 (touches top only, H=300).
+        // Touched axis: targetExtent=round(300*1.042)=313, start=0 -> side=313.
+        // Free axis centered on bbox X-center=350: start=350-313/2=194, extent=313, fits within
+        // [0,700] here (313 < 700) -- use a narrower frame to force extension instead.
+        byte[] jpeg = MakeJpeg(200, 1000);
+        BoundingBox bbox = MakeBox(0, 0, 200, 300); // touches top; X-center=100
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        // Touched axis: targetExtent=round(300*1.042)=313, start=0 -> side=313.
+        // Free axis centered on X-center=100: start=100-313/2=-56 -> does not fit in [0,200] ->
+        // extend. Available crop: start=0, extent=min(200,-56+313)-0=200. srcOffset(extendTowardStart
+        // is true for CenteredAxis) = side-availableExtent=313-200=113.
+        Tx_DetailCropper cropper = NewCropper();
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(749, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(749, lambda.OutputRecord.OutputHeight);
+        Assert.Equal(313, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(313, lambda.OutputRecord.OutputHeight);
         Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 749);
+        AssertSquareJpeg(lambda.ProcessedBytes!, 313);
     }
 
-    //  1 edge — Right-touched: regression test for a coordinate-shift bug where the free axis'
-    //  center was incorrectly adjusted by the pinned axis' crop offset (pinnedFixedStart), which
-    //  only manifests when the touched edge is Bottom/Right (pinnedFixedStart != 0) and the
-    //  Coverage-derived side is smaller than the pinned axis' original extent. A Top/Left-touched
-    //  case alone (as in the test above) cannot catch this, since pinnedFixedStart is always 0 there.
+    //  2 opposing edges — free axis shrinks (fits in frame)
 
     [Fact]
-    public void Transform_OneEdge_Right_ExtendsFreeAxisSymmetricallyAroundBboxCenter() {
-        // 1000x700 frame, bbox touches the right edge only, centered vertically (Y-center=350,
-        // the exact vertical midpoint of the 700-tall frame). idealSide=749 exceeds the free
-        // (vertical) axis' extent of 700, forcing an extension that must land symmetrically
-        // (srcY=24) around Y=350 — not shifted by the pinned axis' 251px crop offset
-        // (1000-749=251), which was the bug (the buggy srcY=275 would place source rows
-        // [200,500) at output rows [475,775), overshooting the 749-tall canvas entirely and
-        // leaving the canvas center, row 374, outside the band — i.e. black, not white).
-        //
-        // Source image: solid black, with a solid white band across rows [200,500) — matching
-        // the bbox's Y-range — so the band's landing position in the output directly reveals
-        // whether centering used the correct (unshifted) or buggy (shifted) srcY.
-        byte[] jpeg = MakeBandedJpeg(1000, 700, bandTop: 200, bandBottom: 500);
-        BoundingBox bbox = MakeBox(800, 200, 200, 300);   // X=[800,1000) touches right; Y-center=350
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, right: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(749, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(749, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-
-        // Correctly centered: the white band [200,500) shifts by srcY=24 to land at [224,524) —
-        // comfortably containing the canvas center row (374). A regression of the fixed bug would
-        // shift the band far past the canvas (buggy srcY=275 => band at [475,775), outside [0,749)),
-        // leaving row 374 black instead of white.
-        using Mat result = Cv2.ImDecode(lambda.ProcessedBytes!, ImreadModes.Color);
-        Assert.True(IsWhite(result, row: 374), "Expected the source band to be centered on the canvas midpoint.");
-        Assert.True(IsBlack(result, row: 20), "Expected background near the top edge, outside the shifted band.");
-        Assert.True(IsBlack(result, row: 728), "Expected background near the bottom edge, outside the shifted band.");
-    }
-
-    //  1 edge — off-center bbox on the free axis: regression test for a second coordinate bug
-    //  found by code review, where the extension offset (side/2 - freeCenter) was never clamped
-    //  to the valid placement range. When the bbox sits closer to one end of the free axis than
-    //  the canvas's own half-width, the ideal (unclamped) offset goes negative, crashing
-    //  Tx_util_BgStretch the same way the already-fixed Tx_CenterAndStretch bug did.
-
-    [Fact]
-    public void Transform_OneEdge_Top_OffCenterBboxOnFreeAxis_ClampsInsteadOfGoingNegative() {
-        // 700x1000 frame, touches top only, bbox X=[600,700) — far toward the right edge of the
-        // free (horizontal) axis. idealSide=749 exceeds the free axis' 700px extent, but centering
-        // the bbox exactly would require srcX = 374 - 650 = -276 (negative -> would have crashed).
-        // Clamped to [0, side-freeOriginalExtent]=[0,49], the correct placement is srcX=0 (source
-        // flush against the canvas' left edge, all 49px of extension on the right).
-        byte[] jpeg = MakeVerticalBandedJpeg(700, 1000, bandLeft: 600, bandRight: 700);
-        BoundingBox bbox = MakeBox(600, 0, 100, 300);
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        var exception = Record.Exception(() => cropper.Transform(lambda));
-
-        Assert.Null(exception);
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(749, lambda.OutputRecord.OutputWidth);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-
-        // srcX=0 means the free axis is unshifted: the white band at source columns [600,700)
-        // must land at the same columns [600,700) in the output.
-        using Mat result = Cv2.ImDecode(lambda.ProcessedBytes!, ImreadModes.Color);
-        Assert.True(IsWhiteAt(result, row: 500, col: 650), "Expected the band to remain at its original column, unshifted (srcX clamped to 0).");
-        Assert.True(IsBlackAt(result, row: 500, col: 10), "Expected background to the left of the unshifted band.");
-    }
-
-    private static byte[] MakeVerticalBandedJpeg(int width, int height, int bandLeft, int bandRight) {
-        using Mat mat = new(height, width, MatType.CV_8UC3, Scalar.Black);
-        Cv2.Rectangle(mat, new Rect(bandLeft, 0, bandRight - bandLeft, height), Scalar.White, thickness: -1);
-        Cv2.ImEncode(".jpg", mat, out byte[] jpeg);
-        return jpeg;
-    }
-
-    private static bool IsWhiteAt(Mat img, int row, int col) => IsNear(img.Get<Vec3b>(row, col), 255);
-    private static bool IsBlackAt(Mat img, int row, int col) => IsNear(img.Get<Vec3b>(row, col), 0);
-
-    /// <summary>Builds a solid-black JPEG with a solid-white horizontal band across [<paramref name="bandTop"/>, <paramref name="bandBottom"/>).</summary>
-    private static byte[] MakeBandedJpeg(int width, int height, int bandTop, int bandBottom) {
-        using Mat mat = new(height, width, MatType.CV_8UC3, Scalar.Black);
-        Cv2.Rectangle(mat, new Rect(0, bandTop, width, bandBottom - bandTop), Scalar.White, thickness: -1);
-        Cv2.ImEncode(".jpg", mat, out byte[] jpeg);
-        return jpeg;
-    }
-
-    private static bool IsWhite(Mat img, int row) => IsNear(img.Get<Vec3b>(row, img.Cols / 2), 255);
-    private static bool IsBlack(Mat img, int row) => IsNear(img.Get<Vec3b>(row, img.Cols / 2), 0);
-    private static bool IsNear(Vec3b px, int target) =>
-        Math.Abs(px.Item0 - target) <= 15 && Math.Abs(px.Item1 - target) <= 15 && Math.Abs(px.Item2 - target) <= 15;
-
-    //  2 opposing edges — within BiDirectional budget
-
-    [Fact]
-    public void Transform_TwoOpposing_WithinBudget_ExtendsFreeAxis() {
-        // Top+Bottom pinned at imgW=1000; free axis (height=850) needs a 17.6% extension to
-        // reach 1000, under the 25% BiDirectional budget.
-        byte[] jpeg = MakeJpeg(1000, 850);
-        BoundingBox bbox = MakeBox(300, 0, 400, 850);     // spans full height: touches top+bottom
+    public void Transform_TwoOpposing_FreeAxisShrinks() {
+        // img 1000x1200, bbox L300 T0 R700 B1200 (touches top+bottom). Pinned side=imgW=1000.
+        // Free axis (vertical) centered on frame center 600: start=600-500=100, fits [0,1200].
+        byte[] jpeg = MakeJpeg(1000, 1200);
+        BoundingBox bbox = MakeBox(300, 0, 400, 1200);
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper();
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
+        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
+        AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
+    }
+
+    //  2 opposing edges — free axis must extend symmetrically
+
+    [Fact]
+    public void Transform_TwoOpposing_FreeAxisExtendsSymmetrically() {
+        // img 1000x800, bbox L300 T0 R700 B800 (touches top+bottom). Pinned side=imgW=1000.
+        // Free axis (vertical) centered on frame center 400: start=400-500=-100 -> does not fit
+        // [0,800] -> extend. Available crop: start=0, extent=min(800,-100+1000)-0=800.
+        // srcOffset(symmetric)=(1000-800)/2=100.
+        byte[] jpeg = MakeJpeg(1000, 800);
+        BoundingBox bbox = MakeBox(300, 0, 400, 800);
+        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true);
+
+        Tx_DetailCropper cropper = NewCropper();
+        cropper.Transform(lambda);
+
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
         Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
         Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
         Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
+
+        // Symmetric extension: the source content (rows [0,800) of the crop) should land centered
+        // in the output, i.e. rows [100,900) -- verify via a banded image in a dedicated test below.
     }
 
-    //  2 opposing edges — exceeds BiDirectional budget → local square crop fallback
-
     [Fact]
-    public void Transform_TwoOpposing_ExceedsBudget_FallsBackToLocalSquareCrop() {
-        // Top+Bottom pinned at imgW=1000; free axis (height=500) would need a 100% extension —
-        // far beyond the 25% BiDirectional budget — so this falls back to a local square crop.
-        byte[] jpeg = MakeJpeg(1000, 500);
-        BoundingBox bbox = MakeBox(300, 0, 400, 500);
+    public void Transform_TwoOpposing_ExtendsSymmetrically_BandLandsCentered() {
+        // Crop (rows [0,800) of the source, unshifted since the free axis fits shrink-wise up to
+        // its own extent) lands at output rows [100,900) once extended to the 1000-tall canvas.
+        // A band only in the source's middle third ([300,500)) marks known-content rows so the
+        // extended top/bottom margins (white background, not part of the band) are distinguishable.
+        byte[] jpeg = MakeBandedJpeg(1000, 800, bandTop: 300, bandBottom: 500);
+        BoundingBox bbox = MakeBox(300, 0, 400, 800);
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper();
         cropper.Transform(lambda);
 
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(500, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(500, lambda.OutputRecord.OutputHeight);
-        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
-        Assert.Contains("exceeds", lambda.OutputRecord.Warnings[0], StringComparison.OrdinalIgnoreCase);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 500);
+        using Mat result = Cv2.ImDecode(lambda.ProcessedBytes!, ImreadModes.Color);
+        Assert.True(IsWhite(result, row: 450), "Expected source band centered in the output (300+100=400 to 500+100=600).");
+        Assert.True(IsBlack(result, row: 20), "Expected background fill above the shifted band.");
+        Assert.True(IsBlack(result, row: 980), "Expected background fill below the shifted band.");
     }
 
-    //  2 adjacent edges — capped crop + background stretch to square
+    //  2 adjacent edges — both axes already square (pure crop, no extension)
 
     [Fact]
-    public void Transform_TwoAdjacent_TopLeft_CropThenStretchReachesSquare() {
-        // Width (1000) is capped at a 14% reduction toward height (800): target = 860. Height
-        // then stretches 800 -> 860 via Tx_util_BgStretch to reach the final square.
+    public void Transform_TwoAdjacent_TopLeft_AlreadySquare_NoExtension() {
         byte[] jpeg = MakeJpeg(1000, 800);
-        BoundingBox bbox = MakeBox(0, 0, 300, 300);       // touches top and left only
+        BoundingBox bbox = MakeBox(0, 0, 300, 300); // touches top+left, W=H=300
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, left: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper();
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(860, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(860, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 860);
+        Assert.Equal(300, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(300, lambda.OutputRecord.OutputHeight);
+        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
+        AssertSquareJpeg(lambda.ProcessedBytes!, 300);
     }
 
-    //  3 edges — within OneSided budget
+    //  2 adjacent edges — shorter axis extends away from the anchor corner (four corner rotations)
 
-    [Fact]
-    public void Transform_ThreeEdges_WithinBudget_ExtendsOpenSide() {
-        // Top+Left+Right pinned (imgW=1000); the open bottom side (height=900) needs an 11.1%
-        // extension to reach 1000, under the 14% OneSided budget.
-        byte[] jpeg = MakeJpeg(1000, 900);
-        BoundingBox bbox = MakeBox(0, 0, 1000, 400);      // spans full width, open at the bottom
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, left: true, right: true);
+    [Theory]
+    [InlineData(true, true)]   // top-left
+    [InlineData(true, false)]  // top-right
+    [InlineData(false, true)]  // bottom-left
+    [InlineData(false, false)] // bottom-right
+    public void Transform_TwoAdjacent_ShorterAxisExtendsAwayFromCorner(bool top, bool left) {
+        // img 500x800, bbox W=300 H=600 anchored at the requested corner -> side=max(300,600)=600.
+        // Width (300) must grow to 600, but the 500-wide frame cannot hold a flush-anchored 600px
+        // window (600 > 500) -> extension via Tx_util_BgStretch is required, not just an enlarged crop.
+        int bboxX = left ? 0 : 200;
+        int bboxY = top ? 0 : 200;
+        byte[] jpeg = MakeJpeg(500, 800);
+        BoundingBox bbox = MakeBox(bboxX, bboxY, 300, 600);
+        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: top, bottom: !top, left: left, right: !left);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper();
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
+        Assert.Equal(600, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(600, lambda.OutputRecord.OutputHeight);
+        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
+        AssertSquareJpeg(lambda.ProcessedBytes!, 600);
+    }
+
+    [Fact]
+    public void Transform_TwoAdjacent_TopLeft_AnchorCornerPixelsDoNotMove() {
+        // Band across the anchor corner's flush rows must remain at the same output rows: the
+        // width axis (300->600) grows rightward (away from the left anchor), the height axis stays
+        // put, so a horizontal band near the top-left corner should not shift vertically.
+        byte[] jpeg = MakeBandedJpeg(1000, 800, bandTop: 0, bandBottom: 100);
+        BoundingBox bbox = MakeBox(0, 0, 300, 600); // touches top+left
+        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, left: true);
+
+        Tx_DetailCropper cropper = NewCropper();
+        cropper.Transform(lambda);
+
+        using Mat result = Cv2.ImDecode(lambda.ProcessedBytes!, ImreadModes.Color);
+        Assert.True(IsWhite(result, row: 50), "Expected the band to remain flush at the top (anchor edge, unmoved).");
+    }
+
+    //  3 edges — open axis shrinks (fits in frame)
+
+    [Fact]
+    public void Transform_ThreeEdges_OpenBottom_Shrinks() {
+        // img 1000x1200, bbox L0 T0 R1000 B300 (top+left+right touched, open bottom). Pinned
+        // side=imgW=1000. Open axis anchored flush at top (touches top): start=0, extent=1000,
+        // fits within [0,1200].
+        byte[] jpeg = MakeJpeg(1000, 1200);
+        BoundingBox bbox = MakeBox(0, 0, 1000, 300);
+        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, left: true, right: true);
+
+        Tx_DetailCropper cropper = NewCropper();
+        cropper.Transform(lambda);
+
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
+        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
+        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
+        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
+        AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
+    }
+
+    //  3 edges — open axis must extend
+
+    [Fact]
+    public void Transform_ThreeEdges_OpenBottom_Extends() {
+        // img 1000x900, bbox L0 T0 R1000 B400 (top+left+right touched, open bottom). Pinned
+        // side=imgW=1000. Open axis flush at top: start=0, extent=1000 -> does not fit [0,900] ->
+        // extend. Available crop: start=0, extent=900. Not symmetric, extendTowardStart=false
+        // (touches top -> flush at start -> ExtendTowardStart=!true=false) -> srcOffset=0.
+        byte[] jpeg = MakeJpeg(1000, 900);
+        BoundingBox bbox = MakeBox(0, 0, 1000, 400);
+        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, left: true, right: true);
+
+        Tx_DetailCropper cropper = NewCropper();
+        cropper.Transform(lambda);
+
+        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
         Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
         Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
         Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
         AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
     }
 
-    //  3 edges — exceeds OneSided budget -> local square crop fallback
+    [Theory]
+    [InlineData(false, true, true, true)]  // open top (bottom+left+right touched)
+    [InlineData(true, false, true, true)]  // open bottom (top+left+right touched)
+    [InlineData(true, true, false, true)]  // open left (top+bottom+right touched)
+    [InlineData(true, true, true, false)]  // open right (top+bottom+left touched)
+    public void Transform_ThreeEdges_AllOpenSideRotations_ProduceSquare(bool top, bool bottom, bool left, bool right) {
+        byte[] jpeg = MakeJpeg(1000, 1000);
+        BoundingBox bbox = MakeBox(0, 0, 1000, 1000);
+        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: top, bottom: bottom, left: left, right: right);
 
-    [Fact]
-    public void Transform_ThreeEdges_ExceedsBudget_FallsBackToLocalSquareCrop() {
-        // Top+Left+Right pinned (imgW=1000); the open bottom side (height=500) would need a 100%
-        // extension — far beyond the 14% OneSided budget — so this falls back to a local crop.
-        byte[] jpeg = MakeJpeg(1000, 500);
-        BoundingBox bbox = MakeBox(0, 0, 1000, 200);
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, left: true, right: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper();
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(500, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(500, lambda.OutputRecord.OutputHeight);
-        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
-        Assert.Contains("exceeds", lambda.OutputRecord.Warnings[0], StringComparison.OrdinalIgnoreCase);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 500);
+        AssertSquareJpeg(lambda.ProcessedBytes!, lambda.OutputRecord.OutputWidth!.Value);
     }
 
-    //  4 edges — no open side, immediate local square crop
+    //  4 edges — always a centered local square crop, no extension
 
     [Fact]
-    public void Transform_FourEdges_FallsBackToLocalSquareCropImmediately() {
+    public void Transform_FourEdges_NoExtension() {
         byte[] jpeg = MakeJpeg(1000, 800);
-        BoundingBox bbox = MakeBox(0, 0, 1000, 800);      // fills the whole frame
+        BoundingBox bbox = MakeBox(0, 0, 1000, 800);
         ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true, left: true, right: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper();
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
         Assert.Equal(800, lambda.OutputRecord.OutputWidth);
         Assert.Equal(800, lambda.OutputRecord.OutputHeight);
         Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
@@ -293,42 +279,38 @@ public class Tx_DetailCropperTests {
         ImageRecord_LAMBDA lambda = new() { InitialFullName = "img.jpg", Width = 1000, Height = 1000 };
         lambda.BoundingBox = MakeBox(0, 0, 500, 500);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper();
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ko, lambda.OutputRecord!.TransformStatus);
         Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
     }
 
-    //  Process() parity — self-derived bbox, no lambda
+    //  Process() parity — self-derived bbox, no lambda (degenerate 0-intersection full-frame case)
 
     [Fact]
-    public void Process_NoLambda_ZeroEdgeFullFrame_ProducesCoverageFloorCrop() {
-        // With no lambda, Tx_DetailCropper.Process() self-derives a full-frame bbox (its
-        // documented degenerate 0-intersection fallback), so this exercises the 0-edge branch
-        // using the same Coverage-floor math as the lambda-driven test above.
-        byte[] jpeg = MakeJpeg(1000, 1000);
+    public void Process_NoLambda_FullFrameBbox_TreatedAsFourEdges() {
+        // With no lambda, Process() self-derives a full-frame bbox whose edges all touch the
+        // frame (Left<=0, Right>=imgW, Top<=0, Bottom>=imgH) -- a 4-intersection pattern, so this
+        // exercises FourEdges: a centered square crop at the smaller original dimension.
+        byte[] jpeg = MakeJpeg(1000, 800);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper();
         byte[] result = cropper.Process(jpeg, stride: 0, upscale_factor: 0f, lambda: null);
 
-        // idealSide = max(1000,1000) = 1000 (full-frame bbox); tight square already retains
-        // 100% of the area (>= Coverage), so the full frame is kept unmodified as a 1000x1000 crop.
-        AssertSquareJpeg(result, 1000);
+        AssertSquareJpeg(result, 800);
     }
 
     [Fact]
     public void Process_WithLambda_MatchesTransformDecision() {
-        // Passing the same lambda used by Transform() should produce byte-identical output —
-        // Process() and Transform() share the same decision-tree helpers when lambda is supplied.
         byte[] jpeg = MakeJpeg(1000, 1000);
-        BoundingBox bbox = MakeBox(350, 350, 300, 300);
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox);
+        BoundingBox bbox = MakeBox(300, 400, 400, 600);
+        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true);
 
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper();
         byte[] result = cropper.Process(jpeg, stride: 0, upscale_factor: 0f, lambda: lambda);
 
-        AssertSquareJpeg(result, 895);
+        AssertSquareJpeg(result, 625);
     }
 
     //  Headcut integration
@@ -338,20 +320,17 @@ public class Tx_DetailCropperTests {
         // Tx_DetailCropper.Transform must call Tx_util_HeadCutter.Analyze first (mirroring
         // Tx_CenterAndStretch), before reading BoundingBox/ProcessedBytes, whenever headcut is
         // requested and a colorMat is available. This repo/test environment ships no Haar cascade
-        // file (jb/src/core has no haarcascade_frontalface_default.xml), and
-        // Tx_util_HeadCutter.Analyze's own CascadeClassifier.Load(...) call throws
-        // FileNotFoundException in that case rather than returning false as its surrounding code
-        // assumes (a pre-existing gap in Tx_util_HeadCutter from ticket T-2200, out of this
-        // ticket's scope to fix). This test pins down that Tx_DetailCropper does invoke Analyze
-        // on the headcut path — proven by the call reaching Tx_util_HeadCutter and surfacing that
-        // exact exception — rather than silently skipping the call.
+        // file, and Tx_util_HeadCutter.Analyze's own CascadeClassifier.Load(...) call throws
+        // FileNotFoundException in that case. This test pins down that Tx_DetailCropper does
+        // invoke Analyze on the headcut path -- proven by the call reaching Tx_util_HeadCutter and
+        // surfacing that exact exception -- rather than silently skipping the call.
         byte[] jpeg = MakeJpeg(1000, 1000);
-        BoundingBox bbox = MakeBox(350, 350, 300, 300);
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox);
+        BoundingBox bbox = MakeBox(300, 400, 400, 600);
+        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true);
         lambda.Features.Set("has-human", "true", 1.0, "test");
 
         using Mat colorMat = Cv2.ImDecode(jpeg, ImreadModes.Color);
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: true, colorMat: colorMat, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper(headcut: true, colorMat: colorMat);
 
         var ex = Assert.Throws<FileNotFoundException>(() => cropper.Transform(lambda));
         Assert.Contains("haarcascade", ex.Message, StringComparison.OrdinalIgnoreCase);
@@ -359,261 +338,17 @@ public class Tx_DetailCropperTests {
 
     [Fact]
     public void Transform_HeadcutNotRequested_SkipsHeadCutterEntirely() {
-        // headcut: false must skip Tx_util_HeadCutter.Analyze entirely — no exception, even
-        // though the same environment has no Haar cascade file available.
         byte[] jpeg = MakeJpeg(1000, 1000);
-        BoundingBox bbox = MakeBox(350, 350, 300, 300);
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox);
+        BoundingBox bbox = MakeBox(300, 400, 400, 600);
+        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true);
         lambda.Features.Set("has-human", "true", 1.0, "test");
 
         using Mat colorMat = Cv2.ImDecode(jpeg, ImreadModes.Color);
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: colorMat, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
+        Tx_DetailCropper cropper = NewCropper(headcut: false, colorMat: colorMat);
         cropper.Transform(lambda);
 
         Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 895);
-    }
-
-    //  1 edge — Bottom and Left (pinned axis always safe cases, but test for regression)
-
-    [Fact]
-    public void Transform_OneEdge_Bottom_ExtendsFreeAxis() {
-        // Narrow frame (700x1000) with the bbox pinned to the bottom: the vertical axis cannot move,
-        // and the ideal square side (749) exceeds the original width (700), forcing a horizontal
-        // extension through Tx_util_BgStretch.
-        byte[] jpeg = MakeJpeg(700, 1000);
-        BoundingBox bbox = MakeBox(250, 700, 200, 300); // Y=[700,1000) touches bottom only
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(749, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(749, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 749);
-    }
-
-    [Fact]
-    public void Transform_OneEdge_Left_ExtendsFreeAxis() {
-        // Narrow frame (1000x700) with the bbox pinned to the left: the horizontal axis cannot move,
-        // and the ideal square side (749) exceeds the original height (700), forcing a vertical
-        // extension through Tx_util_BgStretch.
-        byte[] jpeg = MakeJpeg(1000, 700);
-        BoundingBox bbox = MakeBox(0, 250, 300, 200);  // X=[0,300) touches left only
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, left: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(749, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(749, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 749);
-    }
-
-    //  2 adjacent edges — three untested corners
-
-    [Fact]
-    public void Transform_TwoAdjacent_TopRight_CropThenStretchReachesSquare() {
-        // Height (1000) is capped at a 14% reduction toward width (800): target = 860. Width
-        // then stretches 800 -> 860 via Tx_util_BgStretch to reach the final square.
-        byte[] jpeg = MakeJpeg(800, 1000);
-        BoundingBox bbox = MakeBox(500, 0, 300, 300);  // touches top and right only
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, right: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(860, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(860, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 860);
-    }
-
-    [Fact]
-    public void Transform_TwoAdjacent_BottomLeft_CropThenStretchReachesSquare() {
-        // Height (1000) is capped at a 14% reduction toward width (800): target = 860. Width
-        // then stretches 800 -> 860 via Tx_util_BgStretch to reach the final square.
-        byte[] jpeg = MakeJpeg(800, 1000);
-        BoundingBox bbox = MakeBox(0, 700, 300, 300);  // touches bottom and left only
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true, left: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(860, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(860, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 860);
-    }
-
-    [Fact]
-    public void Transform_TwoAdjacent_BottomRight_CropThenStretchReachesSquare() {
-        // Height (1000) is capped at a 14% reduction toward width (800): target = 860. Width
-        // then stretches 800 -> 860 via Tx_util_BgStretch to reach the final square.
-        byte[] jpeg = MakeJpeg(800, 1000);
-        BoundingBox bbox = MakeBox(500, 700, 300, 300); // touches bottom and right only
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true, right: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(860, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(860, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 860);
-    }
-
-    [Fact]
-    public void Transform_TwoAdjacent_TopRight_AnchorCornerDoesNotMove() {
-        // Verify the anchor corner (top-right in this case) stays fixed while the opposite corner
-        // crops/stretches. Use banded image to confirm pixel positioning. The band is placed in the
-        // top-right quadrant to be within the anchor zone after crop.
-        byte[] jpeg = MakeBandedJpeg(1000, 700, bandTop: 0, bandBottom: 100);
-        BoundingBox bbox = MakeBox(800, 0, 200, 100);  // touches top and right only
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, right: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        // After crop (Step 1): frame goes from 1000x700 to target=860x700, cropped from the left
-        // (anchorLeft=false). After stretch (Step 2): stretched to 860x860. The band at rows [0,100)
-        // should remain in the top rows of the output, anchored at the top (anchorTop=true).
-        using Mat result = Cv2.ImDecode(lambda.ProcessedBytes!, ImreadModes.Color);
-        Assert.True(IsWhite(result, row: 50), "Expected the source band to be at the top of the output.");
-        Assert.True(IsBlack(result, row: 800), "Expected background near the bottom edge (away from anchor).");
-    }
-
-    //  3 edges — three untested open-side rotations, within budget
-
-    [Fact]
-    public void Transform_ThreeEdges_OpenTop_WithinBudget_ExtendsOpenSide() {
-        // Bottom+Left+Right pinned (imgW=1000); the open top side (height=900) needs an 11.1%
-        // extension to reach 1000, under the 14% OneSided budget.
-        byte[] jpeg = MakeJpeg(1000, 900);
-        BoundingBox bbox = MakeBox(0, 500, 1000, 400); // spans full width, open at the top
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true, left: true, right: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
-    }
-
-    [Fact]
-    public void Transform_ThreeEdges_OpenLeft_WithinBudget_ExtendsOpenSide() {
-        // Top+Bottom+Right pinned (imgW=1000); the open left side (width=900) needs an 11.1%
-        // extension to reach 1000, under the 14% OneSided budget.
-        byte[] jpeg = MakeJpeg(900, 1000);
-        BoundingBox bbox = MakeBox(400, 0, 400, 1000); // spans full height, open at the left
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true, right: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
-    }
-
-    [Fact]
-    public void Transform_ThreeEdges_OpenRight_WithinBudget_ExtendsOpenSide() {
-        // Top+Bottom+Left pinned (imgW=1000); the open right side (width=900) needs an 11.1%
-        // extension to reach 1000, under the 14% OneSided budget.
-        byte[] jpeg = MakeJpeg(900, 1000);
-        BoundingBox bbox = MakeBox(0, 0, 400, 1000);  // spans full height, open at the right
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true, left: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
-    }
-
-    //  3 edges — exceeds OneSided budget, other open-side rotation
-
-    [Fact]
-    public void Transform_ThreeEdges_OpenLeft_ExceedsBudget_FallsBackToLocalSquareCrop() {
-        // Top+Bottom+Right pinned (imgW=1000); the open left side (width=500) would need a 100%
-        // extension — far beyond the 14% OneSided budget — so this falls back to a local crop.
-        byte[] jpeg = MakeJpeg(500, 1000);
-        BoundingBox bbox = MakeBox(100, 0, 400, 1000);
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true, right: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord.TransformerType);
-        Assert.Equal(500, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(500, lambda.OutputRecord.OutputHeight);
-        Assert.Equal(string.Empty, lambda.OutputRecord.BackgroundFillMethod);
-        Assert.Contains("exceeds", lambda.OutputRecord.Warnings[0], StringComparison.OrdinalIgnoreCase);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 500);
-    }
-
-    //  Boundary-exact extension ratios (at the boundary of OneSided and BiDirectional budgets)
-
-    [Fact]
-    public void Transform_ThreeEdges_ExtensionRatioJustUnderOneSidedBoundary_Extends() {
-        // Test that extension works when the ratio is just under (not at) the OneSided boundary (0.14).
-        // pinnedSide (width) = 1000; currentOpenSide (height) = 890; delta = 110;
-        // ratio = 110/890 ≈ 0.1236, which is < 0.14. This should extend.
-        byte[] jpeg = MakeJpeg(1000, 890);
-        BoundingBox bbox = MakeBox(0, 100, 1000, 400); // open at the top, ideal side = 1000 (tight)
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, bottom: true, left: true, right: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
-    }
-
-    [Fact]
-    public void Transform_TwoOpposing_ExtensionRatioExactlyAtBiDirectionalBoundary_Extends() {
-        // Construct a case where delta/currentFreeSide = exactly 0.25 (the BiDirectional threshold).
-        // pinnedSide (width) = 1000; currentFreeSide (height) = 800; delta = 1000 - 800 = 200.
-        // ratio = 200/800 = 0.25. This should extend (the <= comparison is inclusive), not fall back.
-        byte[] jpeg = MakeJpeg(1000, 800);
-        BoundingBox bbox = MakeBox(0, 300, 1000, 400); // spans full width, touches top+bottom
-        ImageRecord_LAMBDA lambda = MakeLambda(jpeg, bbox, top: true, bottom: true);
-
-        Tx_DetailCropper cropper = new(Coverage, OneSided, BiDirectional, headcut: false, colorMat: null, detailCropper: DetailCropperCfg, bgStretch: BgStretchCfg, headCutter: HeadCutterCfg);
-        cropper.Transform(lambda);
-
-        Assert.Equal(TransformationStatus.Ok, lambda.OutputRecord!.TransformStatus);
-        Assert.Equal(1000, lambda.OutputRecord.OutputWidth);
-        Assert.Equal(1000, lambda.OutputRecord.OutputHeight);
-        Assert.Equal("background-stretch", lambda.OutputRecord.BackgroundFillMethod);
-        AssertSquareJpeg(lambda.ProcessedBytes!, 1000);
+        AssertSquareJpeg(lambda.ProcessedBytes!, 625);
     }
 
     //  Helpers
@@ -625,6 +360,19 @@ public class Tx_DetailCropperTests {
         Cv2.ImEncode(".jpg", mat, out byte[] jpeg);
         return jpeg;
     }
+
+    /// <summary>Builds a solid-black JPEG with a solid-white horizontal band across [<paramref name="bandTop"/>, <paramref name="bandBottom"/>).</summary>
+    private static byte[] MakeBandedJpeg(int width, int height, int bandTop, int bandBottom) {
+        using Mat mat = new(height, width, MatType.CV_8UC3, Scalar.Black);
+        Cv2.Rectangle(mat, new Rect(0, bandTop, width, bandBottom - bandTop), Scalar.White, thickness: -1);
+        Cv2.ImEncode(".jpg", mat, out byte[] jpeg);
+        return jpeg;
+    }
+
+    private static bool IsWhite(Mat img, int row) => IsNear(img.Get<Vec3b>(row, img.Cols / 2), 255);
+    private static bool IsBlack(Mat img, int row) => IsNear(img.Get<Vec3b>(row, img.Cols / 2), 0);
+    private static bool IsNear(Vec3b px, int target) =>
+        Math.Abs(px.Item0 - target) <= 15 && Math.Abs(px.Item1 - target) <= 15 && Math.Abs(px.Item2 - target) <= 15;
 
     private static BoundingBox MakeBox(int x, int y, int w, int h) => new() {
         X = x,

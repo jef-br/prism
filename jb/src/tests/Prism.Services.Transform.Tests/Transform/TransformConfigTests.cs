@@ -32,9 +32,6 @@ public class TransformConfigTests : IDisposable {
     public void ShippedConfig_SectionsMatchDocumentedValues() {
         CropTransformSettings crop = ConfigLoader.Section<CropTransformSettings>(ConfigFile, "Crop");
         Assert.Equal(0.042, crop.WhiteSpaceMargin);
-        Assert.Equal(0.8, crop.CropCoverage);
-        Assert.Equal(0.14, crop.CropExtensionOneSided);
-        Assert.Equal(0.25, crop.CropExtensionBiDirectional);
         Assert.Equal(0.06, crop.ShadowBottomShrinkFraction);
         Assert.Equal(0.35, crop.SubjectPromotionMinConfidence);
 
@@ -48,8 +45,6 @@ public class TransformConfigTests : IDisposable {
         Assert.Equal(1.42f, bgStretch.Tier2MaxRatio);
         Assert.Equal(2.50f, bgStretch.Tier4MinRatio);
         Assert.Equal(16, bgStretch.FeatherPx);
-
-        Assert.Equal(0.14, ConfigLoader.Section<DetailCropperConfig>(ConfigFile, "DetailCropper").AdjacentCropCap);
 
         LowContrastEnhancementConfig lowContrast = ConfigLoader.Section<LowContrastEnhancementConfig>(ConfigFile, "LowContrastEnhancement");
         Assert.Equal(2.0, lowContrast.ClipLimit);
@@ -68,7 +63,6 @@ public class TransformConfigTests : IDisposable {
         Assert.Equal(0.042, parameters.Crop.WhiteSpaceMargin);
         Assert.Equal(570, parameters.ProblemImageProcessor.MinInputPx);
         Assert.Equal(1.25f, parameters.BgStretch.Tier1MaxRatio);
-        Assert.Equal(0.14, parameters.DetailCropper.AdjacentCropCap);
         Assert.Equal(2.0, parameters.LowContrastEnhancement.ClipLimit);
         Assert.Equal(0.75, parameters.HeadCutter.FaceHeightCutFactor);
         Assert.Equal(100, parameters.Output.JpegOutputQuality);
@@ -85,20 +79,11 @@ public class TransformConfigTests : IDisposable {
     }
 
     [Fact]
-    public void Section_OutOfRangeAdjacentCropCap_ThrowsWithFieldName() {
-        string fileName = WriteConfig("""{ "DetailCropper": { "AdjacentCropCap": 1.5 } }""");
-
-        PrismConfigurationException ex = Assert.Throws<PrismConfigurationException>(
-            () => ConfigLoader.Section<DetailCropperConfig>(fileName, "DetailCropper"));
-        Assert.Contains("DetailCropper.AdjacentCropCap", ex.Message);
-    }
-
-    [Fact]
     public void Section_OutOfRangeWhiteSpaceMargin_ThrowsWithFieldName() {
         // 0.5 collapses Tx_CenterAndStretch's (1 - 2*margin) divisor to zero — the reason for the 0.49 cap.
         string fileName = WriteConfig("""
         {
-            "Crop": { "WhiteSpaceMargin": 0.5, "CropCoverage": 0.8, "CropExtensionOneSided": 0.14, "CropExtensionBiDirectional": 0.25, "ShadowBottomShrinkFraction": 0.06, "SubjectPromotionMinConfidence": 0.35 }
+            "Crop": { "WhiteSpaceMargin": 0.5, "ShadowBottomShrinkFraction": 0.06, "SubjectPromotionMinConfidence": 0.35 }
         }
         """);
 
@@ -111,7 +96,7 @@ public class TransformConfigTests : IDisposable {
     public void Section_OutOfRangeSubjectPromotionMinConfidence_ThrowsWithFieldName() {
         string fileName = WriteConfig("""
         {
-            "Crop": { "WhiteSpaceMargin": 0.042, "CropCoverage": 0.8, "CropExtensionOneSided": 0.14, "CropExtensionBiDirectional": 0.25, "ShadowBottomShrinkFraction": 0.06, "SubjectPromotionMinConfidence": 0.0 }
+            "Crop": { "WhiteSpaceMargin": 0.042, "ShadowBottomShrinkFraction": 0.06, "SubjectPromotionMinConfidence": 0.0 }
         }
         """);
 

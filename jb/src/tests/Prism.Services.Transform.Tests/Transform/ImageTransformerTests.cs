@@ -10,28 +10,28 @@ namespace PrismCoreTests.Transform;
 /// Service behaviour tests verify the skip path and the OkTransformed count via the typed result.
 /// </summary>
 public class ImageTransformerTests {
-    // T-5010 removed the BypassPhenotypes gate, so SelectedPhenotype is load-bearing again: Step 1
-    // sends a null phenotype to Tx_ProblemImageProcessor before any geometry is consulted. Fixtures
-    // that mean to exercise Step 2/Step 3 must therefore carry a phenotype.
+    // T-5090 rework: Tx_ProblemImageProcessor is a last-resort fallback, not a precondition gate.
+    // Every real image carries a bbox (a detection or the full frame), and SelectedPhenotype no
+    // longer gates routing at all — dispatch is edge-intersection-count only: any intersect routes
+    // to Tx_DetailCropper (which dispatches further internally), no intersect routes to
+    // Tx_CenterAndStretch, and only a genuinely bbox-less record falls through to the processor.
 
     // Mirrors the shipped transform_Config.json. Built here rather than loaded from disk: the routing
     // tests below construct Tx_ classes through ImageTransformer and need a bundle whose values they
     // control, not whatever the deployed config happens to say.
     private static readonly TransformParameters Parameters = new() {
-        Crop = new() { WhiteSpaceMargin = 0.042, CropCoverage = 0.8, CropExtensionOneSided = 0.14, CropExtensionBiDirectional = 0.25, ShadowBottomShrinkFraction = 0.06, SubjectPromotionMinConfidence = 0.35 },
+        Crop = new() { WhiteSpaceMargin = 0.042, ShadowBottomShrinkFraction = 0.06, SubjectPromotionMinConfidence = 0.35 },
         ProblemImageProcessor = new() { MinInputPx = 570, MinOutputPx = 800, MaxUpscale = 1.42 },
         BgStretch = new() { Tier1MaxRatio = 1.25f, Tier2MaxRatio = 1.42f, Tier4MinRatio = 2.50f, FeatherPx = 16 },
-        DetailCropper = new() { AdjacentCropCap = 0.14 },
         LowContrastEnhancement = new() { ClipLimit = 2.0, TileSize = 8 },
         HeadCutter = new() { FaceHeightCutFactor = 0.75 },
         Output = new() { JpegOutputQuality = 100 }
     };
 
-    //  Routing — problem processor
+    //  Routing — problem processor (last resort: no bbox)
 
     [Fact]
     public void TransformImage_NoBbox_RoutesToProblemImageProcessor() {
-        // No salient-bbox set → bbox guard fires regardless of phenotype.
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null);
 
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
@@ -48,26 +48,11 @@ public class ImageTransformerTests {
         Assert.NotEmpty(lambda.OutputRecord?.Warnings ?? []);
     }
 
-    //  Routing — edge intersects (Step 2)
+    //  Routing — edge intersects always reach Tx_DetailCropper, phenotype irrelevant
 
     [Fact]
-    public void TransformImage_CloseupWithBboxAndIntersect_ExcludedDetSlot_RoutesToCropSquare() {
-        // Closeup phenotype + intersect qualifies for Tx_DetailCropper on the phenotype test, but
-        // det-slot 0 sits inside the default exclusion range (0-2), so Step 2a rejects it.
-        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "closeup-image", hasBbox: true, intersects: true);
-        lambda.DetOrder = 0;
-
-        ImageTransformer.TransformImage(lambda, null, false, Parameters);
-
-        Assert.Equal(nameof(Tx_CropSquare), lambda.OutputRecord?.TransformerType);
-    }
-
-    [Fact]
-    public void TransformImage_CloseupWithBboxAndIntersect_EligibleDetSlot_RoutesToDetailCropper() {
-        // The other side of the same predicate: past the exclusion range, Step 2a reaches
-        // Tx_DetailCropper. Unreachable for real batches until T-5010 removed the bypass.
-        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "model-detail-closeup", hasBbox: true, intersects: true);
-        lambda.DetOrder = 3;
+    public void TransformImage_BboxAndIntersect_RoutesToDetailCropper() {
+        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "front-packshot", hasBbox: true, intersects: true);
 
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
@@ -75,25 +60,16 @@ public class ImageTransformerTests {
     }
 
     [Fact]
-    public void TransformImage_BboxAndIntersect_RoutesToCropSquare() {
-        ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: "front-packshot", hasBbox: true, intersects: true);
-
-        ImageTransformer.TransformImage(lambda, null, false, Parameters);
-
-        Assert.Equal(nameof(Tx_CropSquare), lambda.OutputRecord?.TransformerType);
-    }
-
-    [Fact]
-    public void TransformImage_BboxAndIntersect_NullPhenotype_RoutesToProblemImageProcessor() {
-        // Step 1 outranks Step 2: geometry that would otherwise crop square never gets consulted.
+    public void TransformImage_BboxAndIntersect_NullPhenotype_StillRoutesToDetailCropper() {
+        // Phenotype no longer gates this route at all.
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null, hasBbox: true, intersects: true);
 
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
-        Assert.Equal(nameof(Tx_ProblemImageProcessor), lambda.OutputRecord?.TransformerType);
+        Assert.Equal(nameof(Tx_DetailCropper), lambda.OutputRecord?.TransformerType);
     }
 
-    //  Routing — center and stretch (Step 3)
+    //  Routing — center and stretch (no intersect), phenotype irrelevant
 
     [Fact]
     public void TransformImage_BboxNoIntersect_RoutesToCenterAndStretch() {
@@ -105,19 +81,18 @@ public class ImageTransformerTests {
     }
 
     [Fact]
-    public void TransformImage_BboxNoIntersect_NullPhenotype_RoutesToProblemImageProcessor() {
-        // Step 1 outranks Step 3 too — the null-phenotype guard is not geometry-conditional.
+    public void TransformImage_BboxNoIntersect_NullPhenotype_StillRoutesToCenterAndStretch() {
         ImageRecord_LAMBDA lambda = MakeLambda("img.jpg", phenotype: null, hasBbox: true);
 
         ImageTransformer.TransformImage(lambda, null, false, Parameters);
 
-        Assert.Equal(nameof(Tx_ProblemImageProcessor), lambda.OutputRecord?.TransformerType);
+        Assert.Equal(nameof(Tx_CenterAndStretch), lambda.OutputRecord?.TransformerType);
     }
 
     [Fact]
-    public void TransformImage_NonCloseupPhenotypesRouteAlike_OnIdenticalGeometry() {
-        // Step 2a is the only place the phenotype's *value* is read; outside it, any two non-closeup
-        // phenotypes on the same geometry must land on the same transformer.
+    public void TransformImage_AnyPhenotypeRoutesAlike_OnIdenticalGeometry() {
+        // Phenotype's value is never read by routing anymore; any two phenotypes (including null)
+        // on the same geometry must land on the same transformer.
         ImageRecord_LAMBDA packshot = MakeLambda("a.jpg", phenotype: "front-packshot", hasBbox: true);
         ImageRecord_LAMBDA onModel = MakeLambda("b.jpg", phenotype: "front-on-model-partial", hasBbox: true);
 

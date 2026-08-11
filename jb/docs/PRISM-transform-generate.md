@@ -29,7 +29,7 @@ stage and `Tx_CenterAndStretch` size against, so they cannot drift apart:
 | Routing | Final longest dimension | Margin term |
 |---|---|---|
 | No edge intersect → `Tx_CenterAndStretch` | `evenFloor(bboxLongest × (1 + 2·margin)) − 2` | yes (`CropTransformSettings.WhiteSpaceMargin`, 0.042 — note the cross-config read from `transform_Config.json`) |
-| Any edge intersect → `Tx_CropSquare` | `min(imageWidth, imageHeight)` | **no** — a bleeding subject gets no whitespace added |
+| Any edge intersect → `Tx_DetailCropper` | `min(imageWidth, imageHeight)` | **no** — `FinalOutputSize` still estimates against the whole-frame floor; `Tx_DetailCropper`'s actual per-pattern side (see **Transform Routing Matrix** below) can differ from this estimate |
 
 Worked example: a 1800 px bbox at margin 0.042 gives a 1948 px canvas. Inverting it, **740 px is the smallest
 bbox longest side that yields an 800 px canvas** (739 gives 798) — so images between 740 and 800 px, which the
@@ -94,7 +94,7 @@ With the dynamic-shape model in use, `RunTiled` runs the whole image as a single
 
 Images transformed one by one, each based on image analysis enriched with match information. Salient object detection, bounding box calculation, and background identification feed the per-image transform decision. Useful tags from `ImageMatcher.cs` attenuate transformation parameters. Transform rules in `jb/src/core/Services/Transform/Engine`. Transformation parameters guided by per-image IFs and selected INGP phenotype.
 
-**Current impl:** All Tx classes (`Tx_CropSquare`, `Tx_CenterAndStretch`, `Tx_DetailCropper`, `Tx_ProblemImageProcessor`) are active — no processing gate remains. `ImageTransformer.SelectTransformer()` routes live per the matrix below. `Tx_DetailCropper` implements the full 0–4 edge-intersection decision tree (greedy crop with Coverage floor, OneSided/BiDirectional extension budgets, corner-anchored fallbacks) with headcut integration; see `Tx_DetailCropperTests.cs` for coverage. Remaining open work in `jb/src/core/Services/Transform/Engine/jbtodo.md` is limited to `Tx_util_HeadCutter` (Algorithm A anatomy-guided search, family-aware mode).
+**Current impl (DetailCropper rework, 2026-08-11):** All Tx classes (`Tx_CropSquare`, `Tx_CenterAndStretch`, `Tx_DetailCropper`, `Tx_ProblemImageProcessor`) are active. `ImageTransformer.SelectTransformer()` routes live per the matrix below — routing is now edge-intersection-count only; `SelectedPhenotype` and det-slot no longer gate any route. `Tx_DetailCropper` implements a gravitational-anchor decision tree over the 1/2-opposite/2-adjacent/3/4-intersection patterns: a touched edge stays flush (plus `WhiteSpaceMargin` on the far edge for the 1-intersection case only), every axis without a touched edge centers on the bbox, and each axis independently shrinks (crop, bbox-preserving) when possible or extends through `Tx_util_BgStretch` otherwise. `Tx_CropSquare` is not currently reached by any route (kept for a future repurposing, not deleted). See `Tx_DetailCropperTests.cs` for coverage. Remaining open work in `jb/src/core/Services/Transform/Engine/jbtodo.md` is limited to `Tx_util_HeadCutter` (Algorithm A anatomy-guided search, family-aware mode).
 
 ---
 
@@ -104,12 +104,12 @@ Routing inputs read from `ImageRecord_LAMBDA.Features`:
 
 | Feature | Role |
 |---|---|
-| `intersects-top/bottom/left/right` | Primary edge-intersect detection — drives Tx_CropSquare vs. Tx_DetailCropper routing |
-| `salient-bbox` | Object bounds — required for Tx_CenterAndStretch and Tx_DetailCropper; UNKNOWN routes to Tx_ProblemImageProcessor |
+| `intersects-top/bottom/left/right` | Primary edge-intersect detection — drives Tx_CenterAndStretch vs. Tx_DetailCropper routing, and the exact anchor pattern within Tx_DetailCropper |
+| `salient-bbox` | Object bounds — required for Tx_CenterAndStretch and Tx_DetailCropper; a genuinely missing bbox routes to Tx_ProblemImageProcessor as a last resort |
 | `low-contrast` | Triggers `Tx_LowContrastEnhancement` pre-step inside Tx_CenterAndStretch |
 | `shadow-present` | Triggers shadow-band shrink of `salient-bbox` bottom edge inside Tx_CenterAndStretch |
 
-Routing also reads `ImageRecord_LAMBDA.SelectedPhenotype` and `DetOrder` + `ProductTypeId` (see **Transform Routing Matrix** and **Det-Slot Exclusions** below).
+`ImageRecord_LAMBDA.SelectedPhenotype`, `DetOrder`, and `ProductTypeId` are **not** read by routing (the DetailCropper rework, 2026-08-11, removed the phenotype/det-slot gate; see **Transform Routing Matrix** below). They remain available on the record for other stages.
 
 All other IFs (human detection, head visibility, orientation, background, color, material) are available as secondary decision modifiers but do not currently gate the primary routing decision.
 
@@ -163,44 +163,35 @@ Object very light (white, light gray, creme) + background also very light → us
 
 ## Border Intersection Rule (No-Reposition)
 
-If salient object exits image frame at one or more edges → margin **cannot** be applied in that direction. Object "sticks" to intersecting edges. No repositioning in blocked direction(s).
+If salient object exits image frame at one or more edges → margin **cannot** be applied in that direction (margin is 1-intersection-only in any case, see the Routing Matrix). Object "sticks" to intersecting edges — the touched edge stays flush; there is no repositioning in the blocked direction(s).
 
-When `Tx_DetailCropper` is selected but detects during pixel processing that the crop cannot be repositioned (border intersection blocks manipulation), it **internally delegates to `Tx_CropSquare`** — the image receives a centered square crop without background extension, is not KO'd, and is not exported unchanged. The OUTPUT record's `TransformerType` records `Tx_CropSquare`; `Warnings` records the reason for the fallback. This is an internal fallback, not a routing decision in `ImageTransformer.cs`.
+`Tx_DetailCropper` never delegates to `Tx_CropSquare`. Every intersection pattern (1/2-opposite/2-adjacent/3/4) is handled locally: an axis without a touched edge shrinks (crop, bbox-preserving) when the bbox fits, or extends via `Tx_util_BgStretch` when it doesn't. The OUTPUT record's `TransformerType` always reads `Tx_DetailCropper` on this route; `Warnings` records which pattern fired and whether extension was applied.
 
 ---
 
 ## Transform Routing Matrix
 
-`ImageTransformer.SelectTransformer()` evaluates in order (first match wins):
+`ImageTransformer.SelectTransformer()` (DetailCropper rework, 2026-08-11) evaluates in order (first match wins). `Tx_ProblemImageProcessor` is a last-resort fallback, not a precondition gate — every real image carries a bbox (a detection or the full frame), so it is reached only when no rule below claims the image:
 
-1. `salient-bbox` is UNKNOWN **or** `SelectedPhenotype` is null (when phenotype bypass is off) → **`Tx_ProblemImageProcessor`**
-2. Any edge intersect is true (`intersects-top/bottom/left/right`):
-   - Phenotype is `"closeup-image"` or `"model-detail-closeup"` **and** det-slot is not in the exclusion range for this product type → **`Tx_DetailCropper`**
-   - Otherwise → **`Tx_CropSquare`** (fallback for intersecting images)
-3. No edge intersects → **`Tx_CenterAndStretch`**
-4. Default → **`Tx_CropSquare`**
+1. Bbox present **and** any edge intersect is true (`intersects-top/bottom/left/right`) → **`Tx_DetailCropper`**, which dispatches internally on the exact intersection pattern (see below).
+2. Bbox present, no edge intersects → **`Tx_CenterAndStretch`**.
+3. Neither rule claims the image (bbox missing) → **`Tx_ProblemImageProcessor`**.
 
-Notes:
-- `Tx_DetailCropper` may internally delegate to `Tx_CropSquare` when pixel-level border intersection blocks repositioning (see **Border Intersection Rule** above). This is not a routing decision.
-- `Tx_ProblemImageProcessor` never calls `Tx_CropSquare` — it applies a safe proportional resize only.
-- `Tx_CropSquare.Transform` **applies** its crop to `ProcessedBytes` (T-4920). Until then it recorded a
-  `CropRectangle` on the OutputRecord without touching the pixels, so the exported file was the whole frame
-  while the manifest claimed a square. It also crops against the decoded bytes' own dimensions rather than
-  `ImageRecord_Base.Width`/`Height`, which stay at their original-resolution ingress values.
-- While `BypassPhenotypes = true` (temporary PoC gate in `ImageTransformer.cs`), rule 1 skips the phenotype-null check and rule 2 always falls through to `Tx_CropSquare` (not `Tx_DetailCropper`).
+`SelectedPhenotype` and det-slot/`ProductTypeId` are **not read by routing at all** — a prior gate (phenotype = `closeup-image`/`model-detail-closeup` + det-slot eligibility) was removed. A stub comment in `ImageTransformer.SelectTransformer` shows how to reinstate a gate if a future ticket needs one; `Tx_CropSquare` and the det-slot-exclusion concept are not deleted, just currently unreferenced by routing (kept for a possible future repurposing).
 
-## Det-Slot Exclusions for Tx_DetailCropper
+### Tx_DetailCropper's internal dispatch (by exact intersection pattern)
 
-`Tx_DetailCropper` is excluded for images at certain det-slots, which fall back to `Tx_CropSquare`:
+| Pattern | Anchor | Margin | Free axis behavior |
+|---|---|---|---|
+| 1 intersection | Touched edge flush | `WhiteSpaceMargin` (0.042) on the far edge of the touched axis | Perpendicular axis centers on the bbox; shrinks if the bbox fits, else extends |
+| 2 opposing (top+bottom or left+right) | Both edges of the pinned axis flush (full frame extent) | None | The other axis centers on the bbox; shrinks if it fits, else extends **symmetrically** |
+| 2 adjacent (shared corner) | Shared corner flush on both axes | None | Each axis independently: shrink the larger dimension toward the smaller if bbox-preserving, else extend the smaller dimension **away from the corner** only — the larger dimension is never touched |
+| 3 (one open side) | The 3 touched edges pin one axis at full extent (never moved) and anchor the 4th (open) axis's touched edge flush | None | The open axis's far edge shrinks toward the anchor if it fits, else extends toward the open side only |
+| 4 (all edges touched) | N/A — no free direction anywhere | None | Always a centered square crop at `min(imgW, imgH)`, no extension |
 
-| Product type | Excluded det-slots |
-|---|---|
-| Default (non-clothing) | 0, 1, 2 |
-| `clothing-*` (any product type starting with `clothing-`) | 0, 1 |
+Shrink-vs-extend test: an axis's flush/centered position is tried first as a plain crop; if the required window would run off the frame, the in-frame portion is cropped and the remainder filled via `Tx_util_BgStretch` (see **Fill Method** below). `Tx_util_BgStretch` owns all fill/stretch mechanics — `Tx_DetailCropper` only ever picks the canvas size and source offset.
 
-- The `clothing-*` rule is prefix-based — no hard-coded list; read from `DetOrderRules.json`.
-- Det-slot is `lambda.DetOrder` (int, 0-based, from `ImageRecord_Base`).
-- Product type is stored on `ImageRecord_LAMBDA.ProductTypeId` (string?), written by `ImageOrderer` during the Order stage. See ticket T-1800.
+`ComputeIdealSide`/Coverage-floor sizing and the `CropExtensionOneSided`/`CropExtensionBiDirectional`/`AdjacentCropCap` budget config values from the pre-rework design are gone — sizing is now driven purely by bbox-preservation (crop if the full bbox stays in frame, else extend), not a percentage cap.
 
 ## Repositioning and Margin Application
 
@@ -245,9 +236,9 @@ Extension ratio = filled canvas area / source image area.
 
 All other failure modes — unknown features, low-confidence geometry, fill/stretch failures — are handled by `Tx_ProblemImageProcessor` (conservative proportional resize, export with warnings). No other transform failure triggers KO.
 
-## UNKNOWN → Problem Processing
+## Missing Bbox → Problem Processing
 
-When `ImageTransformer.cs` finds `salient-bbox` UNKNOWN, or `SelectedPhenotype` is null (while phenotype bypass is off), route to `Tx_ProblemImageProcessor.cs` for conservative processing. Do not use normal transform assumptions.
+When `ImageTransformer.cs` finds no bbox on the record (a genuinely bbox-less record — not expected in practice, since every real image gets either a detection or the full-frame fallback), route to `Tx_ProblemImageProcessor.cs` for conservative processing. Do not use normal transform assumptions. `SelectedPhenotype` no longer factors into this decision (DetailCropper rework, 2026-08-11).
 
 ---
 
