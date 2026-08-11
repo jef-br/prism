@@ -14,7 +14,7 @@ user-facing summaries.
 | Ticket | Status | Title | Do this next |
 |---|---|---|---|
 | [T-2600](T-2600.md) | Blocked | M5 Classify groundwork | Land T-5070 and T-5080, then re-score CiMini's 99 labelled rows |
-| [T-2840](T-2840.md) | Ready | CLIP batch-composition sensitivity, confirmed (T-2820 recurrence) | Verify the batched-Run mechanism against the single-image path, then fix prompts/thresholds |
+| [T-2840](T-2840.md) | Ready | CLIP batch-composition sensitivity, confirmed (T-2820 recurrence) | Calibrate hero-orientation's threshold clear of the measured 0.069 jitter band |
 | [T-3800](T-3800.md) | Blocked | Match bracket validation | Author a Bracket-4 image and a reference-free fuzzy-colour image; no dataset has either |
 | [T-4000](T-4000.md) | Ready | Analyzer calibration backlog | Split the 11 analyzer calibration questions into their own tickets, one at a time |
 | [T-4942](T-4942.md) | Review | Test projects fight over the GPU | Confirm `-m:1` + the 500-test CI floor on a real CI run, then close |
