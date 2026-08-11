@@ -138,3 +138,4 @@ Inc.:   - All XLSX building
 2026-08-10 17:55:19 | X FITFLOP 109 | JobID=af39afc7-dfce-41fc-aa12-ce56e2be68df | images=305 ok=210 dedup-excluded=0 | Job OK rate: 68.9% | duration: 00:01:51 (111.6s)
 2026-08-10 17:55:39 | X DEMEYER31 | JobID=- | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:00:19 (19.5s) | SUBMIT_ERROR: There is not enough space on the disk.
 2026-08-10 17:57:31 | X MEPAL5 | JobID=e18e514e-c377-4623-ae60-70c091b0f3fb | images=36 ok=10 dedup-excluded=5 | Job OK rate: 27.8% | duration: 00:01:51 (111.1s)
+2026-08-11 09:05:36 | X DEMEYER31 | JobID=db91e700-5b75-4dbc-ac24-8e40e6bc4838 | images=20 ok=3 dedup-excluded=0 | Job OK rate: 15% | duration: 00:01:50 (110.8s)
