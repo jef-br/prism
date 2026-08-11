@@ -4,6 +4,638 @@ Done tickets, moved here by /ticket-finish to keep `jb/ticketboard/AGENT-TICKETS
 start) lean. Newest at the top. When a ticket closes, its `jb/ticketboard/T-XXXX.md` body is appended here
 and that file is deleted.
 
+### T-6900 · SMASHEDLEMON45 "hang" is feature-analysis cost, not an algorithmic defect
+**Status:** Done (2026-08-11) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-08-11) — methodology is sound: the fast harness's predicted match rate
+(97.6%/97.2%, 0 wrong) is independently corroborated by a live full pipeline run (JobID `f40f8b9d`,
+36m17s, logged in `matching-testlogs.txt`) that matches it exactly, the 49-image KO accounting sums
+correctly (35+7+7=49) and the 97.2% ceiling arithmetic checks out (1725/1774), and the timing harness
+uses a warm-up pass to exclude JIT/model-load skew. Two things outside the measurement itself need the
+orchestrator's attention before this is folded into a commit: (1) `MatchingService.cs` in the working
+tree already contains T-6910's `Parallel.ForEach` fix for `RefinePhenotypes`, uncommitted and untested,
+while T-6910 is still status "Ready" — this is a different ticket's implementation, not measurement
+tooling, and needs its own test coverage and review cycle rather than riding in under T-6900; and (2)
+the 26316 colour-contradiction policy question below is still open and unresolved by this review.
+**Found by:** [[T-5200]] verification session, 2026-08-11. **Root-caused and measured 2026-08-11
+(second session)** — the conclusion below replaces the earlier "bottleneck is upstream, cause unknown"
+framing and closes out both leading candidates named in the original ticket.
+
+---
+
+## Root cause: there is no hang. The work is real and it is O(pixels).
+
+`ImageFeatureAnalyzer.Analyze` (reached via `MatchingService.PrepareLambda` →
+`FeatureAnalysisService.Analyze`) costs **293 ms per megapixel**, measured directly on real
+SMASHEDLEMON45 images:
+
+| Image | Resolution | decode | hash | **analyze** |
+|---|---|---|---|---|
+| `26000_775-725_1_B2C.jpg` | 3543×5315 (18.8 MP) | 114 ms | 109 ms | **5514 ms** |
+| `26000_775-725_2_B2C.jpg` | 980×1470 (1.4 MP) | 20 ms | 65 ms | **471 ms** |
+| `26000_775-725_4_B2C.jpg` | 3543×5315 (18.8 MP) | 106 ms | 58 ms | **5526 ms** |
+| `26002_450-420_3_B2C.jpg` | 980×1470 (1.4 MP) | 19 ms | 6 ms | **415 ms** |
+
+13× the pixels, 13× the time — **perfectly linear, no algorithmic blow-up**. The dataset totals
+**13,130 megapixels** (404+204 images at 18.8 MP, 1153 at 1.4 MP, 13 at 1.6 MP), so feature analysis
+alone is **~64 minutes of single-threaded CPU**, before decode (~100 s) and hashing.
+
+`MatchingService` runs that loop `Parallel.For` at `MaxDegreeOfParallelism = Math.Min(ProcessorCount, 8)`
+— capped at 8 regardless of core count. **Measured on a live job, it actually sustains only 3.0 cores**
+(chunk barrier every 8 images against 13× per-image cost variance — see [[T-6910]]), so analysis alone
+is ~26 min wall clock, and the sequential `Refine` pass adds a further ~22 min. **Measured end-to-end:
+36 min 17 s** on this machine (JobID `f40f8b9d`), match-only.
+
+**That is why every prior run "hung": the client timeouts were set at 8 and 10 minutes — a fifth of the
+job's actual runtime.** The 45-minute original run was the only one in the right ballpark, and it was
+killed rather than allowed to finish. The sustained ~3-core CPU burn and GC churn that [[T-5200]]
+recorded as the hang's signature was simply the job doing its work — that 3-core figure was never a
+symptom, it is just what this loop's effective parallelism is.
+
+### Both of the original ticket's candidates are now cleared
+1. **Per-image feature-analysis loop** — *confirmed as the cost*, but as ordinary linear work, not a
+   defect. Note it runs even under `SkipClassification=true`: the `doClassify` gate skips CLIP, but
+   decode/hash/feature-analysis are outside it. For a match-only run this is ~64 CPU-minutes spent on
+   measurements matching never reads.
+2. **`Deduplicate`/`FindDuplicates`** (`VisualHasher.cs:98`) — **cleared**. It is O(n²) but each step is
+   a `UInt128` Hamming distance plus a filename compare: ~1.5 M iterations, well under a second at
+   n=1774. Not a contributor.
+
+### A false lead worth recording
+Three files in this dataset are **PNGs carrying a `.jpg` extension**
+(`26303_720-998_7_B2C.jpg`, `26328_010_2_B2C.jpg`, +1). A hand-rolled JPEG header scan desyncs on them
+and reports absurd dimensions (48831×65265 ≈ 3187 MP), which looks exactly like an out-of-memory hang
+cause. They are really 1024×1536. ImageSharp dispatches on content, not extension, so they import fine.
+**Verify image dimensions with a real decoder before believing a header-scan outlier.**
+
+---
+
+## The matching question this ticket also raised is answered: the matcher is already optimal.
+
+The original ticket flagged `SiblingPropagator.BuildProfile` discarding 1-3 digit tokens
+(`ShotSuffixPattern`'s `\d{1,3}` branch) as a possible cause of poor matching on this dataset's
+`26000_775-725_1_B2C.jpg` naming. **Measured: it costs nothing here, because the waterfall never
+reaches SiblingPropagator.**
+
+**Confirmed end-to-end on the live pipeline, 2026-08-11** (JobID `f40f8b9d-35e1-401e-99f5-aef099b4f00c`,
+match-only, **completed in 36 min 17 s — no hang, no timeout**):
+
+```
+images=1774  matched=1732 (97.6%)  correct=1725 (97.2%)  wrong=0  noGroundTruthRow=7
+by bracket: Bracket1: 1145   Bracket2: 482   Bracket2-Permuted: 105
+ko:         MATCH_NOT_FOUND: 35   MATCHES_MULTIPLE_FAMILYIDS: 7
+dedup-excluded: 0
+```
+
+The fast harness below predicted **every one of these figures exactly** (it reports Bracket 2's 587 as
+one bucket; the live run splits it 482 + 105 permuted, same total). The harness is therefore a validated
+proxy for match-only runs — use it instead of a 36-minute pipeline run.
+
+A harness running the *real* `ModelBuilder` and the *real* `ImageMatcher.Run` over all 1774 filenames
+(no image decoding — 0.9 s per run) gives:
+
+```
+images=1774 families=254
+matched=1732 (97.6%)  correct=1725 (97.2%)  wrong=0
+koDespiteHavingTruth=0
+matched by bracket:  NumericMatcher.Bracket1: 1145   NumericMatcher.Bracket2: 587
+ko reasons:          MATCH_NOT_FOUND: 35             MATCHES_MULTIPLE_FAMILYIDS: 7
+```
+
+**Zero wrong matches, and zero images that had a resolvable Excel row and failed to find it.**
+Identical results whether `InitialFullName` carries a full path or a bare filename.
+
+**Why the 3-character tokens are already handled.** Filename `26368_725-010_1_B2C` must resolve to
+FamilyID `99984987` via Excel's `RefCo` cell `26368-725/010`. Bracket 1 matches the 1145 images whose
+article number is unique in the catalogue. The other 587 belong to the **37 articles that carry 2-3
+colour variants**, where the article alone is ambiguous — and **Bracket 2's tokenized concatenation
+resolves every one of them** by joining `26368`+`725`+`010` and comparing against the RefCo digit run.
+The 3-digit colour codes are consumed as concatenation members, so `minNumericTokenLength: 5` never
+excludes them. No config or algorithm change is warranted for this dataset.
+
+### Full accounting of the 49 unmatched images (2.8%)
+| Count | Articles | Cause | Verdict |
+|---|---|---|---|
+| 35 | 26123, 26125, 26127, 26212, 26213 | **No Excel row exists for these articles at all** | Correctly refused (`MATCH_NOT_FOUND`) |
+| 7 | 26140 colour `801` | Excel has 26140 in `825`/`010`/`725` — no `801` | Correctly refused (`MATCHES_MULTIPLE_FAMILYIDS`) |
+| 7 | 26316 colour `000` | Excel has only `26316-520`; **matched on article alone** | ⚠️ **Needs a product decision — see below** |
+
+**97.2% is the arithmetic ceiling for this input**, not a tuning target that was missed.
+
+### Product question resolved (7 images, 0.4%) — 2026-08-11
+Article `26316` has exactly one Excel row, `26316-520`. The seven `26316_000_*` images carry colour
+`000`, which contradicts it. Bracket 1 matched them to `99985091` anyway, because the article token is
+unique.
+
+**Decision (user, verified against the actual 14-image `26316_*` set and the Excel row):**
+`26316_520*` → matches `99985091` (colour code agrees with the family's Excel row).
+`26316_000*` → must be refused/unmatched (colour code has no row in this family's Excel data).
+
+A contradicting colour token **does** veto a unique-article match. The correct check is not a global
+colour-code dictionary — it's a per-family membership check: does the filename's colour code appear
+among *this family's own* Excel rows? `26316` only has `520`, so `000` has no legitimate home there,
+regardless of article uniqueness. Implementation tracked in [[T-6920]] (judgment-heavy matching logic —
+requires `/pair`, per repo convention).
+
+---
+
+## Files
+- `jb/src/core/Services/Matching/MatchingService.cs` — the cost is here (`PrepareLambda`, line ~282),
+  not a defect; see the `SkipClassification` note above if a match-only fast path is ever wanted.
+- `jb/src/core/Services/Matching/Classify/VisualHasher.cs:98` — `FindDuplicates`, cleared.
+- `jb/src/core/Services/Matching/Match/SiblingPropagator.cs` — never reached on this dataset; [[T-5200]]'s
+  fix to it stands on its own merits.
+- `test/test-scripts/Run_SMASHEDLEMON45.ps1` — **use `-TimeoutMinutes 60`**, not the 10-minute default.
+  Consider raising the default: 10 minutes cannot complete this dataset and produces a
+  `TIMEOUT_OR_NO_RESULT` that reads as a pipeline defect rather than a client giving up early.
+
+## Temporary tooling (kept, not deleted — see review)
+- `jb/src/tests/Prism.Services.Matching.Tests/Match/TempPrematchTimingHarness.cs` — per-stage
+  decode/hash/analyze timing. No-op unless `PRISM_TIMING_DIR` is set. Kept: [[T-6910]] explicitly
+  reuses it to confirm its still-open "direction 2" fix.
+- `jb/src/tests/Prism.Services.Matching.Tests/Match/TempSmashedLemonMatchHarness.cs` — real
+  ModelBuilder + real ImageMatcher over all 1774 filenames with ground-truth scoring, in ~1 s. No-op
+  unless `PRISM_SL_OUT` is set. Kept per the ticket's own note and reused by [[T-6920]]'s acceptance
+  criteria.
+
+---
+
+### T-5110 · FilenameToCellMatcher cannot see a filename inside free text
+**Status:** Done (2026-08-11) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-08-11) — the cell-scanning fix in `FilenameToCellMatcher.cs` matches the spec
+(token-shaped splitting, extension-less-token acceptance gated on a sibling extension piece, collapsed-
+prefix fallback for the double-space/suffix case), is covered by 4 new tests plus all 6 pre-existing
+safety tests, and the full Matching suite (271/271) passes with no regressions. Two non-blocking notes
+for the Developer: (1) `FindByCollapsedPrefix` has no minimum key-length floor, unlike the codebase's
+own precedent (`StringMatcher`'s ≥4-char fuzzy-fallback gate) — a short collapsed key (e.g. a cell
+literally listing "1.jpg") could prefix-match unrelated images; worth a length guard before this sees
+wider production data. (2) The ticket's own Files list named `jb/docs/PRISM-match.md` but Bracket 5
+(`FilenameToCellMatcher`) still isn't documented in the Waterfall Matching Gates section — pre-existing
+gap, not newly introduced, but flagged since the ticket committed to touching it. The upstream Excel
+column-fill-rate gap is real and correctly left unfixed here; tracked separately as [[T-5130]].
+**Found by:** scoring JBComplete `-Mode Match` against its golden, 2026-08-05.
+
+**Seven images that a cell names explicitly came back `MATCHES_MULTIPLE_FAMILYIDS`.**
+`100267_1..7` should all match `91337133`. The Excel marketing-description cell reads, verbatim:
+
+```
+Pictures are here: http://thisisnotanurlbutitlookslike.one/100267_1.jpg,
+http://thisisnotanurlbutitlookslike.one/100267_2.jpg, … /100267_6.jpg,
+http://thisisnotanurlbutitlookslike.one/100267_7
+```
+
+The waterfall reaches `RunBracket5FilenameToCell` (it runs before SubstringRescue and sibling
+propagation, so nothing short-circuits it), and the matcher indexes **nothing** from this cell.
+
+**Cause.** `FilenameToCellMatcher.GetOrBuildIndex` treats the *whole cell value* as one path:
+
+```
+string basename = Basename(cellValue).Trim().ToLowerInvariant();   // text after the last '/'
+if (basename.Length == 0 || !ImageExtensions.Contains(Path.GetExtension(basename))) continue;
+```
+
+`Basename` returns everything after the final `/` in the entire cell — here `100267_7`, which has no
+image extension, so the extension guard rejects it and the loop moves on. **Effect:** the six
+filenames earlier in the same cell are never even looked at; a cell can only ever contribute one
+candidate, and only when its entire value is a bare path. **Consequence:** the last-resort bracket is
+inert for the common real shape — a description or notes column that mentions image filenames among
+other words. All seven images then fall through to the KO step and are rejected as ambiguous
+("`100267_1` qualifies for 12 FamilyIDs"), which reads as a matcher failure rather than a missing
+capability.
+
+**Contained fix.** Scan each cell for filename-shaped tokens instead of taking the basename of the
+whole value: split the cell on whitespace and commas, take the last path segment of each piece, and
+index every piece that carries an image extension. Two details the golden pins:
+- `100267_7` is listed **with no extension** (golden note on that row), so an extension-less token
+  that otherwise matches an image's stem must also index — meaning the extension guard has to move
+  from "reject the cell" to "one of two accepted token shapes".
+- `100267_6  - BW001_c.jpg` has a **double space** in the actual filename, so the existing
+  `CollapseStem` path is what has to carry that row, not exact matching.
+
+Widening what counts as a filename token also widens the false-positive surface; keep the
+"exactly one family names it" uniqueness rule as the guardrail rather than adding a score.
+
+**Acceptance:** all seven `100267_*` match `91337133` via `FilenameToCellMatcher`; no image that
+matched by another bracket today changes family; a unit test covers a free-text cell listing several
+filenames, one of them extension-less.
+
+**Files:** `jb/src/core/Services/Matching/Match/FilenameToCellMatcher.cs`,
+`jb/src/tests/Prism.Services.Matching.Tests/Match/FilenameToCellMatcherTests.cs`,
+`jb/docs/PRISM-match.md`, `test/datasets/CiMini/expected-match.json` (read-only).
+
+---
+
+**Implemented 2026-08-11 — the matcher fix is correct and unit-verified; a separate, upstream ingestion
+gap blocks it from resolving CiMini's own `100267_*` case end-to-end. Do not close this ticket on the
+strength of the unit tests alone — read the second half below.**
+
+**The matcher fix, as prescribed.** `GetOrBuildIndex` now splits every cell value on whitespace/commas/
+semicolons and indexes each piece as its own candidate path, instead of treating the whole cell as one
+basename. Extension-less pieces (`100267_7`) index only when their cell also contains a sibling piece
+carrying a real image extension — a bare digit-bearing token is not enough on its own, confirmed the
+hard way: an initial "has extension OR has a digit" rule regressed the existing
+`TryMatch_NonImageCellEqualToStem_DoesNotFalseMatch` safety test (a bare SKU cell like "AB12" would
+have false-matched "AB12.jpg"). Also added: a collapsed-key **prefix** fallback (beyond the existing
+exact-collapsed-equal lookup) for `100267_6  - BW001_c.jpg` — the cell names `100267_6.jpg`, the real
+file has an extra " - BW001_c" suffix and a double space that are in no cell at all, so exact/collapsed
+equality can never match; the cell token's collapsed form being a *prefix* of the file's collapsed
+stem is what carries this row, guarded by the same "exactly one family" uniqueness rule, no score
+added. Confirmed live with `NumericMatcher`: `100267` is a 6-digit token that IS present in the Excel
+(inside the marketing-description cell, all-columns digit indexing is on in production) and IS shared
+by every image in this family — a real, correct piece of evidence — but it resolves to 2+ families in
+the actual CiMini catalogue (confirmed via the golden's own `MATCHES_MULTIPLE_FAMILYIDS` KO reason),
+so NumericMatcher alone cannot carry this case; the string-cell-scanning fix in this ticket remains
+necessary, not redundant with the numeric evidence.
+
+**The blocker, found while verifying against the real CiMini golden, unrelated to the matcher code
+above.** All seven `100267_*` still KO as `MATCHES_MULTIPLE_FAMILYIDS` in the CiMini golden run.
+Traced with a temporary debug print in `FilenameToCellMatcher.TryMatch`: the built index is **empty**
+— 0 keys — meaning no family's `OriginalSourceCellValues` contains the marketing-description text at
+all, for any family in the batch. Confirmed by raw inspection of the Excel
+(`unzip -p Brackets-Complete.xlsx xl/sharedStrings.xml`): the "Pictures are here: ..." cell exists and
+contains exactly the filenames this ticket needs, but it is the **only row** with any value in that
+column across the whole ~34-family sheet. `ModelBuilder.ColumnHasEnoughUsefulValues`
+(`ExcelConfig.json`'s `ColumnValidity.MinimumUsefulValueRatio = 0.2`) drops any column where fewer than
+20% of rows have a value — one filled cell out of ~34 rows is ~3%, so the entire `description` column
+is excluded from the model before `FamilyIDRecord.MergeProperty` ever runs on it. This is upstream of
+`FilenameToCellMatcher` entirely; no amount of fixing the matcher's cell-scanning logic can reach cell
+data that was dropped during Excel ingestion.
+
+**Not fixed here — deliberately.** Whether to always retain a `description`-shaped column regardless
+of fill rate, lower `MinimumUsefulValueRatio`, or something else is a product/config decision with
+real tradeoffs (a lower ratio widens what other sparse, possibly-noisy columns get indexed too), out
+of this ticket's scope and not decided unilaterally. Split out as [[T-5130]].
+
+**Verified (matcher-level, all pass):**
+`TryMatch_FreeTextCellListingSeveralUrls_MatchesEachFilename`,
+`TryMatch_ExtensionLessTokenInFilenameCell_Matches`,
+`TryMatch_DoubleSpaceAndSuffixInRealFilename_MatchesViaCollapsedPrefix`,
+`TryMatch_BareAlphabeticWordInCell_NeverIndexed` (new), plus all 6 pre-existing
+`FilenameToCellMatcherTests` including the SKU false-match guard. Full `Prism.Services.Matching.Tests`
+green (271/271). **Not verified end-to-end** on CiMini specifically, for the ingestion-gap reason
+above — the `100267_*` rows remain in the golden's mismatch list (7 of the remaining 14), unchanged
+in count before and after this fix (their `KoReasonCode` is identical either way, since the matcher
+never sees any candidate data to work with).
+
+---
+
+### T-5100 · Bracket 3 hands an image to a neighbouring family on brand+colour alone
+**Status:** Done (2026-08-11) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-08-11) — `StringMatcher.HasUnresolvableIdentifierToken` and
+`SiblingPropagator`'s `ShortIdentifierCodePattern` correctly stop the OMB-E180-BV repro and don't
+regress the OMB-E166-BV control case (traced by hand, confirmed by
+`Bracket3_FilenameReferenceNamesNoFamily_RefusesEvenWhenGenericTokensMatch`,
+`Bracket3_FilenameReferenceMatchesItsFamily_StillMatches`,
+`SiblingPropagator_ShortLetterDigitToken_KeptWholeNotTreatedAsShotNumber`); T-5200's later
+SiblingPropagator indexing commit only wraps `BuildProfile`, doesn't alter it, so no conflict. One
+non-blocking risk to track: `ShortIdentifierCodePattern` (`^[a-z]{1,2}\d+$`) is a strict superset of
+`ShotSuffixPattern`'s own `[a-z]\d{1,2}` alternative and is checked first, so single-letter+1-2-digit
+shot/angle suffixes ("_A1", "_F2" — CiMini has this exact shape in `Pareo_exotica_F1/F2.jpg`, though
+those happen to resolve before reaching SiblingPropagator) now get kept whole as identity instead of
+filtered as shot noise; no test isolates whether this still lets same-product multi-angle shots
+propagate correctly. Suggest a fast-follow regression test.
+**Found by:** scoring JBComplete `-Mode Match` against its golden, 2026-08-05. Real defect — the
+dataset was built to catch exactly this and the README predicted the outcome verbatim.
+
+**Six images of a product that has no Excel row were assigned a different product's family.**
+
+`OMB-E180-BV_1..6.jpg` — `README.md` §5: *"**no row exists** … while a same-colour same-type family
+(`OMB-E166-BV`, brown bag) sits right there to be stolen. Must stay unmatched."*
+
+All six matched `98636303` (= `OMB-E166-BV`, VICKY, the brown shoulder bag):
+
+```
+Bracket3: 2 string token(s) uniquely matched family 98636303 (score=0,667).
+SiblingPropagation: rare token profile [bv, omb] same shot set as family 98636303.
+```
+
+**Cause.** `bracket3MinDistinctTokens` is 2. The filename tokenises to `omb`, `e180`, `bv`. Two of
+those — the brand `omb` and the colour `bv` — resolve to family `98636303`. The third, `e180`, is the
+**only token that identifies the product**, and it resolves to nothing at all. Bracket 3 counts how
+many tokens hit, not whether the discriminating one did, so 2-of-3 clears the bar and the match is
+recorded as *unique*.
+
+**Effect.** A reference that exists in no row is not a signal of absence; it is simply ignored, and
+the remaining generic tokens elect the nearest neighbour that shares them. `SiblingPropagator` then
+carries the same wrong family to the images Bracket 3 did not reach directly (`_3`, `_4`), so one
+weak match becomes six.
+
+**Consequence.** Silent misattribution of a whole product's shot set to a different product. Nothing
+in the manifest flags it: score 0.667, no KO, no near-tie. Six images would ship renamed as another
+bag. This is the failure mode the matcher waterfall is supposed to prevent, and the one a customer
+would notice first.
+
+**The same mechanism is behind `OMB-E129-TGV_1..4`** (matched `98636325` at 0.667 + 0.25 convergence
+bonus, golden holds them unmatched). That one the README calls a contestable product call — the
+reference is a *transposition* of a real one (`E129` vs `E198`) — so it is not counted as a defect
+here. But note the code cannot currently tell the two cases apart: both are "the reference token
+matched nothing, the generic tokens matched a neighbour". Whatever fix lands must decide both.
+
+**Shape of the fix.** Bracket 3 needs to know which tokens are *discriminating* and refuse to accept
+when a discriminating token in the filename resolves to no family — rather than treating an
+unresolvable token as absent evidence. `NoiseFilter`/stop-word machinery already distinguishes
+generic from rare tokens; the missing piece is treating "rare token present in the filename but in no
+row" as disqualifying rather than neutral. `SiblingPropagator` must not propagate a match whose
+Bracket-3 evidence was disqualified.
+
+**Acceptance:** all six `OMB-E180-BV_*` come back unmatched; `OMB-E166-BV_1..4` still match
+`98636303` (control case — must not regress); the decision taken for `OMB-E129-TGV_*` is written
+into `PRISM-match.md` with its reasoning, whichever way it goes.
+
+**Files:** `jb/src/core/Services/Matching/Match/StringMatcher.cs`,
+`jb/src/core/Services/Matching/Match/SiblingPropagator.cs`, `jb/src/core/config/MatchingConfig.json`,
+`jb/docs/PRISM-match.md`, `test/datasets/CiMini/expected-match.json` (read-only).
+
+---
+
+**Implemented 2026-08-11 — two files, not one.** `StringMatcher.TryMatch` now refuses outright when
+any identifier-grade filename token (letters+digits, ≥`identifierTokenMinLength`, same shape
+`HasUniqueIdentifierToken` already uses) is absent from the entire token index — checked before
+ranking, so it can't be outvoted by generic tokens that hit a neighbour. That alone was not enough:
+`SiblingPropagator` independently re-derived the same wrong match, exactly as this ticket's own text
+predicted ("SiblingPropagator then carries the same wrong family..."). Root cause, found by tracing
+live: `SiblingPropagator.BuildProfile` splits `e180` at the letter-digit boundary into `e` (too short,
+dropped) and `180` (3 digits, discarded by `ShotSuffixPattern` as a bare shot number) — the same
+mechanism as [[T-5210]]'s "reinvents its own tokenizer" concern, materializing in practice. Fixed by
+keeping short-letter-prefix-plus-digits tokens ("e180", "a129" — 1-2 letter prefix, reference-code
+shape) whole rather than splitting them, while still splitting genuine word+digit tokens
+("magenta76") as before — the two shapes are distinguished by prefix length, not disabled globally.
+
+**The [[T-5210]] connection, concretely:** this is exactly the kind of duplication that ticket asks
+to investigate — SiblingPropagator's separate tokenizer disagreeing with StringMatcher's token
+handling on the identical filename. This fix patches the symptom (keep `e180` whole) without resolving
+T-5210's broader question (should SiblingPropagator read `MatchEvidence` token evidence instead of
+re-deriving its own). Left open for that ticket.
+
+**`OMB-E129-TGV_*` decision:** not separately re-litigated here — same disqualification mechanism
+applies (its reference token is a transposition of a real one, resolves to nothing, exactly like
+E180). Golden still holds it unmatched after this fix (not in the remaining 14 mismatches). Whether
+that's "correct because ambiguous" or "correct by the same mechanism as E180" wasn't distinguished at
+the code level — `PRISM-match.md` write-up for this specific reasoning is still open.
+
+**Verified:** `OMB-E180-BV_1..6.jpg` all come back unmatched — confirmed via
+`Bracket3_FilenameReferenceNamesNoFamily_RefusesEvenWhenGenericTokensMatch` (StringMatcher level) and
+`SiblingPropagator_ShortLetterDigitToken_KeptWholeNotTreatedAsShotNumber` (SiblingPropagator level,
+reproducing the exact E180-vs-E166 profile collision). `OMB-E166-BV_1..4` control case confirmed
+still matching via `Bracket3_FilenameReferenceMatchesItsFamily_StillMatches` and the CiMini golden
+(not in the remaining mismatch list). CiMini golden: `OMB-E180-BV_*` dropped out of the match-golden
+mismatch list entirely (was 6 of 26 mismatches, now 0 of 14). Full `Prism.Services.Matching.Tests`
+green (271/271), including the existing `SiblingPropagator_KeylessShot_InheritsSiblingFamily`
+(`CARDIGAN_MAGENTA76` case) confirming the word+digit split path is unaffected.
+
+---
+
+### T-5000 · Filename orientation analyzer fires on garment words, not camera views
+**Status:** Done (2026-08-11) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-08-11) — Trailing-token rule (commit `3ec0b45`, `Analyzer_FilenameEvidence.WriteOrientation`) reads only `tokens[^1]`, matching the measured split (1,564/1,567 real hits trailing, all 15 documented false positives mid-name); `OrientationTokens` moved to `analyzer_Config.json` with a lowercase-key Validate() and a documented rationale for staying separate from `DetOrderKeywordStems.json`. `Analyzer_FilenameEvidenceTests.cs` (new, 122 lines) pins true positives, mid-name false positives, the "Deep Back" colour-name collision, precedence-over-CLIP, and the config lowercase/empty-map contracts — all against the shipped config, not a mock. `dotnet test` on `Prism.Services.Matching.Tests` (`Analyzer_FilenameEvidenceTests`): 19/19 passed. The 2026-08-07 addition (trailing sequence markers like `_FRONT_2` colliding with the same final-token slot) is correctly left unfixed here — it's explicitly logged as "not yet measured," deferred pending real frequency data, and cross-referenced to [[T-5120]]; that's a documented residual, not a silent gap, consistent with how the ticket already treats the `Product_Colour_TOP.jpg` bikini-top residual.
+
+---
+**FIXED 2026-08-05 — the orientation token must be the FINAL token of the filename stem.**
+
+**Re-measure first: this ticket's numbers were stale and its framing was wrong.** It says 16 hits in
+14,427 images and "it almost never fires". `test/datasets` now holds **17,616 images with 1,610 hits**.
+The difference is VINGINO79 — **2,847 images, 1,567 hits (55%)** — a real customer batch naming files
+`..._FRONT.png` / `..._BACK.png`. The path this ticket describes as vanishingly rare is the dominant
+orientation signal on the one dataset that behaves like production.
+
+That settles the design by measurement rather than preference:
+
+| Candidate | Verdict |
+|---|---|
+| Require a view-ish neighbour token | **Refuted** — VINGINO79's 1,564 hits are bare `_FRONT`/`_BACK` with no neighbour. Would destroy the signal it was meant to protect. |
+| **Positional convention (chosen)** | **1,564 of 1,567** real hits put the token last; every known false positive is mid-name. |
+| Drop bare `top`/`bottom` | **Unnecessary** — position already rejects all 10, and dropping them would cost `top-packshot` / `bottom-packshot` their only filename evidence. |
+
+**Scored against every hit in the repo:** all 15 documented false positives stop writing an
+orientation (5 `…-BACK-STRAP-SANDALS-…`, 10 bikini/garment `top`/`bottom`), `25W_538_back` still
+writes BACK, and VINGINO79's 1,564 are untouched.
+
+**A third defect this found, not on the ticket.** The analyzer scanned tokens left-to-right and
+stopped at the first hit. Three VINGINO79 files carry the colour name **"Deep Back"**, so
+`WO25KB420009_Clive_Deep Back_FRONT.png` was labelled **BACK** — an orientation read off a colour
+name, on a front shot. Reading the final token fixes it; `..._Deep Back_DETAIL1.png` correctly writes
+nothing.
+
+**The two keyword lists stay two lists, documented as deliberate.** `DetOrderKeywordStems.json` maps
+filename hints to *det slots* and carries six groups that name no orientation at all (detail, pack,
+label, material, lifestyle, interior). They overlap on the orientation-bearing groups only. The token
+map moved from a hard-coded dictionary into `analyzer_Config.json` (it was a values list living in
+code, against the config rule), with the relationship written into the config file itself. Vocabulary
+widening is a calibration question and stays with [[T-4000]]. Keys must be lowercase and `Validate()`
+throws otherwise — filename tokens keep their original case and are lowercased for lookup, so a
+capitalised key would sit in the JSON matching nothing.
+
+**Known residual, stated rather than hidden:** a customer file literally named `Product_Colour_TOP.jpg`
+where TOP is a bikini top is still misread. Nothing in the filename separates that from an overhead
+shot; only a neighbour rule would, and that costs the 1,564.
+
+**Regression guard:** `Analyzer_FilenameEvidenceTests` pins real stems from `test/datasets` — true
+positives, false positives, the colour-name collision, the precedence contract, and the config
+lowercase contract — against the shipped `analyzer_Config.json`.
+
+---
+
+**Addition 2026-08-07 — a second kind of token wants the same final position.**
+*Origin: session on det-ordering and filename tokens, the one that reverted [[T-5060]] and produced
+[[T-5120]]. Recorded here because it constrains this ticket's positional rule; no change made.*
+
+**The rule "orientation token must be the final token of the stem" collides with sequence tokens.**
+[[T-5120]] will read a trailing `_1`, `_2`, `_A`, `_B` as a weak signal for det order. Sequence
+markers sit at the end of a filename. So do orientation words. They compete for one slot.
+
+The failure is quiet. Append a shot number to a name that worked, and the orientation signal
+disappears:
+
+| Filename | Final token | Orientation written |
+|---|---|---|
+| `WO25KB420009_Clive_Navy_FRONT.png` | `FRONT` | FRONT ✅ |
+| `WO25KB420009_Clive_Navy_FRONT_2.png` | `2` | **nothing** ❌ |
+
+Same photo, same intent, one suffix, signal gone. **Cause:** the positional rule looks at exactly one
+token. **Effect:** any customer who numbers their shots loses filename orientation entirely.
+**Consequence:** on those batches the analyzer goes silent and CLIP is unchecked — which matters
+because CLIP orientation is itself unreliable ([[T-5080]], [[T-2840]]).
+
+Counter-example, so the rule is not over-corrected: `F-MODE-GO-…-BACK-STRAP-SANDALS-01.jpg`. Here the
+final token is also a number, and the `BACK` earlier in the name is still part of the product name,
+not a view. Scanning backwards past the sequence marker would revive exactly the false positive this
+ticket eliminated. So "take the last token, or the one before it if the last is a sequence marker"
+is not automatically safe — it depends on recognising a sequence marker reliably.
+
+**Not yet measured.** The `_FRONT_2` pattern's real frequency across `test/datasets` (VINGINO79 is the
+batch to check) is unknown. Measure before changing the rule — this ticket's own history is that its
+first framing was wrong because the numbers were stale.
+
+Also fixed in passing: `ProductTypeResolverTests` mirrored the config by hand at `0.75` while the
+shipped value has been `0.60` since `97326fe`. It now reads the real config.
+---
+**Found by:** [[T-4970]] second pass, 2026-07-30
+
+`Analyzer_FilenameEvidence` writes `hero-orientation` from whole-token filename matches at a fixed
+confidence (`analyzer_Config.json` → `Filename.OrientationConfidence`). Scanned across all 14,427 images in
+`test/datasets/`: **16 filenames contain an orientation token, and 15 of the 16 are false positives.**
+
+| Filename | Token | What it actually means |
+|---|---|---|
+| `freya_top_cinzia_skirt_F` (×4) | `top` | the garment is a *top*; `_F` says the view is front |
+| `Malibu_ivory_TOP` (×2), `Malibu_ivory_BOTTOM` (×2), `Alba_ivory_B - BOTTOM` (×2) | `top`/`bottom` | bikini top and bottoms — the pieces |
+| `F-MODE-GO-…-BACK-STRAP-SANDALS-…` (×5) | `back` | *back-strap*, part of the product name |
+| `25W_538_back` | `back` | genuinely a back view |
+
+**Cause:** `top`, `bottom` and `back` are common apparel nouns as well as view words, and the analyzer
+matches them bare. **Effect:** a front-facing model shot gets `hero-orientation = TOP`. **Consequence:** on
+batches whose filenames carry these words — customer filenames routinely do — the analyzer can outvote
+CLIP, making any CLIP orientation threshold moot.
+
+**Confidence was 0.75 when this was found; commit `97326fe` (2026-07-31) lowered it to 0.60 while also
+dropping the CLIP `hero-orientation` bar to 0.33.** That changes the arithmetic but not the defect: 0.60 is
+still above every CLIP orientation score ever recorded on real data (max 0.582), so a matching token still
+wins outright. Re-check the numbers before designing the fix.
+
+**Also in scope, same file:** two independent keyword lists disagree — `OrientationTokens` in
+`Analyzer_FilenameEvidence.cs` (25 entries, hard-coded) and `DetOrderKeywordStems.json` (12 groups, config,
+carrying `sole`, `outsole`, `close`, `zoom`, which the analyzer's list lacks). Decide whether they should be
+one list.
+
+**Acceptance:** the 15 false positives no longer write an orientation, `25W_538_back` still does, and the
+list duplication is either merged or documented as deliberate. Candidate approaches — require a view-ish
+neighbour token, require a positional convention, or drop the bare `top`/`bottom` tokens — are a design
+choice, not settled here.
+
+**Files:** `jb/src/core/Services/Matching/Analyzers/Analyzer_FilenameEvidence.cs`,
+`jb/src/core/config/analyzer_Config.json`, `jb/src/core/config/DetOrderKeywordStems.json`.
+
+---
+
+### T-4990 · Subject detector under-counts frame intersections on 1 image in 4
+**Status:** Done (2026-08-11) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-08-11) — Recalibration is physically grounded (IntersectionFraction is a
+fraction of a thin edge strip, not the whole frame; the ticket's own worked example of a 384x30px
+band explains why 0.20 was unreachable), backed by a parameter sweep across four candidates rather
+than a single nudge, and I independently re-ran `SubjectEdgeDetectorAccuracyTests` against the real
+86-image SPACINI29 set — both tests pass (84/86, 0 under-counts; 70/70 on the two-edge subset),
+confirming the claimed jump. One residual risk, not a blocker: both the sweep and the validation
+draw on the same single hand-labeled set (SPACINI29 is the only dataset in the repo with
+ground-truth intersection counts — SPACINI32 has none), so there is no held-out check; the ticket
+mitigates this by explicitly guarding against tuning to the original 6 failures alone and the
+regression-guard test now asserts zero under-counts on every future run, which is the right
+safety net given no second labeled set exists.
+
+---
+**FIXED 2026-08-05. Two thresholds, both in `ClassifyConfig.json` → `SubjectEdgeDetector`:
+`BgColorDiffThreshold` 0.15 → 0.12 and `IntersectionFraction` 0.20 → 0.02.** Nothing else moved.
+
+Re-scored against the same notes file, as the acceptance asks:
+
+| Truth | Measured 0 | Measured 1 | Measured 2 | Measured 3 |
+|---|---|---|---|---|
+| 1 intersection (16 images) | **0** | 14 | 2 | 0 |
+| 2 intersections (70 images) | **0** | 0 | **70** | 0 |
+
+**84/86 = 97.7%, zero under-counts, 2 over-counts** — up from 65/86 with 21 under-counts. The
+two-edge images, the ordinary catalogue crop and 70 of the 86, are now perfect. Critically **no image
+reads 0 any more**, so the false-`full-product` gate this ticket was really about is closed.
+
+**Which of the three candidates it was: the thresholds, and neither of the other two.**
+- *Analysis downscale — refuted, and with it the [[T-4948]] interaction this ticket hypothesised.*
+  `MaxAnalysisSize` 512 / 1024 / 2400 score **identically** at matched thresholds (74 / 74 / 74). Note
+  the ticket cited 1024; that is `SubjectDetector`'s value. This detector's was always 512.
+- *Edge-strip width — near-flat.* `StripDepthFraction` 0.02 / 0.04 / 0.08 gave 75 / 75 / 74, and 0.10
+  made over-counts worse (6).
+- *Thresholds — dominant.* `IntersectionFraction` alone moved 65 → 80; adding the colour change gave 84.
+
+**Why 0.20 was never reachable.** `IntersectionFraction` is a fraction of the *whole strip area*. On a
+384×30px top band a model cut at the top touches it with head and shoulders — 5-10% of that area,
+never a fifth of it. `BgColorDiffThreshold` 0.15 compounded it by reading light garments on a white
+sweep as background. `MinRunLength` must stay at 3: raising it to 8+ costs 4 points, because a thin
+limb at an edge produces short runs.
+
+The sweep reproduced this ticket's own 65/86 and its exact confusion matrix at the shipped config
+before changing anything, so the harness was validated against the original measurement.
+
+**Regression guard:** `SubjectEdgeDetectorAccuracyTests` parses the do-not-edit notes file and scores
+all 86 real images on every run. It asserts zero under-counts *separately* from the accuracy floor, so
+a change that raised overall accuracy while re-introducing an under-count still fails.
+
+**Downstream effect, measured the same day:** the 4 phenotype mislabels [[T-4970]] attributed to
+detector under-count are gone — see `phenotype-assignment-validation.md`.
+---
+**Found by:** [[T-4970]] second pass, 2026-07-30 — first measurement against hand-verified ground truth.
+
+`SubjectEdgeDetector` scored against `test/datasets/SPACINI29/RAW IMAGES/dataset notes.md` (user-authored,
+do-not-edit), which records the true intersection count for all 86 images.
+
+| Truth | Measured 0 | Measured 1 | Measured 2 |
+|---|---|---|---|
+| 1 intersection (16 images) | **6** | 10 | 0 |
+| 2 intersections (70 images) | 0 | **15** | 55 |
+
+**65/86 = 76% correct, and every one of the 21 errors under-counts.** Not one over-count, which points at
+a detection threshold or an edge-strip width rather than random noise. Identical in classify-only and
+with-Transform runs, so this is the detector itself, not [[T-4955]].
+
+**Why it matters more than 76% sounds.** `intersection-count = 0` is the hard gate on
+`front-on-model-full-product`, `back-on-model-full-product`, all six packshots and all three ghosts — 12 of
+21 phenotypes. **Cause:** the detector reports zero intersections for 6 images whose subject runs off the
+top edge. **Effect:** they satisfy a gate ground truth says nothing in the dataset should satisfy.
+**Consequence:** they are labelled full-product shots and routed to the wrong transform — measured at a
+0.30 bar, 4 images reached `front-on-model-full-product` and all 4 were wrong. Now that
+`BypassPhenotypes` is gone ([[T-5010]]) that mis-routing is live, not hypothetical.
+
+Note [[T-4980]]'s fix touches the same service for the *4-intersection* case (full-bleed short-circuit);
+this ticket is the 0/1/2 end and is untouched by it.
+
+**Acceptance:** re-score against the same notes file and report the confusion matrix; state whether the fix
+is a threshold, the edge-strip width, or the analysis downscale (`MaxAnalysisSize` = 1024 vs the reference
+prototype's 2400 — see [[T-4948]], the two interact). Do not tune against the 6 failing images alone; the
+15 that read 1 instead of 2 are the same defect.
+
+**Files:** `jb/src/core/Services/Matching/Classify/SubjectEdgeDetector.cs`,
+`jb/src/core/config/ClassifyConfig.json`, `test/datasets/SPACINI29/RAW IMAGES/dataset notes.md`.
+
+---
+
+### T-4955 · Derived edge features go stale when the subject box is promoted
+**Status:** Done (2026-08-11) | **Profile:** P1-feature-worker
+**Review:** Approve (2026-08-11) — `WriteDerivedEdgeFeatures` (commit 3ec0b45, `ImageTransformer.cs:114-125`) recomputes `intersection-count`/`fully-in-frame` from the just-promoted booleans at the single promotion call site (`ImagePreProcessor.PreprocessAsync` → `FinalizeGeometry`), and a grep of every writer of those two feature IDs confirms only `ImageFeatureAnalyzer.WriteEdgeIntersections` (Classified-stage source) and this recompute exist — no third stale path. `SubjectPromotionConsistencyTests` covers all five 0-4 edge patterns plus the exact 23211041_03_A.jpg contradiction plus the below-floor negative case; ran it standalone, 7/7 pass.
+
+---
+**FIXED 2026-08-05 — recompute, not document-as-pre-promotion-only.** Recomputing was the only
+option that survives contact with the rules: they read `intersects-*` and `intersection-count` in a
+single evaluation, so "these two fields describe different moments in time" is not a contract a rule
+author can work with. `ImageTransformer.PreferSubjectGeometry` now calls `WriteDerivedEdgeFeatures`,
+which recomputes `intersection-count` and `fully-in-frame` from the four booleans it just promoted.
+
+**Regression guard:** `SubjectPromotionConsistencyTests` builds a snapshot whose pre-promotion values
+deliberately contradict the detector on every field — the 42% case — and asserts the count and the
+flags agree afterwards, across all five 0-4 edge patterns. It also pins the negative: below the
+promotion confidence floor nothing is promoted, so the derived pair must be left alone.
+---
+**Found by:** [[T-4800]] review of [[T-4850]], 2026-07-28 — **priority raised twice since**
+
+`ImageTransformer.PreferSubjectGeometry` overwrites `intersects-top/bottom/left/right` with the detector's
+signals but leaves `intersection-count` and `fully-in-frame` holding values `ImageFeatureAnalyzer` derived
+earlier from the *old* heuristic intersects. (`occlusion-level` was the third such feature; [[T-4970]]
+deleted it from the taxonomy.) **Cause:** promotion updates the source features but not the derived ones.
+**Effect:** after a promotion the feature snapshot is internally inconsistent.
+
+**Magnitude, measured 2026-07-30 by [[T-4970]] — not a corner case.** On SPACINI29 a run including the
+Transform stage leaves **36 of 86 images (42%)** with `intersects-*` flags contradicting
+`intersection-count`; the same dataset without Transform leaves 0/86. Example: `23211041_03_A.jpg` reports
+one edge touched and a count of zero. **Consequence:** `front-on-model-partial` gates on
+`intersects-top|bottom` while `front-on-model-full-product` gates on `intersection-count=0`, so one image
+can satisfy both mutually-exclusive rules and first-rule-wins hands it to the wrong one.
+
+This was "harmless today" only while `BypassPhenotypes` suppressed phenotype routing. **That flag was
+removed 2026-07-31 ([[T-5010]]), so the inconsistency is now live.** It is a prerequisite for any
+phenotype rule or threshold tuning — tuning against a snapshot that contradicts itself on 42% of images is
+tuning against noise. Either recompute the derived features at promotion time or document them as
+pre-promotion-only.
+
+**Files:** `jb/src/core/Services/Transform/ImageTransformer.cs`,
+`jb/src/core/Services/Matching/Classify/ImageFeatureAnalyzer.cs`.
+
+---
+
 ### T-5060 · Det compaction reorders a family when only some of its images win a slot
 **Status:** Superseded (2026-08-07) | **Profile:** P4-critical-architecture
 **Found by:** [[T-4980]] item 2, 2026-08-05 — surfaced the moment `dotnet test` started reading the

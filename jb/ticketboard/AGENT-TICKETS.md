@@ -17,26 +17,22 @@ user-facing summaries.
 | [T-2840](T-2840.md) | Ready | CLIP batch-composition sensitivity, confirmed (T-2820 recurrence) | Decide the closing criteria — all 4 original families now explained by other tickets or reduced to ordering noise |
 | [T-3800](T-3800.md) | Blocked | Match bracket validation | Author a Bracket-4 image and a reference-free fuzzy-colour image; no dataset has either |
 | [T-4000](T-4000.md) | Ready | Analyzer calibration backlog | Split the 11 analyzer calibration questions into their own tickets, one at a time |
-| [T-4942](T-4942.md) | Review | Test projects fight over the GPU | Confirm `-m:1` + the 500-test CI floor on a real CI run, then close |
+| [T-4942](T-4942.md) | Ready | Test projects fight over the GPU | Fix the K&R formatting violation in `ModelBuilder.cs` blocking CI, then get a real CI run to pass the floor gate |
 | [T-4945](T-4945.md) | Ready | Hard-shadow threshold | Label a set for hard vs soft shadow and re-tune the threshold against it |
 | [T-4948](T-4948.md) | Ready | White-on-white contrast floor | Measure real white-on-white contrast, then set the denoise strength to match |
 | [T-4950](T-4950.md) | Ready | SubjectMask crosses the wire unread | Measure the per-image mask payload, then decide keep / `[JsonIgnore]` / config-gate |
-| [T-4955](T-4955.md) | Review | Stale derived edge features | Review the recompute-at-promotion diff, then close |
-| [T-4980](T-4980.md) | Review | CiMini E2E golden red | [[T-5060]] was reverted, not landed — golden now red on 84 fields; fix belongs to [[T-5120]] |
-| [T-4990](T-4990.md) | Review | Detector under-counts intersections | Review the two-threshold recalibration (65/86 → 84/86), then close |
-| [T-5000](T-5000.md) | Review | Filename orientation false positives | Review the trailing-token rule, then close |
+| [T-4980](T-4980.md) | Blocked | CiMini E2E golden red | [[T-5060]] was reverted, not landed — golden now red on 93 fields (re-measured 2026-08-11); fix belongs to [[T-5120]] |
 | [T-5010](T-5010.md) | Blocked | Centre-and-stretch unreachable | Get every SPACINI29 row in `spacini29-image-routing-list.md` a user-blessed intended route |
 | [T-5050](T-5050.md) | Ready | `multiple-products` never written false | Make the analyzer write a known value, handling the shoe-pair case |
 | [T-5070](T-5070.md) | Ready | Edge-touching shots match no rule | Decide what `intersection-count = 0` should mean; it blocks 7 of 18 phenotypes |
 | [T-5080](T-5080.md) | Ready | `hero-orientation` wrong or absent | Dump the per-prompt score vector for 9 known side views, then re-word or re-bar |
-| [T-5090](T-5090.md) | Review | SubstringRescue invents evidence from shot numbers | Review the every-token-must-agree fix, then close |
-| [T-5100](T-5100.md) | Review | Bracket 3 steals a neighbour's family | Review the StringMatcher + SiblingPropagator fix pair, then close |
-| [T-5110](T-5110.md) | Review | Filename-in-cell never fires | Review the matcher fix; separately, ticket the Excel column-fill-rate gate blocking CiMini's own case |
+| [T-5090](T-5090.md) | Ready | SubstringRescue invents evidence from shot numbers | Fix is correct; still re-check the other 4 pre-existing SubstringRescue matches the ticket's acceptance requires, then close |
 | [T-5120](T-5120.md) | Blocked | Filename and folder tokens should feed phenotyping | Resolve the `pack`/`packshot` keyword collision first; start only on a clean, green, roomy session |
-| [T-5200](T-5200.md) | Review | SiblingPropagator loose-relation scan is unindexed O(n²) | Review the index/crossBracketCandidates fix (tested, no regression); does not close the hang — see [[T-6900]] |
+| [T-5130](T-5130.md) | Ready | Excel column-fill-rate gate drops sparse description columns | Decide how a sparse-but-real filename-reference column should be treated, then implement |
+| [T-5200](T-5200.md) | Ready | SiblingPropagator loose-relation scan is unindexed O(n²) | Add a test covering `crossBracketCandidates` filtering (currently untested), then close |
 | [T-5210](T-5210.md) | Ready | SiblingPropagator may reinvent token evidence Brackets 1-3 built | Read both token shapes and decide whether BuildProfile can reuse existing MatchEvidence |
-| [T-6900](T-6900.md) | Review | SMASHEDLEMON45 "hang" is feature-analysis cost, not a defect | Review the measurement; decide the 26316 colour-contradiction policy question |
 | [T-6910](T-6910.md) | Review | Full-resolution pixel analysis runs twice, second pass single-threaded | Review the parallel-Refine fix; decide whether scaled decode (direction 2) is worth re-blessing the golden |
+| [T-6920](T-6920.md) | Ready | Unique-article match should refuse a colour code the family's Excel data doesn't have | Start a `/pair` session on the per-family colour-code membership check in `NumericMatcher` |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.
