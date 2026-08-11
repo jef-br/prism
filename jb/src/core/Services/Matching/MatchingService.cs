@@ -146,7 +146,7 @@ public sealed class MatchingService : IMatchingService, IDisposable {
         //  Refine: post-match analyzer chain — now that the family (IEM) is known, narrow each
         //  image's phenotype pool with IEM/filename/detector evidence and finalize the phenotype.
         int refinementFailed;
-        (phenotypeAssigned, refinementFailed) = RefinePhenotypes(results, ingest.FamilyRecords, featureAnalysis, ruleSet);
+        (phenotypeAssigned, refinementFailed) = RefinePhenotypes(results, ingest.FamilyRecords, featureAnalysis, ruleSet, parallelOptions);
 
         //  Ordered: assign det slots within each family
         await StageProgress.EmitStarted(progress, ingest.JobID, PipelineStageNames.Ordered, cancellationToken);
@@ -304,14 +304,26 @@ public sealed class MatchingService : IMatchingService, IDisposable {
         (ImageRecord_LAMBDA Lambda, ImageRecord_INPUT Source, UInt128 Hash)[] results,
         IReadOnlyList<FamilyIDRecord> families,
         IFeatureAnalysisService featureAnalysis,
-        PhenotypeRuleSet ruleSet) {
+        PhenotypeRuleSet ruleSet,
+        ParallelOptions parallelOptions) {
         Dictionary<string, FamilyIDRecord> familyById = new(StringComparer.OrdinalIgnoreCase);
         foreach (FamilyIDRecord family in families) familyById.TryAdd(family.FamilyID, family);
 
         int assigned = 0;
         int refinementFailed = 0;
-        foreach (var (lambda, source, _) in results) {
-            if (lambda.IsKo) continue;
+
+        // Parallel per image (T-6910): this is the second full-resolution pass over the batch — Refine
+        // re-reads the image from disk and re-runs YOLO plus the geometry/colour analyzers, so at batch
+        // scale it costs as much wall clock as the chunked Analyze loop above despite doing less work.
+        // Safe to fan out because every participant is either stateless or read-only by this point:
+        // all 12 Analyzer_* types are static with no fields, ImageFeatureAnalyzer holds no static
+        // mutable state, SubjectDetector/ProductTypeResolver/PhenotypeRuleSet keep only readonly config,
+        // YoloDetector.Detect serializes itself on its own RunLock, and familyById is fully built before
+        // the loop starts. Each iteration writes only to its own lambda, so results are order-independent
+        // and identical to the sequential version.
+        Parallel.ForEach(results, parallelOptions, entry => {
+            ImageRecord_LAMBDA lambda = entry.Lambda;
+            if (lambda.IsKo) return;
 
             FamilyIDRecord? family = lambda.MatchEvidence?.FinalFamilyId is string familyId
                 && familyById.TryGetValue(familyId, out FamilyIDRecord? match) ? match : null;
@@ -321,11 +333,12 @@ public sealed class MatchingService : IMatchingService, IDisposable {
             // either: refinementFailed surfaces as a MatchingResult.Warnings entry (BuildWarnings), the
             // same non-fatal-degradation pattern this file already uses for classifyDegraded — this repo
             // has no logging framework to write to instead.
-            try { featureAnalysis.Refine(lambda, family, source.NormalizedJpgPath, ruleSet); }
-            catch { refinementFailed++; }
+            try { featureAnalysis.Refine(lambda, family, entry.Source.NormalizedJpgPath, ruleSet); }
+            catch { Interlocked.Increment(ref refinementFailed); }
 
-            if (lambda.SelectedPhenotype is not null) assigned++;
-        }
+            if (lambda.SelectedPhenotype is not null) Interlocked.Increment(ref assigned);
+        });
+
         return (assigned, refinementFailed);
     }
 
