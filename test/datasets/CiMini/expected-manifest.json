@@ -463,31 +463,31 @@
   },
   {
     "SourceReference": "OMB-E129-TGV_1.jpg",
-    "Status": "Ok",
-    "FamilyId": "98636325",
-    "FinalFileName": "98636325_det0.jpg",
-    "DetOrder": 0
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "OMB-E129-TGV_2.jpg",
-    "Status": "Ok",
-    "FamilyId": "98636325",
-    "FinalFileName": "98636325_det1.jpg",
-    "DetOrder": 1
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "OMB-E129-TGV_3.jpg",
-    "Status": "Ok",
-    "FamilyId": "98636325",
-    "FinalFileName": "98636325_det2.jpg",
-    "DetOrder": 2
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "OMB-E129-TGV_4.jpg",
-    "Status": "Ok",
-    "FamilyId": "98636325",
-    "FinalFileName": "98636325_det3.jpg",
-    "DetOrder": 3
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "OMB-E166-BV_1.jpg",
@@ -519,45 +519,45 @@
   },
   {
     "SourceReference": "OMB-E180-BV_1.jpg",
-    "Status": "Ok",
-    "FamilyId": "98636303",
-    "FinalFileName": "98636303_det5.jpg",
-    "DetOrder": 5
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "OMB-E180-BV_2.jpg",
-    "Status": "Ok",
-    "FamilyId": "98636303",
-    "FinalFileName": "98636303_det6.jpg",
-    "DetOrder": 6
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "OMB-E180-BV_3.jpg",
-    "Status": "Ok",
-    "FamilyId": "98636303",
-    "FinalFileName": "98636303_det0.jpg",
-    "DetOrder": 0
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "OMB-E180-BV_4.jpg",
-    "Status": "Ok",
-    "FamilyId": "98636303",
-    "FinalFileName": "98636303_det7.jpg",
-    "DetOrder": 7
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "OMB-E180-BV_5.jpg",
-    "Status": "Ok",
-    "FamilyId": "98636303",
-    "FinalFileName": "98636303_det8.jpg",
-    "DetOrder": 8
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "OMB-E180-BV_6.jpg",
-    "Status": "Ok",
-    "FamilyId": "98636303",
-    "FinalFileName": "98636303_det1.jpg",
-    "DetOrder": 1
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "OMB-E181-CVW_1.jpg",
