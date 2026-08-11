@@ -173,6 +173,31 @@ public class MatcherUpgradeTests {
     }
 
     [Fact]
+    public void SubstringRescue_ShotNumberWeldedOntoReference_RefusesInsteadOfPickingSideOfTie() {
+        // T-5090: "87186790" is a prefix of two EANs. The shot suffix "_1"/"_2" welds onto it
+        // ("871867901"/"871867902"), which happens to resolve uniquely to whichever EAN's 9th digit
+        // matches — but the honest 8-digit reference "87186790" alone is ambiguous between both
+        // families. Evaluating every rescue token (not stopping at the first unique hit) must surface
+        // that contradiction and refuse, not silently pick a side.
+        NumericMatcher matcher = new("familyID", MakeNumericCfg(minNumericTokenLength: 5, indexDigitRunsAllColumns: false, minSubstringRescueLength: 7));
+        FamilyIDRecord famA = MakeFamily("99984905", ("EAN", "8718679018555", ExcelColumnClassification.Numerical));
+        FamilyIDRecord famB = MakeFamily("99985047", ("EAN", "8718679021272", ExcelColumnClassification.Numerical));
+        MatchingRule eanRule = RefCoRule with { ExcelField = "EAN" };
+
+        (MatchEvidence? evidence1, List<CandidateSummary> tied1) = matcher.TryMatchBySubstringRescue(
+            MakeLambda("87186790_1.jpg"), [famA, famB], [FamilyIdRule, eanRule]);
+        (MatchEvidence? evidence2, List<CandidateSummary> tied2) = matcher.TryMatchBySubstringRescue(
+            MakeLambda("87186790_2.jpg"), [famA, famB], [FamilyIdRule, eanRule]);
+
+        Assert.Null(evidence1);
+        Assert.Null(evidence2);
+        Assert.Contains(tied1, c => c.FamilyId == "99984905");
+        Assert.Contains(tied1, c => c.FamilyId == "99985047");
+        Assert.Contains(tied2, c => c.FamilyId == "99984905");
+        Assert.Contains(tied2, c => c.FamilyId == "99985047");
+    }
+
+    [Fact]
     public void SubstringRescue_Disabled_ReturnsNull() {
         NumericMatcher matcher = new("familyID", MakeNumericCfg(minNumericTokenLength: 5, indexDigitRunsAllColumns: false, minSubstringRescueLength: 0));
         FamilyIDRecord family = MakeFamily("94671120", ("EAN", "8446271023117", ExcelColumnClassification.Numerical));
@@ -219,6 +244,39 @@ public class MatcherUpgradeTests {
         Assert.Null(matcher.TryMatch(MakeLambda("1707527E.jpg"), [famA, famB]));
     }
 
+    //  M2: unresolvable identifier token disqualifies a brand+colour-only match (T-5100, CiMini OMB-E180-BV)
+
+    [Fact]
+    public void Bracket3_FilenameReferenceNamesNoFamily_RefusesEvenWhenGenericTokensMatch() {
+        // "OMB-E180-BV" tokenizes to omb/e180/bv. omb (brand) and bv (colour) both hit famA — a
+        // different, similarly-branded/coloured product — but "e180" (the actual reference) is in no
+        // row at all. 2-of-3 tokens would otherwise clear bracket3MinDistinctTokens=2 and hand the
+        // image to famA; the unresolvable identifier-grade token must refuse the match instead.
+        StringMatcher matcher = new(EmptyTranslation, MakeStringCfg(bracket3MinDistinctTokens: 2, identifierTokenMinLength: 4, indexExcelTokenBigrams: DefaultIndexExcelTokenBigrams));
+        FamilyIDRecord famA = MakeFamily("98636303",
+            ("brand", "OMB", ExcelColumnClassification.Categorical),
+            ("colour", "BV", ExcelColumnClassification.Categorical),
+            ("reference", "E166", ExcelColumnClassification.Mixed));
+
+        Assert.Null(matcher.TryMatch(MakeLambda("OMB-E180-BV_1.jpg"), [famA]));
+    }
+
+    [Fact]
+    public void Bracket3_FilenameReferenceMatchesItsFamily_StillMatches() {
+        // Control case: same brand+colour shape, but the reference IS in the catalogue (E166, not
+        // E180) — must still match normally. Guards against the T-5100 fix over-refusing.
+        StringMatcher matcher = new(EmptyTranslation, MakeStringCfg(bracket3MinDistinctTokens: 2, identifierTokenMinLength: 4, indexExcelTokenBigrams: DefaultIndexExcelTokenBigrams));
+        FamilyIDRecord famA = MakeFamily("98636303",
+            ("brand", "OMB", ExcelColumnClassification.Categorical),
+            ("colour", "BV", ExcelColumnClassification.Categorical),
+            ("reference", "E166", ExcelColumnClassification.Mixed));
+
+        MatchEvidence? evidence = matcher.TryMatch(MakeLambda("OMB-E166-BV_1.jpg"), [famA]);
+
+        Assert.NotNull(evidence);
+        Assert.Equal("98636303", evidence!.FinalFamilyId);
+    }
+
     //  M2: short-digit tiebreak (CiMini color-code discrimination)
 
     [Fact]
@@ -260,6 +318,29 @@ public class MatcherUpgradeTests {
         Assert.DoesNotContain(keyless, stillUnmatched);
         Assert.Equal("90861052", keyless.MatchEvidence?.FinalFamilyId);
         Assert.Equal("SiblingPropagator", keyless.MatchEvidence?.AcceptedMatcherName);
+    }
+
+    [Fact]
+    public void SiblingPropagator_ShortLetterDigitToken_KeptWholeNotTreatedAsShotNumber() {
+        // T-5100/T-5210: "OMB-E180-BV" and "OMB-E166-BV" must NOT be treated as siblings. Naively
+        // splitting "e180"/"e166" at the letter-digit boundary yields "e" (too short, dropped) and
+        // "180"/"166" (3 digits, discarded by ShotSuffixPattern as a bare shot number) — both profiles
+        // then collapse to the same {omb, bv}, and SiblingPropagator would independently re-derive the
+        // exact match Bracket 3 (StringMatcher's HasUnresolvableIdentifierToken) correctly refuses.
+        // Keeping "e180"/"e166" whole (short letter-prefix + digits = reference-code shape, not a
+        // splittable word+digits pair like "magenta76") keeps the profiles distinct.
+        SiblingPropagator propagator = new(SiblingPropagatorCfg);
+
+        ImageRecord_LAMBDA matched = MakeLambda("OMB-E166-BV_1.jpg");
+        matched.MatchEvidence = new MatchEvidence { ImageId = "a", FinalFamilyId = "98636303", IsKo = false };
+
+        ImageRecord_LAMBDA unresolvable = MakeLambda("OMB-E180-BV_1.jpg");
+        List<ImageRecord_LAMBDA> allRecords = [matched, unresolvable];
+
+        List<ImageRecord_LAMBDA> stillUnmatched = propagator.Run([unresolvable], allRecords);
+
+        Assert.Contains(unresolvable, stillUnmatched);
+        Assert.Null(unresolvable.MatchEvidence);
     }
 
     [Fact]

@@ -24,6 +24,14 @@ internal sealed class SiblingPropagator {
         @"^([a-z]|\d{1,3}|[a-z]\d{1,2}|det\d+|ret|retouch(ed)?|copy|front|back|side|top|detail\d*)$",
         RegexOptions.Compiled);
 
+    // A short letter-prefix (1-2 chars — too short to be a real word) immediately followed by digits
+    // and nothing else: "e180", "a129". This is a reference-code shape, not "word + trailing digits"
+    // ("magenta76" does not match — 7-letter prefix). Kept whole rather than split, so BuildProfile
+    // does not discard the digit half as a bare shot-number suffix.
+    private static readonly Regex ShortIdentifierCodePattern = new(
+        @"^[a-z]{1,2}\d+$",
+        RegexOptions.Compiled);
+
     private readonly Config cfg;
 
     /// <summary>SiblingPropagator's tunables, loaded from MatchingConfig.json's match.siblingPropagator section.</summary>
@@ -193,12 +201,25 @@ internal sealed class SiblingPropagator {
     /// <summary>
     /// Reduces a filename stem to its rare-token identity profile: lowercased, diacritics stripped,
     /// split on separators and letter↔digit boundaries, shot descriptors and short digit runs removed.
+    /// A short-letters-then-digits token ("e180", "a129" — the identifier-code shape StringMatcher's
+    /// own Bracket 3 treats as a reference) is kept whole instead of being split and having its digit
+    /// half discarded as a shot suffix: splitting "magenta76" into "magenta"+"76" is correct (both
+    /// halves are meaningful on their own — a color word, a color-code fragment), but splitting "e180"
+    /// the same way loses the only part that actually identifies the product ("e" alone is noise,
+    /// "180" alone looks exactly like a shot number and gets discarded by ShotSuffixPattern). Without
+    /// this, SiblingPropagator can independently re-derive a match Bracket 3 correctly refused because
+    /// the reference token it relied on to refuse never survives into this profile (T-5100).
     /// </summary>
     private static HashSet<string> BuildProfile(string filename) {
         string stem = NormalizeDiacritics(Path.GetFileNameWithoutExtension(filename).ToLowerInvariant());
         HashSet<string> profile = new(StringComparer.Ordinal);
 
         foreach (string raw in TokenSplitPattern.Split(stem)) {
+            if (ShortIdentifierCodePattern.IsMatch(raw)) {
+                profile.Add(raw);
+                continue;
+            }
+
             foreach (string part in AlphaDigitBoundaryPattern.Split(raw)) {
                 if (part.Length < 2 || ShotSuffixPattern.IsMatch(part))
                     continue;

@@ -428,14 +428,20 @@ internal sealed class NumericMatcher {
     //  Substring rescue
 
     /// <summary>
-    /// Attempts substring rescue: accepts the unique family one of whose digit targets contains a
-    /// long filename token (e.g. token "46271023" inside EAN "8446271023117"). Runs only for tokens
-    /// (or the monotoken) of at least MinSubstringRescueLength digits; disabled when that is 0.
+    /// Attempts substring rescue: accepts the family that every rescue token's containment evidence
+    /// agrees on — the intersection of families named by each individual token — rather than trusting
+    /// whichever token happens to resolve uniquely first. Runs only for tokens (or the monotoken) of
+    /// at least MinSubstringRescueLength digits; disabled when that is 0. A longer welded token (e.g.
+    /// reference "87186790" + shot suffix "1" = "871867901") can accidentally resolve to one family
+    /// while the shorter, honest token ("87186790") is ambiguous between two — intersecting every
+    /// token's family set means the honest token's ambiguity is not silently discarded just because a
+    /// welded token happened to narrow to one side of it.
     /// </summary>
     /// <returns>
-    /// Accepted MatchEvidence when exactly one family contains a rescue token (tied candidates empty
-    /// in that case). When no token rescues the image, evidence is null and tied candidates holds the
-    /// union of every family set that ambiguously (2+) matched some rescue token, for cross-bracket
+    /// Accepted MatchEvidence when exactly one family is named by every rescue token that hit at least
+    /// one target (tied candidates empty in that case). When no token hits any target, or the
+    /// per-token family sets don't intersect to exactly one family, evidence is null and tied
+    /// candidates holds the union of every family any rescue token named, for cross-bracket
     /// MATCHES_MULTIPLE_FAMILYIDS attribution.
     /// </returns>
     internal (MatchEvidence? Evidence, List<CandidateSummary> TiedCandidates) TryMatchBySubstringRescue(
@@ -461,12 +467,16 @@ internal sealed class NumericMatcher {
 
         Dictionary<string, List<DigitPosting>> index = this.GetOrBuildDigitIndex(families, numericRules);
         const string matcherName = "NumericMatcher.SubstringRescue";
-        HashSet<string> ambiguousFamilies = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> allNamedFamilies = new(StringComparer.OrdinalIgnoreCase);
+
+        // Per rescue token that hit at least one target: which families it names, plus one (target,
+        // field) sample per family for evidence attribution if that token turns out to be the winner.
+        var perTokenFamilies = new List<HashSet<string>>();
+        Dictionary<string, (string Token, string Target, string Field)> sampleByFamily =
+            new(StringComparer.OrdinalIgnoreCase);
 
         foreach (string token in rescueTokens) {
             HashSet<string> containingFamilies = new(StringComparer.OrdinalIgnoreCase);
-            string? matchedTarget = null;
-            string? matchedField = null;
 
             foreach (KeyValuePair<string, List<DigitPosting>> entry in index) {
                 if (entry.Key.Length <= token.Length || !entry.Key.Contains(token, StringComparison.Ordinal))
@@ -474,37 +484,62 @@ internal sealed class NumericMatcher {
 
                 foreach (DigitPosting posting in entry.Value) {
                     containingFamilies.Add(posting.FamilyId);
-                    matchedTarget = entry.Key;
-                    matchedField = posting.Field;
+                    sampleByFamily.TryAdd(posting.FamilyId, (token, entry.Key, posting.Field));
                 }
             }
 
-            if (containingFamilies.Count >= 2)
-                ambiguousFamilies.UnionWith(containingFamilies);
+            if (containingFamilies.Count == 0)
+                continue;
 
-            if (containingFamilies.Count != 1)
-                continue; // 0 → try the next token; 2+ → ambiguous, not rescuable by this token
-
-            string familyId = containingFamilies.First();
-
-            return (new MatchEvidence {
-                ImageId = stem,
-                SourceFilename = filename,
-                FinalFamilyId = familyId,
-                FinalScore = this.cfg.SubstringRescueConfidence,
-                IsKo = false,
-                AcceptedMatcherName = matcherName,
-                TopCandidates = [new CandidateSummary(familyId, this.cfg.SubstringRescueConfidence, matcherName)],
-                NumericTokenEvidence = [new TokenEvidenceItem(token, matchedTarget!, matchedField!, familyId, this.cfg.SubstringRescueConfidence)],
-                ImageNgpSummary = BuildNgpSummary(record),
-                SafeExplanation = $"SubstringRescue: token '{token}' is contained in target '{matchedTarget}' of family {familyId}."
-            }, []);
+            allNamedFamilies.UnionWith(containingFamilies);
+            perTokenFamilies.Add(containingFamilies);
         }
 
-        List<CandidateSummary> tied = ambiguousFamilies
-            .Select(f => new CandidateSummary(f, 0.9, matcherName))
-            .ToList();
-        return (null, tied);
+        if (perTokenFamilies.Count == 0)
+            return (null, []); // no token contained in any target — nothing to report as ambiguous either
+
+        // Any single rescue token that is ambiguous on its own (2+ families) disqualifies the image,
+        // full stop — a more "precise" token cannot override it by intersection. Intersecting an
+        // ambiguous set {A, B} with a unique set {A} narrows to {A} and would make the ambiguous token
+        // vanish from the decision entirely, which is exactly the "871867901" (welds the shot suffix
+        // on, resolves uniquely to one EAN by accident) overriding "87186790" (the honest reference,
+        // ambiguous between two EANs) bug this fix exists to prevent. So: reject outright if any token
+        // alone is ambiguous, before ever comparing tokens against each other.
+        if (perTokenFamilies.Any(f => f.Count > 1)) {
+            List<CandidateSummary> ambiguousOnOwnToken = allNamedFamilies
+                .Select(f => new CandidateSummary(f, 0.9, matcherName))
+                .ToList();
+            return (null, ambiguousOnOwnToken);
+        }
+
+        // Every token that hit something resolved uniquely on its own — now require they all agree.
+        HashSet<string> agreeingFamilies = new(perTokenFamilies[0], StringComparer.OrdinalIgnoreCase);
+        foreach (HashSet<string> tokenFamilies in perTokenFamilies.Skip(1))
+            agreeingFamilies.IntersectWith(tokenFamilies);
+
+        if (agreeingFamilies.Count != 1) {
+            // Different tokens each resolved uniquely, but to different families — contradiction.
+            List<CandidateSummary> disagreeing = allNamedFamilies
+                .Select(f => new CandidateSummary(f, 0.9, matcherName))
+                .ToList();
+            return (null, disagreeing);
+        }
+
+        string winningFamilyId = agreeingFamilies.First();
+        (string winningToken, string winningTarget, string winningField) = sampleByFamily[winningFamilyId];
+
+        return (new MatchEvidence {
+            ImageId = stem,
+            SourceFilename = filename,
+            FinalFamilyId = winningFamilyId,
+            FinalScore = this.cfg.SubstringRescueConfidence,
+            IsKo = false,
+            AcceptedMatcherName = matcherName,
+            TopCandidates = [new CandidateSummary(winningFamilyId, this.cfg.SubstringRescueConfidence, matcherName)],
+            NumericTokenEvidence = [new TokenEvidenceItem(winningToken, winningTarget, winningField, winningFamilyId, this.cfg.SubstringRescueConfidence)],
+            ImageNgpSummary = BuildNgpSummary(record),
+            SafeExplanation = $"SubstringRescue: token '{winningToken}' is contained in target '{winningTarget}' of family {winningFamilyId}."
+        }, []);
     }
 
     //  Bracket 4 support

@@ -78,6 +78,72 @@ public class FilenameToCellMatcherTests {
         Assert.Null(matcher.TryMatch(record, [family]).Evidence);
     }
 
+    //  T-5110: cell scanning finds filenames inside free text, not just whole-cell paths
+
+    [Fact]
+    public void TryMatch_FreeTextCellListingSeveralUrls_MatchesEachFilename() {
+        // CiMini's real marketing-description cell shape: a sentence, then several comma-separated
+        // URLs. Previously the whole cell was treated as one path, its "basename" (text after the
+        // final '/') was the last URL's extensionless tail, and the extension guard rejected the
+        // entire cell — none of the 7 filenames ever got indexed.
+        FilenameToCellMatcher matcher = new();
+        const string cellValue =
+            "Pictures are here: http://example.test/100267_1.jpg, http://example.test/100267_2.jpg, " +
+            "http://example.test/100267_3.jpg, http://example.test/100267_7";
+        FamilyIDRecord family = FamilyWithProperty("91337133", "description", cellValue);
+
+        (MatchEvidence? e1, _) = matcher.TryMatch(MakeLambda("100267_1.jpg"), [family]);
+        (MatchEvidence? e2, _) = matcher.TryMatch(MakeLambda("100267_2.jpg"), [family]);
+        (MatchEvidence? e3, _) = matcher.TryMatch(MakeLambda("100267_3.jpg"), [family]);
+
+        Assert.NotNull(e1);
+        Assert.Equal("91337133", e1!.FinalFamilyId);
+        Assert.NotNull(e2);
+        Assert.Equal("91337133", e2!.FinalFamilyId);
+        Assert.NotNull(e3);
+        Assert.Equal("91337133", e3!.FinalFamilyId);
+    }
+
+    [Fact]
+    public void TryMatch_ExtensionLessTokenInFilenameCell_Matches() {
+        // "100267_7" is listed with no extension, but shares its cell with several ".jpg" siblings —
+        // that context is what makes it a filename reference, not a bare word.
+        FilenameToCellMatcher matcher = new();
+        const string cellValue = "See http://example.test/100267_6.jpg and http://example.test/100267_7";
+        FamilyIDRecord family = FamilyWithProperty("91337133", "description", cellValue);
+
+        (MatchEvidence? evidence, _) = matcher.TryMatch(MakeLambda("100267_7.jpg"), [family]);
+
+        Assert.NotNull(evidence);
+        Assert.Equal("91337133", evidence!.FinalFamilyId);
+    }
+
+    [Fact]
+    public void TryMatch_DoubleSpaceAndSuffixInRealFilename_MatchesViaCollapsedPrefix() {
+        // The cell names "100267_6.jpg"; the real file on disk is "100267_6  - BW001_c.jpg" (extra
+        // " - BW001_c" and a double space — neither is in any Excel cell). Exact and collapsed-equal
+        // lookups both miss; the collapsed-prefix fallback is what carries this row.
+        FilenameToCellMatcher matcher = new();
+        const string cellValue =
+            "Pictures: http://example.test/100267_1.jpg, http://example.test/100267_6.jpg";
+        FamilyIDRecord family = FamilyWithProperty("91337133", "description", cellValue);
+
+        (MatchEvidence? evidence, _) = matcher.TryMatch(MakeLambda("100267_6  - BW001_c.jpg"), [family]);
+
+        Assert.NotNull(evidence);
+        Assert.Equal("91337133", evidence!.FinalFamilyId);
+    }
+
+    [Fact]
+    public void TryMatch_BareAlphabeticWordInCell_NeverIndexed() {
+        // "Pictures" and "here" are plain prose, not filename references, extension or not.
+        FilenameToCellMatcher matcher = new();
+        FamilyIDRecord family = FamilyWithProperty("91337133", "description", "Pictures are here: nothing.jpg");
+
+        Assert.Null(matcher.TryMatch(MakeLambda("Pictures.jpg"), [family]).Evidence);
+        Assert.Null(matcher.TryMatch(MakeLambda("here.jpg"), [family]).Evidence);
+    }
+
     //  Helpers
 
     private static ImageRecord_LAMBDA MakeLambda(string filename) =>

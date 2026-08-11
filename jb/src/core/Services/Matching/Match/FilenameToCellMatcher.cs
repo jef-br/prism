@@ -29,6 +29,12 @@ internal sealed class FilenameToCellMatcher {
         @"(\s*\(\d+\)|[-_ ]+(copy|ret|retouch(ed)?))+$",
         System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
+    // Splits a free-text cell into candidate filename tokens: whitespace, commas, and semicolons —
+    // the common separators in a "here are the pictures: a.jpg, b.jpg" marketing-description cell.
+    private static readonly System.Text.RegularExpressions.Regex CellTokenSplitPattern = new(
+        @"[\s,;]+",
+        System.Text.RegularExpressions.RegexOptions.Compiled);
+
     /// <summary>
     /// Attempts to match by locating the image's own filename inside any Excel cell of exactly one family.
     /// </summary>
@@ -52,6 +58,7 @@ internal sealed class FilenameToCellMatcher {
             index.TryGetValue(basenameKey, out HashSet<string>? byBasename) ? byBasename
             : index.TryGetValue(stemKey, out HashSet<string>? byStem) ? byStem
             : collapsedKey.Length > 0 && this.indexByCollapsedKey!.TryGetValue(collapsedKey, out HashSet<string>? byCollapsed) ? byCollapsed
+            : collapsedKey.Length > 0 ? this.FindByCollapsedPrefix(collapsedKey)
             : null;
 
         if (matchedFamilies is null || matchedFamilies.Count == 0)
@@ -83,8 +90,32 @@ internal sealed class FilenameToCellMatcher {
     }
 
     /// <summary>
+    /// Fallback when no collapsed key equals the image's collapsed stem exactly: a cell can name a
+    /// file's base reference without whatever the real file's own name adds afterward (e.g. cell lists
+    /// "100267_6.jpg", the real file is "100267_6  - BW001_c.jpg" — the extra " - BW001_c" is not in
+    /// any Excel cell). Finds every indexed collapsed key that is a prefix of the image's collapsed
+    /// stem and unions their families — the same "exactly one family" uniqueness gate the caller
+    /// already applies to exact/collapsed matches is what keeps this safe, not a score.
+    /// </summary>
+    private HashSet<string>? FindByCollapsedPrefix(string collapsedKey) {
+        HashSet<string>? matched = null;
+
+        foreach (KeyValuePair<string, HashSet<string>> entry in this.indexByCollapsedKey!) {
+            if (entry.Key.Length == 0 || !collapsedKey.StartsWith(entry.Key, StringComparison.Ordinal))
+                continue;
+
+            matched ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            matched.UnionWith(entry.Value);
+        }
+
+        return matched;
+    }
+
+    /// <summary>
     /// Builds (once per family set) an index from filename key → FamilyIDs by scanning every original
-    /// cell value of every family and keeping only cells whose basename carries an image extension.
+    /// cell value of every family for filename-shaped tokens — not just cells whose entire value is a
+    /// bare path. A free-text cell ("Pictures are here: a.jpg, b.jpg, c") gets split on whitespace/
+    /// commas/semicolons first, then each piece is treated as its own candidate path.
     /// </summary>
     private Dictionary<string, HashSet<string>> GetOrBuildIndex(IReadOnlyList<FamilyIDRecord> families) {
         if (this.indexByFilenameKey is not null && ReferenceEquals(this.indexedFamilies, families))
@@ -99,19 +130,17 @@ internal sealed class FilenameToCellMatcher {
                     if (string.IsNullOrWhiteSpace(cellValue))
                         continue;
 
-                    string basename = Basename(cellValue).Trim().ToLowerInvariant();
-                    if (basename.Length == 0 || !ImageExtensions.Contains(Path.GetExtension(basename)))
-                        continue;
+                    string[] pieces = CellTokenSplitPattern.Split(cellValue);
 
-                    AddKey(index, basename, family.FamilyID);
+                    // Extension-less pieces only count in a cell that ALSO lists at least one
+                    // extensioned image path — that context is what makes "100267_7" (last item in a
+                    // cell otherwise full of "….jpg" URLs) a filename reference rather than a bare SKU
+                    // cell like "AB12" (no sibling with an image extension anywhere in that cell).
+                    bool cellHasImageExtensionPiece = pieces.Any(p =>
+                        ImageExtensions.Contains(Path.GetExtension(Basename(p).Trim().ToLowerInvariant())));
 
-                    string stem = StripExtension(basename);
-                    if (stem.Length > 0)
-                        AddKey(index, stem, family.FamilyID);
-
-                    string collapsed = CollapseStem(stem);
-                    if (collapsed.Length > 0)
-                        AddKey(collapsedIndex, collapsed, family.FamilyID);
+                    foreach (string piece in pieces)
+                        IndexCellToken(index, collapsedIndex, piece, family.FamilyID, cellHasImageExtensionPiece);
                 }
             }
         }
@@ -120,6 +149,45 @@ internal sealed class FilenameToCellMatcher {
         this.indexByCollapsedKey = collapsedIndex;
         this.indexedFamilies = families;
         return index;
+    }
+
+    /// <summary>
+    /// Indexes one whitespace/comma-split piece of a cell value as a candidate filename, when it looks
+    /// filename-shaped: carrying a recognized image extension (the common case), or — since a cell can
+    /// list a filename with its extension trimmed off, as `expected-match.json`'s `100267_7` row pins —
+    /// carrying a digit AND sharing its cell with at least one piece that DOES carry an image
+    /// extension. That second condition is load-bearing: without it, a bare SKU cell like "AB12" (no
+    /// sibling with an image extension anywhere in that cell) would index and false-match "AB12.jpg",
+    /// which is exactly the case <c>TryMatch_NonImageCellEqualToStem_DoesNotFalseMatch</c> guards. A
+    /// bare alphabetic word ("here", "Pictures") is never indexed either way; the "exactly one family
+    /// names it" uniqueness check at lookup time is the real guardrail against a coincidental token
+    /// collision, not this shape filter.
+    /// </summary>
+    private static void IndexCellToken(
+        Dictionary<string, HashSet<string>> index,
+        Dictionary<string, HashSet<string>> collapsedIndex,
+        string piece,
+        string familyId,
+        bool cellHasImageExtensionPiece) {
+        string basename = Basename(piece).Trim().ToLowerInvariant();
+        if (basename.Length == 0)
+            return;
+
+        bool hasImageExtension = ImageExtensions.Contains(Path.GetExtension(basename));
+        bool extensionLessButInFilenameCell = !hasImageExtension && cellHasImageExtensionPiece && basename.Any(char.IsDigit);
+        if (!hasImageExtension && !extensionLessButInFilenameCell)
+            return;
+
+        if (hasImageExtension)
+            AddKey(index, basename, familyId);
+
+        string stem = hasImageExtension ? StripExtension(basename) : basename;
+        if (stem.Length > 0)
+            AddKey(index, stem, familyId);
+
+        string collapsed = CollapseStem(stem);
+        if (collapsed.Length > 0)
+            AddKey(collapsedIndex, collapsed, familyId);
     }
 
     /// <summary>

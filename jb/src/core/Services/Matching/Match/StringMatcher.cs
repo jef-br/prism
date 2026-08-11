@@ -119,6 +119,15 @@ internal sealed class StringMatcher {
         if (evidenceByFamily.Count == 0)
             return null;
 
+        // Refuse outright when an identifier-grade filename token (letters+digits, reference-shaped —
+        // "e180" in "OMB-E180-BV") names nothing in the entire catalogue. An unresolvable reference is
+        // not absent evidence, it is contrary evidence: the generic tokens that DID hit (brand, colour)
+        // belong to a neighbouring family that happens to share them, not to this product, which has no
+        // row at all. Checked before ranking so a strong-looking 2-of-3 token match on brand+colour
+        // cannot outvote the one token that would have identified the actual product.
+        if (this.HasUnresolvableIdentifierToken(imageTokens))
+            return null;
+
         // Strict-winner: accept the family that matched the most distinct filename tokens. A true
         // top-tie (e.g. a common token like "ivory" shared equally by several families) is not
         // discriminating and is rejected — only a unique strongest family is accepted.
@@ -207,6 +216,30 @@ internal sealed class StringMatcher {
         }
 
         return agreedWinner;
+    }
+
+    /// <summary>
+    /// True when any filename token is identifier-grade (letters and digits mixed, at least
+    /// IdentifierTokenMinLength long — the same shape <see cref="HasUniqueIdentifierToken"/> treats as
+    /// a reference code) but is absent from the token index entirely, in every family, not just the
+    /// eventual Bracket 3 winner. A reference that names nothing in the catalogue is contrary evidence,
+    /// not silence — this must run before ranking so it cannot be outvoted by generic tokens (brand,
+    /// colour) that happen to hit a neighbouring family.
+    /// </summary>
+    private bool HasUnresolvableIdentifierToken(IReadOnlyList<FilenameToken> imageTokens) {
+        if (this.identifierTokenMinLength <= 0 || this.tokenIndex is null)
+            return false;
+
+        foreach (FilenameToken token in imageTokens) {
+            if (token.Normalized.Length < this.identifierTokenMinLength ||
+                !token.Normalized.Any(char.IsLetter) || !token.Normalized.Any(char.IsDigit))
+                continue;
+
+            if (!this.tokenIndex.ContainsKey(token.Normalized))
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>
