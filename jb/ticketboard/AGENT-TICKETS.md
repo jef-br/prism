@@ -22,13 +22,14 @@ user-facing summaries.
 | [T-4948](T-4948.md) | Ready | White-on-white contrast floor | Measure real white-on-white contrast, then set the denoise strength to match |
 | [T-4950](T-4950.md) | Ready | SubjectMask crosses the wire unread | Measure the per-image mask payload, then decide keep / `[JsonIgnore]` / config-gate |
 | [T-4980](T-4980.md) | Blocked | CiMini E2E golden red | [[T-5060]] was reverted, not landed — golden now red on 93 fields (re-measured 2026-08-11); fix belongs to [[T-5120]] |
-| [T-5010](T-5010.md) | Blocked | Centre-and-stretch unreachable | Get every SPACINI29 row in `spacini29-image-routing-list.md` a user-blessed intended route |
+| [T-5010](T-5010.md) | Active | Centre-and-stretch unreachable | Run the evidence harness on SPACINI29 and confirm real routes match `spacini29-image-routing-list.md` |
 | [T-5050](T-5050.md) | Ready | `multiple-products` never written false | Make the analyzer write a known value, handling the shoe-pair case |
 | [T-5070](T-5070.md) | Ready | Edge-touching shots match no rule | Decide what `intersection-count = 0` should mean; it blocks 7 of 18 phenotypes |
 | [T-5080](T-5080.md) | Ready | `hero-orientation` wrong or absent | Dump the per-prompt score vector for 9 known side views, then re-word or re-bar |
 | [T-5090](T-5090.md) | Ready | SubstringRescue invents evidence from shot numbers | Fix is correct; still re-check the other 4 pre-existing SubstringRescue matches the ticket's acceptance requires, then close |
 | [T-5120](T-5120.md) | Blocked | Filename and folder tokens should feed phenotyping | Resolve the `pack`/`packshot` keyword collision first; start only on a clean, green, roomy session |
 | [T-5130](T-5130.md) | Ready | Excel column-fill-rate gate drops sparse description columns | Decide how a sparse-but-real filename-reference column should be treated, then implement |
+| [T-5140](T-5140.md) | Ready | `Tx_ProblemImageProcessor` reports pre-upscale output metadata | Re-measure how many images now reach this path, then fix the size read to be post-upscale |
 | [T-5200](T-5200.md) | Ready | SiblingPropagator loose-relation scan is unindexed O(n²) | Add a test covering `crossBracketCandidates` filtering (currently untested), then close |
 | [T-5210](T-5210.md) | Ready | SiblingPropagator may reinvent token evidence Brackets 1-3 built | Read both token shapes and decide whether BuildProfile can reuse existing MatchEvidence |
 | [T-6920](T-6920.md) | Ready | Unique-article match should refuse a colour code the family's Excel data doesn't have | Start a `/pair` session on the per-family colour-code membership check in `NumericMatcher` |
