@@ -36,6 +36,7 @@ user-facing summaries.
 | [T-6930](T-6930.md) | Ready | Pass 1's chunk barrier caps effective parallelism at ~3 of 8 threads | Measure sustained core use before/after switching to a flat or size-aware chunking scheme |
 | [T-6940](T-6940.md) | Ready | Match-only runs still pay for feature-analysis work matching never reads | Scope a match-only fast path that skips decode/hash/analyze when nothing downstream needs it |
 | [T-6950](T-6950.md) | Ready | Direction 2: stop decoding at full resolution for scale-invariant analyzers | Decide whether the wall-clock win is worth a deliberate CiMini golden re-bless |
+| [T-7000](T-7000.md) | Ready | Successful jobs never delete their artifact folder | Delete a job's `%TEMP%/PRISM/{jobId}` folder when retention evicts its record |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.
