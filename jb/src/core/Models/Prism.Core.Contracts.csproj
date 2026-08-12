@@ -31,6 +31,7 @@
     <Compile Include="..\lib\Excel\ExcelCellAddress.cs" Link="ExcelCellAddress.cs" />
     <Compile Include="..\lib\Export\BatchManifest.cs" Link="BatchManifest.cs" />
     <Compile Include="..\lib\Export\BatchManifestSummary.cs" Link="BatchManifestSummary.cs" />
+    <Compile Include="..\lib\Export\BatchManifestModelToggles.cs" Link="BatchManifestModelToggles.cs" />
     <Compile Include="..\lib\Export\ManifestImageRow.cs" Link="ManifestImageRow.cs" />
     <Compile Include="..\Pipeline\PipelineProgressEvent.cs" Link="PipelineProgressEvent.cs" />
     <Compile Include="..\Services\Matching\Classify\ClassificationToken.cs" Link="ClassificationToken.cs" />

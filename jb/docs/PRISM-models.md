@@ -125,6 +125,7 @@ Canonical audit and export contract for a completed job. Both zip and JSON outpu
 | Batch/job identifier | |
 | Optional client request token | safe to echo |
 | Summary | BMS record (see below) |
+| `Models` | BMMT record — which AI models were enabled for the job (see below) |
 | `ImageRows` | list of MIR — one per image (see below) |
 | KO groups and safe reason details | |
 | Effective config snapshot / safe summary | |
@@ -148,6 +149,19 @@ Split from BM in T-1100. Carries all batch-level counts.
 | `OkTransformed` | images that completed transformation |
 | `KoTransformed` | images where transformation produced KO |
 | `GeneratedCount` | IRG child records created |
+
+---
+
+## BMMT — `BatchManifestModelToggles.cs`
+
+Added 2026-08-12. Mirrors the `Models.<section>.UseIt` toggles the job ran under, so a manifest read later still distinguishes "the model measured nothing" from "the model never ran". Serializes immediately after `Summary`. See `PRISM-model-runtime.md` → "Per-model AI toggles".
+
+| Field | Notes |
+|---|---|
+| `Classification` | CLIP zero-shot tagging (`Models.classification.UseIt`) |
+| `Detection` | YOLO26 object detection (`Models.Detection.UseIt`) |
+| `Upscale` | Real-ESRGAN upscaling (`Models.Upscaling.UseIt`) |
+| `Generation` | generation backend (`Models.Generation.UseIt`) — ships `false` |
 
 ---
 

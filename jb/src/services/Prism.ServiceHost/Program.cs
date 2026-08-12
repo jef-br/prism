@@ -39,7 +39,7 @@ if (Hosts("matching")) {
 }
 
 if (Hosts("generate")) {
-    IGenerateService generate = new GenerateService();
+    IGenerateService generate = new GenerateService(configuration);
     app.MapPost(PrismServiceRoutes.Generate, async (MatchingResult matched, CancellationToken ct) =>
         Results.Json(await generate.GenerateAsync(matched, matched.Ingest.Parameters.Generation, null, ct)));
     app.MapGet(PrismServiceRoutes.Generate + "/health", () => Results.Json(new { status = "ok", service = "generate" }));
@@ -54,7 +54,9 @@ if (Hosts("transform")) {
     ITransformService transform;
     string? upscaleUrl = Environment.GetEnvironmentVariable(PipelineServiceFactory.UpscaleUrlVariable);
     if (string.IsNullOrWhiteSpace(upscaleUrl)) {
-        UpscaleService.Create(configuration);
+        // Models.Upscaling.UseIt false: no local session is created — TransformService reads the same
+        // config value and forces every image onto the Lanczos path, so nothing can reach the upscaler.
+        if (configuration.AiUpscalingEnabled) UpscaleService.Create(configuration);
         transform = new TransformService();
     }
     else {
@@ -66,11 +68,23 @@ if (Hosts("transform")) {
 }
 
 if (Hosts("upscale")) {
-    // Dedicated upscale hosting fails fast: no model asset → no host (any machine; T-4110).
-    IUpscaleService upscale = UpscaleService.Create(configuration);
-    app.MapPost(PrismServiceRoutes.Upscale, async (UpscaleRequest request, CancellationToken ct) =>
-        Results.Json(await upscale.UpscaleAsync(request.ImageBytes, request.ScaleFactor, ct)));
-    app.MapGet(PrismServiceRoutes.Upscale + "/health", () => Results.Json(new { status = "ok", service = "upscale" }));
+    // Models.Upscaling.UseIt false means Real-ESRGAN is switched off everywhere this config is read.
+    // Asking for PRISM_SERVICE=upscale in that state is a contradiction — the host's only reason to
+    // exist is disabled — so it fails loud rather than serving a route nothing may call. The default
+    // all-services host just drops the route: every transform host reading this config has already
+    // forced itself onto the Lanczos path, so nothing addresses it.
+    if (!configuration.AiUpscalingEnabled && !string.IsNullOrWhiteSpace(onlyService))
+        throw new PrismConfigurationException(
+            "PRISM_SERVICE=upscale was requested but Models.Upscaling.UseIt is false in Prism_Config.json. " +
+            "Enable the model or host a different service.");
+
+    if (configuration.AiUpscalingEnabled) {
+        // Dedicated upscale hosting fails fast: no model asset → no host (any machine; T-4110).
+        IUpscaleService upscale = UpscaleService.Create(configuration);
+        app.MapPost(PrismServiceRoutes.Upscale, async (UpscaleRequest request, CancellationToken ct) =>
+            Results.Json(await upscale.UpscaleAsync(request.ImageBytes, request.ScaleFactor, ct)));
+        app.MapGet(PrismServiceRoutes.Upscale + "/health", () => Results.Json(new { status = "ok", service = "upscale" }));
+    }
 }
 
 app.Run();

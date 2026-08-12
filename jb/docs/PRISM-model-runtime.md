@@ -44,7 +44,57 @@ Adding a new model-running component (a new analyzer, a segmentation transformer
 
 **No algorithm switching on GPU presence (2026-07-20, user decision).** A component must never gate *loading its model* on `GpuProbe`/`IsGpuAvailable` — the model loads on every host and the factory alone decides the execution provider. Upscale was the last violator: it used to skip Real-ESRGAN entirely without a GPU and silently swap in Lanczos4 (capped ×1.42). That fallback class (`Upscaler_c_p_u`) and the `ImageUpscaler` router are deleted — the single `Upscaler` class (`Services/Upscale/Engine/Upscaler.cs`) is the whole upscale path, and Lanczos4 survives only as its in-model top-up resize after the fixed ×2 SR step.
 
-**Missing or corrupt model asset = loud startup failure (2026-07-20, user decision).** No model degrades silently to a lesser algorithm. Existence: `PrismConfiguration.ValidateModelAssets` fails config load without the YOLO or Real-ESRGAN asset; `ClassificationService.ResolveClassifierPaths` does the same for the CLIP assets. Corruption: all three loaders (`Upscaler.Initialize`, `YoloDetector.Initialize`, `ImageClassifier.Initialize`) throw `PrismConfigurationException` — message naming the file as corrupt/truncated/incompatible, inner exception preserved — when a model file is present but fails to load. A quiet `IsReady = false` exists only for the missing-file case inside the loaders, because existence is already enforced loud upstream. Contract pinned by tests: `UpscalerTests`, `YoloDetectorTests`, `ImageClassifierTests` each assert corrupt-file → throws and missing-file → quiet not-ready (garbage-byte fixtures, CI-runnable without real models). The former monolith degrade path (T-2800's swallow in `PipelineServiceFactory.EnsureUpscalerReady`) is removed. The ×1.42 upscale KO bound is unrelated to any of this — it lives in `ImagePreProcessor` (`PREPROCESS_UPSCALE_EXCEEDED`, config `Output.Images.Resize.MAXIMUM_UpScale`) and is about refusing quality-destroying scale factors, not about hardware.
+**Missing or corrupt model asset = loud startup failure (2026-07-20, user decision).** No model degrades silently to a lesser algorithm — unless that model's `UseIt` toggle is off, which is the one deliberate, config-declared exception (see "Per-model AI toggles" below). Existence: `PrismConfiguration.ValidateModelAssets` fails config load without the YOLO or Real-ESRGAN asset; `ClassificationService.ResolveClassifierPaths` does the same for the CLIP assets. Corruption: all three loaders (`Upscaler.Initialize`, `YoloDetector.Initialize`, `ImageClassifier.Initialize`) throw `PrismConfigurationException` — message naming the file as corrupt/truncated/incompatible, inner exception preserved — when a model file is present but fails to load. A quiet `IsReady = false` exists only for the missing-file case inside the loaders, because existence is already enforced loud upstream. Contract pinned by tests: `UpscalerTests`, `YoloDetectorTests`, `ImageClassifierTests` each assert corrupt-file → throws and missing-file → quiet not-ready (garbage-byte fixtures, CI-runnable without real models). The former monolith degrade path (T-2800's swallow in `PipelineServiceFactory.EnsureUpscalerReady`) is removed. The ×1.42 upscale KO bound is unrelated to any of this — it lives in `ImagePreProcessor` (`PREPROCESS_UPSCALE_EXCEEDED`, config `Output.Images.Resize.MAXIMUM_UpScale`) and is about refusing quality-destroying scale factors, not about hardware.
+
+---
+
+## Per-model AI toggles (2026-08-12)
+
+Each model's own section in `Prism_Config.json`'s `Models` block carries a `UseIt` boolean. The section
+names are the model's *job*, not its vendor: `classification` (CLIP), `Detection` (YOLO26), `Upscaling`
+(Real-ESRGAN), and `Generation` (the not-yet-built generation backend, no other fields).
+
+```json
+"Models": {
+    "classification": { "Dir": "…", "Model": "…", "Vocab": "…", "Merges": "…", "UseIt": true },
+    "Upscaling":      { "Path": "…", "UseIt": true },
+    "Detection":      { "Path": "…", "UseIt": true },
+    "Generation":     { "UseIt": false }
+}
+```
+
+`PrismConfiguration` exposes them as `AiClassificationEnabled` / `AiDetectionEnabled` /
+`AiUpscalingEnabled` / `AiGenerationEnabled`, all `required` with no initializer — a missing or
+misspelled `UseIt` throws `PrismConfigurationException` at load, per the repo's no-shadow-defaults rule.
+
+**The governing rule: every feature value starts at UNKNOWN and is only overwritten by an actual
+measurement.** A toggle never skips an analyzer and never introduces a parallel code path — every
+analyzer is still called on every image exactly as normal. The gate sits *inside* the analyzer at the
+point where it would consume the model's output, so a closed gate simply leaves the feature at its "I
+don't know" default. Each toggle reuses the plumbing that already existed for "model unavailable":
+
+| Toggle | Model-load gate | Downstream behavior when off |
+|---|---|---|
+| `classification` | `MatchingService` constructor skips `ClipPromptCatalog` + `ImageClassifier.GetShared`; both fields stay null | `ClassificationService.IsReady` reports false — the same state an absent CLIP file already produced. `MatchAsync`'s existing `doClassify` guard needs no change. `ImageMatcher` already auto-skips Bracket 4 with no CLIP tags; `SemanticMatcher` already passes candidates through unfiltered |
+| `Detection` | `FeatureAnalysisService` never resolves the YOLO asset; `yoloModelPath` stays null | `ImageFeatureAnalyzer.Refine` already feeds `[]` to every analyzer on a null path. `Analyzer_SubjectGeometry` falls through to its existing CV-based box; `Analyzer_MultipleProducts` already returns early. **`Analyzer_HasHuman` needed an explicit gate** — its empty-detections branch writes a *confident* `false`, correct when YOLO ran and found nobody, wrong when YOLO never ran, and `detections.Count == 0` cannot distinguish the two |
+| `Upscaling` | `PipelineServiceFactory.EnsureUpscalerReady` and the ServiceHost transform branch skip `UpscaleService.Create` | `TransformService` ANDs the toggle into `allowEsrganUpscale`, so every image takes the Lanczos path T-4900 already built, capped at `MAXIMUM_UpScale_LanczosOnly`. Past that cap the image is KO'd rather than shipped soft |
+| `Generation` | none — no backend exists | Shipped `false`, which reproduces the previously-hardcoded `GenerationBackendAvailable = false` exactly. **Do not default it to `true`**: `ImageGenerator.Run` would skip creating the `Gated` placeholder record and the family would silently produce nothing |
+
+**Asset validation follows the toggle.** `ValidateModelAssets` skips the existence check for a model
+whose `UseIt` is false — otherwise switching a model off *because* its file is missing or known-bad
+would still fail startup, defeating the point. A model that is on is validated exactly as loudly as
+before.
+
+**`PRISM_SERVICE=upscale` with `Upscaling.UseIt=false` fails loud.** A host whose only reason to exist
+is a disabled model is a config contradiction, not a degraded mode. The default all-services host
+instead just drops the upscale route, since every transform host reading the same config has already
+forced itself onto Lanczos and nothing addresses it.
+
+**The manifest records the outcome.** `BatchManifest.Models` (`BatchManifestModelToggles`) sits
+immediately after `Summary` and reports `Classification` / `Detection` / `Upscale` / `Generation` for
+the job, so a manifest read later still distinguishes "the model measured nothing" from "the model
+never ran". Threaded `PrismConfiguration` → `Pipeline` → `ExportRequest` → `Exporter.BuildManifest`,
+mirroring `DetOrderGapsAllowed`.
 
 ---
 

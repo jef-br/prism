@@ -17,6 +17,7 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService {
     private readonly ClassifyParameters classifyParameters;
     private readonly ProductTypeResolver productTypes;
     private readonly string? yoloModelPath;
+    private readonly bool aiDetectionEnabled;
     private readonly SubjectDetector subjectDetector;
 
     public FeatureAnalysisService(PrismConfiguration configuration) {
@@ -30,7 +31,13 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService {
         this.productTypes = ProductTypeResolver.Load(ConfigLoader.RequireFile("ProductTypeMap.json"));
 
         // The 37 MB detector is not copied into build outputs; ModelAssetLocator resolves it from the
-        // deployed location, the PRISM_ONNX_MODEL_DIR override, or the single source-tree copy.
+        // deployed location, the PRISM_ONNX_MODEL_DIR override, or the single source-tree copy. With
+        // Models.Detection.UseIt false the asset is never resolved and the path stays null — the same
+        // "no detector" state Refine already handles, so every analyzer still runs and simply receives an
+        // empty detection list.
+        this.aiDetectionEnabled = configuration.AiDetectionEnabled;
+        if (!this.aiDetectionEnabled) return;
+
         this.yoloModelPath = ModelAssetLocator.Find(configuration.YoloModelPath);
         if (this.yoloModelPath is null)
             throw new PrismConfigurationException(
@@ -44,7 +51,7 @@ public sealed class FeatureAnalysisService : IFeatureAnalysisService {
 
     /// <inheritdoc/>
     public void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet)
-        => ImageFeatureAnalyzer.Refine(lambda, family, imagePath, ruleSet, this.analyzerParameters, this.yoloModelPath, this.productTypes,
+        => ImageFeatureAnalyzer.Refine(lambda, family, imagePath, ruleSet, this.analyzerParameters, this.yoloModelPath, this.aiDetectionEnabled, this.productTypes,
             (record, image) => this.DetectSubject(record, image, family));
 
     // Wave-3 subject isolation. Seeded with the Excel + CLIP signals resolved from the record and its

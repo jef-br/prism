@@ -121,7 +121,20 @@ Imported → Classified → Matched → Ordered → Renamed → Generated → Tr
 | Job Retries | `Pipeline.JobRetries` |
 | Jobs | `Jobs` |
 | Job Retention Period | `Jobs.JobRetentionPeriodInHours` |
+| Model Assets | `Models` |
+| CLIP Dir / Model / Vocab / Merges | `Models.classification.Dir` / `.Model` / `.Vocab` / `.Merges` |
+| CLIP Enabled | `Models.classification.UseIt` |
+| Real-ESRGAN Path | `Models.Upscaling.Path` |
+| Real-ESRGAN Enabled | `Models.Upscaling.UseIt` |
+| YOLO26 Path | `Models.Detection.Path` |
+| YOLO26 Enabled | `Models.Detection.UseIt` |
+| Generation Backend Enabled | `Models.Generation.UseIt` |
 ```
+
+**The four `UseIt` keys are required, not optional** (2026-08-12). A missing one throws
+`PrismConfigurationException` at load. Sections are named for the model's job — `classification`,
+`Detection`, `Upscaling`, `Generation` — not its vendor. See `PRISM-model-runtime.md` →
+"Per-model AI toggles" for what each toggle gates and why an analyzer is never skipped.
 
 **Transform keys are not here.** T-4530 (2026-07-12) moved the crop/positioning budgets out of
 `Prism_Config.json` — the whole `Transformation.*` block is gone. They now live in the `Crop` section

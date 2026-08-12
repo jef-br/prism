@@ -29,7 +29,7 @@ public static class PipelineServiceFactory {
         return new(
             new IngestService(configuration, modelBuilder),
             new MatchingService(configuration),
-            new GenerateService(),
+            new GenerateService(configuration),
             new TransformService(),
             new LocalArtifactStore());
     }
@@ -49,7 +49,7 @@ public static class PipelineServiceFactory {
 
         IGenerateService generate = RemoteUrl(GenerateUrlVariable) is { } generateUrl
             ? new HttpGenerateService(generateUrl)
-            : new GenerateService();
+            : new GenerateService(configuration);
 
         ITransformService transform;
         if (RemoteUrl(TransformUrlVariable) is { } transformUrl) {
@@ -78,9 +78,13 @@ public static class PipelineServiceFactory {
     /// Transform job that needs to upscale a below-minimum image doesn't crash (T-2800). Unlike CLIP,
     /// Upscaler is a static, process-wide resource, not one instance per service. A missing or
     /// unloadable model asset propagates as <see cref="PrismConfigurationException"/> — there is no
-    /// fallback upscaler, so startup fails loud like it does for the YOLO model (T-4110).
+    /// fallback upscaler, so startup fails loud like it does for the YOLO model (T-4110). With
+    /// Models.Upscaling.UseIt false the session is never created: TransformService forces
+    /// <c>allowEsrganUpscale</c> off from the same config value, so nothing in this process can reach it.
     /// </summary>
     private static void EnsureUpscalerReady(PrismConfiguration configuration) {
+        if (!configuration.AiUpscalingEnabled) return;
+
         UpscaleService.Create(configuration);
     }
 

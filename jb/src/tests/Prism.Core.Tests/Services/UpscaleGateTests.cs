@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using OpenCvSharp;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
@@ -150,14 +152,70 @@ public class UpscaleGateTests : IDisposable {
         Assert.True(box.Right <= enlargedWidth, $"Bounding box right edge {box.Right} runs past the {enlargedWidth}px image.");
     }
 
+    //  Models.Upscaling.UseIt off — the job may not opt into a model that isn't loaded
+
+    // TransformService computes `Parameters.AllowEsrganUpscale && config.AiUpscalingEnabled`, so with the
+    // model switched off the job's opt-in cannot reach ESRGAN. These two tests drive PreprocessAsync with
+    // that composed value against a real config whose toggle is off, covering config load → toggle →
+    // resampler choice → cap.
+    [Fact]
+    public async Task ModelDisabled_JobOptedIn_StillTakesTheLanczosPath() {
+        PrismConfiguration disabled = this.ConfigWithUpscalingDisabled();
+        bool allowEsrgan = true && disabled.AiUpscalingEnabled;
+        ImageRecord_LAMBDA lambda = Lambda(BoxOf(140, 140, 620, 620), intersects: false);
+        RecordingUpscaleService recorder = new();
+
+        (byte[]? processed, CvMat? mat) = await Preprocess(lambda, 900, 900, allowEsrgan, recorder, disabled);
+        mat?.Dispose();
+
+        Assert.False(disabled.AiUpscalingEnabled);
+        Assert.False(lambda.IsKo, $"{lambda.KoReasonCode}: {lambda.KoSafeMessage}");
+        Assert.Equal(0, recorder.Calls);
+        Assert.True(WidthOf(processed) > 900, "Lanczos path did not enlarge the image.");
+    }
+
+    [Fact]
+    public async Task ModelDisabled_ImageNeedingMoreThanTheLanczosCap_IsKoInsteadOfUpscaled() {
+        // The same 1.36x bleed image that processes fine when ESRGAN is available: with the model off
+        // there is no larger cap to fall back to, so it is KO'd rather than shipped soft or undersized.
+        PrismConfiguration disabled = this.ConfigWithUpscalingDisabled();
+        bool allowEsrgan = true && disabled.AiUpscalingEnabled;
+        ImageRecord_LAMBDA lambda = Lambda(BoxOf(0, 40, 700, 500), intersects: true);
+        RecordingUpscaleService recorder = new();
+
+        (byte[]? processed, CvMat? mat) = await Preprocess(lambda, 900, 590, allowEsrgan, recorder, disabled);
+        mat?.Dispose();
+
+        Assert.True(lambda.IsKo);
+        Assert.Equal("PREPROCESS_UPSCALE_EXCEEDED", lambda.KoReasonCode);
+        Assert.Null(processed);
+        Assert.Equal(0, recorder.Calls);
+    }
+
     //  Helpers
 
+    /// <summary>
+    /// A private copy of the loader's config files with Models.Upscaling.UseIt flipped off. Copied rather
+    /// than mutated in place so the shipped config is untouched and the cross-file ImageNGP validator
+    /// still finds its companion files.
+    /// </summary>
+    private PrismConfiguration ConfigWithUpscalingDisabled() {
+        string configPath = TempConfigDirectory.Create(Path.Combine(this.tempDir, "config"));
+
+        JsonObject root = (JsonObject)JsonNode.Parse(File.ReadAllText(configPath))!;
+        root["Models"]!["Upscaling"]!["UseIt"] = false;
+        File.WriteAllText(configPath, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        return PrismConfiguration.LoadPrismConfig(configPath);
+    }
+
     private Task<(byte[]? bytes, CvMat? colorMat)> Preprocess(
-        ImageRecord_LAMBDA lambda, int imageWidth, int imageHeight, bool allowEsrgan, IUpscaleService remoteUpscale) {
+        ImageRecord_LAMBDA lambda, int imageWidth, int imageHeight, bool allowEsrgan, IUpscaleService remoteUpscale,
+        PrismConfiguration? configuration = null) {
         string path = Path.Combine(this.tempDir, $"{Guid.NewGuid():N}.jpg");
         WriteBlankJpeg(path, imageWidth, imageHeight);
         return ImagePreProcessor.PreprocessAsync(
-            lambda, path, this.config, this.parameters, null, allowEsrgan, remoteUpscale, CancellationToken.None);
+            lambda, path, configuration ?? this.config, this.parameters, null, allowEsrgan, remoteUpscale, CancellationToken.None);
     }
 
     private void AssertFinalSizeReachesBar(ImageRecord_LAMBDA lambda, byte[]? processed) {

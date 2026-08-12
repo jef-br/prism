@@ -205,7 +205,7 @@ public class VisualAnalyzerTests {
         var snapshot = new ImageFeatureSnapshot();
         var person = new YoloDetection(0, "person", 0.9f, 0.2f, 0.0f, 0.8f, 1.0f); // 60% of frame
 
-        Analyzer_HasHuman.Analyze([person], snapshot, YoloCfg);
+        Analyzer_HasHuman.Analyze([person], snapshot, YoloCfg, aiDetectionEnabled: true);
 
         Assert.Equal("true", snapshot.GetValue("has-human"));
         Assert.Equal("TRUE", snapshot.GetValue("hero-is-human"));
@@ -215,7 +215,7 @@ public class VisualAnalyzerTests {
     public void HasHuman_NoPerson_SetsHeroIsHumanFalse() {
         var snapshot = new ImageFeatureSnapshot();
 
-        Analyzer_HasHuman.Analyze([], snapshot, YoloCfg);
+        Analyzer_HasHuman.Analyze([], snapshot, YoloCfg, aiDetectionEnabled: true);
 
         Assert.Equal("false", snapshot.GetValue("has-human"));
         Assert.Equal("FALSE", snapshot.GetValue("hero-is-human"));
@@ -227,7 +227,7 @@ public class VisualAnalyzerTests {
         var snapshot = new ImageFeatureSnapshot();
         var person = new YoloDetection(0, "person", 0.9f, 0.45f, 0.45f, 0.55f, 0.55f); // 1% of frame
 
-        Analyzer_HasHuman.Analyze([person], snapshot, YoloCfg);
+        Analyzer_HasHuman.Analyze([person], snapshot, YoloCfg, aiDetectionEnabled: true);
 
         Assert.Equal("true", snapshot.GetValue("has-human"));
         Assert.Equal("UNKNOWN", snapshot.GetValue("hero-is-human"));
@@ -238,7 +238,43 @@ public class VisualAnalyzerTests {
         var snapshot = new ImageFeatureSnapshot();
         snapshot.Set("hero-is-human", "TRUE", 0.95, "clip");
 
-        Analyzer_HasHuman.Analyze([], snapshot, YoloCfg);
+        Analyzer_HasHuman.Analyze([], snapshot, YoloCfg, aiDetectionEnabled: true);
+
+        Assert.Equal("TRUE", snapshot.GetValue("hero-is-human"));
+    }
+
+    //  Models.Detection.UseIt off — the analyzer still runs, but nothing it would have measured is written.
+
+    [Fact]
+    public void HasHuman_DetectionDisabled_LeavesEveryHumanFeatureUnknown() {
+        var snapshot = new ImageFeatureSnapshot();
+        var person = new YoloDetection(0, "person", 0.9f, 0.2f, 0.0f, 0.8f, 1.0f);
+
+        Analyzer_HasHuman.Analyze([person], snapshot, YoloCfg, aiDetectionEnabled: false);
+
+        Assert.Equal("UNKNOWN", snapshot.GetValue("has-human"));
+        Assert.Equal("UNKNOWN", snapshot.GetValue("human-count"));
+        Assert.Equal("UNKNOWN", snapshot.GetValue("hero-is-human"));
+    }
+
+    [Fact]
+    public void HasHuman_DetectionDisabled_DoesNotWriteConfidentAbsence() {
+        // The bug this guards: an empty detection list means "YOLO found nobody", which the enabled path
+        // writes as a confident false. With the model switched off there is no measurement to report.
+        var snapshot = new ImageFeatureSnapshot();
+
+        Analyzer_HasHuman.Analyze([], snapshot, YoloCfg, aiDetectionEnabled: false);
+
+        Assert.Equal("UNKNOWN", snapshot.GetValue("has-human"));
+        Assert.Equal("UNKNOWN", snapshot.GetValue("hero-is-human"));
+    }
+
+    [Fact]
+    public void HasHuman_DetectionDisabled_LeavesExistingClipEvidenceAlone() {
+        var snapshot = new ImageFeatureSnapshot();
+        snapshot.Set("hero-is-human", "TRUE", 0.95, "clip");
+
+        Analyzer_HasHuman.Analyze([], snapshot, YoloCfg, aiDetectionEnabled: false);
 
         Assert.Equal("TRUE", snapshot.GetValue("hero-is-human"));
     }

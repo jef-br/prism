@@ -132,17 +132,23 @@
         }
     },
     "Models": {
-        "Clip": {
+        "classification": {
             "Dir": "Services/Matching/Classify/ONNX/clip-vit-b32-uint8",
             "Model": "model_uint8.onnx",
             "Vocab": "vocab.json",
-            "Merges": "merges.txt"
+            "Merges": "merges.txt",
+            "UseIt": true
         },
-        "Upscale": {
-            "Path": "Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus_dynamic.onnx"
+        "Upscaling": {
+            "Path": "Services/Upscale/Engine/ONNX/Real-ESRGAN_x2plus_dynamic.onnx",
+            "UseIt": true
         },
-        "Yolo": {
-            "Path": "Services/Matching/Analyzers/ONNX/yolo26s.onnx"
+        "Detection": {
+            "Path": "Services/Matching/Analyzers/ONNX/yolo26s.onnx",
+            "UseIt": true
+        },
+        "Generation": {
+            "UseIt": false
         }
     }
 }

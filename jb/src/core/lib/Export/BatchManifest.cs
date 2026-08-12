@@ -15,6 +15,11 @@ public sealed record BatchManifest {
     public BatchManifestSummary Summary { get; init; } = new();
 
     /// <summary>
+    /// Which AI models were enabled for this job (Models.&lt;section&gt;.UseIt in Prism_Config.json).
+    /// </summary>
+    public BatchManifestModelToggles Models { get; init; } = new();
+
+    /// <summary>
     /// Per-image rows — one entry per lambda record processed by the pipeline.
     /// </summary>
     public IReadOnlyList<ManifestImageRow> ImageRows { get; init; } = [];

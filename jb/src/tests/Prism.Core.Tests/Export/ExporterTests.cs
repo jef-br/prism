@@ -233,6 +233,44 @@ public class ExporterTests : IDisposable {
         Assert.Equal("MATCH_FAIL", row.KoReasonCode);
     }
 
+    //  Manifest Models block — which AI models were enabled for the job
+
+    [Fact]
+    public void Run_ManifestReportsTheFourModelToggles() {
+        ExportArtifacts result = Exporter.Run(MakeRequest(
+            [MakeInput("ok_img.jpg", null)],
+            [MakeLambda("ok_img.jpg", "FAM001", 0)],
+            "json",
+            classification: true,
+            detection: false,
+            upscaling: true,
+            generation: false));
+
+        BatchManifestModelToggles models = result.Manifest.Models;
+        Assert.True(models.Classification);
+        Assert.False(models.Detection);
+        Assert.True(models.Upscale);
+        Assert.False(models.Generation);
+    }
+
+    [Fact]
+    public void Run_ManifestModelsBlockMirrorsEveryToggleIndependently() {
+        ExportArtifacts result = Exporter.Run(MakeRequest(
+            [MakeInput("ok_img.jpg", null)],
+            [MakeLambda("ok_img.jpg", "FAM001", 0)],
+            "json",
+            classification: false,
+            detection: true,
+            upscaling: false,
+            generation: true));
+
+        BatchManifestModelToggles models = result.Manifest.Models;
+        Assert.False(models.Classification);
+        Assert.True(models.Detection);
+        Assert.False(models.Upscale);
+        Assert.True(models.Generation);
+    }
+
     //  Det-order gap policy
 
     [Fact]
@@ -282,7 +320,11 @@ public class ExporterTests : IDisposable {
         IReadOnlyList<ImageRecord_LAMBDA> lambdas,
         string format,
         string? excelPath = null,
-        bool detOrderGapsAllowed = false) {
+        bool detOrderGapsAllowed = false,
+        bool classification = false,
+        bool detection = false,
+        bool upscaling = false,
+        bool generation = false) {
         return new ExportRequest {
             JobID = Guid.NewGuid(),
             LambdaRecords = lambdas,
@@ -293,6 +335,10 @@ public class ExporterTests : IDisposable {
             ExcelCount = excelPath is not null ? 1 : 0,
             ZipCount = 0,
             DetOrderGapsAllowed = detOrderGapsAllowed,
+            AiClassificationEnabled = classification,
+            AiDetectionEnabled = detection,
+            AiUpscalingEnabled = upscaling,
+            AiGenerationEnabled = generation,
             Warnings = []
         };
     }

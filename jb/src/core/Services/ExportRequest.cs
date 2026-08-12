@@ -28,6 +28,18 @@ public sealed record ExportRequest {
     /// </summary>
     public bool DetOrderGapsAllowed { get; init; }
 
+    /// <summary>Models.classification.UseIt for this job; reported in the manifest's Models block.</summary>
+    public bool AiClassificationEnabled { get; init; }
+
+    /// <summary>Models.Detection.UseIt for this job; reported in the manifest's Models block.</summary>
+    public bool AiDetectionEnabled { get; init; }
+
+    /// <summary>Models.Upscaling.UseIt for this job; reported in the manifest's Models block.</summary>
+    public bool AiUpscalingEnabled { get; init; }
+
+    /// <summary>Models.Generation.UseIt for this job; reported in the manifest's Models block.</summary>
+    public bool AiGenerationEnabled { get; init; }
+
     /// <summary>Original accepted image count for the manifest summary.</summary>
     public int ImageCount { get; init; }
 

@@ -12,19 +12,25 @@ namespace Prism.Services.Matching;
 /// </summary>
 public sealed class MatchingService : IMatchingService, IDisposable {
     private readonly PrismConfiguration configuration;
-    private readonly ImageClassifier _sharedClassifier;
-    private readonly ClipPromptCatalog _sharedPromptCatalog;
+    private readonly ImageClassifier? _sharedClassifier;
+    private readonly ClipPromptCatalog? _sharedPromptCatalog;
     private bool _disposed;
 
     /// <summary>Creates the service with the validated PRISM configuration (thresholds, dedup policy).
     /// Resolves the process-wide shared CLIP ONNX session (see <see cref="ImageClassifier.GetShared"/>) —
-    /// loaded once per process regardless of how many MatchingService instances are constructed.</summary>
+    /// loaded once per process regardless of how many MatchingService instances are constructed. With
+    /// Models.classification.UseIt false the session and its prompt catalogue are never loaded and both
+    /// stay null, which ClassificationService reports as the "not ready" state it already handles for a
+    /// physically absent model.</summary>
     public MatchingService(PrismConfiguration configuration) {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        this._sharedPromptCatalog = ClassificationService.LoadPromptCatalog();
 
-        (string modelPath, string vocabPath, string mergesPath) = ClassificationService.ResolveClassifierPaths(configuration);
-        this._sharedClassifier = ImageClassifier.GetShared(modelPath, vocabPath, mergesPath);
+        if (configuration.AiClassificationEnabled) {
+            this._sharedPromptCatalog = ClassificationService.LoadPromptCatalog();
+
+            (string modelPath, string vocabPath, string mergesPath) = ClassificationService.ResolveClassifierPaths(configuration);
+            this._sharedClassifier = ImageClassifier.GetShared(modelPath, vocabPath, mergesPath);
+        }
     }
 
     /// <inheritdoc/>

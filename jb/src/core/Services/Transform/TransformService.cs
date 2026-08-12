@@ -49,7 +49,10 @@ public sealed class TransformService : ITransformService {
         // Read off the job parameters rather than a method argument: the parameters already ride inside
         // MatchingResult across the matching→transform HTTP boundary (the ServiceHost route reads
         // Transform and Headcut the same way), so one read here cannot be dropped at a call site.
-        bool allowEsrganUpscale = matched.Ingest.Parameters.AllowEsrganUpscale;
+        // ...and ANDed with the Models.Upscaling.UseIt toggle: with Real-ESRGAN switched off there is no
+        // session to reach, so the job parameter cannot opt in. False routes through the Lanczos path
+        // T-4900 already built (ImagePreProcessor.UpscaleAsync) — no new upscaling logic.
+        bool allowEsrganUpscale = matched.Ingest.Parameters.AllowEsrganUpscale && prismConfig.AiUpscalingEnabled;
 
         Dictionary<string, ImageRecord_INPUT> inputByName = matched.Ingest.NormalizedImages
             .ToDictionary(r => r.InitialFullName, StringComparer.OrdinalIgnoreCase);

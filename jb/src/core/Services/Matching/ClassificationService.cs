@@ -7,33 +7,38 @@ namespace Prism.Services.Matching;
 /// Per-job Classification wrapper. Borrows the shared <see cref="ImageClassifier"/> and prompt catalogue
 /// from <see cref="MatchingService"/> (which owns both for the app lifetime) and performs ONNX tagging and
 /// perceptual-hash duplicate grouping. <see cref="Dispose"/> is a no-op — the classifier is not owned here.
+/// A null classifier or catalogue means CLIP is unavailable — the model file is absent, or
+/// Models.classification.UseIt is false — and every tagging method is a no-op, exactly as it already was
+/// for an absent model file.
 /// </summary>
 public sealed class ClassificationService : IClassificationService {
-    private readonly ImageClassifier classifier;
-    private readonly ClipPromptCatalog promptCatalog;
+    private readonly ImageClassifier? classifier;
+    private readonly ClipPromptCatalog? promptCatalog;
     private readonly PrismConfiguration configuration;
 
-    internal ClassificationService(ImageClassifier classifier, ClipPromptCatalog promptCatalog, PrismConfiguration configuration) {
+    internal ClassificationService(ImageClassifier? classifier, ClipPromptCatalog? promptCatalog, PrismConfiguration configuration) {
         this.classifier = classifier;
         this.promptCatalog = promptCatalog;
         this.configuration = configuration;
     }
 
     /// <inheritdoc/>
-    public bool IsReady => this.classifier.IsReady;
+    public bool IsReady => this.classifier is not null && this.promptCatalog is not null && this.classifier.IsReady;
 
     /// <inheritdoc/>
     public void ApplyClipTags(Image<Rgba32> image, ImageRecord_LAMBDA lambda, double influentialThreshold, double cutoffThreshold) {
-        ClassificationToken[] logitTokens = this.classifier.ClassifyImage(image, this.promptCatalog.BuildPrompts());
+        if (!this.IsReady) return;
+
+        ClassificationToken[] logitTokens = this.classifier!.ClassifyImage(image, this.promptCatalog!.BuildPrompts());
         this.ApplyTokens(logitTokens, lambda, influentialThreshold, cutoffThreshold);
     }
 
     /// <inheritdoc/>
     public void ApplyClipTagsBatch(IReadOnlyList<(Image<Rgba32> Image, ImageRecord_LAMBDA Lambda)> items, double influentialThreshold, double cutoffThreshold) {
-        if (items.Count == 0) return;
+        if (items.Count == 0 || !this.IsReady) return;
 
-        ClassificationToken[][] tokenSets = this.classifier.ClassifyImages(
-            [.. items.Select(item => item.Image)], this.promptCatalog.BuildPrompts());
+        ClassificationToken[][] tokenSets = this.classifier!.ClassifyImages(
+            [.. items.Select(item => item.Image)], this.promptCatalog!.BuildPrompts());
 
         for (int i = 0; i < items.Count; i++)
             this.ApplyTokens(tokenSets[i], items[i].Lambda, influentialThreshold, cutoffThreshold);
@@ -49,7 +54,7 @@ public sealed class ClassificationService : IClassificationService {
         // Resolve each prompt to the (feature, value) it represents; drop unrecognised prompts.
         var resolved = new List<(ClassificationToken Token, string Feature, string Value)>();
         foreach (ClassificationToken token in logitTokens) {
-            if (this.promptCatalog.TryResolve(token.Label, out string feature, out string value))
+            if (this.promptCatalog!.TryResolve(token.Label, out string feature, out string value))
                 resolved.Add((token, feature, value));
         }
 

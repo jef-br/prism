@@ -107,6 +107,25 @@ public sealed class PrismConfiguration {
     public string UpscaleModelPath { get; private set; } = "";
     public string YoloModelPath { get; private set; } = "";
 
+    // --- Per-model AI toggles (Models.<section>.UseIt)
+    /// <summary>
+    /// One boolean per ONNX model, sourced from that model's own config section. False means the model is
+    /// never loaded and every feature it would have measured keeps its "I don't know" default — analyzers
+    /// still run, only the write is gated. `required` + `init` rather than the private-set convention of
+    /// the properties above: these are new, so the no-shadow-defaults rule applies — a config missing any
+    /// UseIt key throws at load rather than silently picking a side.
+    /// </summary>
+    public required bool AiClassificationEnabled { get; init; }
+
+    /// <summary>Models.Detection.UseIt — the YOLO26 detector. See <see cref="AiClassificationEnabled"/>.</summary>
+    public required bool AiDetectionEnabled { get; init; }
+
+    /// <summary>Models.Upscaling.UseIt — Real-ESRGAN. Off forces the existing Lanczos path.</summary>
+    public required bool AiUpscalingEnabled { get; init; }
+
+    /// <summary>Models.Generation.UseIt — the not-yet-built generation backend. Shipped false.</summary>
+    public required bool AiGenerationEnabled { get; init; }
+
     // --- Output det-order policy
     /// <summary>
     /// Output.DET-ORDER-GAPS-ALLOWED. When false (default), each family's det indices are compacted to a
@@ -156,13 +175,15 @@ public sealed class PrismConfiguration {
 
     // Fail fast on missing model assets: the refinement chain needs the YOLO26 detector and Transform
     // needs the Real-ESRGAN upscaler, and a per-image degradation would be silent (T-4110: no fallback
-    // upscaler exists). Same resolution order as the CLIP model assets.
+    // upscaler exists). Same resolution order as the CLIP model assets. A model whose UseIt toggle is off
+    // is never loaded, so its asset is not required to be present — checking it anyway would make
+    // "disable the model" impossible on exactly the hosts that need it (asset missing or known-bad).
     private static void ValidateModelAssets(PrismConfiguration config) {
-        if (ModelAssetLocator.Find(config.YoloModelPath) is null)
+        if (config.AiDetectionEnabled && ModelAssetLocator.Find(config.YoloModelPath) is null)
             throw new PrismConfigurationException(
                 $"YOLO26 ONNX model not found at '{config.YoloModelPath}'. Deploy it next to " +
                 "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
-        if (ModelAssetLocator.Find(config.UpscaleModelPath) is null)
+        if (config.AiUpscalingEnabled && ModelAssetLocator.Find(config.UpscaleModelPath) is null)
             throw new PrismConfigurationException(
                 $"Real-ESRGAN ONNX model not found at '{config.UpscaleModelPath}'. Deploy it next to " +
                 "Prism_Config.json, set PRISM_ONNX_MODEL_DIR, or keep the source-tree copy under jb/src/core/.");
@@ -221,12 +242,17 @@ public sealed class PrismConfiguration {
             AcceptedExcelExtensions = RequireStringArray(root, cfgPath, "Input", "EXCEL", "extensions"),
             AcceptedZipExtensions = RequireStringArray(root, cfgPath, "Input", "ZIP", "extensions"),
 
-            ClipModelDir = RequireString(root, cfgPath, "Models", "Clip", "Dir"),
-            ClipModelFile = RequireString(root, cfgPath, "Models", "Clip", "Model"),
-            ClipVocabFile = RequireString(root, cfgPath, "Models", "Clip", "Vocab"),
-            ClipMergesFile = RequireString(root, cfgPath, "Models", "Clip", "Merges"),
-            UpscaleModelPath = RequireString(root, cfgPath, "Models", "Upscale", "Path"),
-            YoloModelPath = RequireString(root, cfgPath, "Models", "Yolo", "Path"),
+            ClipModelDir = RequireString(root, cfgPath, "Models", "classification", "Dir"),
+            ClipModelFile = RequireString(root, cfgPath, "Models", "classification", "Model"),
+            ClipVocabFile = RequireString(root, cfgPath, "Models", "classification", "Vocab"),
+            ClipMergesFile = RequireString(root, cfgPath, "Models", "classification", "Merges"),
+            UpscaleModelPath = RequireString(root, cfgPath, "Models", "Upscaling", "Path"),
+            YoloModelPath = RequireString(root, cfgPath, "Models", "Detection", "Path"),
+
+            AiClassificationEnabled = RequireBool(root, cfgPath, "Models", "classification", "UseIt"),
+            AiDetectionEnabled = RequireBool(root, cfgPath, "Models", "Detection", "UseIt"),
+            AiUpscalingEnabled = RequireBool(root, cfgPath, "Models", "Upscaling", "UseIt"),
+            AiGenerationEnabled = RequireBool(root, cfgPath, "Models", "Generation", "UseIt"),
 
             // Optional with a safe default (false = compact) so existing configs keep working.
             DetOrderGapsAllowed = OptionalBool(root, "Output", "DET-ORDER-GAPS-ALLOWED") ?? false
@@ -286,12 +312,12 @@ public sealed class PrismConfiguration {
         if (this.AcceptedExcelExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.EXCEL.extensions must contain at least one entry.");
         if (this.AcceptedZipExtensions.Count == 0) throw new PrismConfigurationException($"{FileName} at '{cfgPath}': Input.ZIP.extensions must contain at least one entry.");
 
-        AssertNonEmpty(this.ClipModelDir, cfgPath, "Models.Clip.Dir");
-        AssertNonEmpty(this.ClipModelFile, cfgPath, "Models.Clip.Model");
-        AssertNonEmpty(this.ClipVocabFile, cfgPath, "Models.Clip.Vocab");
-        AssertNonEmpty(this.ClipMergesFile, cfgPath, "Models.Clip.Merges");
-        AssertNonEmpty(this.UpscaleModelPath, cfgPath, "Models.Upscale.Path");
-        AssertNonEmpty(this.YoloModelPath, cfgPath, "Models.Yolo.Path");
+        AssertNonEmpty(this.ClipModelDir, cfgPath, "Models.classification.Dir");
+        AssertNonEmpty(this.ClipModelFile, cfgPath, "Models.classification.Model");
+        AssertNonEmpty(this.ClipVocabFile, cfgPath, "Models.classification.Vocab");
+        AssertNonEmpty(this.ClipMergesFile, cfgPath, "Models.classification.Merges");
+        AssertNonEmpty(this.UpscaleModelPath, cfgPath, "Models.Upscaling.Path");
+        AssertNonEmpty(this.YoloModelPath, cfgPath, "Models.Detection.Path");
 
     }
 

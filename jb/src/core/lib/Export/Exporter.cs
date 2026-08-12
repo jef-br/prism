@@ -150,6 +150,12 @@ internal static class Exporter {
                 KoTransformed = 0,
                 GeneratedCount = request.GeneratedCount
             },
+            Models = new BatchManifestModelToggles {
+                Classification = request.AiClassificationEnabled,
+                Detection = request.AiDetectionEnabled,
+                Upscale = request.AiUpscalingEnabled,
+                Generation = request.AiGenerationEnabled
+            },
             ImageRows = rows,
             RouteSummaries = Pipeline.StageOrder.Select(stage => $"{stage}: completed.").ToArray(),
             Warnings = request.Warnings

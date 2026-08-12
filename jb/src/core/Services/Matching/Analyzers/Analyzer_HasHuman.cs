@@ -10,7 +10,13 @@ namespace Prism.Services.Matching;
 /// absence confidence, and a stronger existing measurement (e.g. CLIP) is never overwritten.
 /// </summary>
 internal static class Analyzer_HasHuman {
-    public static void Analyze(IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot, YoloAnalyzerConfig cfg) {
+    public static void Analyze(IReadOnlyList<YoloDetection> detections, ImageFeatureSnapshot snapshot, YoloAnalyzerConfig cfg, bool aiDetectionEnabled) {
+        // AI detection is off — the "I don't know" default stands. Unlike Analyzer_SubjectGeometry, an
+        // empty detection list here is a confident measurement ("YOLO looked and found nobody"), so it
+        // cannot double as "YOLO never ran"; only the toggle distinguishes the two. Room here for a
+        // manually-authored has-human fallback measurement later; none exists today.
+        if (!aiDetectionEnabled) return;
+
         List<YoloDetection> persons = [.. detections.Where(d => d.IsPerson && d.Confidence >= cfg.HumanMinConfidence)];
 
         if (persons.Count > 0) {

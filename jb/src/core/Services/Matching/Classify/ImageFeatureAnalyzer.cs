@@ -107,7 +107,7 @@ public static class ImageFeatureAnalyzer {
     /// qualifies for every phenotype; each wave eliminates those with strong contra-evidence.
     /// The final assignment overwrites the provisional phenotype set at the Classified stage.
     /// </summary>
-    public static void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet, AnalyzerParameters parameters, string? yoloModelPath, ProductTypeResolver productTypes, Action<ImageRecord_LAMBDA, Image<Rgba32>>? subjectStep) {
+    public static void Refine(ImageRecord_LAMBDA lambda, FamilyIDRecord? family, string? imagePath, PhenotypeRuleSet ruleSet, AnalyzerParameters parameters, string? yoloModelPath, bool aiDetectionEnabled, ProductTypeResolver productTypes, Action<ImageRecord_LAMBDA, Image<Rgba32>>? subjectStep) {
         PhenotypePool pool = new(ruleSet);
 
         // Wave 1 — IEM + filename evidence. Phase-1 measurements (background, edge intersections)
@@ -123,7 +123,7 @@ public static class ImageFeatureAnalyzer {
             IReadOnlyList<YoloDetection> detections = yoloModelPath is null
                 ? []
                 : YoloDetector.GetShared(yoloModelPath).Detect(image, parameters.Yolo);
-            Analyzer_HasHuman.Analyze(detections, lambda.Features, parameters.Yolo);
+            Analyzer_HasHuman.Analyze(detections, lambda.Features, parameters.Yolo, aiDetectionEnabled);
             pool.Eliminate(lambda.Features);
 
             // Wave 3 — remaining visual analyzers: geometry from the shared subject box, then

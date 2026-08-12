@@ -14,6 +14,10 @@ internal sealed class Pipeline : IDisposable {
     private readonly IGenerateService generateService;
     private readonly ITransformService transformService;
     private readonly bool detOrderGapsAllowed;
+    private readonly bool aiClassificationEnabled;
+    private readonly bool aiDetectionEnabled;
+    private readonly bool aiUpscalingEnabled;
+    private readonly bool aiGenerationEnabled;
 
     /// <summary>
     /// Creates a Pipeline by discovering its services from the environment: in-process by default, or HTTP
@@ -25,24 +29,31 @@ internal sealed class Pipeline : IDisposable {
         : this(PipelineServiceFactory.CreateFromEnvironment(
             configuration ?? throw new ArgumentNullException(nameof(configuration)),
             modelBuilder ?? throw new ArgumentNullException(nameof(modelBuilder))),
-            configuration!.DetOrderGapsAllowed) {
+            configuration!) {
     }
 
     /// <summary>
     /// Creates a Pipeline over an explicit service set. This is the DI seam: callers inject in-process or
-    /// HTTP-client implementations without the pipeline knowing which.
+    /// HTTP-client implementations without the pipeline knowing which. The scalar policy values Export
+    /// needs are read off the configuration here and kept as fields — the pipeline never holds the
+    /// configuration object itself.
     /// </summary>
     /// <param name="services">The service implementations and shared artifact store this pipeline runs on.</param>
-    /// <param name="detOrderGapsAllowed">Output.DET-ORDER-GAPS-ALLOWED policy; forwarded to Export for det compaction.</param>
-    internal Pipeline(PipelineServices services, bool detOrderGapsAllowed = false) {
+    /// <param name="configuration">Validated PRISM configuration; read for det-order and AI-toggle policy.</param>
+    internal Pipeline(PipelineServices services, PrismConfiguration configuration) {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
 
         this.artifactStore = services.ArtifactStore;
         this.ingestService = services.Ingest;
         this.matchingService = services.Matching;
         this.generateService = services.Generate;
         this.transformService = services.Transform;
-        this.detOrderGapsAllowed = detOrderGapsAllowed;
+        this.detOrderGapsAllowed = configuration.DetOrderGapsAllowed;
+        this.aiClassificationEnabled = configuration.AiClassificationEnabled;
+        this.aiDetectionEnabled = configuration.AiDetectionEnabled;
+        this.aiUpscalingEnabled = configuration.AiUpscalingEnabled;
+        this.aiGenerationEnabled = configuration.AiGenerationEnabled;
     }
 
     /// <summary>Disposes services that own native resources (e.g. the CLIP ONNX session in MatchingService).</summary>
@@ -146,6 +157,10 @@ internal sealed class Pipeline : IDisposable {
             OkTransformedCount = transformed.OkTransformedCount,
             GeneratedCount = generatedImages.Count,
             DetOrderGapsAllowed = this.detOrderGapsAllowed,
+            AiClassificationEnabled = this.aiClassificationEnabled,
+            AiDetectionEnabled = this.aiDetectionEnabled,
+            AiUpscalingEnabled = this.aiUpscalingEnabled,
+            AiGenerationEnabled = this.aiGenerationEnabled,
             Warnings = [.. ingest.Warnings, .. matched.Warnings]
         };
     }

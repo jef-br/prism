@@ -20,7 +20,7 @@ public class ImageGeneratorTests {
             MakeLambda("img2.jpg", "FAM002", 0, width: 2000, height: 2000)
         ];
 
-        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: false);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: false, generationBackendAvailable: false);
 
         Assert.All(records, r =>
             Assert.Equal(GenerationRouteState.Skipped, r.GenerationRouteState));
@@ -31,7 +31,7 @@ public class ImageGeneratorTests {
     public void Run_GenerationDisabled_KoImagesNotTouched() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("ko.jpg", "FAM001", 0, isKo: true)];
 
-        ImageGenerator.Run(records, generationEnabled: false);
+        ImageGenerator.Run(records, generationEnabled: false, generationBackendAvailable: false);
 
         Assert.Equal(GenerationRouteState.NotEvaluated, records[0].GenerationRouteState);
     }
@@ -47,7 +47,7 @@ public class ImageGeneratorTests {
             MakeLambda("img2.jpg", "FAM001", 1, width: 2000, height: 2000)
         ];
 
-        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true, generationBackendAvailable: false);
 
         Assert.All(records, r =>
             Assert.Equal(GenerationRouteState.Skipped, r.GenerationRouteState));
@@ -61,7 +61,7 @@ public class ImageGeneratorTests {
         // 800×800 is below the 1600×1600 minimum in config
         List<ImageRecord_LAMBDA> records = [MakeLambda("small.jpg", "FAM001", 0, width: 800, height: 800)];
 
-        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true, generationBackendAvailable: false);
 
         Assert.Equal(GenerationRouteState.SkippedLowQuality, records[0].GenerationRouteState);
         Assert.Empty(generated);
@@ -73,7 +73,7 @@ public class ImageGeneratorTests {
         // Unknown dimensions pass the quality check.
         List<ImageRecord_LAMBDA> records = [MakeLambda("unknown.jpg", "FAM001", 0, width: 0, height: 0)];
 
-        ImageGenerator.Run(records, generationEnabled: true);
+        ImageGenerator.Run(records, generationEnabled: true, generationBackendAvailable: false);
 
         Assert.Equal(GenerationRouteState.Gated, records[0].GenerationRouteState);
     }
@@ -84,7 +84,7 @@ public class ImageGeneratorTests {
     public void Run_QualifiedHero_BackendUnavailable_RouteStateIsGated() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
 
-        ImageGenerator.Run(records, generationEnabled: true);
+        ImageGenerator.Run(records, generationEnabled: true, generationBackendAvailable: false);
 
         Assert.Equal(GenerationRouteState.Gated, records[0].GenerationRouteState);
     }
@@ -93,7 +93,7 @@ public class ImageGeneratorTests {
     public void Run_QualifiedHero_GeneratedChildAttachedToHero() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
 
-        ImageGenerator.Run(records, generationEnabled: true);
+        ImageGenerator.Run(records, generationEnabled: true, generationBackendAvailable: false);
 
         Assert.Single(records[0].GeneratedChildren);
         Assert.Equal(GenerationStatus.Gated, records[0].GeneratedChildren[0].Status);
@@ -104,7 +104,7 @@ public class ImageGeneratorTests {
     public void Run_QualifiedHero_GeneratedCountIncremented() {
         List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
 
-        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true, generationBackendAvailable: false);
 
         Assert.Single(generated);
     }
@@ -120,7 +120,7 @@ public class ImageGeneratorTests {
             MakeLambda("ko.jpg",   "FAM001", 1, isKo: true)
         ];
 
-        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true, generationBackendAvailable: false);
 
         Assert.Equal(GenerationRouteState.Gated, records[0].GenerationRouteState);
         Assert.Equal(GenerationRouteState.NotEvaluated, records[1].GenerationRouteState);
@@ -140,7 +140,7 @@ public class ImageGeneratorTests {
             MakeLambda("fam2b.jpg", "FAM002", 1, width: 2000, height: 2000)
         ];
 
-        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true);
+        IReadOnlyList<ImageRecord_GENERATED> generated = ImageGenerator.Run(records, generationEnabled: true, generationBackendAvailable: false);
 
         Assert.Equal(GenerationRouteState.Gated, records[0].GenerationRouteState);
         Assert.Equal(GenerationRouteState.Skipped, records[1].GenerationRouteState);
@@ -148,7 +148,36 @@ public class ImageGeneratorTests {
         Assert.Single(generated);
     }
 
-    //  Helpers 
+    //  Models.Generation.UseIt
+
+    [Fact]
+    public void Run_BackendUnavailable_IsTheShippedBehaviour_GatedPlaceholderRecord() {
+        // Models.Generation.UseIt ships false, so this is what every job produces today. Pinned as the
+        // baseline the toggle must not have moved.
+        List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
+
+        IReadOnlyList<ImageRecord_GENERATED> generated =
+            ImageGenerator.Run(records, generationEnabled: true, generationBackendAvailable: false);
+
+        Assert.Single(generated);
+        Assert.Equal(GenerationStatus.Gated, generated[0].Status);
+        Assert.Equal(GenerationRouteState.Gated, records[0].GenerationRouteState);
+    }
+
+    [Fact]
+    public void Run_BackendAvailable_SkipsPlaceholderCreation() {
+        // Why Generation must not default to true: with no real inference wired up, flipping it skips
+        // the Gated-placeholder branch and the family silently produces nothing at all.
+        List<ImageRecord_LAMBDA> records = [MakeLambda("hero.jpg", "FAM001", 0, width: 2000, height: 2000)];
+
+        IReadOnlyList<ImageRecord_GENERATED> generated =
+            ImageGenerator.Run(records, generationEnabled: true, generationBackendAvailable: true);
+
+        Assert.Empty(generated);
+        Assert.Empty(records[0].GeneratedChildren);
+    }
+
+    //  Helpers
 
     /// <summary>
     /// Creates a minimal <see cref="ImageRecord_LAMBDA"/> with Family, DetOrder, and dimensions set,
