@@ -148,7 +148,10 @@ Inc.:   - All XLSX building
 2026-08-11 20:08:52 | X SMASHEDLEMON45 | JobID=f40f8b9d-35e1-401e-99f5-aef099b4f00c | images=1774 ok=1732 dedup-excluded=0 | Job OK rate: 97.6% | duration: 00:36:17 (2177.6s)
 
 
---- ROUND 4 - Post-pair-dev-sessions (new skill who dis) ---
+--- ROUND 4 - Post-pair-dev-sessions (Decisive OKR run) ---
 
 2026-08-11 21:22:27 | X SMASHEDLEMON45 | JobID=b27efb41-8b18-4acf-8933-f0bb30808b00 | images=1774 ok=1732 dedup-excluded=0 | Job OK rate: 97.6% | duration: 00:43:02 (2582.9s)
 
+2026-08-12 10:56:12 | OHMYBAG1 | JobID=- | images=0 ok=0 dedup-excluded=0 | Job OK rate: 0% | duration: 00:00:00 (0.2s) | SUBMIT_ERROR: No accepted image files to submit.
+2026-08-12 10:56:28 | WOODWIC12 | JobID=272bc80b-0b30-42c7-a799-870e10cf0b1a | images=9 ok=9 dedup-excluded=0 | Job OK rate: 100% | duration: 00:00:15 (15.6s)
+2026-08-12 10:58:09 | X DEMEYER31 | JobID=2037369f-e429-45b3-bc56-3348cc1f2fbe | images=20 ok=3 dedup-excluded=0 | Job OK rate: 15% | duration: 00:01:40 (101s)

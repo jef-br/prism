@@ -83,6 +83,40 @@ function Get-PrismRelativePath {
     return $relative -replace '\\', '/'
 }
 
+function Expand-PrismZip {
+    <#
+      Extracts $ZipPath into $Destination entry by entry, skipping directory entries and any entry
+      whose normalised path would land outside $Destination.
+      ZipFile::ExtractToDirectory cannot be used here: several supplier archives (OHMYBAG1's
+      "PRODUCT VISUALS.zip", the three KNEIPP56 zips) start with an entry literally named "/", which
+      Path.Combine treats as a rooted path, so .NET aborts the whole extraction with "would have
+      resulted in a file outside the specified destination directory" before a single file lands —
+      leaving the job with only its .xlsx and failing as "No accepted image files to submit."
+    #>
+    param(
+        [Parameter(Mandatory)][string]$ZipPath,
+        [Parameter(Mandatory)][string]$Destination
+    )
+
+    $destRoot = (Resolve-Path -LiteralPath $Destination).Path.TrimEnd('\') + '\'
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+    try {
+        foreach ($entry in $archive.Entries) {
+            if ([string]::IsNullOrEmpty($entry.Name)) { continue }
+            $relative = ($entry.FullName -replace '/', '\').TrimStart('\')
+            $target = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($destRoot, $relative))
+            if (-not $target.StartsWith($destRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+                Write-Warning "Skipping zip entry outside destination: $($entry.FullName)"
+                continue
+            }
+            New-Item -ItemType Directory -Path ([System.IO.Path]::GetDirectoryName($target)) -Force | Out-Null
+            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+        }
+    } finally {
+        $archive.Dispose()
+    }
+}
+
 function Get-PrismJobInputFiles {
     <#
       Collects accepted upload files from $Folder. Loose files are gathered recursively; ZIPs are
@@ -113,7 +147,7 @@ function Get-PrismJobInputFiles {
         $dest = Join-Path $ZipExpandDir "zip$zipIndex"
         New-Item -ItemType Directory -Path $dest -Force | Out-Null
         try {
-            [System.IO.Compression.ZipFile]::ExtractToDirectory($zip.FullName, $dest)
+            Expand-PrismZip -ZipPath $zip.FullName -Destination $dest
             $destRoot = (Resolve-Path -LiteralPath $dest).Path
             $zipMembers = @(Get-ChildItem -Path $dest -Recurse -File | Where-Object { $_.Extension.ToLowerInvariant() -ne $script:ZipExtension })
             foreach ($member in $zipMembers) {
