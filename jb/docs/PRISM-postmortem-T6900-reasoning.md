@@ -115,6 +115,28 @@ pixel work irrelevant to the question being asked. The investigation had been pa
 cost for a filename-only answer, which is also why iteration was slow enough that guessing felt
 cheaper than measuring — the loop that makes error #4 attractive.
 
+## A sixth error, made while writing this document
+
+Worth recording because it shows the failure mode is not something previous sessions were uniquely
+prone to. After parallelizing `RefinePhenotypes` ([[T-6910]]), the fix was verified with a full
+pipeline rerun. It came back **slower** — 43m02s against a 36m17s baseline — which read as a
+regression in the change just made.
+
+It was not. That job shared the machine with roughly ten minutes of test suites, builds and commits,
+while the baseline had run nearly clean. **Two uncontrolled 40-minute runs cannot resolve a difference
+of a few minutes.** The confounder was known at the time and the comparison was made anyway, because
+an end-to-end number *feels* more authoritative than a micro-benchmark.
+
+Isolating the one variable — the same 24 images, one process, sequential loop versus parallel loop,
+machine idle — took under three minutes and gave an unambiguous **4.87×** (476 ms/image → 98 ms/image).
+
+> **Rule.** An end-to-end number is not automatically better evidence than a targeted one. It is
+> better only when everything else is held still. If it is not, the smaller controlled measurement is
+> the more trustworthy of the two, not the weaker.
+
+Note also what the e2e run *was* good for: match output was byte-identical across both runs
+(`ok=1732`). Use the expensive run to confirm correctness, the isolated one to measure speed.
+
 ## Checklist for the next "it hangs" report
 
 1. **How much work is there, and how fast is that kind of work?** Two numbers, before any theory.
@@ -123,6 +145,8 @@ cheaper than measuring — the loop that makes error #4 attractive.
 4. **What does each hypothesis predict for this control?** If the predictions agree, do not run it.
 5. **Has the headline claim itself been measured, or only inherited?** Measure it first.
 6. **Can the deciding question be answered without the expensive part?** Usually yes, and usually 1000× faster.
+7. **When comparing two runs, was anything else different?** If yes, the comparison is void — isolate
+   the one variable instead. An end-to-end number is only authoritative when everything else is held still.
 
 See also: [[T-6900]] (root cause + matching measurement), [[T-6910]] (the one real defect this
 uncovered: full-resolution analysis running twice, second pass single-threaded).
