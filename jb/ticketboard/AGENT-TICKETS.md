@@ -14,7 +14,7 @@ user-facing summaries.
 | Ticket | Status | Title | Do this next |
 |---|---|---|---|
 | [T-2600](T-2600.md) | Blocked | M5 Classify groundwork | Land T-5070 and T-5080, then re-score CiMini's 99 labelled rows |
-| [T-2840](T-2840.md) | Ready | CLIP batch-composition sensitivity, confirmed (T-2820 recurrence) | Decide the closing criteria — all 4 original families now explained by other tickets or reduced to ordering noise |
+| [T-2840](T-2840.md) | Ready | CLIP batch-composition sensitivity, confirmed (T-2820 recurrence) | Decide whether the near-tie ordering residual closes here or moves to T-5080, then close |
 | [T-3800](T-3800.md) | Blocked | Match bracket validation | Author a Bracket-4 image and a reference-free fuzzy-colour image; no dataset has either |
 | [T-4000](T-4000.md) | Ready | Analyzer calibration backlog | Split the 11 analyzer calibration questions into their own tickets, one at a time |
 | [T-4942](T-4942.md) | Ready | Test projects fight over the GPU | Fix the K&R formatting violation in `ModelBuilder.cs` blocking CI, then get a real CI run to pass the floor gate |
