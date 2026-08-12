@@ -31,8 +31,10 @@ user-facing summaries.
 | [T-5130](T-5130.md) | Ready | Excel column-fill-rate gate drops sparse description columns | Decide how a sparse-but-real filename-reference column should be treated, then implement |
 | [T-5200](T-5200.md) | Ready | SiblingPropagator loose-relation scan is unindexed O(n²) | Add a test covering `crossBracketCandidates` filtering (currently untested), then close |
 | [T-5210](T-5210.md) | Ready | SiblingPropagator may reinvent token evidence Brackets 1-3 built | Read both token shapes and decide whether BuildProfile can reuse existing MatchEvidence |
-| [T-6910](T-6910.md) | Review | Full-resolution pixel analysis runs twice, second pass single-threaded | Review the parallel-Refine fix; decide whether scaled decode (direction 2) is worth re-blessing the golden |
 | [T-6920](T-6920.md) | Ready | Unique-article match should refuse a colour code the family's Excel data doesn't have | Start a `/pair` session on the per-family colour-code membership check in `NumericMatcher` |
+| [T-6930](T-6930.md) | Ready | Pass 1's chunk barrier caps effective parallelism at ~3 of 8 threads | Measure sustained core use before/after switching to a flat or size-aware chunking scheme |
+| [T-6940](T-6940.md) | Ready | Match-only runs still pay for feature-analysis work matching never reads | Scope a match-only fast path that skips decode/hash/analyze when nothing downstream needs it |
+| [T-6950](T-6950.md) | Ready | Direction 2: stop decoding at full resolution for scale-invariant analyzers | Decide whether the wall-clock win is worth a deliberate CiMini golden re-bless |
 
 Done tickets live in [`AGENT-TICKETS-ARCHIVE.md`](AGENT-TICKETS-ARCHIVE.md). Read it only when you need
 history.
