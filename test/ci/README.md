@@ -45,9 +45,13 @@ Both run on `runs-on: [self-hosted, windows]`.
 
    | Asset | Source of the relative path |
    |---|---|
-   | CLIP dir + filenames | `jb/src/core/config/Prism_Config.json` → `Models.Clip.Dir` / `.Model` / `.Vocab` / `.Merges` |
-   | Real-ESRGAN | `jb/src/core/config/Prism_Config.json` → `Models.Upscale.Path` |
-   | YOLO26 | `jb/src/core/config/Prism_Config.json` → `Models.Yolo.Path` |
+   | CLIP dir + filenames | `jb/src/core/config/Prism_Config.json` → `Models.classification.Dir` / `.Model` / `.Vocab` / `.Merges` |
+   | Real-ESRGAN | `jb/src/core/config/Prism_Config.json` → `Models.Upscaling.Path` |
+   | YOLO26 | `jb/src/core/config/Prism_Config.json` → `Models.Detection.Path` |
+
+   Each of those sections also carries a `UseIt` boolean. A model whose `UseIt` is `false` is never
+   loaded and its asset is not existence-checked at startup — so a runner missing one model can still
+   run the rest of the suite by switching that model off rather than by faking the file.
 
 3. **Machine-level environment variables** (System, so the runner service inherits them):
 
