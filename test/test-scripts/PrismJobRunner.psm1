@@ -19,7 +19,7 @@ $script:ZipExtension    = '.zip'
 $script:MinImageBytes = 2048
 $script:MaxImageBytes = 262144000
 $script:MinExcelBytes = 9216
-$script:MaxExcelBytes = 5242880
+$script:MaxExcelBytes = 15728640
 
 function Ensure-PrismApi {
     <#
@@ -221,8 +221,12 @@ function Invoke-PrismFolderJob {
     $workDir = Join-Path ([System.IO.Path]::GetTempPath()) "prism-test-$folderName-$([System.Guid]::NewGuid().ToString('N'))"
     try {
         # @(...) is load-bearing: a single accepted file comes back as a scalar object, which has no
-        # .Count under StrictMode.
-        $files = @(Get-PrismJobInputFiles -Folder $Folder -ZipExpandDir $workDir)
+        # .Count under StrictMode. The Where-Object is load-bearing too: Get-PrismJobInputFiles
+        # returns $null when no valid .xlsx remains, and @($null) has Count 1 — so a bare count check
+        # lets the doomed job through to Submit-PrismJob, where the mandatory [object[]]$Files bind
+        # rejects it and logs a misleading "Cannot bind argument to parameter 'Files'" SUBMIT_ERROR
+        # instead of NO_VALID_XLSX.
+        $files = @(Get-PrismJobInputFiles -Folder $Folder -ZipExpandDir $workDir | Where-Object { $null -ne $_ })
         if ($files.Count -eq 0) {
             Write-PrismLogLine -LogPath $LogPath -Folder $folderName -JobId '-' -Total 0 -Ok 0 -DurationSeconds $stopwatch.Elapsed.TotalSeconds -Note 'NO_VALID_XLSX'
             return
