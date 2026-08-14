@@ -14,7 +14,7 @@ $folders = @(
     'MMERO26'
 )
 
-Ensure-PrismApi -BaseUrl $BaseUrl -RepoRoot $repoRoot
+Initialize-PrismApi -BaseUrl $BaseUrl -RepoRoot $repoRoot
 
 foreach ($folder in $folders) {
     Write-Host "==== $folder ===="

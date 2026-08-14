@@ -107,7 +107,7 @@ pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Match -Dataset CiMini
 pwsh test/ci/Invoke-CiPipeline.ps1 -Mode Full -Dataset CiMini
 ```
 
-The script starts the API if needed (`Ensure-PrismApi`), submits the fixture, and compares the manifest
+The script starts the API if needed (`Initialize-PrismApi`), submits the fixture, and compares the manifest
 to the golden. It **fails** on any FamilyId/Status/filename/det mismatch, a missing output image, an
 empty manifest, or an all-KO run (the vacuous-green guard).
 

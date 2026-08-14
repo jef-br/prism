@@ -3,7 +3,7 @@
 
   Submits test/datasets/<Dataset> through the PRISM pipeline and asserts the resulting manifest
   against committed "golden" expectations. Reuses the primitives in test-scripts/PrismJobRunner.psm1
-  (Ensure-PrismApi, Get-PrismJobInputFiles, Submit-PrismJob, Wait-PrismResult).
+  (Initialize-PrismApi, Get-PrismJobInputFiles, Submit-PrismJob, Wait-PrismResult).
 
   Modes:
     -Mode Match  Fast PR gate: Transform/Generation off, SkipClassification on, JSON result.
@@ -46,7 +46,7 @@ if (-not $Capture -and -not (Test-Path $goldenPath)) {
     throw "Golden file missing: $goldenPath. Run once with -Capture (after verifying output) to create it."
 }
 
-Ensure-PrismApi -BaseUrl $BaseUrl -RepoRoot $repoRoot
+Initialize-PrismApi -BaseUrl $BaseUrl -RepoRoot $repoRoot
 
 # ---- Run the job -----------------------------------------------------------------------------
 $workDir = Join-Path ([System.IO.Path]::GetTempPath()) "prism-ci-$Dataset-$([Guid]::NewGuid().ToString('N'))"

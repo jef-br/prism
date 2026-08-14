@@ -21,7 +21,7 @@ $script:MaxImageBytes = 262144000
 $script:MinExcelBytes = 9216
 $script:MaxExcelBytes = 15728640
 
-function Ensure-PrismApi {
+function Initialize-PrismApi {
     <#
       Ensures the PRISM API is reachable and ready at $BaseUrl.
       If /PRISM/health is unreachable, launches `dotnet run` for Prism.Api.csproj from $RepoRoot
@@ -33,17 +33,17 @@ function Ensure-PrismApi {
     )
 
     if (Test-PrismHealthy -BaseUrl $BaseUrl) {
-        Write-Host "[Ensure-PrismApi] API already healthy at $BaseUrl"
+        Write-Host "[Initialize-PrismApi] API already healthy at $BaseUrl"
         return
     }
 
     # Build synchronously first so build errors fail fast and the detached run cannot race a
     # concurrent build for obj/ file locks; then launch the prebuilt API.
-    Write-Host "[Ensure-PrismApi] API not reachable — building Prism.Api ..."
+    Write-Host "[Initialize-PrismApi] API not reachable — building Prism.Api ..."
     & dotnet build "$RepoRoot/jb/src/api/Prism.Api.csproj" -clp:ErrorsOnly
     if ($LASTEXITCODE -ne 0) { throw "Prism.Api build failed (exit $LASTEXITCODE); cannot start the API." }
 
-    Write-Host "[Ensure-PrismApi] Launching Prism.Api ..."
+    Write-Host "[Initialize-PrismApi] Launching Prism.Api ..."
     $command = "Set-Location '$RepoRoot'; dotnet run --no-build --project jb/src/api/Prism.Api.csproj"
     Start-Process pwsh -ArgumentList '-NoExit', '-Command', $command | Out-Null
 
@@ -51,7 +51,7 @@ function Ensure-PrismApi {
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds 3
         if (Test-PrismHealthy -BaseUrl $BaseUrl) {
-            Write-Host "[Ensure-PrismApi] API is healthy."
+            Write-Host "[Initialize-PrismApi] API is healthy."
             return
         }
     }
@@ -511,4 +511,4 @@ function Write-PrismLogLine {
     Write-Host $line
 }
 
-Export-ModuleMember -Function Ensure-PrismApi, Get-PrismJobInputFiles, Invoke-PrismFolderJob, Write-PrismLogLine, Submit-PrismJob, Wait-PrismResult
+Export-ModuleMember -Function Initialize-PrismApi, Get-PrismJobInputFiles, Invoke-PrismFolderJob, Write-PrismLogLine, Submit-PrismJob, Wait-PrismResult
