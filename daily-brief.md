@@ -24,7 +24,7 @@
 > T-2840 and T-5010 are not done yet. The daily brief for 12/08/2026 should reflect that.
 
 ##### Changed
-- None — no commits since the 14/08 brief; `origin/main`, the local branch, and the working tree all sit at `b7ce41c` with nothing staged or modified. Ticket board is unchanged: T-2840 still Ready, T-5010 still Active, T-4942/T-5090/T-5200 still Ready, T-4980/T-5120 still Blocked.
+- None — no commits since the 16/08 brief (`e17f665`); `origin/main`, the local branch, and the working tree all sit at that commit with nothing staged or modified. Ticket board files untouched since 16/08 23:14; the six `jb/src/**/jbtodo.md` last moved on 2026-08-07, root `jbtodo.md` on 2026-08-12. Board unchanged: T-2840 Ready, T-5010 Active, T-4942/T-5090/T-5200 Ready, T-4980/T-5120 Blocked.
 
 ##### Next steps
 - Recapture both CiMini goldens (`-Mode Match` and `-Mode Full`, per its README) — still not done since `4cced83`/shadow additions changed the image set; every phenotype/match number stays untrustworthy until they re-bless.
@@ -36,4 +36,4 @@
 - Clear the standing Review verdicts: T-4942 needs the `-m:1` + 500-test floor confirmed on a real CI run (fix the `ModelBuilder.cs` K&R violation first); T-4980 stays "golden red, fix owned by T-5120," not a close.
 
 ##### Todo updates
-- None — nothing improvable without guessing. Repo is byte-for-byte identical to the 14/08 pass, which already lifted every answer available from existing data (Match items 1/2 fixtures now in CiMini; Classify/root phenotype re-score still baseline-shifted by the 0.42 hero-orientation change). No new data landed, so Export Todo 4's `Tx_*` self-write, HeadCutter crown-offset, Generate (FROZEN), and the `difficult shadows/` set all stay blocked on measurement, not on this pass.
+- None — nothing improvable without guessing. Repo is byte-for-byte identical to the 16/08 pass (same HEAD `e17f665`, no working-tree edits), which itself carried forward the 14/08 conclusion that every answer liftable from existing data had already been lifted. No new measurements, no new dataset, no new commits — Match items 1/2, Classify item 2 + root phenotype re-score, Export Todo 4's `Tx_*` self-write, HeadCutter crown-offset, Generate (FROZEN), and the `difficult shadows/` set all stay blocked on measurement, not on this pass.
