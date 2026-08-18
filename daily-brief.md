@@ -24,7 +24,7 @@
 > T-2840 and T-5010 are not done yet. The daily brief for 12/08/2026 should reflect that.
 
 ##### Changed
-- None — no commits since the 16/08 brief (`e17f665`); `origin/main`, the local branch, and the working tree all sit at that commit with nothing staged or modified. Ticket board files untouched since 16/08 23:14; the six `jb/src/**/jbtodo.md` last moved on 2026-08-07, root `jbtodo.md` on 2026-08-12. Board unchanged: T-2840 Ready, T-5010 Active, T-4942/T-5090/T-5200 Ready, T-4980/T-5120 Blocked.
+- None — no commits since the 17/08 brief (`5c60b9e`); `origin/main`, the local branch, and the working tree all sit at that commit with nothing staged or modified. Last real code commit remains `7f9e8af` (shadow additions); everything after is daily-brief commits. Ticket board files untouched; the six `jb/src/**/jbtodo.md` last moved 2026-08-07, root `jbtodo.md` 2026-08-12. Board unchanged: T-2840 Ready, T-5010 Active, T-4942/T-5090/T-5200 Ready, T-4980/T-5120 Blocked.
 
 ##### Next steps
 - Recapture both CiMini goldens (`-Mode Match` and `-Mode Full`, per its README) — still not done since `4cced83`/shadow additions changed the image set; every phenotype/match number stays untrustworthy until they re-bless.
@@ -36,4 +36,4 @@
 - Clear the standing Review verdicts: T-4942 needs the `-m:1` + 500-test floor confirmed on a real CI run (fix the `ModelBuilder.cs` K&R violation first); T-4980 stays "golden red, fix owned by T-5120," not a close.
 
 ##### Todo updates
-- None — nothing improvable without guessing. Repo is byte-for-byte identical to the 16/08 pass (same HEAD `e17f665`, no working-tree edits), which itself carried forward the 14/08 conclusion that every answer liftable from existing data had already been lifted. No new measurements, no new dataset, no new commits — Match items 1/2, Classify item 2 + root phenotype re-score, Export Todo 4's `Tx_*` self-write, HeadCutter crown-offset, Generate (FROZEN), and the `difficult shadows/` set all stay blocked on measurement, not on this pass.
+- None — nothing improvable without guessing. Repo is byte-for-byte identical to the 17/08 pass (same HEAD `5c60b9e`, clean tree), which carried forward the earlier conclusion that every answer liftable from existing data had already been lifted. The two Match jbtodo items (StringMatcher fuzzy categorical, SemanticMatcher `totalImageTokens`) already carry implemented-on-main fixes whose only remaining step is a labeled before/after run — a measurement, not a lift. No new commits, dataset, or measurement this pass; the same blocked items (root phenotype re-score, Export `Tx_*` self-write, HeadCutter crown-offset, Generate FROZEN, `difficult shadows/`) all still wait on data, not on this pass.
