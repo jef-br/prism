@@ -1,34 +1,33 @@
 [
   {
     "SourceReference": "100267_1.jpg",
-    "FamilyId": "91337133",
-    "Note": "filename-in-cell: '100267_1.jpg' appears verbatim in the marketing description"
+    "FamilyId": null,
+    "Note": "Confirmed KO 25/08/26: the marketing-description text ('100267_1.jpg' verbatim in the cell) is not indexed by the matcher - filename-in-cell is not an implemented mechanism. Live -Mode Full capture rejects all seven 100267_* as MATCH_NOT_FOUND; this is the desired/correct behavior, not a defect."
   },
   {
     "SourceReference": "100267_2.jpg",
-    "FamilyId": "91337133"
+    "FamilyId": null
   },
   {
     "SourceReference": "100267_3.jpg",
-    "FamilyId": "91337133"
+    "FamilyId": null
   },
   {
     "SourceReference": "100267_4.jpg",
-    "FamilyId": "91337133"
+    "FamilyId": null
   },
   {
     "SourceReference": "100267_5.jpg",
-    "FamilyId": "91337133"
+    "FamilyId": null
   },
   {
     "SourceReference": "100267_6  - BW001_c.jpg",
-    "FamilyId": "91337133",
-    "Note": "double space in filename; BW001 token resolves to nothing"
+    "FamilyId": null,
+    "Note": "double space in filename; BW001 token resolves to nothing either way"
   },
   {
     "SourceReference": "100267_7 - BW001_c.jpg",
-    "FamilyId": "91337133",
-    "Note": "description lists '100267_7' with no extension"
+    "FamilyId": null
   },
   {
     "SourceReference": "133726012.jpg",
@@ -127,19 +126,6 @@
   },
   {
     "SourceReference": "4471-2290-F.jpg",
-    "FamilyId": null
-  },
-  {
-    "SourceReference": "4471-2340-B.jpg",
-    "FamilyId": null,
-    "Note": "reference lives under two FamilyIDs across two sheets"
-  },
-  {
-    "SourceReference": "4471-2340-D.jpg",
-    "FamilyId": null
-  },
-  {
-    "SourceReference": "4471-2340-F.jpg",
     "FamilyId": null
   },
   {
@@ -441,5 +427,100 @@
     "SourceReference": "triggered_ghost_back.jpg",
     "FamilyId": "97019930",
     "Note": "ghost-back phenotype case"
+  },
+  {
+    "SourceReference": "4471-2290-F - Copy.jpg",
+    "FamilyId": null,
+    "Note": "Confirmed 25/08/26: KoReasonCode=MATCHES_MULTIPLE_FAMILYIDS (88884444, 98884444) - same cross-sheet collision as 4471-2290-B/D/F.jpg, not a VISUAL_DUPLICATE as originally assumed; matching fails before dedup is ever reached"
+  },
+  {
+    "SourceReference": "5283-410-achterkant.jpg",
+    "FamilyId": "96000017",
+    "Note": "Confirmed 25/08/26 via live capture (NumericMatcher.Bracket1): exact reference match, back view of the same family as 5283-410.jpg"
+  },
+  {
+    "SourceReference": "5283-410.jpg",
+    "FamilyId": "96000017",
+    "Note": "Confirmed 25/08/26 via live capture (NumericMatcher.Bracket1): exact reference match"
+  },
+  {
+    "SourceReference": "6318-5274.jpg",
+    "FamilyId": "96000001",
+    "Note": "Confirmed 25/08/26 via live capture (NumericMatcher.Bracket1): exact reference match, unambiguous"
+  },
+  {
+    "SourceReference": "90861071_b.jpg",
+    "FamilyId": "90861071",
+    "Note": "Confirmed 25/08/26 via live capture (NumericMatcher.Bracket1): filename carries the FamilyID directly, second image of the family already golden via 23231096_35_A.jpg"
+  },
+  {
+    "SourceReference": "90861083_e.jpg",
+    "FamilyId": "90861083",
+    "Note": "Confirmed 25/08/26 via live capture (NumericMatcher.Bracket1): filename carries the FamilyID directly, third image of the family already golden via 23211008_02_A/B.jpg"
+  },
+  {
+    "SourceReference": "IMG_2619_indigo.png",
+    "FamilyId": null,
+    "Note": "Confirmed KO 25/08/26: MATCH_NOT_FOUND. Only candidate is 96000012 (Jeans, Color='Indigo Blue') via the single token 'indigo' - below bracket3MinDistinctTokens=2, no identifier-grade bypass. Visually the right product, evidence insufficient (same shape as IMG_4432.png)"
+  },
+  {
+    "SourceReference": "IMG_7710.jpg",
+    "FamilyId": null,
+    "Note": "Confirmed KO 25/08/26: MATCH_NOT_FOUND, no Excel evidence at all for this filename"
+  },
+  {
+    "SourceReference": "IMG_9021.jpg",
+    "FamilyId": null,
+    "Note": "Confirmed KO 25/08/26: MATCH_NOT_FOUND, no Excel evidence at all for this filename"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_1-back.jpg",
+    "FamilyId": "98636303",
+    "Note": "Confirmed 25/08/26 via live capture (StringMatcher.Bracket3): reference tokens omb/e166/bv match verbatim, same family as OMB-E166-BV_1/2/3/4.jpg"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_1-front.jpg",
+    "FamilyId": "98636303",
+    "Note": "Confirmed 25/08/26 via live capture (StringMatcher.Bracket3): reference tokens omb/e166/bv match verbatim, same family as OMB-E166-BV_1/2/3/4.jpg"
+  },
+  {
+    "SourceReference": "blue-hoodie.jpg",
+    "FamilyId": "96000009",
+    "Note": "Confirmed 25/08/26 via live capture (StringMatcher.Bracket3): tokens 'blue'+'hoodie' hit exactly one family (96000009: Type=Hoodie, Color=Blue) - unambiguous 2-token categorical match"
+  },
+  {
+    "SourceReference": "blue.jpg",
+    "FamilyId": null,
+    "Note": "Confirmed KO 25/08/26: MATCH_NOT_FOUND, single token 'blue' insufficient (mirrors blue-hoodie.jpg's 2-token accept vs this 1-token reject)"
+  },
+  {
+    "SourceReference": "charcol-wrap.jpg",
+    "FamilyId": null,
+    "Note": "Confirmed KO 25/08/26: MATCH_NOT_FOUND. Tokens 'charcol'(sic)/'wrap' only appear in 96000008's free-text Description, not any categorical field (its Type is SCARF, not 'wrap') - no evidence to match on"
+  },
+  {
+    "SourceReference": "graphite-scarf.jpg",
+    "FamilyId": "96000008",
+    "Note": "Confirmed 25/08/26 via live capture (StringMatcher.Bracket3): tokens 'graphite'+'scarf' exact-match 96000008's Type=SCARF and Color=graphite, unambiguous 2-token categorical match"
+  },
+  {
+    "SourceReference": "green-sweater-back.jpg",
+    "FamilyId": null,
+    "Note": "Confirmed KO 25/08/26: tokens 'green'+'sweater' hit TWO families equally (96000016: Type=Sweater/Color=Green, and 96000001: Type=SWEATER/Color=Green - already claimed by 6318-5274.jpg's exact reference match). No digit token to break the tie -> genuine ambiguity, matcher correctly refuses to guess"
+  },
+  {
+    "SourceReference": "green-sweater-front.jpg",
+    "FamilyId": null,
+    "Note": "Same ambiguity as green-sweater-back.jpg (96000016 vs 96000001, both Type=Sweater/Color=Green, no tie-break evidence)"
+  },
+  {
+    "SourceReference": "grey-scarf.jpg",
+    "FamilyId": "96000007",
+    "Note": "Confirmed 25/08/26 via live capture (StringMatcher.Bracket3): 'scarf' exact-matches Type=SCARF, 'grey' fuzzy-matches Color='gray' (US spelling, 1 edit) - 2-token categorical match"
+  },
+  {
+    "SourceReference": "sweater-detail.jpg",
+    "FamilyId": null,
+    "Note": "Confirmed KO 25/08/26: single token 'sweater' hits THREE families (96000016, 96000001, 90861052 - all Type=SWEATER/Sweater), below bracket3MinDistinctTokens=2 regardless of tie-break"
   }
 ]

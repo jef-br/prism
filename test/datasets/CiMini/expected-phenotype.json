@@ -141,18 +141,6 @@
     "Phenotype": "front-packshot"
   },
   {
-    "SourceReference": "4471-2340-B.jpg",
-    "Phenotype": "back-packshot"
-  },
-  {
-    "SourceReference": "4471-2340-D.jpg",
-    "Phenotype": "closeup-image"
-  },
-  {
-    "SourceReference": "4471-2340-F.jpg",
-    "Phenotype": "front-packshot"
-  },
-  {
     "SourceReference": "8712345678901-2.jpg",
     "Phenotype": "side-on-model",
     "Confidence": "low",
@@ -468,5 +456,160 @@
   {
     "SourceReference": "triggered_ghost_back.jpg",
     "Phenotype": "back-packshot"
+  },
+  {
+    "SourceReference": "4471-2290-F - Copy.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "5283-410-achterkant.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "5283-410.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "6318-5274.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "90861071_b.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "90861083_e.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "IMG_2619_indigo.png",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "IMG_7710.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "IMG_9021.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_1-back.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "OMB-E166-BV_1-front.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "blue-hoodie.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "blue.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "charcol-wrap.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99218611_det2.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99218894_det0.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99219082_det0.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99219209_det0.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99219453_det0.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99219688_det0.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99219692_det0.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99219695_det0.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99219780_det0.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99219782_det0.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99219905_det0.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "difficult shadows/99219910_det1.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "graphite-scarf.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "green-sweater-back.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "green-sweater-front.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "grey-scarf.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
+  },
+  {
+    "SourceReference": "sweater-detail.jpg",
+    "Phenotype": null,
+    "Note": "TODO - not yet judged, pending Excel cross-reference"
   }
 ]

@@ -59,36 +59,36 @@
     "SourceReference": "2021_3024_46_A - Copy.jpg",
     "Status": "Ok",
     "FamilyId": "90861025",
-    "FinalFileName": "90861025_det2.jpg",
-    "DetOrder": 2
-  },
-  {
-    "SourceReference": "2021_3024_46_A.jpg",
-    "Status": "Ok",
-    "FamilyId": "90861025",
     "FinalFileName": "90861025_det0.jpg",
     "DetOrder": 0
   },
   {
-    "SourceReference": "2021_3024_46_B.jpg",
+    "SourceReference": "2021_3024_46_A.jpg",
     "Status": "Ok",
     "FamilyId": "90861025",
     "FinalFileName": "90861025_det1.jpg",
     "DetOrder": 1
   },
   {
+    "SourceReference": "2021_3024_46_B.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861025",
+    "FinalFileName": "90861025_det2.jpg",
+    "DetOrder": 2
+  },
+  {
     "SourceReference": "2021_3041_65_A - Copy.jpg",
     "Status": "Ok",
     "FamilyId": "90861026",
-    "FinalFileName": "90861026_det1.jpg",
-    "DetOrder": 1
+    "FinalFileName": "90861026_det0.jpg",
+    "DetOrder": 0
   },
   {
     "SourceReference": "2021_3041_65_A.jpg",
     "Status": "Ok",
     "FamilyId": "90861026",
-    "FinalFileName": "90861026_det0.jpg",
-    "DetOrder": 0
+    "FinalFileName": "90861026_det1.jpg",
+    "DetOrder": 1
   },
   {
     "SourceReference": "23211008_02_A.jpg",
@@ -115,8 +115,8 @@
     "SourceReference": "24211507_CARDIGAN_76_MAGENTA_B.jpg",
     "Status": "Ok",
     "FamilyId": "90861052",
-    "FinalFileName": "90861052_det0.jpg",
-    "DetOrder": 0
+    "FinalFileName": "90861052_det1.jpg",
+    "DetOrder": 1
   },
   {
     "SourceReference": "24211511_86_A.jpg",
@@ -136,8 +136,8 @@
     "SourceReference": "2426834-7558_bottom-packshot_sole.jpg",
     "Status": "Ok",
     "FamilyId": "98768768",
-    "FinalFileName": "98768768_det2.jpg",
-    "DetOrder": 2
+    "FinalFileName": "98768768_det0.jpg",
+    "DetOrder": 0
   },
   {
     "SourceReference": "2426834-7558_FW001_e.jpg",
@@ -150,8 +150,8 @@
     "SourceReference": "2426834-7558_side-packshot_shoe.jpg",
     "Status": "Ok",
     "FamilyId": "98768768",
-    "FinalFileName": "98768768_det0.jpg",
-    "DetOrder": 0
+    "FinalFileName": "98768768_det2.jpg",
+    "DetOrder": 2
   },
   {
     "SourceReference": "2426834-7558_top-packshot_overhead.jpg",
@@ -164,22 +164,22 @@
     "SourceReference": "26182-Denim-801/1.jpg",
     "Status": "Ok",
     "FamilyId": "99985047",
-    "FinalFileName": "99985047_det1.jpg",
-    "DetOrder": 1
+    "FinalFileName": "99985047_det0.jpg",
+    "DetOrder": 0
   },
   {
     "SourceReference": "26182-Denim-801/2.jpg",
     "Status": "Ok",
     "FamilyId": "99985047",
-    "FinalFileName": "99985047_det0.jpg",
-    "DetOrder": 0
+    "FinalFileName": "99985047_det1.jpg",
+    "DetOrder": 1
   },
   {
     "SourceReference": "26182-Denim-801/a (1).jpg",
     "Status": "Ok",
     "FamilyId": "99985047",
-    "FinalFileName": "99985047_det3.jpg",
-    "DetOrder": 3
+    "FinalFileName": "99985047_det2.jpg",
+    "DetOrder": 2
   },
   {
     "SourceReference": "4471-2290-B.jpg",
@@ -210,25 +210,25 @@
     "DetOrder": null
   },
   {
-    "SourceReference": "4471-2340-B.jpg",
-    "Status": "Ko",
-    "FamilyId": null,
-    "FinalFileName": null,
-    "DetOrder": null
+    "SourceReference": "5283-410-achterkant.jpg",
+    "Status": "Ok",
+    "FamilyId": "96000017",
+    "FinalFileName": "96000017_det0.jpg",
+    "DetOrder": 0
   },
   {
-    "SourceReference": "4471-2340-D.jpg",
-    "Status": "Ko",
-    "FamilyId": null,
-    "FinalFileName": null,
-    "DetOrder": null
+    "SourceReference": "5283-410.jpg",
+    "Status": "Ok",
+    "FamilyId": "96000017",
+    "FinalFileName": "96000017_det1.jpg",
+    "DetOrder": 1
   },
   {
-    "SourceReference": "4471-2340-F.jpg",
-    "Status": "Ko",
-    "FamilyId": null,
-    "FinalFileName": null,
-    "DetOrder": null
+    "SourceReference": "6318-5274.jpg",
+    "Status": "Ok",
+    "FamilyId": "96000001",
+    "FinalFileName": "96000001_det0.jpg",
+    "DetOrder": 0
   },
   {
     "SourceReference": "8712345678901-2.jpg",
@@ -241,15 +241,15 @@
     "SourceReference": "8712345678901-3.jpg",
     "Status": "Ok",
     "FamilyId": "99985014",
-    "FinalFileName": "99985014_det2.jpg",
-    "DetOrder": 2
+    "FinalFileName": "99985014_det1.jpg",
+    "DetOrder": 1
   },
   {
     "SourceReference": "8712345678901.jpg",
     "Status": "Ok",
     "FamilyId": "99985014",
-    "FinalFileName": "99985014_det1.jpg",
-    "DetOrder": 1
+    "FinalFileName": "99985014_det2.jpg",
+    "DetOrder": 2
   },
   {
     "SourceReference": "87186790_1.jpg",
@@ -264,6 +264,20 @@
     "FamilyId": null,
     "FinalFileName": null,
     "DetOrder": null
+  },
+  {
+    "SourceReference": "90861071_b.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861071",
+    "FinalFileName": "90861071_det1.jpg",
+    "DetOrder": 1
+  },
+  {
+    "SourceReference": "90861083_e.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861083",
+    "FinalFileName": "90861083_det2.jpg",
+    "DetOrder": 2
   },
   {
     "SourceReference": "99218629_det0.jpg",
@@ -302,10 +316,10 @@
   },
   {
     "SourceReference": "99218809_det1.jpg",
-    "Status": "Ko",
+    "Status": "Ok",
     "FamilyId": "99218809",
-    "FinalFileName": null,
-    "DetOrder": null
+    "FinalFileName": "99218809_det1.jpg",
+    "DetOrder": 1
   },
   {
     "SourceReference": "99218810_det1.jpg",
@@ -339,64 +353,78 @@
     "SourceReference": "AY_FFK0230_83035_02FW001_A.png",
     "Status": "Ok",
     "FamilyId": "98226706",
-    "FinalFileName": "98226706_det0.jpg",
-    "DetOrder": 0
-  },
-  {
-    "SourceReference": "AY_FFK0230_83035_03FW001_c.png",
-    "Status": "Ok",
-    "FamilyId": "98226706",
     "FinalFileName": "98226706_det2.jpg",
     "DetOrder": 2
   },
   {
-    "SourceReference": "AY_FFK0230_83035_04.png",
+    "SourceReference": "AY_FFK0230_83035_03FW001_c.png",
     "Status": "Ok",
     "FamilyId": "98226706",
     "FinalFileName": "98226706_det3.jpg",
     "DetOrder": 3
   },
   {
-    "SourceReference": "AY_FFK0230_83035_05FW001_d.png",
+    "SourceReference": "AY_FFK0230_83035_04.png",
     "Status": "Ok",
     "FamilyId": "98226706",
     "FinalFileName": "98226706_det4.jpg",
     "DetOrder": 4
   },
   {
-    "SourceReference": "AY_FFK0230_83035_06FW001_f.png",
+    "SourceReference": "AY_FFK0230_83035_05FW001_d.png",
     "Status": "Ok",
     "FamilyId": "98226706",
     "FinalFileName": "98226706_det5.jpg",
     "DetOrder": 5
   },
   {
-    "SourceReference": "C153KB460011_Cedric__City_Grey_DETAIL.png",
+    "SourceReference": "AY_FFK0230_83035_06FW001_f.png",
     "Status": "Ok",
-    "FamilyId": "99147525",
-    "FinalFileName": "99147525_det2.jpg",
-    "DetOrder": 2
+    "FamilyId": "98226706",
+    "FinalFileName": "98226706_det0.jpg",
+    "DetOrder": 0
   },
   {
-    "SourceReference": "C153KB460011_Cedric_City_Grey_BAC.png",
+    "SourceReference": "blue-hoodie.jpg",
+    "Status": "Ok",
+    "FamilyId": "96000009",
+    "FinalFileName": "96000009_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "blue.jpg",
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
+  },
+  {
+    "SourceReference": "C153KB460011_Cedric__City_Grey_DETAIL.png",
     "Status": "Ok",
     "FamilyId": "99147525",
     "FinalFileName": "99147525_det0.jpg",
     "DetOrder": 0
   },
   {
-    "SourceReference": "C153KB460011_Cedric_City_Grey_FRON.png",
+    "SourceReference": "C153KB460011_Cedric_City_Grey_BAC.png",
     "Status": "Ok",
     "FamilyId": "99147525",
     "FinalFileName": "99147525_det1.jpg",
     "DetOrder": 1
   },
   {
+    "SourceReference": "C153KB460011_Cedric_City_Grey_FRON.png",
+    "Status": "Ok",
+    "FamilyId": "99147525",
+    "FinalFileName": "99147525_det2.jpg",
+    "DetOrder": 2
+  },
+  {
     "SourceReference": "C153KU420009_Kendall_Twill sand_BACK.png",
     "Status": "Ok",
     "FamilyId": "99147533",
-    "FinalFileName": "99147533_det2.jpg",
-    "DetOrder": 2
+    "FinalFileName": "99147533_det0.jpg",
+    "DetOrder": 0
   },
   {
     "SourceReference": "C153KU420009_Kendall_Twill sand_DETAIL1.png",
@@ -409,53 +437,109 @@
     "SourceReference": "C153KU420009_Kendall_Twill sand_FRONT.png",
     "Status": "Ok",
     "FamilyId": "99147533",
-    "FinalFileName": "99147533_det0.jpg",
-    "DetOrder": 0
+    "FinalFileName": "99147533_det2.jpg",
+    "DetOrder": 2
   },
   {
     "SourceReference": "CARDIGAN_MAGENTA76_A.jpg",
-    "Status": "Ok",
-    "FamilyId": "90861052",
-    "FinalFileName": "90861052_det1.jpg",
-    "DetOrder": 1
-  },
-  {
-    "SourceReference": "CARDIGAN_MAGENTA76_DETAIL.jpg",
     "Status": "Ok",
     "FamilyId": "90861052",
     "FinalFileName": "90861052_det2.jpg",
     "DetOrder": 2
   },
   {
+    "SourceReference": "CARDIGAN_MAGENTA76_DETAIL.jpg",
+    "Status": "Ok",
+    "FamilyId": "90861052",
+    "FinalFileName": "90861052_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "charcol-wrap.jpg",
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
+  },
+  {
     "SourceReference": "foldercontainsID99984905/1.jpg",
+    "Status": "Ok",
+    "FamilyId": "99984905",
+    "FinalFileName": "99984905_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "foldercontainsID99984905/2.jpg",
     "Status": "Ok",
     "FamilyId": "99984905",
     "FinalFileName": "99984905_det1.jpg",
     "DetOrder": 1
   },
   {
-    "SourceReference": "foldercontainsID99984905/2.jpg",
+    "SourceReference": "foldercontainsID99984905/3.jpg",
     "Status": "Ok",
     "FamilyId": "99984905",
     "FinalFileName": "99984905_det2.jpg",
     "DetOrder": 2
   },
   {
-    "SourceReference": "foldercontainsID99984905/3.jpg",
+    "SourceReference": "foldercontainsID99984905/4.jpg",
     "Status": "Ok",
     "FamilyId": "99984905",
     "FinalFileName": "99984905_det3.jpg",
     "DetOrder": 3
   },
   {
-    "SourceReference": "foldercontainsID99984905/4.jpg",
+    "SourceReference": "graphite-scarf.jpg",
     "Status": "Ok",
-    "FamilyId": "99984905",
-    "FinalFileName": "99984905_det4.jpg",
-    "DetOrder": 4
+    "FamilyId": "96000008",
+    "FinalFileName": "96000008_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "green-sweater-back.jpg",
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
+  },
+  {
+    "SourceReference": "green-sweater-front.jpg",
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
+  },
+  {
+    "SourceReference": "grey-scarf.jpg",
+    "Status": "Ok",
+    "FamilyId": "96000007",
+    "FinalFileName": "96000007_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "IMG_2619_indigo.png",
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "IMG_4432.png",
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
+  },
+  {
+    "SourceReference": "IMG_7710.jpg",
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
+  },
+  {
+    "SourceReference": "IMG_9021.jpg",
     "Status": "Ko",
     "FamilyId": null,
     "FinalFileName": null,
@@ -490,6 +574,20 @@
     "DetOrder": null
   },
   {
+    "SourceReference": "OMB-E166-BV_1-back.jpg",
+    "Status": "Ok",
+    "FamilyId": "98636303",
+    "FinalFileName": "98636303_det0.jpg",
+    "DetOrder": 0
+  },
+  {
+    "SourceReference": "OMB-E166-BV_1-front.jpg",
+    "Status": "Ok",
+    "FamilyId": "98636303",
+    "FinalFileName": "98636303_det1.jpg",
+    "DetOrder": 1
+  },
+  {
     "SourceReference": "OMB-E166-BV_1.jpg",
     "Status": "Ok",
     "FamilyId": "98636303",
@@ -514,8 +612,8 @@
     "SourceReference": "OMB-E166-BV_4.jpg",
     "Status": "Ok",
     "FamilyId": "98636303",
-    "FinalFileName": "98636303_det9.jpg",
-    "DetOrder": 9
+    "FinalFileName": "98636303_det5.jpg",
+    "DetOrder": 5
   },
   {
     "SourceReference": "OMB-E180-BV_1.jpg",
@@ -591,36 +689,43 @@
     "SourceReference": "OMB-E181-CVW_5.jpg",
     "Status": "Ok",
     "FamilyId": "98636312",
-    "FinalFileName": "98636312_det5.jpg",
-    "DetOrder": 5
+    "FinalFileName": "98636312_det4.jpg",
+    "DetOrder": 4
   },
   {
     "SourceReference": "OMB-E181-CVW_6.jpg",
     "Status": "Ok",
     "FamilyId": "98636312",
-    "FinalFileName": "98636312_det4.jpg",
-    "DetOrder": 4
+    "FinalFileName": "98636312_det5.jpg",
+    "DetOrder": 5
   },
   {
     "SourceReference": "Pareo Exotica.jpg",
-    "Status": "Ok",
-    "FamilyId": "94613033",
-    "FinalFileName": "94613033_det2.jpg",
-    "DetOrder": 2
-  },
-  {
-    "SourceReference": "Pareo_exotica_F1.jpg",
     "Status": "Ok",
     "FamilyId": "94613033",
     "FinalFileName": "94613033_det0.jpg",
     "DetOrder": 0
   },
   {
-    "SourceReference": "Pareo_exotica_F2.jpg",
+    "SourceReference": "Pareo_exotica_F1.jpg",
     "Status": "Ok",
     "FamilyId": "94613033",
     "FinalFileName": "94613033_det1.jpg",
     "DetOrder": 1
+  },
+  {
+    "SourceReference": "Pareo_exotica_F2.jpg",
+    "Status": "Ok",
+    "FamilyId": "94613033",
+    "FinalFileName": "94613033_det2.jpg",
+    "DetOrder": 2
+  },
+  {
+    "SourceReference": "sweater-detail.jpg",
+    "Status": "Ko",
+    "FamilyId": null,
+    "FinalFileName": null,
+    "DetOrder": null
   },
   {
     "SourceReference": "T_SHIRT_EGRET_DETAIL.jpg",
@@ -647,15 +752,15 @@
     "SourceReference": "triggered_black-tshirt-back-americain.jpg",
     "Status": "Ok",
     "FamilyId": "97019930",
-    "FinalFileName": "97019930_det1.jpg",
-    "DetOrder": 1
+    "FinalFileName": "97019930_det0.jpg",
+    "DetOrder": 0
   },
   {
     "SourceReference": "triggered_black-tshirt-front-americain.jpg",
     "Status": "Ok",
     "FamilyId": "97019930",
-    "FinalFileName": "97019930_det3.jpg",
-    "DetOrder": 3
+    "FinalFileName": "97019930_det1.jpg",
+    "DetOrder": 1
   },
   {
     "SourceReference": "triggered_black-tshirt-front-detail.jpg",
@@ -668,8 +773,8 @@
     "SourceReference": "triggered_black-tshirt-front-silhouette.jpg",
     "Status": "Ok",
     "FamilyId": "97019930",
-    "FinalFileName": "97019930_det0.jpg",
-    "DetOrder": 0
+    "FinalFileName": "97019930_det3.jpg",
+    "DetOrder": 3
   },
   {
     "SourceReference": "triggered_ghost_back.jpg",
