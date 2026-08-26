@@ -64,10 +64,14 @@ jobs:
 
       - name: Assert minimum test count
         shell: pwsh
+        if: always()
         # T-4942: a crashed or short-circuited run still prints "Passed! - Failed: 0, Passed: 176",
         # which reads as success unless someone notices the count is short. Green is not enough — the
         # run also has to have executed roughly the suite we expect. The floor sits deliberately below
         # the current total so adding tests never breaks CI, but losing a whole project does.
+        # if: always() so this step still runs (and can still pass) when "Unit tests (xUnit)" fails —
+        # e.g. the CiMiniGoldenTests known-red rows tracked by T-4980/T-5120/T-5130/T-5080. This step's
+        # job is crash/short-circuit detection, not overall greenness; those are different questions.
         run: |
           $floor = 500
           $trx = Get-ChildItem "${{ github.workspace }}/test-results" -Filter *.trx -Recurse
