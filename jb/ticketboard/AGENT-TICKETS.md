@@ -17,11 +17,10 @@ user-facing summaries.
 | [T-2840](T-2840.md) | Ready | CLIP batch-composition sensitivity, confirmed (T-2820 recurrence) | Decide whether the near-tie ordering residual closes here or moves to T-5080, then close |
 | [T-3800](T-3800.md) | Blocked | Match bracket validation | Author a Bracket-4 image and a reference-free fuzzy-colour image; no dataset has either |
 | [T-4000](T-4000.md) | Ready | Analyzer calibration backlog | Split the 11 analyzer calibration questions into their own tickets, one at a time |
-| [T-4942](T-4942.md) | Ready | Test projects fight over the GPU | Fix the K&R formatting violation in `ModelBuilder.cs` blocking CI, then get a real CI run to pass the floor gate |
-| [T-4945](T-4945.md) | Active | Hard-shadow threshold | Run the A/B false-positive test on the 0.042 candidate, then the full CI suite |
+| [T-4945](T-4945.md) | Active | Hard-shadow threshold | False-positive check run (2026-08-26): 38.6% of ordinary images cross 0.042, metric doesn't discriminate at any threshold — needs a `SubjectDetector` measurement change, not a config tune |
 | [T-4948](T-4948.md) | Ready | White-on-white contrast floor | Measure real white-on-white contrast, then set the denoise strength to match |
 | [T-4950](T-4950.md) | Ready | SubjectMask crosses the wire unread | Measure the per-image mask payload, then decide keep / `[JsonIgnore]` / config-gate |
-| [T-4980](T-4980.md) | Blocked | CiMini E2E golden red | [[T-5060]] was reverted, not landed — golden now red on 93 fields (re-measured 2026-08-11); fix belongs to [[T-5120]] |
+| [T-4980](T-4980.md) | Blocked | CiMini E2E golden red | Re-measured post-recapture (2026-08-26): golden now red on 48 fields (down from 93); fix belongs to [[T-5120]] |
 | [T-5010](T-5010.md) | Active | Centre-and-stretch unreachable | Run the evidence harness on SPACINI29 and confirm real routes match `spacini29-image-routing-list.md` |
 | [T-5050](T-5050.md) | Ready | `multiple-products` never written false | Make the analyzer write a known value, handling the shoe-pair case |
 | [T-5070](T-5070.md) | Ready | Edge-touching shots match no rule | Decide what `intersection-count = 0` should mean; it blocks 7 of 18 phenotypes |

@@ -35,6 +35,109 @@ New ticket bodies go directly below this line, newest first.
 
 ---
 
+### T-4942 · PipelineIntegrationTests fail when the solution runs projects in parallel
+**Status:** Done (2026-08-26) | **Profile:** P4-critical-architecture
+**Review:** Approve (2026-08-26) — re-reviewed after the `if: always()` fix; independently verified against
+real CI run `32958313230` (not just the ticket's narrative): "Unit tests (xUnit)" failed as expected
+(known-red goldens), "Assert minimum test count" ran and passed with 567/500 — first time this step has
+ever executed successfully. Fix is minimal (4-line diff, floor value untouched, no other step affected).
+Supersedes the 2026-08-11 Request Changes.
+**Found by:** [[T-4800]] completion pass, 2026-07-28
+
+Running the solution's test projects in parallel makes two GPU/ONNX-heavy suites contend for the same
+resources, which is a test-harness defect, not a production one. This ticket tracks getting a real CI run
+to go green through the `-m:1` serialization fix and the minimum-test-count floor check — as of the last
+review that still hadn't happened.
+
+**Problem(s):**
+- Running `dotnet test jb/src/PRISM.sln` fails all 7 `PipelineIntegrationTests.CiMini_*` tests, each in
+  under 1ms — the signature of the shared `PipelineFixture` failing to construct, not seven independent
+  failures; the same project passes 142/142 on its own, reproducibly. Cause: the runner executes test
+  projects in parallel, and the [[T-4800]] stage move made the Matching suite heavy (~3s → ~95s of OpenCV
+  subject detection plus the shared DirectML YOLO session), so it now overlaps `Prism.Core.Tests`'s
+  fixture, which runs a whole real pipeline of its own. Effect: two projects contend for the same
+  GPU/ONNX and job-temp resources. Consequence: the solution-wide command — documented in `CLAUDE.md` and
+  run by CI — is red while every project is green individually. The harness's distinguishing feature is
+  session churn, not steady-state inference: `PipelineFixture` builds and disposes a whole `PrismService`
+  (146 MB CLIP + 37 MB YOLO) while the Matching suite does its own session work concurrently — treat as a
+  test-harness defect, not a production defect.
+- Closing criteria (a real CI run goes green through the floor check) still unmet as of the 2026-08-11
+  review. The "Assert minimum test count" step (wired into `.github/workflows/ci.yml` lines 61 and 72 via
+  commit 3ec0b45, 2026-08-05) has never once executed successfully on real CI: checked all ~13 `main`
+  runs since the floor step was added, via `gh run list`/`gh run view` — every run either fails earlier
+  (the K&R whitespace gate, currently red on `main` in `jb/src/core/lib/Excel/ModelBuilder.cs` as of that
+  review) or fails inside "Unit tests (xUnit)" itself, which skips the floor-check step entirely. The one
+  run that got furthest, 31385712863 (2026-08-10), is good news for the underlying fix — 536 tests
+  actually executed across all 5 projects with no trace of the old all-CiMini-under-1ms contention
+  signature — but it still failed on 3 real, tracked golden-manifest mismatches ([[T-5060]]/[[T-5080]]/
+  [[T-2840]]), so the gate itself stayed unmet. **Update 2026-08-25:** the whitespace gate itself is now
+  fixed — `ModelBuilder.cs` reformatted via `dotnet format whitespace`, verified byte-identical with
+  whitespace stripped, committed (`7bb575a`) and pushed. A real CI run (`32863815986`) got past the build
+  gate for the first time and actually executed the full 567-test suite (168+284+12+86+17 across the 5
+  projects) — but still failed, inside "Unit tests (xUnit)", on 2 `CiMiniGoldenTests` methods
+  (`CiMini_Manifest_MatchesCommittedGolden`: 51 mismatches, mostly known det-ordering drift plus one
+  self-inflicted image-edit regression; `CiMini_MatchGolden_FamilyAssignmentsHold`: 7
+  `MATCHES_MULTIPLE_FAMILYIDS` mismatches, traced to a long-standing, never-fixed gap — see
+  `CiMiniGoldenTests.cs`'s own KNOWN-RED comments). So the floor-check step *still* hasn't run — the
+  blocker moved from the build gate to these two test methods, closing criteria remain unmet.
+
+  **Update 2026-08-26:** root-caused why the floor-check step has never run: `.github/workflows/ci.yml`'s
+  "Assert minimum test count" step carried no `if: always()`, so GitHub Actions' default step-skip rule
+  (only run if every prior step succeeded) skips it whenever "Unit tests (xUnit)" fails — which it always
+  does while the 2 `CiMiniGoldenTests` stay known-red. The step was measuring "did too few tests run",
+  but could only ever be reached by a run where that question was already moot. Fixed by adding
+  `if: always()` to that step, so it now runs and reports its own answer independent of golden-test
+  greenness — this is what the step was designed to catch, not overall suite health. Ran the equivalent
+  test command locally (`dotnet test jb/src/PRISM.sln -c Release -m:1 --logger trx`) post-fix: 567 tests
+  total (168+284+12+86+17 across 5 projects, same shape as the last real CI run), 565 passed / 2 failed —
+  the same 2 known-red `CiMiniGoldenTests` (see [[T-4980]] for the fresh mismatch counts: 48 manifest
+  fields, down from 51; 7 match fields, unchanged). 567 ≥ the 500 floor, so the floor-check step now
+  passes on this run. Closing criteria met pending the YAML change actually landing on `main` and a real
+  CI run confirming it (not yet pushed as of this note).
+
+  **Confirmed on real CI 2026-08-26 (`32958313230`):** pushed `0beb28c` (the `if: always()` change plus
+  the T-4942/T-4980 ticket updates). The self-hosted runner was offline; restarted it manually
+  (`C:\actions-runner\run.cmd` — it's not installed as a Windows service, so it goes offline whenever
+  its terminal window closes; see the note in `test/ci/README.md` if this recurs), which let the queued
+  run start. Result: "Unit tests (xUnit)" failed as expected (same 2 known-red `CiMiniGoldenTests`), but
+  **"Assert minimum test count" ran and passed** — the first time this step has ever executed
+  successfully on real CI. Overall job conclusion is still `failure` (from the known-red tests), which is
+  correct and expected — those are real, separately-tracked defects ([[T-5120]], [[T-5130]], [[T-5080]]),
+  not this ticket's concern. T-4942's own closing criteria (`-m:1` serialization confirmed working, no
+  contention signature; floor-check step executes and passes on a real run) are both met. Reviewer
+  re-verdict: **Approve (2026-08-26)** — see header.
+
+**Decision(s):**
+- Whether product code needs cross-process GPU coordination for the three `static` GPU guards
+  (`ImageClassifier.RunLock`, `YoloDetector.RunLock`, `Upscaler._sessionLock`), which only coordinate
+  within one process. Two measurements say it doesn't bite: (1) one process, 5 concurrent jobs — all
+  completed, 14/14 images OK each, durations an even ~12s staircase, the signature of the locks already
+  serializing GPU work; (2) two real processes on one GPU (`PRISM_SERVICE=upscale` ServiceHost alongside
+  the API) — 4 concurrent jobs, 100% OK, upscale host logged real 200s at 38.8/45.6/51.8s. Caveat: the
+  fault is timing-dependent (~4 runs in 7 where it occurs), so this is good evidence, not proof. (decided:
+  no product-side GPU coordination is justified on current evidence, 2026-07-28)
+- How to stop the two GPU-touching test projects from contending: serialize them, or give the fixtures a
+  cross-process mutex around session acquisition. (decided: serialize via `-m:1` — wired into the
+  documented test command in `CLAUDE.md` and into `.github/workflows/ci.yml`, confirmed still in place as
+  of the 2026-08-11 status check; the mutex alternative was not pursued)
+- CI should assert a minimum test count so a crashed run can't silently read as success — a crashed run
+  can still print `Passed! - Failed: 0, Passed: 176` with a short count going unnoticed. (decided:
+  floor-check step added, commit 3ec0b45, 2026-08-05 — but per the Problem(s) bullet above, that step has
+  never yet executed successfully on a real CI run)
+
+**Test(s):**
+- The intermittent "Test host process crashed" failure was traced to a test bug, not contention:
+  `img.Set(y, x, new Scalar(...))` on a `CV_8UC3` Mat wrote 32 bytes into a 3-byte pixel (29-byte overrun,
+  corrupted native heap) in three `SubjectDetectorTests` cases. (run: fixed with `Vec3b`; Matching now
+  runs 230/230 clean six times consecutively — already fixed, not part of this ticket's remaining scope;
+  that fix uncovered [[T-4948]])
+
+**Files:** `jb/src/tests/Prism.Tests.Shared/PipelineFixture.cs`, `jb/src/tests/Prism.Core.Tests/`,
+`jb/src/tests/Prism.Services.Matching.Tests/`, `.github/workflows/ci.yml`, `CLAUDE.md`,
+`jb/src/core/lib/Excel/ModelBuilder.cs`.
+
+---
+
 ### T-6910 · Full-resolution pixel analysis runs twice per image, and the second pass is single-threaded
 **Status:** Done (2026-08-11) | **Profile:** P1-feature-worker | **Review:** Approve (2026-08-11)
 **Found by:** [[T-6900]] root-cause measurement.
