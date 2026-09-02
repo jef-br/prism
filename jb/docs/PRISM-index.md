@@ -7,6 +7,7 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | File | Covers |
 |---|---|
 | [GLOSSARY.md](GLOSSARY.md) | All abbreviations used across docs |
+| [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md) | Architectural overview: system shape, deployment topologies, assembly map, the 8 stages, record lifecycle, job lifecycle, matching/classify/transform deep dives, cross-cutting rules. Nine editable `.drawio.svg` diagrams live beside it. Start here for orientation; every section points at the doc that owns the detail |
 | [PRISM-overview.md](PRISM-overview.md) | System specs, accepted media, batch limits, terminology |
 | [PRISM-pipeline-core.md](PRISM-pipeline-core.md) | Stage order, Prism.cs / Pipeline.cs, PJR, PJRes, failure policies, config lifecycle |
 | [PRISM-excel.md](PRISM-excel.md) | IEM, header detection, deduplication, PK rules, column validity |
@@ -46,7 +47,7 @@ Load only the files relevant to your current task. Abbreviations: `GLOSSARY.md`.
 | Working on web workbench | [PRISM-workbench.md](PRISM-workbench.md) [PRISM-api.md](PRISM-api.md) |
 | Defining/updating any C# model/record | [PRISM-models.md](PRISM-models.md) |
 | Writing or running tests | [PRISM-testing.md](PRISM-testing.md) |
-| General orientation | [PRISM-overview.md](PRISM-overview.md) + [PRISM-pipeline-core.md](PRISM-pipeline-core.md) |
+| General orientation | [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md), then [PRISM-overview.md](PRISM-overview.md) + [PRISM-pipeline-core.md](PRISM-pipeline-core.md) |
 | Investigating a hang, a slow job, or "the pipeline is stuck" | [PRISM-postmortem-T6900-reasoning.md](PRISM-postmortem-T6900-reasoning.md) — read the checklist before forming a theory |
 | INGP phenotypes / DO assignment | [ImageNGP/imagePhenotypes.md](ImageNGP/imagePhenotypes.md) [ImageNGP/ImageFeatures.md](ImageNGP/ImageFeatures.md) |
 | Phenotype coverage / calibration / why a phenotype never fires | [ImageNGP/phenotype-assignment-validation.md](ImageNGP/phenotype-assignment-validation.md) |
