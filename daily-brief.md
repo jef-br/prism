@@ -24,13 +24,13 @@
 > T-2840 and T-5010 are not done yet. The daily brief for 12/08/2026 should reflect that.
 
 ##### Changed
-- No repo substance change. Only delta since the prior brief: the 17/09 brief landed (`33d8d7e` → `4f703f4`), no content. Last non-brief commit is still `43f2c58`/`fef1ebe` (PR #32, architecture overview + nine drawio diagrams, 2026-09-02); every commit since is a daily-brief. All seven `jbtodo.md` untouched since 2026-08-11 (root 2026-08-12); board 2026-08-26, `AGENTFEEDBACK.md` 2026-08-12, `jb/docs/` 2026-09-02 — all unchanged.
+- No repo substance change. Only delta since the prior brief: the 18/09 brief landed (`4f703f4` → `7b430e2`), no content, and no 19/09 brief was written — this is the first brief since (one-day gap). Last non-brief commit is still `43f2c58`/`fef1ebe` (PR #32, architecture overview + nine drawio diagrams, 2026-09-02); every commit since is a daily-brief. All seven `jbtodo.md` untouched since 2026-08-12 (working tree clean); board + `AGENT-TICKETS-ARCHIVE.md` last touched 2026-08-26 (T-4942 close), `AGENTFEEDBACK.md` 2026-08-12, `jb/docs/` 2026-09-02 — all unchanged. The three Todo updates below have carried across several briefs unactioned (Match/root todos still dated 2026-08-12), so they remain the standing recommendations, not new finds.
 
 ##### Next steps
 - Split T-3800: its item-1 (fuzzy categorical) validation is now satisfiable from the shipped golden — `grey-scarf`/`charcol-wrap`/`graphite-scarf` are captured green (see Todo updates), so the board's "no dataset has either" next-action is stale on the fuzzy half. Close item 1; leave only item 4 (a real Bracket-4 asset) blocked.
 - The three intended Bracket-4 images (`IMG_9021`, `IMG_2619_indigo`, `IMG_7710`) all KO in the golden ("no Excel evidence" / one token below `bracket3MinDistinctTokens=2`) — none reach `SemanticMatcher`, so item 4's `totalImageTokens` fix is still unexercised. It needs a purpose-built asset: a 0-image family plus a filename that survives the waterfall to Bracket 4, not another Bracket-3-resolvable name.
 - Illustration positive case: asset `90861083_e.jpg` is on disk and in `expected-phenotype.json` (as a `null` placeholder); `Analyzer_IsIllustration` is closed, so the only work left is re-capturing the golden so its row carries a real `is-illustration` judgment. No code.
-- T-5010 (SPACINI29 route confirm) and T-2840 (near-tie ordering) still close on one evidence-harness run each, no code.
+- T-5010 (SPACINI29 route confirm) and T-2840 (near-tie ordering) still close on one evidence-harness run each, no code — both remain the stated goals from Jef's note.
 - Land T-5070 + T-5080, then re-score CiMini's 99 labelled rows (T-2600) — still the only path off the M11 phenotype block; the measurement itself is already done.
 
 ##### Todo updates
