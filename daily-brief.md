@@ -24,7 +24,7 @@
 > T-2840 and T-5010 are not done yet. The daily brief for 12/08/2026 should reflect that.
 
 ##### Changed
-- None. No repo substance change since the 22/09 brief (`5b4b232`) — working tree clean, the only commit since is that brief itself. Last non-brief commit remains `fef1ebe`/`43f2c58` (PR #32, architecture overview + nine drawio diagrams, 2026-09-02). All seven `jbtodo.md` untouched since 2026-08-12; board + `AGENT-TICKETS-ARCHIVE.md` last touched 2026-08-26, `AGENTFEEDBACK.md` 2026-08-12, `jb/docs/` 2026-09-02. The three Todo updates below are the same standing carry-overs — still accurate, still unactioned by Jef — not fresh finds; there is no new data to mine this pass.
+- None. No repo substance change since the 23/09 brief. Working tree clean; the only commits since the 22/09 brief (`5b4b232`) are the 23/09 (`5f52125`) and this brief. Last non-brief commit remains `fef1ebe`/`43f2c58` (PR #32, architecture overview + nine drawio diagrams, 2026-09-02). All seven `jbtodo.md` untouched since 2026-08-12; board + `AGENT-TICKETS-ARCHIVE.md` last touched 2026-08-26, `AGENTFEEDBACK.md` 2026-08-12, `jb/docs/` 2026-09-02. The three Todo updates below are the same standing carry-overs — still accurate, still unactioned by Jef — not fresh finds; there is no new data to mine this pass.
 
 ##### Next steps
 - Split T-3800: item-1 (fuzzy categorical) validation is satisfiable from the shipped golden — `grey-scarf`/`charcol-wrap`/`graphite-scarf` are captured green (see Todo updates), so the board's "no dataset has either" is stale on the fuzzy half. Close item 1; leave only item 4 (a real Bracket-4 asset) blocked.
